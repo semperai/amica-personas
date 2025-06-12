@@ -93,18 +93,15 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     event TokensPurchased(uint256 indexed tokenId, address indexed buyer, uint256 amountSpent, uint256 tokensReceived);
     event LiquidityPairCreated(uint256 indexed tokenId, address indexed pair, uint256 liquidity);
 
-    constructor() {
-        _disableInitializers();
-    }
-
     function initialize(
         address amicaToken_,
         address uniswapFactory_,
         address uniswapRouter_,
         address erc20Implementation_
-    ) external initializer { 
+    ) public initializer {
         __ERC721_init("Amica Persona", "PERSONA");
         __Ownable_init(msg.sender);
+        __ReentrancyGuard_init();
 
         require(amicaToken_ != address(0), "Invalid AMICA token");
         require(uniswapFactory_ != address(0), "Invalid factory");
@@ -412,6 +409,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         override
         returns (string memory)
     {
+        // TODO this should provide the image from some website
         _requireOwned(tokenId);
 
         PersonaData storage persona = _personas[tokenId];
