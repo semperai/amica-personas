@@ -352,7 +352,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
         for (uint256 i = 0; i < purchasesLocal.length; i++) {
             if (!purchasesLocal[i].withdrawn &&
-                (persona.pairCreated || block.timestamp >= persona.createdAt + LOCK_DURATION)) {
+                (persona.pairCreated || block.timestamp >= purchasesLocal[i].timestamp + LOCK_DURATION)) {
                 totalToWithdraw += purchasesLocal[i].amount;
                 purchasesLocal[i].withdrawn = true;
             }
@@ -437,6 +437,12 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             timestamp: block.timestamp,
             withdrawn: false
         }));
+
+        // Transfer persona tokens to recipient
+        require(
+            IERC20(persona.erc20Token).transfer(to, amountOut),
+            "Token transfer failed"
+        );
 
         emit TokensPurchased(tokenId, to, amountIn, amountOut);
 
