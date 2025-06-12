@@ -1205,7 +1205,7 @@ describe("PersonaTokenFactory", function () {
 
             // Approve but don't have enough balance
             await amicaToken.connect(user1).transfer(user1.address, await amicaToken.balanceOf(user1.address) - ethers.parseEther("100"));
-            
+
             await amicaToken.connect(user1).approve(
                 await personaFactory.getAddress(),
                 DEFAULT_MINT_COST
@@ -1227,7 +1227,7 @@ describe("PersonaTokenFactory", function () {
 
             // Make a huge purchase that would exceed available tokens
             const hugeAmount = ethers.parseEther("10000000"); // 10M AMICA
-            
+
             await amicaToken.connect(user2).approve(
                 await personaFactory.getAddress(),
                 hugeAmount

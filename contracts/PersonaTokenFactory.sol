@@ -168,7 +168,8 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         require(bytes(symbol).length > 0 && bytes(symbol).length <= 10, "Invalid symbol length");
         require(metadataKeys.length == metadataValues.length, "Metadata mismatch");
 
-        // Take payment
+        // Take payment - check balance first
+        require(amicaToken.balanceOf(msg.sender) >= config.mintCost, "Insufficient balance");
         require(
             amicaToken.transferFrom(msg.sender, address(this), config.mintCost),
             "Payment failed"
@@ -344,9 +345,20 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         PersonaData storage persona = _personas[tokenId];
         if (persona.pairCreated) return 0;
 
-        uint256 totalForSale = PERSONA_TOKEN_SUPPLY -
-                              pairingConfigs[persona.pairToken].amicaDepositAmount -
-                              LIQUIDITY_TOKEN_AMOUNT;
+        // Fix the arithmetic order to prevent underflow
+        uint256 reservedTokens = pairingConfigs[persona.pairToken].amicaDepositAmount + LIQUIDITY_TOKEN_AMOUNT;
+        
+        // Check if we have enough tokens
+        if (PERSONA_TOKEN_SUPPLY <= reservedTokens) {
+            return 0;
+        }
+        
+        uint256 totalForSale = PERSONA_TOKEN_SUPPLY - reservedTokens;
+
+        // Check if tokens sold exceeds available
+        if (_purchases[tokenId].tokensSold >= totalForSale) {
+            return 0;
+        }
 
         return totalForSale - _purchases[tokenId].tokensSold;
     }
@@ -414,15 +426,15 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
         PersonaData storage persona = _personas[tokenId];
 
-        // Return basic JSON metadata
+        // Return basic JSON metadata with properly quoted tokenId
         return string(abi.encodePacked(
             'data:application/json;utf8,{"name":"',
             persona.name,
             '","symbol":"',
             persona.symbol,
-            '","tokenId":',
+            '","tokenId":"',
             tokenId.toString(),
-            ',"erc20Token":"',
+            '","erc20Token":"',
             Strings.toHexString(uint160(persona.erc20Token), 20),
             '"}'
         ));
