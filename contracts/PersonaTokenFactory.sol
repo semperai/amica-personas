@@ -37,6 +37,7 @@ interface IERC20Implementation {
 /**
  * @title PersonaTokenFactory
  * @notice Factory for creating persona NFTs with associated ERC20 tokens
+ * @dev Updated to use 33/33/33 split: 1/3 to AMICA on graduation, 1/3 to bonding curve, 1/3 for liquidity
  */
 contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using Strings for uint256;
@@ -56,7 +57,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         bool enabled;
         uint256 mintCost;
         uint256 graduationThreshold;
-        uint256 amicaDepositAmount;
     }
 
     struct TokenPurchase {
@@ -91,9 +91,12 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     TradingFeeConfig public tradingFeeConfig;
     uint256 public constant LOCK_DURATION = 7 days;
 
-    // Constants
+    // Constants - Updated for 33/33/33 split
     uint256 public constant PERSONA_TOKEN_SUPPLY = 1_000_000_000 ether;
-    uint256 public constant LIQUIDITY_TOKEN_AMOUNT = 600_000_000 ether;  // 60% for liquidity
+    uint256 public constant AMICA_DEPOSIT_AMOUNT = 333_333_333 ether;     // 1/3 for AMICA (on graduation)
+    uint256 public constant BONDING_CURVE_AMOUNT = 333_333_333 ether;    // 1/3 for bonding curve
+    uint256 public constant LIQUIDITY_TOKEN_AMOUNT = 333_333_334 ether;  // 1/3 for liquidity (+ rounding)
+
     string private constant TOKEN_SUFFIX = ".amica";
     uint256 private constant BASIS_POINTS = 10000;
 
@@ -137,8 +140,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         pairingConfigs[amicaToken_] = PairingConfig({
             enabled: true,
             mintCost: 1000 ether,
-            graduationThreshold: 1_000_000 ether,
-            amicaDepositAmount: 100_000_000 ether  // 10% for AMICA deposit
+            graduationThreshold: 1_000_000 ether
         });
 
         // Initialize trading fee config (1% fee, 50/50 split)
@@ -170,16 +172,14 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     function configurePairingToken(
         address token,
         uint256 mintCost,
-        uint256 graduationThreshold,
-        uint256 amicaDepositAmount
+        uint256 graduationThreshold
     ) external onlyOwner {
         require(token != address(0), "Invalid token");
 
         pairingConfigs[token] = PairingConfig({
             enabled: true,
             mintCost: mintCost,
-            graduationThreshold: graduationThreshold,
-            amicaDepositAmount: amicaDepositAmount
+            graduationThreshold: graduationThreshold
         });
 
         emit PairingConfigUpdated(token);
@@ -246,10 +246,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             persona.metadata[metadataKeys[i]] = metadataValues[i];
             emit MetadataUpdated(tokenId, metadataKeys[i]);
         }
-
-        // Always deposit tokens to AMICA contract (regardless of pairing token)
-        IERC20(erc20Token).approve(address(amicaToken), type(uint256).max);
-        IAmicaToken(address(amicaToken)).deposit(erc20Token, config.amicaDepositAmount);
 
         emit PersonaCreated(tokenId, msg.sender, erc20Token, name, symbol);
 
@@ -407,7 +403,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         amountOut = getAmountOut(
             amountInAfterFee,
             purchase.tokensSold,
-            getAvailableTokens(tokenId) + purchase.tokensSold
+            BONDING_CURVE_AMOUNT
         );
 
         require(amountOut >= amountOutMin, "Insufficient output amount");
@@ -452,7 +448,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         }
     }
 
-
     /**
      * @notice Distribute trading fees between creator and AMICA
      */
@@ -467,23 +462,11 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             IERC20(persona.pairToken).transfer(ownerOf(tokenId), creatorFees);
         }
 
-        // Deposit AMICA's share
-        if (amicaFees > 0) {
-            // If pairing token is AMICA, deposit directly
-            if (persona.pairToken == address(amicaToken)) {
-                // Need to approve from this contract to AMICA contract
-                IERC20(persona.pairToken).approve(address(amicaToken), amicaFees);
-                IAmicaToken(address(amicaToken)).deposit(persona.erc20Token, amicaFees);
-            } else {
-                // For other tokens, just hold them (could be extended to swap to AMICA first)
-                // For now, send to AMICA treasury (the AMICA token contract)
-                IERC20(persona.pairToken).transfer(address(amicaToken), amicaFees);
-            }
-        }
+        // AMICA's share stays in contract for now
+        // It will be used for liquidity if graduation happens
 
         emit TradingFeesCollected(tokenId, feeAmount, creatorFees, amicaFees);
     }
-
 
     /**
      * @notice Calculate output amount using Bancor-style bonding curve
@@ -519,13 +502,12 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      */
     function getAmountOut(uint256 tokenId, uint256 amountIn) external view returns (uint256) {
         TokenPurchase storage purchase = purchases[tokenId];
-        uint256 totalAvailable = getAvailableTokens(tokenId) + purchase.tokensSold;
 
         // Apply trading fee to input
         uint256 feeAmount = (amountIn * tradingFeeConfig.feePercentage) / BASIS_POINTS;
         uint256 amountInAfterFee = amountIn - feeAmount;
 
-        return getAmountOut(amountInAfterFee, purchase.tokensSold, totalAvailable);
+        return getAmountOut(amountInAfterFee, purchase.tokensSold, BONDING_CURVE_AMOUNT);
     }
 
     /**
@@ -536,7 +518,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         pure
         returns (uint256)
     {
-        uint256 totalSupply = 110_000_000 ether;
+        uint256 totalSupply = BONDING_CURVE_AMOUNT;
         uint256 soldRatio = currentDeposited * 1e18 / graduationThreshold;
         uint256 tokensSold = totalSupply * soldRatio / 1e18;
 
@@ -551,20 +533,12 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         if (persona.pairCreated) return 0;
         if (persona.erc20Token == address(0)) return 0;
 
-        uint256 amicaDeposit = pairingConfigs[persona.pairToken].amicaDepositAmount;
-
-        if (PERSONA_TOKEN_SUPPLY < amicaDeposit + LIQUIDITY_TOKEN_AMOUNT) {
-            return 0;
-        }
-
-        uint256 totalForBonding = PERSONA_TOKEN_SUPPLY - amicaDeposit - LIQUIDITY_TOKEN_AMOUNT;
-
         uint256 sold = purchases[tokenId].tokensSold;
-        if (sold >= totalForBonding) {
+        if (sold >= BONDING_CURVE_AMOUNT) {
             return 0;
         }
 
-        return totalForBonding - sold;
+        return BONDING_CURVE_AMOUNT - sold;
     }
 
     /**
@@ -577,6 +551,10 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         TokenPurchase storage purchase = purchases[tokenId];
 
         address erc20Token = persona.erc20Token;
+
+        // Now deposit tokens to AMICA contract (on graduation)
+        IERC20(erc20Token).approve(address(amicaToken), AMICA_DEPOSIT_AMOUNT);
+        IAmicaToken(address(amicaToken)).deposit(erc20Token, AMICA_DEPOSIT_AMOUNT);
 
         // All pairing tokens go to liquidity (no graduation reward to creator)
         uint256 pairingTokenForLiquidity = purchase.totalDeposited;

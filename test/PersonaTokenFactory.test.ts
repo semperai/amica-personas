@@ -42,10 +42,12 @@ export async function getQuote(
 describe("PersonaTokenFactory", function () {
     // Constants - Access them from the contract instance
     let PERSONA_TOKEN_SUPPLY: bigint;
+    let AMICA_DEPOSIT_AMOUNT: bigint;
+    let BONDING_CURVE_AMOUNT: bigint;
     let LIQUIDITY_TOKEN_AMOUNT: bigint;
     const DEFAULT_MINT_COST = ethers.parseEther("1000");
     const DEFAULT_GRADUATION_THRESHOLD = ethers.parseEther("1000000");
-    const DEFAULT_AMICA_DEPOSIT = ethers.parseEther("100000000"); // Updated to 100M
+
 
     // Test helpers
     async function deployMocksFixture() {
@@ -87,6 +89,8 @@ describe("PersonaTokenFactory", function () {
 
         // Get constants from contract
         PERSONA_TOKEN_SUPPLY = await personaFactory.PERSONA_TOKEN_SUPPLY();
+        AMICA_DEPOSIT_AMOUNT = await personaFactory.AMICA_DEPOSIT_AMOUNT();
+        BONDING_CURVE_AMOUNT = await personaFactory.BONDING_CURVE_AMOUNT();
         LIQUIDITY_TOKEN_AMOUNT = await personaFactory.LIQUIDITY_TOKEN_AMOUNT();
 
         // Give users some AMICA tokens
@@ -544,7 +548,6 @@ describe("PersonaTokenFactory", function () {
             expect(config.enabled).to.be.true;
             expect(config.mintCost).to.equal(DEFAULT_MINT_COST);
             expect(config.graduationThreshold).to.equal(DEFAULT_GRADUATION_THRESHOLD);
-            expect(config.amicaDepositAmount).to.equal(DEFAULT_AMICA_DEPOSIT);
         });
 
         it("Should initialize default trading fee config", async function () {
@@ -576,7 +579,6 @@ describe("PersonaTokenFactory", function () {
             expect(config.enabled).to.be.true;
             expect(config.mintCost).to.equal(DEFAULT_MINT_COST);
             expect(config.graduationThreshold).to.equal(DEFAULT_GRADUATION_THRESHOLD);
-            expect(config.amicaDepositAmount).to.equal(DEFAULT_AMICA_DEPOSIT);
         });
 
         it("Should reject initialization with zero addresses", async function () {
@@ -633,14 +635,12 @@ describe("PersonaTokenFactory", function () {
 
             const customMintCost = ethers.parseEther("500");
             const customThreshold = ethers.parseEther("500000");
-            const customDeposit = ethers.parseEther("200000000");
 
             await expect(
                 personaFactory.configurePairingToken(
                     await testToken.getAddress(),
                     customMintCost,
                     customThreshold,
-                    customDeposit
                 )
             ).to.emit(personaFactory, "PairingConfigUpdated")
              .withArgs(await testToken.getAddress());
@@ -649,7 +649,6 @@ describe("PersonaTokenFactory", function () {
             expect(config.enabled).to.be.true;
             expect(config.mintCost).to.equal(customMintCost);
             expect(config.graduationThreshold).to.equal(customThreshold);
-            expect(config.amicaDepositAmount).to.equal(customDeposit);
         });
 
         it("Should allow owner to disable pairing tokens", async function () {
@@ -672,7 +671,6 @@ describe("PersonaTokenFactory", function () {
                     user1.address,
                     ethers.parseEther("100"),
                     ethers.parseEther("100000"),
-                    ethers.parseEther("10000000")
                 )
             ).to.be.revertedWithCustomError(personaFactory, "OwnableUnauthorizedAccount");
         });
@@ -685,7 +683,6 @@ describe("PersonaTokenFactory", function () {
                     ethers.ZeroAddress,
                     ethers.parseEther("100"),
                     ethers.parseEther("100000"),
-                    ethers.parseEther("10000000")
                 )
             ).to.be.revertedWith("Invalid token");
         });
@@ -766,7 +763,7 @@ describe("PersonaTokenFactory", function () {
             expect(await erc20Token.symbol()).to.equal("TESTP.amica");
             expect(await erc20Token.totalSupply()).to.equal(PERSONA_TOKEN_SUPPLY);
             expect(await erc20Token.balanceOf(await personaFactory.getAddress())).to.equal(
-                PERSONA_TOKEN_SUPPLY - DEFAULT_AMICA_DEPOSIT
+                PERSONA_TOKEN_SUPPLY - AMICA_DEPOSIT_AMOUNT
             );
         });
 
@@ -781,11 +778,11 @@ describe("PersonaTokenFactory", function () {
 
             // Verify the deposit happened by checking balances
             expect(await erc20Token.balanceOf(await personaFactory.getAddress())).to.equal(
-                PERSONA_TOKEN_SUPPLY - DEFAULT_AMICA_DEPOSIT
+                PERSONA_TOKEN_SUPPLY - AMICA_DEPOSIT_AMOUNT
             );
 
             // Check deposited balance in AMICA contract
-            expect(await amicaToken.depositedBalances(persona.erc20Token)).to.equal(DEFAULT_AMICA_DEPOSIT);
+            expect(await amicaToken.depositedBalances(persona.erc20Token)).to.equal(AMICA_DEPOSIT_AMOUNT);
         });
 
         it("Should take payment from creator", async function () {
@@ -1060,7 +1057,7 @@ describe("PersonaTokenFactory", function () {
             await personaFactory.connect(user3).swapExactTokensForTokens(tokenId, purchase2, 0, user3.address, deadline);
 
             // Verify state updates by checking available tokens decreased
-            const availableBefore = PERSONA_TOKEN_SUPPLY - DEFAULT_AMICA_DEPOSIT - LIQUIDITY_TOKEN_AMOUNT;
+            const availableBefore = PERSONA_TOKEN_SUPPLY - AMICA_DEPOSIT_AMOUNT - LIQUIDITY_TOKEN_AMOUNT;
             const availableAfter = await personaFactory.getAvailableTokens(tokenId);
 
             expect(availableAfter).to.be.lt(availableBefore);
@@ -1332,7 +1329,7 @@ describe("PersonaTokenFactory", function () {
             const { tokenId, personaFactory, amicaToken, user2 } = await loadFixture(createPersonaFixture);
 
             const initialAvailable = await personaFactory.getAvailableTokens(tokenId);
-            const expectedInitial = PERSONA_TOKEN_SUPPLY - DEFAULT_AMICA_DEPOSIT - LIQUIDITY_TOKEN_AMOUNT;
+            const expectedInitial = BONDING_CURVE_AMOUNT;
             expect(initialAvailable).to.equal(expectedInitial);
 
             // Purchase some tokens
@@ -1808,7 +1805,6 @@ describe("PersonaTokenFactory", function () {
                 await usdc.getAddress(),
                 ethers.parseEther("100"),  // 100 USDC mint cost
                 ethers.parseEther("10000"), // 10k USDC graduation threshold
-                ethers.parseEther("100000000") // Still 100M tokens to AMICA
             );
 
             // Configure WETH as pairing token
@@ -1816,7 +1812,6 @@ describe("PersonaTokenFactory", function () {
                 await weth.getAddress(),
                 ethers.parseEther("0.5"),  // 0.5 WETH mint cost
                 ethers.parseEther("50"),   // 50 WETH graduation threshold
-                ethers.parseEther("100000000") // Still 100M tokens to AMICA
             );
 
             // Give users some tokens
@@ -1904,7 +1899,6 @@ describe("PersonaTokenFactory", function () {
                 await usdc.getAddress(),
                 ethers.parseEther("100"),
                 ethers.parseEther("1000"), // Low threshold
-                ethers.parseEther("100000000")
             );
 
             // Create persona
@@ -2158,7 +2152,6 @@ describe("PersonaTokenFactory", function () {
                 await usdc6.getAddress(),
                 ethers.parseUnits("100", 6),  // 100 USDC mint cost
                 ethers.parseUnits("10000", 6), // 10k USDC graduation threshold
-                ethers.parseEther("100000000") // Still 100M persona tokens to AMICA
             );
 
             // Give user some tokens
@@ -2210,7 +2203,6 @@ describe("PersonaTokenFactory", function () {
                 await usdc.getAddress(),
                 ethers.parseEther("100"),
                 ethers.parseEther("1000"), // Low threshold for testing
-                ethers.parseEther("100000000")
             );
 
             // Create persona with USDC pairing
