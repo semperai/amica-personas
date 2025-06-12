@@ -1,4 +1,5 @@
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { TestERC20 } from "../typechain-types";
@@ -123,7 +124,8 @@ describe("PersonaTokenFactory", function () {
             "Test Persona",
             "TESTP",
             ["description", "image"],
-            ["A test persona", "https://example.com/image.png"]
+            ["A test persona", "https://example.com/image.png"],
+            0,
         );
 
         const receipt = await tx.wait();
@@ -149,6 +151,390 @@ describe("PersonaTokenFactory", function () {
 
         return { ...fixture, tokenId };
     }
+
+
+    describe("Trading Fees", function () {
+        it("Should configure trading fees correctly", async function () {
+            const { personaFactory, owner } = await loadFixture(deployPersonaTokenFactoryFixture);
+
+            // Set 2% fee with 60/40 split
+            await expect(
+                personaFactory.configureTradingFees(200, 6000)
+            ).to.emit(personaFactory, "TradingFeeConfigUpdated")
+             .withArgs(200, 6000);
+
+            const config = await personaFactory.tradingFeeConfig();
+            expect(config.feePercentage).to.equal(200);
+            expect(config.creatorShare).to.equal(6000);
+        });
+
+        it("Should apply trading fees on purchases", async function () {
+            const { tokenId, personaFactory, amicaToken, user1, user2 } = await loadFixture(createPersonaFixture);
+
+            const purchaseAmount = ethers.parseEther("10000");
+            await amicaToken.connect(user2).approve(
+                await personaFactory.getAddress(),
+                purchaseAmount
+            );
+
+            const creatorBalanceBefore = await amicaToken.balanceOf(user1.address);
+            const amicaContractBalanceBefore = await amicaToken.balanceOf(await amicaToken.getAddress());
+
+            // Get quote (which should account for fees)
+            const expectedTokens = await personaFactory["getAmountOut(uint256,uint256)"](tokenId, purchaseAmount);
+
+            await expect(
+                swapTokensForPersona(personaFactory, tokenId, purchaseAmount, expectedTokens, user2)
+            ).to.emit(personaFactory, "TradingFeesCollected");
+
+            // Check fee distribution (1% fee, 50/50 split by default)
+            const feeAmount = purchaseAmount * 100n / 10000n; // 1%
+            const creatorFee = feeAmount * 5000n / 10000n; // 50%
+
+            expect(await amicaToken.balanceOf(user1.address)).to.equal(
+                creatorBalanceBefore + creatorFee
+            );
+        });
+
+        it("Should reject fees above 10%", async function () {
+            const { personaFactory } = await loadFixture(deployPersonaTokenFactoryFixture);
+
+            await expect(
+                personaFactory.configureTradingFees(1001, 5000) // 10.01%
+            ).to.be.revertedWith("Fee too high");
+        });
+    });
+
+    describe("Token Lock and Withdrawal", function () {
+        it("Should lock tokens for 1 week", async function () {
+            const { tokenId, personaFactory, amicaToken, user2 } = await loadFixture(createPersonaFixture);
+
+            const purchaseAmount = ethers.parseEther("10000");
+            await amicaToken.connect(user2).approve(
+                await personaFactory.getAddress(),
+                purchaseAmount
+            );
+
+            await swapTokensForPersona(personaFactory, tokenId, purchaseAmount, 0n, user2);
+
+            // Try to withdraw immediately - should fail
+            await expect(
+                personaFactory.connect(user2).withdrawTokens(tokenId)
+            ).to.be.revertedWith("No tokens to withdraw");
+
+            // Check user purchases
+            const purchases = await personaFactory.getUserPurchases(tokenId, user2.address);
+            expect(purchases.length).to.equal(1);
+            expect(purchases[0].withdrawn).to.be.false;
+        });
+
+        it("Should allow withdrawal after 1 week", async function () {
+            const { tokenId, personaFactory, amicaToken, user2 } = await loadFixture(createPersonaFixture);
+
+            const purchaseAmount = ethers.parseEther("10000");
+            await amicaToken.connect(user2).approve(
+                await personaFactory.getAddress(),
+                purchaseAmount
+            );
+
+            const expectedTokens = await getQuote(personaFactory, tokenId, purchaseAmount);
+            await swapTokensForPersona(personaFactory, tokenId, purchaseAmount, expectedTokens, user2);
+
+            // Fast forward 1 week
+            await time.increase(7 * 24 * 60 * 60);
+
+            // Now withdrawal should work
+            const persona = await personaFactory.getPersona(tokenId);
+            const TestERC20 = await ethers.getContractFactory("TestERC20");
+            const personaToken = TestERC20.attach(persona.erc20Token) as TestERC20;
+
+            await expect(
+                personaFactory.connect(user2).withdrawTokens(tokenId)
+            ).to.emit(personaFactory, "TokensWithdrawn")
+             .withArgs(tokenId, user2.address, expectedTokens);
+
+            expect(await personaToken.balanceOf(user2.address)).to.equal(expectedTokens);
+        });
+
+        it("Should allow immediate withdrawal after graduation", async function () {
+            const { tokenId, personaFactory, amicaToken, user2 } = await loadFixture(createPersonaFixture);
+
+            // Buy small amount first
+            const smallAmount = ethers.parseEther("10000");
+            await amicaToken.connect(user2).approve(
+                await personaFactory.getAddress(),
+                DEFAULT_GRADUATION_THRESHOLD + smallAmount
+            );
+
+            const expectedTokens = await getQuote(personaFactory, tokenId, smallAmount);
+            await swapTokensForPersona(personaFactory, tokenId, smallAmount, expectedTokens, user2);
+
+            // Trigger graduation
+            await swapTokensForPersona(personaFactory, tokenId, DEFAULT_GRADUATION_THRESHOLD, 0n, user2);
+
+            // Should be able to withdraw immediately
+            await expect(
+                personaFactory.connect(user2).withdrawTokens(tokenId)
+            ).to.emit(personaFactory, "TokensWithdrawn");
+        });
+    });
+
+    describe("Initial Buy Feature", function () {
+        it("Should allow creator to buy tokens at launch", async function () {
+            const { personaFactory, amicaToken, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
+
+            const initialBuyAmount = ethers.parseEther("5000");
+            const totalPayment = DEFAULT_MINT_COST + initialBuyAmount;
+
+            await amicaToken.connect(user1).approve(
+                await personaFactory.getAddress(),
+                totalPayment
+            );
+
+            const tx = await personaFactory.connect(user1).createPersona(
+                await amicaToken.getAddress(),
+                "Launch Test",
+                "LAUNCH",
+                [],
+                [],
+                initialBuyAmount
+            );
+
+            await expect(tx).to.emit(personaFactory, "TokensPurchased");
+
+            // Creator should have bought tokens (but locked)
+            const tokenId = 0;
+            const purchases = await personaFactory.getUserPurchases(tokenId, user1.address);
+            expect(purchases.length).to.equal(1);
+            expect(purchases[0].amount).to.be.gt(0);
+        });
+    });
+
+    describe("No Graduation Reward", function () {
+        it("Should not send graduation reward to creator", async function () {
+            const { tokenId, personaFactory, amicaToken, user1, user2 } = await loadFixture(createPersonaFixture);
+
+            const creatorBalanceBefore = await amicaToken.balanceOf(user1.address);
+
+            // Purchase to trigger graduation
+            await amicaToken.connect(user2).approve(
+                await personaFactory.getAddress(),
+                DEFAULT_GRADUATION_THRESHOLD
+            );
+
+            await swapTokensForPersona(personaFactory, tokenId, DEFAULT_GRADUATION_THRESHOLD, 0n, user2);
+
+            // Creator balance should only increase by trading fees, not graduation reward
+            const creatorBalanceAfter = await amicaToken.balanceOf(user1.address);
+            const feeAmount = DEFAULT_GRADUATION_THRESHOLD * 100n / 10000n; // 1% fee
+            const creatorFee = feeAmount * 5000n / 10000n; // 50% of fees
+
+            expect(creatorBalanceAfter).to.equal(creatorBalanceBefore + creatorFee);
+        });
+
+        it("Should use all funds for liquidity", async function () {
+            const { tokenId, personaFactory, amicaToken, user2 } = await loadFixture(createPersonaFixture);
+
+            // Purchase slightly more than graduation threshold
+            const excess = ethers.parseEther("100000");
+            const totalAmount = DEFAULT_GRADUATION_THRESHOLD + excess;
+
+            await amicaToken.connect(user2).approve(
+                await personaFactory.getAddress(),
+                totalAmount
+            );
+
+            const tx = await swapTokensForPersona(personaFactory, tokenId, totalAmount, 0n, user2);
+            const receipt = await tx.wait();
+
+            // Find LiquidityPairCreated event
+            const event = receipt?.logs.find(
+                (log: any) => {
+                    try {
+                        const parsed = personaFactory.interface.parseLog({
+                            topics: log.topics as string[],
+                            data: log.data
+                        });
+                        return parsed?.name === 'LiquidityPairCreated';
+                    } catch {
+                        return false;
+                    }
+                }
+            );
+
+            const parsedEvent = personaFactory.interface.parseLog({
+                topics: event!.topics as string[],
+                data: event!.data
+            });
+
+            // All deposited tokens (minus fees) should go to liquidity
+            const feeAmount = totalAmount * 100n / 10000n; // 1% fee
+            const expectedLiquidity = LIQUIDITY_TOKEN_AMOUNT + (totalAmount - feeAmount);
+
+            expect(parsedEvent!.args.liquidity).to.be.closeTo(
+                expectedLiquidity,
+                ethers.parseEther("1") // Allow small difference for rounding
+            );
+        });
+    });
+
+    describe("Metadata Management Fix", function () {
+        it("Should update metadata by token owner", async function () {
+            const { tokenId, personaFactory, user1 } = await loadFixture(createPersonaFixture);
+
+            await expect(
+                personaFactory.connect(user1).updateMetadata(
+                    tokenId,
+                    ["description", "twitter"],
+                    ["Updated description", "@coolpersona"]
+                )
+            ).to.emit(personaFactory, "MetadataUpdated")
+             .withArgs(tokenId, "description")
+             .to.emit(personaFactory, "MetadataUpdated")
+             .withArgs(tokenId, "twitter");
+
+            const metadata = await personaFactory.getMetadata(tokenId, ["description", "twitter"]);
+            expect(metadata[0]).to.equal("Updated description");
+            expect(metadata[1]).to.equal("@coolpersona");
+        });
+    });
+
+    describe("Small Swap Fix", function () {
+        it("Should handle very small swaps correctly", async function () {
+            const { tokenId, personaFactory, amicaToken, user2 } = await loadFixture(createPersonaFixture);
+
+            // Test with small but valid amount
+            const smallAmount = ethers.parseEther("0.01"); // 0.01 AMICA
+            await amicaToken.connect(user2).approve(
+                await personaFactory.getAddress(),
+                smallAmount
+            );
+
+            // Should get a quote greater than 0
+            const quote = await getQuote(personaFactory, tokenId, smallAmount);
+            expect(quote).to.be.gt(0);
+
+            // Should be able to swap
+            await expect(
+                swapTokensForPersona(personaFactory, tokenId, smallAmount, 0n, user2)
+            ).to.not.be.reverted;
+        });
+    });
+
+    describe("Bancor Curve Fee Fix", function () {
+        it("Should apply fee correctly", async function () {
+            const { personaFactory } = await loadFixture(deployPersonaTokenFactoryFixture);
+
+            const amountIn = ethers.parseEther("10000");
+            const sold = 0n;
+            const total = ethers.parseEther("300000000");
+
+            // Get output with the built-in 1% fee
+            const output = await personaFactory["getAmountOut(uint256,uint256,uint256)"](
+                amountIn,
+                sold,
+                total
+            );
+
+            // Calculate what output would be without the 1% protocol fee
+            const virtualAmicaReserve = ethers.parseEther("100000");
+            const virtualTokenReserve = total / 10n;
+
+            const currentTokenReserve = virtualTokenReserve + total;
+            const currentAmicaReserve = virtualAmicaReserve;
+
+            const k = currentTokenReserve * currentAmicaReserve;
+            const newAmicaReserve = currentAmicaReserve + amountIn;
+            const newTokenReserve = k / newAmicaReserve;
+            const amountOutBeforeFee = currentTokenReserve - newTokenReserve;
+
+            // Output should be 99% of the calculation (1% protocol fee)
+            expect(output).to.equal(amountOutBeforeFee * 99n / 100n);
+        });
+    });
+
+    describe("Failed Payment Transfer Fix", function () {
+        it("Should handle insufficient balance gracefully", async function () {
+            const { personaFactory, amicaToken, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
+
+            // Transfer most balance away, keeping just a bit
+            const balance = await amicaToken.balanceOf(user1.address);
+            await amicaToken.connect(user1).transfer(user1.address, balance - ethers.parseEther("100"));
+
+            // Approve more than we have
+            await amicaToken.connect(user1).approve(
+                await personaFactory.getAddress(),
+                DEFAULT_MINT_COST
+            );
+
+            // Should fail with proper error
+            await expect(
+                personaFactory.connect(user1).createPersona(
+                    await amicaToken.getAddress(),
+                    "Test",
+                    "TEST",
+                    [],
+                    [],
+                    0,
+                )
+            ).to.be.revertedWith("Insufficient balance");
+        });
+    });
+
+    describe("Graduation Excess Fix", function () {
+        it("Should handle graduation with excess correctly", async function () {
+            const { tokenId, personaFactory, amicaToken, user2 } = await loadFixture(createPersonaFixture);
+
+            // Calculate a reasonable amount that will trigger graduation
+            const graduationAmount = DEFAULT_GRADUATION_THRESHOLD + ethers.parseEther("100000");
+
+            await amicaToken.connect(user2).approve(
+                await personaFactory.getAddress(),
+                graduationAmount
+            );
+
+            await expect(
+                swapTokensForPersona(personaFactory, tokenId, graduationAmount, 0n, user2)
+            ).to.emit(personaFactory, "LiquidityPairCreated");
+
+            // Verify the pair was created
+            const persona = await personaFactory.getPersona(tokenId);
+            expect(persona.pairCreated).to.be.true;
+        });
+    });
+
+    // Keep original tests that should still pass
+    describe("Deployment and Initialization", function () {
+        it("Should deploy with correct initial state", async function () {
+            const { personaFactory, amicaToken, mockFactory, mockRouter, erc20Implementation } =
+                await loadFixture(deployPersonaTokenFactoryFixture);
+
+            expect(await personaFactory.name()).to.equal("Amica Persona");
+            expect(await personaFactory.symbol()).to.equal("PERSONA");
+            expect(await personaFactory.amicaToken()).to.equal(await amicaToken.getAddress());
+            expect(await personaFactory.uniswapFactory()).to.equal(await mockFactory.getAddress());
+            expect(await personaFactory.uniswapRouter()).to.equal(await mockRouter.getAddress());
+            expect(await personaFactory.erc20Implementation()).to.equal(await erc20Implementation.getAddress());
+        });
+
+        it("Should set default AMICA pairing config", async function () {
+            const { personaFactory, amicaToken } = await loadFixture(deployPersonaTokenFactoryFixture);
+
+            const config = await personaFactory.pairingConfigs(await amicaToken.getAddress());
+            expect(config.enabled).to.be.true;
+            expect(config.mintCost).to.equal(DEFAULT_MINT_COST);
+            expect(config.graduationThreshold).to.equal(DEFAULT_GRADUATION_THRESHOLD);
+            expect(config.amicaDepositAmount).to.equal(DEFAULT_AMICA_DEPOSIT);
+        });
+
+        it("Should initialize default trading fee config", async function () {
+            const { personaFactory } = await loadFixture(deployPersonaTokenFactoryFixture);
+
+            const config = await personaFactory.tradingFeeConfig();
+            expect(config.feePercentage).to.equal(100); // 1%
+            expect(config.creatorShare).to.equal(5000); // 50%
+        });
+    });
 
     describe("Deployment and Initialization", function () {
         it("Should deploy with correct initial state", async function () {
@@ -301,7 +687,8 @@ describe("PersonaTokenFactory", function () {
                 "Cool Persona",
                 "COOL",
                 ["description", "website"],
-                ["A cool AI persona", "https://coolpersona.ai"]
+                ["A cool AI persona", "https://coolpersona.ai"],
+                0,
             );
 
             const receipt = await tx.wait();
@@ -396,7 +783,8 @@ describe("PersonaTokenFactory", function () {
                 "Test",
                 "TEST",
                 [],
-                []
+                [],
+                0
             );
 
             expect(await amicaToken.balanceOf(user1.address)).to.equal(
@@ -424,7 +812,8 @@ describe("PersonaTokenFactory", function () {
                     "Test",
                     "TEST",
                     [],
-                    []
+                    [],
+                    0,
                 )
             ).to.be.revertedWith("Pairing token not enabled");
         });
@@ -444,7 +833,8 @@ describe("PersonaTokenFactory", function () {
                     "",
                     "TEST",
                     [],
-                    []
+                    [],
+                    0,
                 )
             ).to.be.revertedWith("Invalid name length");
 
@@ -455,7 +845,8 @@ describe("PersonaTokenFactory", function () {
                     "ThisNameIsWayTooLongForTheContract",
                     "TEST",
                     [],
-                    []
+                    [],
+                    0,
                 )
             ).to.be.revertedWith("Invalid name length");
         });
@@ -475,7 +866,8 @@ describe("PersonaTokenFactory", function () {
                     "Test",
                     "",
                     [],
-                    []
+                    [],
+                    0,
                 )
             ).to.be.revertedWith("Invalid symbol length");
 
@@ -486,7 +878,8 @@ describe("PersonaTokenFactory", function () {
                     "Test",
                     "VERYLONGSYM",
                     [],
-                    []
+                    [],
+                    0,
                 )
             ).to.be.revertedWith("Invalid symbol length");
         });
@@ -505,7 +898,8 @@ describe("PersonaTokenFactory", function () {
                     "Test",
                     "TEST",
                     ["key1", "key2"],
-                    ["value1"] // Missing value2
+                    ["value1"], // Missing value2
+                    0,
                 )
             ).to.be.revertedWith("Metadata mismatch");
         });
@@ -519,7 +913,8 @@ describe("PersonaTokenFactory", function () {
                     "Test",
                     "TEST",
                     [],
-                    []
+                    [],
+                    0,
                 )
             ).to.be.revertedWithCustomError(amicaToken, "ERC20InsufficientAllowance");
         });
@@ -547,7 +942,7 @@ describe("PersonaTokenFactory", function () {
                     ["Updated description", "@coolpersona"]
                 )
             ).to.emit(personaFactory, "MetadataUpdated")
-             .withArgs(tokenId);
+             .withArgs([tokenId, "description"], [tokenId, "Updated description"])
 
             const metadata = await personaFactory.getMetadata(tokenId, ["description", "twitter"]);
             expect(metadata[0]).to.equal("Updated description");
@@ -990,7 +1385,8 @@ describe("PersonaTokenFactory", function () {
                     `Persona ${i}`,
                     `P${i}`,
                     [],
-                    []
+                    [],
+                    0,
                 );
             }
 
@@ -1079,7 +1475,8 @@ describe("PersonaTokenFactory", function () {
                 "First",
                 "FIRST",
                 ["type"],
-                ["AI"]
+                ["AI"],
+                0,
             );
 
             await personaFactory.connect(user1).createPersona(
@@ -1087,7 +1484,8 @@ describe("PersonaTokenFactory", function () {
                 "Second",
                 "SECOND",
                 ["type"],
-                ["Bot"]
+                ["Bot"],
+                0,
             );
 
             // Purchase tokens for first persona
@@ -1213,7 +1611,8 @@ describe("PersonaTokenFactory", function () {
                 "A", // 1 char name
                 "A", // 1 char symbol
                 [],
-                []
+                [],
+                0,
             );
 
             // Test maximum valid lengths
@@ -1222,7 +1621,8 @@ describe("PersonaTokenFactory", function () {
                 "A".repeat(32), // 32 char name
                 "A".repeat(10), // 10 char symbol
                 [],
-                []
+                [],
+                0,
             );
 
             expect(await personaFactory.ownerOf(0)).to.equal(user1.address);
@@ -1276,7 +1676,8 @@ describe("PersonaTokenFactory", function () {
                     "Test",
                     "TEST",
                     [],
-                    []
+                    [],
+                    0,
                 )
             ).to.be.revertedWith("Insufficient balance");
         });
@@ -1397,7 +1798,8 @@ describe("PersonaTokenFactory", function () {
                 "USDC Persona",
                 "USDCP",
                 ["description"],
-                ["A persona paired with USDC"]
+                ["A persona paired with USDC"],
+                0,
             );
 
             // User2 creates persona with WETH pairing
@@ -1411,7 +1813,8 @@ describe("PersonaTokenFactory", function () {
                 "ETH Persona",
                 "ETHP",
                 ["description"],
-                ["A persona paired with WETH"]
+                ["A persona paired with WETH"],
+                0,
             );
 
             // Verify both personas were created
@@ -1480,7 +1883,8 @@ describe("PersonaTokenFactory", function () {
                 "Test",
                 "TEST",
                 [],
-                []
+                [],
+                0
             );
 
             // Purchase enough to trigger graduation
@@ -1693,7 +2097,9 @@ describe("PersonaTokenFactory", function () {
             // The output should be less than if there was no fee
             // We can verify this by checking that the effective price is higher than the starting ratio
             const effectivePrice = (amountIn * ethers.parseEther("1")) / output;
-            const initialPrice = (ethers.parseEther("100000") * ethers.parseEther("1")) / (total / 10n); // Virtual reserves ratio
+            const virtualAmicaReserve = ethers.parseEther("100000");
+            const virtualTokenReserve = total / 10n;
+            const initialPrice = virtualAmicaReserve * ethers.parseEther("1") / virtualTokenReserve;
 
             expect(effectivePrice).to.be.gt(initialPrice);
         });
@@ -1729,7 +2135,8 @@ describe("PersonaTokenFactory", function () {
                 "USDC6 Persona",
                 "USDC6P",
                 [],
-                []
+                [],
+                0
             );
 
             // Test swapping with 6-decimal token
@@ -1778,7 +2185,8 @@ describe("PersonaTokenFactory", function () {
                 "USDC Test",
                 "USDCT",
                 [],
-                []
+                [],
+                0,
             );
 
             // Try to swap with AMICA instead of USDC - should fail

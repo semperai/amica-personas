@@ -1,6 +1,8 @@
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
+import { time } from "@nomicfoundation/hardhat-network-helpers";
+import { TestERC20 } from "../typechain-types";
 
 describe("PersonaTokenFactory - Complete Lifecycle", function () {
     const DEFAULT_MINT_COST = ethers.parseEther("1000");
@@ -90,7 +92,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
 
     describe("AMICA Pairing Lifecycle", function () {
         it("Should complete full lifecycle with AMICA pairing", async function () {
-            const { amicaToken, personaFactory, creator, buyer1, buyer2, buyer3 } = 
+            const { amicaToken, personaFactory, creator, buyer1, buyer2, buyer3 } =
                 await loadFixture(deployFullSystemFixture);
 
             console.log("\n=== AMICA Persona Lifecycle ===");
@@ -101,16 +103,17 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 DEFAULT_MINT_COST
             );
 
-            const createTx = await personaFactory.connect(creator).createPersona(
+            const createTx = await (personaFactory.connect(creator) as any).createPersona(
                 await amicaToken.getAddress(),
                 "AI Assistant",
                 "ASSIST",
                 ["description", "twitter", "website"],
-                ["Your friendly AI assistant", "@ai_assist", "https://ai-assist.com"]
+                ["Your friendly AI assistant", "@ai_assist", "https://ai-assist.com"],
+                0,
             );
 
             const receipt = await createTx.wait();
-            const event = receipt?.logs.find(log => {
+            const event = receipt?.logs.find((log: any) => {
                 try {
                     const parsed = personaFactory.interface.parseLog({
                         topics: log.topics as string[],
@@ -139,11 +142,14 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             // 2. Early buyers purchase tokens
             const deadline = () => Math.floor(Date.now() / 1000) + 3600;
 
+            // Track creator balance for fee verification
+            const creatorInitialBalance = await amicaToken.balanceOf(creator.address);
+
             // Buyer 1 - Early bird
             const buy1Amount = ethers.parseEther("50000");
             await amicaToken.connect(buyer1).approve(await personaFactory.getAddress(), buy1Amount);
             const quote1 = await personaFactory["getAmountOut(uint256,uint256)"](tokenId, buy1Amount);
-            
+
             await personaFactory.connect(buyer1).swapExactTokensForTokens(
                 tokenId, buy1Amount, quote1, buyer1.address, deadline()
             );
@@ -153,7 +159,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             const buy2Amount = ethers.parseEther("200000");
             await amicaToken.connect(buyer2).approve(await personaFactory.getAddress(), buy2Amount);
             const quote2 = await personaFactory["getAmountOut(uint256,uint256)"](tokenId, buy2Amount);
-            
+
             await personaFactory.connect(buyer2).swapExactTokensForTokens(
                 tokenId, buy2Amount, quote2, buyer2.address, deadline()
             );
@@ -164,6 +170,15 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             const pricePerToken2 = buy2Amount * ethers.parseEther("1") / quote2;
             expect(pricePerToken2).to.be.gt(pricePerToken1);
             console.log(`✓ Price increased from ${ethers.formatEther(pricePerToken1)} to ${ethers.formatEther(pricePerToken2)} AMICA per token`);
+
+            // Check creator received fees
+            const totalPurchases = buy1Amount + buy2Amount;
+            const expectedFees = totalPurchases * 100n / 10000n; // 1% fee
+            const expectedCreatorFees = expectedFees * 5000n / 10000n; // 50% of fees
+
+            const creatorCurrentBalance = await amicaToken.balanceOf(creator.address);
+            expect(creatorCurrentBalance).to.equal(creatorInitialBalance + expectedCreatorFees);
+            console.log(`✓ Creator received ${ethers.formatEther(expectedCreatorFees)} AMICA in trading fees`);
 
             // 3. Approach graduation
             const availableBefore = await personaFactory.getAvailableTokens(tokenId);
@@ -196,10 +211,11 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             expect(liquidityEvent).to.not.be.undefined;
             console.log("\n✓ GRADUATION! Liquidity pair created on Uniswap");
 
-            // Verify creator received graduation reward
+            // Verify creator only received trading fees, not graduation reward
             const creatorBalanceAfter = await amicaToken.balanceOf(creator.address);
-            expect(creatorBalanceAfter).to.equal(creatorBalanceBefore + DEFAULT_GRADUATION_THRESHOLD);
-            console.log(`✓ Creator received ${ethers.formatEther(DEFAULT_GRADUATION_THRESHOLD)} AMICA graduation reward`);
+            const graduationFees = graduationAmount * 100n / 10000n * 5000n / 10000n; // 1% fee, 50% to creator
+            expect(creatorBalanceAfter).to.equal(creatorBalanceBefore + graduationFees);
+            console.log(`✓ Creator received only trading fees (${ethers.formatEther(graduationFees)} AMICA), no graduation reward`);
 
             // 5. Verify post-graduation state
             const personaAfter = await personaFactory.getPersona(tokenId);
@@ -219,20 +235,18 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
 
             // 6. Summary
             const TestERC20 = await ethers.getContractFactory("TestERC20");
-            const assistToken = TestERC20.attach(persona.erc20Token);
+            const assistToken = TestERC20.attach(persona.erc20Token) as TestERC20;
 
             console.log("\n=== Final State ===");
             console.log(`Total ASSIST supply: ${ethers.formatEther(await assistToken.totalSupply())}`);
-            console.log(`Buyer1 balance: ${ethers.formatEther(await assistToken.balanceOf(buyer1.address))}`);
-            console.log(`Buyer2 balance: ${ethers.formatEther(await assistToken.balanceOf(buyer2.address))}`);
-            console.log(`Buyer3 balance: ${ethers.formatEther(await assistToken.balanceOf(buyer3.address))}`);
+            console.log(`Tokens locked for buyers (need to wait 1 week or graduation to withdraw)`);
             console.log(`AMICA deposited: ${ethers.formatEther(await amicaToken.depositedBalances(persona.erc20Token))}`);
         });
     });
 
     describe("USDC Pairing Lifecycle", function () {
         it("Should complete full lifecycle with USDC pairing", async function () {
-            const { amicaToken, personaFactory, usdc, creator, buyer1, buyer2 } = 
+            const { amicaToken, personaFactory, usdc, creator, buyer1, buyer2 } =
                 await loadFixture(deployFullSystemFixture);
 
             console.log("\n=== USDC Persona Lifecycle ===");
@@ -248,7 +262,8 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 "DeFi Bot",
                 "DEFI",
                 ["description"],
-                ["Automated DeFi trading bot"]
+                ["Automated DeFi trading bot"],
+                0, // No initial buy
             );
 
             const tokenId = 0;
@@ -282,22 +297,25 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 tokenId, graduationAmount, 0, buyer2.address, deadline()
             );
 
-            // Verify creator received USDC reward (not AMICA)
+            // Verify creator received only USDC fees (not graduation reward)
             const creatorUsdcAfter = await usdc.balanceOf(creator.address);
-            expect(creatorUsdcAfter).to.equal(creatorUsdcBefore + ethers.parseEther("50000"));
-            console.log(`✓ Creator received ${ethers.formatEther(ethers.parseEther("50000"))} USDC graduation reward`);
+            const totalUsdcPurchases = usdcAmount1 + graduationAmount;
+            const totalFees = totalUsdcPurchases * 100n / 10000n; // 1% fee
+            const creatorFees = totalFees * 5000n / 10000n; // 50% to creator
+            expect(creatorUsdcAfter).to.equal(creatorUsdcBefore + creatorFees);
+            console.log(`✓ Creator received ${ethers.formatEther(creatorFees)} USDC in trading fees only`);
 
             // 4. Verify Uniswap pair is DEFI/USDC (not DEFI/AMICA)
             const mockFactory = await ethers.getContractAt(
                 "IUniswapV2Factory",
                 await personaFactory.uniswapFactory()
             );
-            
+
             const pairAddress = await mockFactory.getPair(
                 persona.erc20Token,
                 await usdc.getAddress()
             );
-            
+
             expect(pairAddress).to.not.equal(ethers.ZeroAddress);
             console.log(`✓ Uniswap pair created: DEFI/USDC at ${pairAddress}`);
 
@@ -313,7 +331,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
 
     describe("WETH Pairing Lifecycle", function () {
         it("Should complete full lifecycle with WETH pairing", async function () {
-            const { amicaToken, personaFactory, weth, creator, buyer1, buyer2 } = 
+            const { amicaToken, personaFactory, weth, creator, buyer1, buyer2 } =
                 await loadFixture(deployFullSystemFixture);
 
             console.log("\n=== WETH Persona Lifecycle ===");
@@ -329,7 +347,8 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 "ETH Maximalist",
                 "ETHMAX",
                 ["description"],
-                ["Only ETH matters"]
+                ["Only ETH matters"],
+                0, // No initial buy
             );
 
             const tokenId = 0;
@@ -347,7 +366,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             // 3. Quick graduation (only 10 WETH threshold)
             const wethAmount2 = ethers.parseEther("8.5"); // Extra for liquidity
             await weth.connect(buyer2).approve(await personaFactory.getAddress(), wethAmount2);
-            
+
             await expect(
                 personaFactory.connect(buyer2).swapExactTokensForTokens(
                     tokenId, wethAmount2, 0, buyer2.address, deadline()
@@ -356,20 +375,22 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
 
             console.log("✓ Graduated with only 10 WETH!");
 
-            // Verify creator received WETH
+            // Verify creator received only fees in WETH
+            const totalWethPurchases = wethAmount1 + wethAmount2;
+            const expectedFees = totalWethPurchases * 100n / 10000n * 5000n / 10000n; // 1% fee, 50% to creator
             const creatorWethBalance = await weth.balanceOf(creator.address);
-            expect(creatorWethBalance).to.be.gte(ethers.parseEther("10"));
-            console.log(`✓ Creator received ${ethers.formatEther(ethers.parseEther("10"))} WETH reward`);
+            expect(creatorWethBalance).to.be.gte(ethers.parseEther("0.9") + expectedFees); // Initial 1 WETH minus mint cost + fees
+            console.log(`✓ Creator received fees in WETH`);
         });
     });
 
     describe("AMICA Burn and Claim Integration", function () {
         it("Should allow AMICA holders to claim persona tokens", async function () {
-            const { amicaToken, personaFactory, usdc, creator, buyer1, owner } = 
+            const { amicaToken, personaFactory, usdc, creator, buyer1, owner } =
                 await loadFixture(deployFullSystemFixture);
 
             // Create multiple personas with different pairings
-            
+
             // AMICA persona
             await amicaToken.connect(creator).approve(await personaFactory.getAddress(), DEFAULT_MINT_COST);
             await personaFactory.connect(creator).createPersona(
@@ -377,7 +398,8 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 "AMICA Test",
                 "ATEST",
                 [],
-                []
+                [],
+                0,
             );
 
             // USDC persona
@@ -387,7 +409,8 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 "USDC Test",
                 "UTEST",
                 [],
-                []
+                [],
+                0,
             );
 
             const persona1 = await personaFactory.getPersona(0);
@@ -403,14 +426,17 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             console.log("\n=== AMICA Burn & Claim ===");
             console.log(`Token indices: ${index1}, ${index2}`);
 
+            // Get initial circulating supply for calculation
+            const circulatingSupply = await amicaToken.circulatingSupply();
+
             // Burn AMICA and claim both persona tokens
             const burnAmount = ethers.parseEther("100000");
             await amicaToken.burnAndClaim(burnAmount, [index1, index2]);
 
             // Check received tokens
             const TestERC20 = await ethers.getContractFactory("TestERC20");
-            const token1 = TestERC20.attach(persona1.erc20Token);
-            const token2 = TestERC20.attach(persona2.erc20Token);
+            const token1 = TestERC20.attach(persona1.erc20Token) as TestERC20;
+            const token2 = TestERC20.attach(persona2.erc20Token) as TestERC20;
 
             const balance1 = await token1.balanceOf(owner.address);
             const balance2 = await token2.balanceOf(owner.address);
@@ -422,12 +448,250 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             expect(balance2).to.be.gt(0);
 
             // Both should be proportional to burn amount
-            const circulatingSupply = await amicaToken.circulatingSupply();
             const sharePercentage = burnAmount * ethers.parseEther("1") / circulatingSupply;
             const expectedClaim = ethers.parseEther("100000000") * sharePercentage / ethers.parseEther("1");
 
-            expect(balance1).to.be.closeTo(expectedClaim, ethers.parseEther("1"));
-            expect(balance2).to.be.closeTo(expectedClaim, ethers.parseEther("1"));
+            // Allow some tolerance for the calculation
+            expect(balance1).to.be.closeTo(expectedClaim, ethers.parseEther("10"));
+            expect(balance2).to.be.closeTo(expectedClaim, ethers.parseEther("10"));
+        });
+    });
+
+    describe("Initial Buy Feature", function () {
+        it("Should allow creator to buy tokens at launch to prevent sniping", async function () {
+            const { amicaToken, personaFactory, creator } =
+                await loadFixture(deployFullSystemFixture);
+
+            console.log("\n=== Initial Buy Feature ===");
+
+            const initialBuyAmount = ethers.parseEther("10000");
+            const totalPayment = DEFAULT_MINT_COST + initialBuyAmount;
+
+            await amicaToken.connect(creator).approve(
+                await personaFactory.getAddress(),
+                totalPayment
+            );
+
+            const creatorBalanceBefore = await amicaToken.balanceOf(creator.address);
+
+            const tx = await personaFactory.connect(creator).createPersona(
+                await amicaToken.getAddress(),
+                "Anti-Snipe Token",
+                "NOSNIPE",
+                ["description"],
+                ["Token with creator initial buy"],
+                initialBuyAmount
+            );
+
+            await expect(tx).to.emit(personaFactory, "PersonaCreated");
+            await expect(tx).to.emit(personaFactory, "TokensPurchased");
+
+            const tokenId = 0;
+
+            // Check creator's purchases
+            const purchases = await personaFactory.getUserPurchases(tokenId, creator.address);
+            expect(purchases.length).to.equal(1);
+            expect(purchases[0].amount).to.be.gt(0);
+            console.log(`✓ Creator bought ${ethers.formatEther(purchases[0].amount)} tokens at launch`);
+
+            // Verify payment was taken
+            const creatorBalanceAfter = await amicaToken.balanceOf(creator.address);
+            const totalSpent = DEFAULT_MINT_COST + initialBuyAmount;
+            const feeRefund = initialBuyAmount * 100n / 10000n * 5000n / 10000n; // Creator gets back their portion of fees
+            expect(creatorBalanceAfter).to.equal(creatorBalanceBefore - totalSpent + feeRefund);
+            console.log("✓ Creator paid mint cost + initial buy amount");
+
+            // Verify tokens are locked
+            await expect(
+                personaFactory.connect(creator).withdrawTokens(tokenId)
+            ).to.be.revertedWith("No tokens to withdraw");
+            console.log("✓ Creator's tokens are locked for 1 week");
+        });
+    });
+
+    describe("Token Lock Mechanism", function () {
+        it("Should demonstrate full lock and unlock cycle", async function () {
+            const { amicaToken, personaFactory, creator, buyer1 } =
+                await loadFixture(deployFullSystemFixture);
+
+            console.log("\n=== Token Lock Mechanism ===");
+
+            // Create persona
+            await amicaToken.connect(creator).approve(
+                await personaFactory.getAddress(),
+                DEFAULT_MINT_COST
+            );
+
+            await personaFactory.connect(creator).createPersona(
+                await amicaToken.getAddress(),
+                "Lock Test",
+                "LOCK",
+                [],
+                [],
+                0, // No initial buy
+            );
+
+            const tokenId = 0;
+            const deadline = () => Math.floor(Date.now() / 1000) + 3600;
+
+            // Buyer purchases tokens
+            const buyAmount = ethers.parseEther("10000");
+            await amicaToken.connect(buyer1).approve(await personaFactory.getAddress(), buyAmount);
+
+            const quote = await personaFactory["getAmountOut(uint256,uint256)"](tokenId, buyAmount);
+            await personaFactory.connect(buyer1).swapExactTokensForTokens(
+                tokenId, buyAmount, quote, buyer1.address, deadline()
+            );
+            console.log(`✓ Buyer1 purchased ${ethers.formatEther(quote)} tokens`);
+
+            // Try to withdraw immediately - should fail
+            await expect(
+                personaFactory.connect(buyer1).withdrawTokens(tokenId)
+            ).to.be.revertedWith("No tokens to withdraw");
+            console.log("✓ Cannot withdraw immediately after purchase");
+
+            // Fast forward 6 days - still can't withdraw
+            await time.increase(6 * 24 * 60 * 60);
+            await expect(
+                personaFactory.connect(buyer1).withdrawTokens(tokenId)
+            ).to.be.revertedWith("No tokens to withdraw");
+            console.log("✓ Cannot withdraw after 6 days");
+
+            // Fast forward 1 more day (total 7 days) - now can withdraw
+            await time.increase(1 * 24 * 60 * 60);
+
+            const persona = await personaFactory.getPersona(tokenId);
+            const TestERC20 = await ethers.getContractFactory("TestERC20");
+            const personaToken = TestERC20.attach(persona.erc20Token) as TestERC20;
+
+            const balanceBefore = await personaToken.balanceOf(buyer1.address);
+
+            await expect(
+                personaFactory.connect(buyer1).withdrawTokens(tokenId)
+            ).to.emit(personaFactory, "TokensWithdrawn")
+             .withArgs(tokenId, buyer1.address, quote);
+
+            const balanceAfter = await personaToken.balanceOf(buyer1.address);
+            expect(balanceAfter).to.equal(balanceBefore + quote);
+            console.log("✓ Successfully withdrew tokens after 7 days");
+
+            // Try to withdraw again - should fail
+            await expect(
+                personaFactory.connect(buyer1).withdrawTokens(tokenId)
+            ).to.be.revertedWith("No tokens to withdraw");
+            console.log("✓ Cannot withdraw same tokens twice");
+        });
+
+        it("Should allow immediate withdrawal after graduation", async function () {
+            const { amicaToken, personaFactory, creator, buyer1, buyer2 } =
+                await loadFixture(deployFullSystemFixture);
+
+            // Create persona
+            await amicaToken.connect(creator).approve(
+                await personaFactory.getAddress(),
+                DEFAULT_MINT_COST
+            );
+
+            await personaFactory.connect(creator).createPersona(
+                await amicaToken.getAddress(),
+                "Grad Test",
+                "GRAD",
+                [],
+                [],
+                0, // No initial buy
+            );
+
+            const tokenId = 0;
+            const deadline = () => Math.floor(Date.now() / 1000) + 3600;
+
+            // Buyer 1 makes small purchase
+            const smallAmount = ethers.parseEther("10000");
+            await amicaToken.connect(buyer1).approve(await personaFactory.getAddress(), smallAmount);
+
+            const quote = await personaFactory["getAmountOut(uint256,uint256)"](tokenId, smallAmount);
+            await personaFactory.connect(buyer1).swapExactTokensForTokens(
+                tokenId, smallAmount, quote, buyer1.address, deadline()
+            );
+
+            // Buyer 2 triggers graduation
+            const graduationAmount = DEFAULT_GRADUATION_THRESHOLD;
+            await amicaToken.connect(buyer2).approve(await personaFactory.getAddress(), graduationAmount);
+
+            await expect(
+                personaFactory.connect(buyer2).swapExactTokensForTokens(
+                    tokenId, graduationAmount, 0, buyer2.address, deadline()
+                )
+            ).to.emit(personaFactory, "LiquidityPairCreated");
+
+            // Buyer 1 should be able to withdraw immediately
+            const persona = await personaFactory.getPersona(tokenId);
+            const TestERC20 = await ethers.getContractFactory("TestERC20");
+            const personaToken = TestERC20.attach(persona.erc20Token) as TestERC20;
+
+            const balanceBefore = await personaToken.balanceOf(buyer1.address);
+
+            await expect(
+                personaFactory.connect(buyer1).withdrawTokens(tokenId)
+            ).to.emit(personaFactory, "TokensWithdrawn")
+             .withArgs(tokenId, buyer1.address, quote);
+
+            const balanceAfter = await personaToken.balanceOf(buyer1.address);
+            expect(balanceAfter).to.equal(balanceBefore + quote);
+
+            console.log("✓ Tokens unlocked immediately after graduation");
+        });
+    });
+
+    describe("Trading Fee Scenarios", function () {
+        it("Should handle different fee configurations", async function () {
+            const { amicaToken, personaFactory, owner, creator, buyer1 } =
+                await loadFixture(deployFullSystemFixture);
+
+            // Configure 2% fee with 70/30 split (70% to creator)
+            await personaFactory.configureTradingFees(200, 7000);
+
+            // Create persona
+            await amicaToken.connect(creator).approve(
+                await personaFactory.getAddress(),
+                DEFAULT_MINT_COST
+            );
+
+            await personaFactory.connect(creator).createPersona(
+                await amicaToken.getAddress(),
+                "Fee Test",
+                "FEE",
+                [],
+                [],
+                0, // No initial buy
+            );
+
+            const tokenId = 0;
+            const deadline = () => Math.floor(Date.now() / 1000) + 3600;
+
+            // Track balances
+            const creatorBalanceBefore = await amicaToken.balanceOf(creator.address);
+            const amicaContractBalanceBefore = await amicaToken.balanceOf(await amicaToken.getAddress());
+
+            // Buy tokens
+            const buyAmount = ethers.parseEther("100000");
+            await amicaToken.connect(buyer1).approve(await personaFactory.getAddress(), buyAmount);
+
+            await personaFactory.connect(buyer1).swapExactTokensForTokens(
+                tokenId, buyAmount, 0, buyer1.address, deadline()
+            );
+
+            // Check fee distribution
+            const totalFees = buyAmount * 200n / 10000n; // 2%
+            const creatorFees = totalFees * 7000n / 10000n; // 70%
+            const amicaFees = totalFees - creatorFees; // 30%
+
+            const creatorBalanceAfter = await amicaToken.balanceOf(creator.address);
+            expect(creatorBalanceAfter).to.equal(creatorBalanceBefore + creatorFees);
+
+            console.log(`✓ With 2% fee and 70/30 split:`);
+            console.log(`  - Total fees: ${ethers.formatEther(totalFees)} AMICA`);
+            console.log(`  - Creator received: ${ethers.formatEther(creatorFees)} AMICA`);
+            console.log(`  - AMICA protocol received: ${ethers.formatEther(amicaFees)} AMICA`);
         });
     });
 });

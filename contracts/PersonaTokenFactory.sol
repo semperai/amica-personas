@@ -64,6 +64,17 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 tokensSold;
     }
 
+    struct UserPurchase {
+        uint256 amount;
+        uint256 timestamp;
+        bool withdrawn;
+    }
+
+    struct TradingFeeConfig {
+        uint256 feePercentage;    // Fee percentage (basis points, e.g., 100 = 1%)
+        uint256 creatorShare;      // Creator's share of fees (basis points, e.g., 5000 = 50%)
+    }
+
     IERC20 public amicaToken;
     IUniswapV2Factory public uniswapFactory;
     IUniswapV2Router public uniswapRouter;
@@ -75,10 +86,16 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     mapping(uint256 => TokenPurchase) private _purchases;
     mapping(address => PairingConfig) public pairingConfigs;
 
+    // New state variables for features
+    mapping(uint256 => mapping(address => UserPurchase[])) private _userPurchases;
+    TradingFeeConfig public tradingFeeConfig;
+    uint256 public constant LOCK_DURATION = 7 days;
+
     // Constants
     uint256 public constant PERSONA_TOKEN_SUPPLY = 1_000_000_000 ether;
     uint256 public constant LIQUIDITY_TOKEN_AMOUNT = 600_000_000 ether;  // 60% for liquidity
     string private constant TOKEN_SUFFIX = ".amica";
+    uint256 private constant BASIS_POINTS = 10000;
 
     // Events
     event PersonaCreated(
@@ -92,6 +109,9 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     event MetadataUpdated(uint256 indexed tokenId, string indexed key);
     event TokensPurchased(uint256 indexed tokenId, address indexed buyer, uint256 amountSpent, uint256 tokensReceived);
     event LiquidityPairCreated(uint256 indexed tokenId, address indexed pair, uint256 liquidity);
+    event TradingFeeConfigUpdated(uint256 feePercentage, uint256 creatorShare);
+    event TokensWithdrawn(uint256 indexed tokenId, address indexed user, uint256 amount);
+    event TradingFeesCollected(uint256 indexed tokenId, uint256 totalFees, uint256 creatorFees, uint256 amicaFees);
 
     function initialize(
         address amicaToken_,
@@ -120,6 +140,28 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             graduationThreshold: 1_000_000 ether,
             amicaDepositAmount: 100_000_000 ether  // 10% for AMICA deposit
         });
+
+        // Initialize trading fee config (1% fee, 50/50 split)
+        tradingFeeConfig = TradingFeeConfig({
+            feePercentage: 100,    // 1%
+            creatorShare: 5000     // 50%
+        });
+    }
+
+    /**
+     * @notice Configure trading fee parameters
+     */
+    function configureTradingFees(
+        uint256 feePercentage,
+        uint256 creatorShare
+    ) external onlyOwner {
+        require(feePercentage <= 1000, "Fee too high"); // Max 10%
+        require(creatorShare <= BASIS_POINTS, "Invalid creator share");
+
+        tradingFeeConfig.feePercentage = feePercentage;
+        tradingFeeConfig.creatorShare = creatorShare;
+
+        emit TradingFeeConfigUpdated(feePercentage, creatorShare);
     }
 
     /**
@@ -153,13 +195,15 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
     /**
      * @notice Create a new persona with associated ERC20 token
+     * @param initialBuyAmount Optional amount to buy on the bonding curve at launch
      */
     function createPersona(
         address pairingToken,
         string memory name,
         string memory symbol,
         string[] memory metadataKeys,
-        string[] memory metadataValues
+        string[] memory metadataValues,
+        uint256 initialBuyAmount
     ) external nonReentrant returns (uint256) {
         // Validations
         PairingConfig memory config = pairingConfigs[pairingToken];
@@ -168,10 +212,11 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         require(bytes(symbol).length > 0 && bytes(symbol).length <= 10, "Invalid symbol length");
         require(metadataKeys.length == metadataValues.length, "Metadata mismatch");
 
-        // Take payment in the pairing token - check balance first
-        require(IERC20(pairingToken).balanceOf(msg.sender) >= config.mintCost, "Insufficient balance");
+        // Take payment in the pairing token
+        uint256 totalPayment = config.mintCost + initialBuyAmount;
+        require(IERC20(pairingToken).balanceOf(msg.sender) >= totalPayment, "Insufficient balance");
         require(
-            IERC20(pairingToken).transferFrom(msg.sender, address(this), config.mintCost),
+            IERC20(pairingToken).transferFrom(msg.sender, address(this), totalPayment),
             "Payment failed"
         );
 
@@ -207,6 +252,17 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         IAmicaToken(address(amicaToken)).deposit(erc20Token, config.amicaDepositAmount);
 
         emit PersonaCreated(tokenId, msg.sender, erc20Token, name, symbol);
+
+        // Handle initial buy if specified
+        if (initialBuyAmount > 0) {
+            _swapExactTokensForTokensInternal(
+                tokenId,
+                initialBuyAmount,
+                0,
+                msg.sender,
+                block.timestamp + 300
+            );
+        }
 
         return tokenId;
     }
@@ -272,12 +328,47 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
+     * @notice Get user purchases for a persona
+     */
+    function getUserPurchases(uint256 tokenId, address user)
+        external
+        view
+        returns (UserPurchase[] memory)
+    {
+        return _userPurchases[tokenId][user];
+    }
+
+    /**
+     * @notice Withdraw unlocked tokens
+     */
+    function withdrawTokens(uint256 tokenId) external nonReentrant {
+        PersonaData storage persona = _personas[tokenId];
+        require(persona.erc20Token != address(0), "Invalid token");
+
+        UserPurchase[] storage purchases = _userPurchases[tokenId][msg.sender];
+        uint256 totalToWithdraw = 0;
+
+        for (uint256 i = 0; i < purchases.length; i++) {
+            if (!purchases[i].withdrawn &&
+                (persona.pairCreated || block.timestamp >= persona.createdAt + LOCK_DURATION)) {
+                totalToWithdraw += purchases[i].amount;
+                purchases[i].withdrawn = true;
+            }
+        }
+
+        require(totalToWithdraw > 0, "No tokens to withdraw");
+
+        // Transfer tokens
+        require(
+            IERC20(persona.erc20Token).transfer(msg.sender, totalToWithdraw),
+            "Transfer failed"
+        );
+
+        emit TokensWithdrawn(tokenId, msg.sender, totalToWithdraw);
+    }
+
+    /**
      * @notice Swap exact tokens for persona tokens (similar to Uniswap)
-     * @param tokenId The persona token ID
-     * @param amountIn Amount of pairing tokens to spend
-     * @param amountOutMin Minimum persona tokens to receive
-     * @param to Recipient address
-     * @param deadline Transaction deadline
      */
     function swapExactTokensForTokens(
         uint256 tokenId,
@@ -286,18 +377,32 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         address to,
         uint256 deadline
     ) external nonReentrant returns (uint256 amountOut) {
+        return _swapExactTokensForTokensInternal(tokenId, amountIn, amountOutMin, to, deadline);
+    }
+
+    function _swapExactTokensForTokensInternal(
+        uint256 tokenId,
+        uint256 amountIn,
+        uint256 amountOutMin,
+        address to,
+        uint256 deadline
+    ) private returns (uint256 amountOut) {
         require(block.timestamp <= deadline, "Transaction expired");
         require(to != address(0), "Invalid recipient");
-        
+
         PersonaData storage persona = _personas[tokenId];
         require(!persona.pairCreated, "Trading already on Uniswap");
         require(persona.erc20Token != address(0), "Invalid token");
 
         TokenPurchase storage purchase = _purchases[tokenId];
 
-        // Calculate tokens out using Bancor formula
+        // Calculate fees
+        uint256 feeAmount = (amountIn * tradingFeeConfig.feePercentage) / BASIS_POINTS;
+        uint256 amountInAfterFee = amountIn - feeAmount;
+
+        // Calculate tokens out using Bancor formula (after fees)
         amountOut = getAmountOut(
-            amountIn,
+            amountInAfterFee,
             purchase.tokensSold,
             getAvailableTokens(tokenId) + purchase.tokensSold
         );
@@ -305,21 +410,27 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         require(amountOut >= amountOutMin, "Insufficient output amount");
         require(amountOut <= getAvailableTokens(tokenId), "Insufficient liquidity");
 
-        // Take payment in the pairing token
+        // Take payment in the pairing token (full amount including fees)
         require(
             IERC20(persona.pairToken).transferFrom(msg.sender, address(this), amountIn),
             "Transfer failed"
         );
 
+        // Handle fees if any
+        if (feeAmount > 0) {
+            _distributeTradingFees(tokenId, feeAmount);
+        }
+
         // Update state
-        purchase.totalDeposited += amountIn;
+        purchase.totalDeposited += amountInAfterFee;
         purchase.tokensSold += amountOut;
 
-        // Transfer tokens
-        require(
-            IERC20(persona.erc20Token).transfer(to, amountOut),
-            "Transfer failed"
-        );
+        // Store purchase info for lock
+        _userPurchases[tokenId][to].push(UserPurchase({
+            amount: amountOut,
+            timestamp: block.timestamp,
+            withdrawn: false
+        }));
 
         emit TokensPurchased(tokenId, to, amountIn, amountOut);
 
@@ -330,10 +441,39 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
+     * @notice Distribute trading fees between creator and AMICA
+     */
+    function _distributeTradingFees(uint256 tokenId, uint256 feeAmount) private {
+        PersonaData storage persona = _personas[tokenId];
+
+        uint256 creatorFees = (feeAmount * tradingFeeConfig.creatorShare) / BASIS_POINTS;
+        uint256 amicaFees = feeAmount - creatorFees;
+
+        // Send creator's share
+        if (creatorFees > 0) {
+            IERC20(persona.pairToken).transfer(ownerOf(tokenId), creatorFees);
+        }
+
+        // Deposit AMICA's share
+        if (amicaFees > 0) {
+            // If pairing token is AMICA, deposit directly
+            if (persona.pairToken == address(amicaToken)) {
+                // Need to approve from this contract to AMICA contract
+                IERC20(persona.pairToken).approve(address(amicaToken), amicaFees);
+                IAmicaToken(address(amicaToken)).deposit(persona.erc20Token, amicaFees);
+            } else {
+                // For other tokens, just hold them (could be extended to swap to AMICA first)
+                // For now, send to AMICA treasury (the AMICA token contract)
+                IERC20(persona.pairToken).transfer(address(amicaToken), amicaFees);
+            }
+        }
+
+        emit TradingFeesCollected(tokenId, feeAmount, creatorFees, amicaFees);
+    }
+
+
+    /**
      * @notice Calculate output amount using Bancor-style bonding curve
-     * @param amountIn Input amount of AMICA
-     * @param reserveSold Amount of tokens already sold
-     * @param reserveTotal Total tokens available for bonding curve
      */
     function getAmountOut(
         uint256 amountIn,
@@ -342,38 +482,37 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     ) public pure returns (uint256) {
         require(amountIn > 0, "Insufficient input amount");
         require(reserveTotal > reserveSold, "Insufficient reserve");
-        
+
         // Bancor-inspired formula with virtual reserves
-        // This creates a gradual price increase as more tokens are sold
-        
-        // Virtual reserves to prevent extreme price movements
-        uint256 virtualAmicaReserve = 100_000 ether; // Virtual AMICA reserve
-        uint256 virtualTokenReserve = reserveTotal / 10; // 10% of total as virtual reserve
-        
-        // Current reserves
+        uint256 virtualAmicaReserve = 100_000 ether;
+        uint256 virtualTokenReserve = reserveTotal / 10;
+
         uint256 currentTokenReserve = virtualTokenReserve + (reserveTotal - reserveSold);
         uint256 currentAmicaReserve = virtualAmicaReserve + (reserveSold * virtualAmicaReserve / virtualTokenReserve);
-        
-        // Calculate output using constant product formula: x * y = k
-        // amountOut = currentTokenReserve - (k / (currentAmicaReserve + amountIn))
+
         uint256 k = currentTokenReserve * currentAmicaReserve;
         uint256 newAmicaReserve = currentAmicaReserve + amountIn;
         uint256 newTokenReserve = k / newAmicaReserve;
         uint256 amountOut = currentTokenReserve - newTokenReserve;
-        
+
         // Apply a 1% fee
         amountOut = amountOut * 99 / 100;
-        
+
         return amountOut;
     }
 
     /**
-     * @notice Get a quote for swapping AMICA for tokens
+     * @notice Get a quote for swapping tokens
      */
     function getAmountOut(uint256 tokenId, uint256 amountIn) external view returns (uint256) {
         TokenPurchase storage purchase = _purchases[tokenId];
         uint256 totalAvailable = getAvailableTokens(tokenId) + purchase.tokensSold;
-        return getAmountOut(amountIn, purchase.tokensSold, totalAvailable);
+
+        // Apply trading fee to input
+        uint256 feeAmount = (amountIn * tradingFeeConfig.feePercentage) / BASIS_POINTS;
+        uint256 amountInAfterFee = amountIn - feeAmount;
+
+        return getAmountOut(amountInAfterFee, purchase.tokensSold, totalAvailable);
     }
 
     /**
@@ -384,12 +523,10 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         pure
         returns (uint256)
     {
-        // Approximate the Bancor formula output for legacy compatibility
-        // This is a simplified calculation and may not match exactly
-        uint256 totalSupply = 110_000_000 ether; // Approximate available tokens
+        uint256 totalSupply = 110_000_000 ether;
         uint256 soldRatio = currentDeposited * 1e18 / graduationThreshold;
         uint256 tokensSold = totalSupply * soldRatio / 1e18;
-        
+
         return getAmountOut(amountIn, tokensSold, totalSupply);
     }
 
@@ -399,20 +536,16 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     function getAvailableTokens(uint256 tokenId) public view returns (uint256) {
         PersonaData storage persona = _personas[tokenId];
         if (persona.pairCreated) return 0;
-        if (persona.erc20Token == address(0)) return 0; // Persona doesn't exist
+        if (persona.erc20Token == address(0)) return 0;
 
-        // Calculate total tokens available for bonding curve
-        // Total supply - AMICA deposit - liquidity reserve
         uint256 amicaDeposit = pairingConfigs[persona.pairToken].amicaDepositAmount;
-        
-        // Ensure we don't underflow
+
         if (PERSONA_TOKEN_SUPPLY < amicaDeposit + LIQUIDITY_TOKEN_AMOUNT) {
             return 0;
         }
-        
+
         uint256 totalForBonding = PERSONA_TOKEN_SUPPLY - amicaDeposit - LIQUIDITY_TOKEN_AMOUNT;
-        
-        // Subtract already sold tokens
+
         uint256 sold = _purchases[tokenId].tokensSold;
         if (sold >= totalForBonding) {
             return 0;
@@ -428,11 +561,12 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         PersonaData storage persona = _personas[tokenId];
         require(!persona.pairCreated, "Pair already created");
 
-        PairingConfig memory config = pairingConfigs[persona.pairToken];
         TokenPurchase storage purchase = _purchases[tokenId];
 
         address erc20Token = persona.erc20Token;
-        uint256 pairingTokenForLiquidity = purchase.totalDeposited - config.graduationThreshold;
+
+        // All pairing tokens go to liquidity (no graduation reward to creator)
+        uint256 pairingTokenForLiquidity = purchase.totalDeposited;
 
         // Approve router for both tokens
         IERC20(erc20Token).approve(address(uniswapRouter), LIQUIDITY_TOKEN_AMOUNT);
@@ -449,16 +583,10 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             persona.pairToken,
             LIQUIDITY_TOKEN_AMOUNT,
             pairingTokenForLiquidity,
-            0, // Accept any amount
-            0, // Accept any amount
-            ownerOf(tokenId),
+            0,
+            0,
+            address(this), // LP tokens go to contract
             block.timestamp + 300
-        );
-
-        // Send graduation reward to NFT owner (in pairing token)
-        require(
-            IERC20(persona.pairToken).transfer(ownerOf(tokenId), config.graduationThreshold),
-            "Reward transfer failed"
         );
 
         persona.pairCreated = true;
@@ -479,12 +607,10 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         override
         returns (string memory)
     {
-        // TODO this should provide the image from some website
         _requireOwned(tokenId);
 
         PersonaData storage persona = _personas[tokenId];
 
-        // Return basic JSON metadata with properly quoted tokenId
         return string(abi.encodePacked(
             'data:application/json;utf8,{"name":"',
             persona.name,
