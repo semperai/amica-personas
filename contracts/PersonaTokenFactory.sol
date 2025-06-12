@@ -260,7 +260,8 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
                 initialBuyAmount,
                 0,
                 msg.sender,
-                block.timestamp + 300
+                block.timestamp + 300,
+                true // Internal call, tokens already in contract
             );
         }
 
@@ -378,7 +379,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         address to,
         uint256 deadline
     ) external nonReentrant returns (uint256 amountOut) {
-        return _swapExactTokensForTokensInternal(tokenId, amountIn, amountOutMin, to, deadline);
+        return _swapExactTokensForTokensInternal(tokenId, amountIn, amountOutMin, to, deadline, false);
     }
 
     function _swapExactTokensForTokensInternal(
@@ -386,7 +387,8 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 amountIn,
         uint256 amountOutMin,
         address to,
-        uint256 deadline
+        uint256 deadline,
+        bool isInternal  // Add this parameter
     ) private returns (uint256 amountOut) {
         require(block.timestamp <= deadline, "Transaction expired");
         require(to != address(0), "Invalid recipient");
@@ -411,11 +413,14 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         require(amountOut >= amountOutMin, "Insufficient output amount");
         require(amountOut <= getAvailableTokens(tokenId), "Insufficient liquidity");
 
-        // Take payment in the pairing token (full amount including fees)
-        require(
-            IERC20(persona.pairToken).transferFrom(msg.sender, address(this), amountIn),
-            "Transfer failed"
-        );
+        // Only transfer tokens if this is NOT an internal call
+        // Internal calls mean tokens are already in the contract
+        if (!isInternal) {
+            require(
+                IERC20(persona.pairToken).transferFrom(msg.sender, address(this), amountIn),
+                "Transfer failed"
+            );
+        }
 
         // Handle fees if any
         if (feeAmount > 0) {
@@ -440,6 +445,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             _createLiquidityPair(tokenId);
         }
     }
+
 
     /**
      * @notice Distribute trading fees between creator and AMICA

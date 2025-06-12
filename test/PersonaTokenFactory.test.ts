@@ -223,7 +223,7 @@ describe("PersonaTokenFactory", function () {
             ).to.be.revertedWith("No tokens to withdraw");
 
             // Check user purchases
-            const purchases = await personaFactory.getUserPurchases(tokenId, user2.address);
+            const purchases = await personaFactory.getUserpurchases(tokenId, user2.address);
             expect(purchases.length).to.equal(1);
             expect(purchases[0].withdrawn).to.be.false;
         });
@@ -304,7 +304,7 @@ describe("PersonaTokenFactory", function () {
 
             // Creator should have bought tokens (but locked)
             const tokenId = 0;
-            const purchases = await personaFactory.getUserPurchases(tokenId, user1.address);
+            const purchases = await personaFactory.getUserpurchases(tokenId, user1.address);
             expect(purchases.length).to.equal(1);
             expect(purchases[0].amount).to.be.gt(0);
         });
