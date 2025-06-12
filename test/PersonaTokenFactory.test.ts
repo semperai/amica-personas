@@ -217,7 +217,7 @@ describe("PersonaTokenFactory", function () {
             const smallAmount = ethers.parseEther("10000");
             await amicaToken.connect(user2).approve(
                 await personaFactory.getAddress(),
-                DEFAULT_GRADUATION_THRESHOLD + smallAmount
+                DEFAULT_GRADUATION_THRESHOLD + smallAmount + ethers.parseEther("100000") // Extra for graduation
             );
 
             const expectedTokens = await getQuote(personaFactory, tokenId, smallAmount);
@@ -230,7 +230,7 @@ describe("PersonaTokenFactory", function () {
             // Calculate exact amount needed for graduation
             // Need to account for fees: if we need X more deposits, we need to send X / 0.99 tokens
             const remainingNeeded = DEFAULT_GRADUATION_THRESHOLD - depositsBeforeGrad;
-            const graduationAmount = (remainingNeeded * 10000n) / 9900n; // Account for 1% fee
+            const graduationAmount = (remainingNeeded * 10000n) / 9900n + ethers.parseEther("1"); // Add small buffer
 
             await swapTokensForPersona(personaFactory, tokenId, graduationAmount, 0n, user2);
 

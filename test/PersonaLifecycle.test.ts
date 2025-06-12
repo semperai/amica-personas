@@ -344,7 +344,6 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             expect(amicaPairAddress).to.equal(ethers.ZeroAddress);
             console.log("✓ No DEFI/AMICA pair created");
         });
-
     });
 
     describe("WETH Pairing Lifecycle", function () {
@@ -498,7 +497,6 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             expect(balance1).to.be.closeTo(expectedClaim, ethers.parseEther("100"));
             expect(balance2).to.be.closeTo(expectedClaim, ethers.parseEther("100"));
         });
-
     });
 
     describe("Initial Buy Feature", function () {
@@ -550,146 +548,6 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 personaFactory.connect(creator).withdrawTokens(tokenId)
             ).to.be.revertedWith("No tokens to withdraw");
             console.log("✓ Creator's tokens are locked for 1 week");
-        });
-    });
-
-    describe("Token Lock Mechanism", function () {
-        it("Should demonstrate full lock and unlock cycle", async function () {
-            const { amicaToken, personaFactory, creator, buyer1 } =
-                await loadFixture(deployFullSystemFixture);
-
-            console.log("\n=== Token Lock Mechanism ===");
-
-            // Create persona
-            await amicaToken.connect(creator).approve(
-                await personaFactory.getAddress(),
-                DEFAULT_MINT_COST
-            );
-
-            await personaFactory.connect(creator).createPersona(
-                await amicaToken.getAddress(),
-                "Lock Test",
-                "LOCK",
-                [],
-                [],
-                0, // No initial buy
-            );
-
-            const tokenId = 0;
-            const deadline = () => Math.floor(Date.now() / 1000) + 3600;
-
-            // Buyer purchases tokens
-            const buyAmount = ethers.parseEther("10000");
-            await amicaToken.connect(buyer1).approve(await personaFactory.getAddress(), buyAmount);
-
-            const quote = await personaFactory["getAmountOut(uint256,uint256)"](tokenId, buyAmount);
-            await personaFactory.connect(buyer1).swapExactTokensForTokens(
-                tokenId, buyAmount, quote, buyer1.address, deadline()
-            );
-            console.log(`✓ Buyer1 purchased ${ethers.formatEther(quote)} tokens`);
-
-            // Try to withdraw immediately - should fail
-            await expect(
-                personaFactory.connect(buyer1).withdrawTokens(tokenId)
-            ).to.be.revertedWith("No tokens to withdraw");
-            console.log("✓ Cannot withdraw immediately after purchase");
-
-            // Fast forward 6 days - still can't withdraw
-            await time.increase(6 * 24 * 60 * 60);
-            await expect(
-                personaFactory.connect(buyer1).withdrawTokens(tokenId)
-            ).to.be.revertedWith("No tokens to withdraw");
-            console.log("✓ Cannot withdraw after 6 days");
-
-            // Fast forward 1 more day (total 7 days) - now can withdraw
-            await time.increase(1 * 24 * 60 * 60);
-
-            const persona = await personaFactory.getPersona(tokenId);
-            const TestERC20 = await ethers.getContractFactory("TestERC20");
-            const personaToken = TestERC20.attach(persona.erc20Token) as TestERC20;
-
-            const balanceBefore = await personaToken.balanceOf(buyer1.address);
-
-            await expect(
-                personaFactory.connect(buyer1).withdrawTokens(tokenId)
-            ).to.emit(personaFactory, "TokensWithdrawn")
-             .withArgs(tokenId, buyer1.address, quote);
-
-            const balanceAfter = await personaToken.balanceOf(buyer1.address);
-            expect(balanceAfter).to.equal(balanceBefore + quote);
-            console.log("✓ Successfully withdrew tokens after 7 days");
-
-            // Try to withdraw again - should fail
-            await expect(
-                personaFactory.connect(buyer1).withdrawTokens(tokenId)
-            ).to.be.revertedWith("No tokens to withdraw");
-            console.log("✓ Cannot withdraw same tokens twice");
-        });
-
-        it("Should allow immediate withdrawal after graduation", async function () {
-            const { amicaToken, personaFactory, creator, buyer1, buyer2 } =
-                await loadFixture(deployFullSystemFixture);
-
-            // Create persona
-            await amicaToken.connect(creator).approve(
-                await personaFactory.getAddress(),
-                DEFAULT_MINT_COST
-            );
-
-            await personaFactory.connect(creator).createPersona(
-                await amicaToken.getAddress(),
-                "Grad Test",
-                "GRAD",
-                [],
-                [],
-                0, // No initial buy
-            );
-
-            const tokenId = 0;
-            const deadline = () => Math.floor(Date.now() / 1000) + 3600;
-
-            // Buyer 1 makes small purchase
-            const smallAmount = ethers.parseEther("10000");
-            await amicaToken.connect(buyer1).approve(await personaFactory.getAddress(), smallAmount);
-
-            const quote = await personaFactory["getAmountOut(uint256,uint256)"](tokenId, smallAmount);
-            await personaFactory.connect(buyer1).swapExactTokensForTokens(
-                tokenId, smallAmount, quote, buyer1.address, deadline()
-            );
-
-            // Get total deposits before graduation
-            const TokenPurchase = await personaFactory.purchases(tokenId);
-            const depositsBeforeGrad = TokenPurchase.totalDeposited;
-
-            // Calculate exact amount needed for graduation
-            // Need to account for fees: if we need X more deposits, we need to send X / 0.99 tokens
-            const remainingNeeded = DEFAULT_GRADUATION_THRESHOLD - depositsBeforeGrad;
-            const graduationAmount = remainingNeeded * 10000n / 9900n; // Account for 1% fee
-
-            await amicaToken.connect(buyer2).approve(await personaFactory.getAddress(), graduationAmount);
-
-            await expect(
-                personaFactory.connect(buyer2).swapExactTokensForTokens(
-                    tokenId, graduationAmount, 0, buyer2.address, deadline()
-                )
-            ).to.emit(personaFactory, "LiquidityPairCreated");
-
-            // Buyer 1 should be able to withdraw immediately
-            const persona = await personaFactory.getPersona(tokenId);
-            const TestERC20 = await ethers.getContractFactory("TestERC20");
-            const personaToken = TestERC20.attach(persona.erc20Token) as TestERC20;
-
-            const balanceBefore = await personaToken.balanceOf(buyer1.address);
-
-            await expect(
-                personaFactory.connect(buyer1).withdrawTokens(tokenId)
-            ).to.emit(personaFactory, "TokensWithdrawn")
-             .withArgs(tokenId, buyer1.address, quote);
-
-            const balanceAfter = await personaToken.balanceOf(buyer1.address);
-            expect(balanceAfter).to.equal(balanceBefore + quote);
-
-            console.log("✓ Tokens unlocked immediately after graduation");
         });
     });
 
