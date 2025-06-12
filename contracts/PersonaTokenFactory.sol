@@ -248,7 +248,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         }
 
         // Always deposit tokens to AMICA contract (regardless of pairing token)
-        IERC20(erc20Token).approve(address(amicaToken), config.amicaDepositAmount);
+        IERC20(erc20Token).approve(address(amicaToken), type(uint256).max);
         IAmicaToken(address(amicaToken)).deposit(erc20Token, config.amicaDepositAmount);
 
         emit PersonaCreated(tokenId, msg.sender, erc20Token, name, symbol);
