@@ -89,7 +89,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         string symbol
     );
     event PairingConfigUpdated(address indexed token);
-    event MetadataUpdated(uint256 indexed tokenId);
+    event MetadataUpdated(uint256 indexed tokenId, string indexed key);
     event TokensPurchased(uint256 indexed tokenId, address indexed buyer, uint256 amountSpent, uint256 tokensReceived);
     event LiquidityPairCreated(uint256 indexed tokenId, address indexed pair, uint256 liquidity);
 
@@ -199,6 +199,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         // Store metadata
         for (uint256 i = 0; i < metadataKeys.length; i++) {
             persona.metadata[metadataKeys[i]] = metadataValues[i];
+            emit MetadataUpdated(tokenId, metadataKeys[i]);
         }
 
         // Always deposit tokens to AMICA contract (regardless of pairing token)
@@ -215,31 +216,30 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      */
     function updateMetadata(
         uint256 tokenId,
-        string[] memory key,
-        string[] memory value
+        string[] memory keys,
+        string[] memory values
     ) external {
         require(ownerOf(tokenId) == msg.sender, "Not token owner");
-        require(key.length == value.length, "Key-value mismatch");
+        require(keys.length == values.length, "Key-value mismatch");
 
-        for (uint256 i = 0; i < key.length; i++) {
-            _personas[tokenId].metadata[key[i]] = value[i];
+        for (uint256 i = 0; i < keys.length; i++) {
+            _personas[tokenId].metadata[keys[i]] = values[i];
+            emit MetadataUpdated(tokenId, keys[i]);
         }
-
-        emit MetadataUpdated(tokenId);
     }
 
     /**
      * @notice Get persona metadata
      */
-    function getMetadata(uint256 tokenId, string[] memory key)
+    function getMetadata(uint256 tokenId, string[] memory keys)
         external
         view
         returns (string[] memory)
     {
-        string[] memory values = new string[](key.length);
+        string[] memory values = new string[](keys.length);
 
-        for (uint256 i = 0; i < key.length; i++) {
-            values[i] = _personas[tokenId].metadata[key[i]];
+        for (uint256 i = 0; i < keys.length; i++) {
+            values[i] = _personas[tokenId].metadata[keys[i]];
         }
 
         return values;
