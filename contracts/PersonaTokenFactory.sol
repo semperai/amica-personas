@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
 interface IUniswapV2Factory {
@@ -38,7 +38,7 @@ interface IERC20Implementation {
  * @title PersonaTokenFactory
  * @notice Factory for creating persona NFTs with associated ERC20 tokens
  */
-contract PersonaTokenFactory is ERC721, Ownable, ReentrancyGuard {
+contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using Strings for uint256;
 
     // Structs
@@ -55,7 +55,7 @@ contract PersonaTokenFactory is ERC721, Ownable, ReentrancyGuard {
     struct PairingConfig {
         bool enabled;
         uint256 mintCost;
-        uint256 graduationCost;
+        uint256 graduationThreshold;
         uint256 amicaDepositAmount;
     }
 
@@ -64,11 +64,10 @@ contract PersonaTokenFactory is ERC721, Ownable, ReentrancyGuard {
         uint256 tokensSold;
     }
 
-    // Immutable addresses
-    IERC20 public immutable amicaToken;
-    IUniswapV2Factory public immutable uniswapFactory;
-    IUniswapV2Router public immutable uniswapRouter;
-    address public immutable erc20Implementation;
+    IERC20 public amicaToken;
+    IUniswapV2Factory public uniswapFactory;
+    IUniswapV2Router public uniswapRouter;
+    address public erc20Implementation;
 
     // State variables
     uint256 private _currentTokenId;
@@ -79,7 +78,6 @@ contract PersonaTokenFactory is ERC721, Ownable, ReentrancyGuard {
     // Constants
     uint256 public constant PERSONA_TOKEN_SUPPLY = 1_000_000_000 ether;
     uint256 public constant LIQUIDITY_TOKEN_AMOUNT = 890_000_000 ether;
-    uint256 public constant GRADUATION_THRESHOLD = 100 ether;
     string private constant TOKEN_SUFFIX = ".amica";
 
     // Events
@@ -95,12 +93,19 @@ contract PersonaTokenFactory is ERC721, Ownable, ReentrancyGuard {
     event TokensPurchased(uint256 indexed tokenId, address indexed buyer, uint256 amountSpent, uint256 tokensReceived);
     event LiquidityPairCreated(uint256 indexed tokenId, address indexed pair, uint256 liquidity);
 
-    constructor(
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
         address amicaToken_,
         address uniswapFactory_,
         address uniswapRouter_,
         address erc20Implementation_
-    ) ERC721("Amica Persona", "PERSONA") Ownable(msg.sender) {
+    ) external initializer { 
+        __ERC721_init("Amica Persona", "PERSONA");
+        __Ownable_init(msg.sender);
+
         require(amicaToken_ != address(0), "Invalid AMICA token");
         require(uniswapFactory_ != address(0), "Invalid factory");
         require(uniswapRouter_ != address(0), "Invalid router");
@@ -115,7 +120,7 @@ contract PersonaTokenFactory is ERC721, Ownable, ReentrancyGuard {
         pairingConfigs[amicaToken_] = PairingConfig({
             enabled: true,
             mintCost: 1000 ether,
-            graduationCost: 10 ether,
+            graduationThreshold: 1_000_000 ether,
             amicaDepositAmount: 300_000_000 ether
         });
     }
@@ -126,7 +131,7 @@ contract PersonaTokenFactory is ERC721, Ownable, ReentrancyGuard {
     function configurePairingToken(
         address token,
         uint256 mintCost,
-        uint256 graduationCost,
+        uint256 graduationThreshold,
         uint256 amicaDepositAmount
     ) external onlyOwner {
         require(token != address(0), "Invalid token");
@@ -134,7 +139,7 @@ contract PersonaTokenFactory is ERC721, Ownable, ReentrancyGuard {
         pairingConfigs[token] = PairingConfig({
             enabled: true,
             mintCost: mintCost,
-            graduationCost: graduationCost,
+            graduationThreshold: graduationThreshold,
             amicaDepositAmount: amicaDepositAmount
         });
 
@@ -285,7 +290,8 @@ contract PersonaTokenFactory is ERC721, Ownable, ReentrancyGuard {
         // Calculate tokens out based on bonding curve
         uint256 tokensOut = calculateTokensOut(
             purchase.totalDeposited,
-            amountToSpend
+            amountToSpend,
+            pairingConfigs[persona.pairToken].graduationThreshold
         );
 
         require(tokensOut >= minTokensOut, "Slippage too high");
@@ -310,7 +316,7 @@ contract PersonaTokenFactory is ERC721, Ownable, ReentrancyGuard {
         emit TokensPurchased(tokenId, msg.sender, amountToSpend, tokensOut);
 
         // Check if ready to create pair
-        if (purchase.totalDeposited >= GRADUATION_THRESHOLD) {
+        if (purchase.totalDeposited >= pairingConfigs[persona.pairToken].graduationThreshold) {
             _createLiquidityPair(tokenId);
         }
     }
@@ -318,7 +324,7 @@ contract PersonaTokenFactory is ERC721, Ownable, ReentrancyGuard {
     /**
      * @notice Calculate tokens out for a given AMICA input
      */
-    function calculateTokensOut(uint256 currentDeposited, uint256 amountIn)
+    function calculateTokensOut(uint256 currentDeposited, uint256 amountIn, uint256 graduationThreshold)
         public
         pure
         returns (uint256)
@@ -328,7 +334,7 @@ contract PersonaTokenFactory is ERC721, Ownable, ReentrancyGuard {
         uint256 startPrice = 0.0001 ether;
         uint256 endPrice = 0.001 ether;
 
-        uint256 progress = (currentDeposited * 1e18) / GRADUATION_THRESHOLD;
+        uint256 progress = (currentDeposited * 1e18) / graduationThreshold;
         uint256 currentPrice = startPrice + ((endPrice - startPrice) * progress) / 1e18;
 
         return (amountIn * 1e18) / currentPrice;
@@ -359,7 +365,7 @@ contract PersonaTokenFactory is ERC721, Ownable, ReentrancyGuard {
         TokenPurchase storage purchase = _purchases[tokenId];
 
         address erc20Token = persona.erc20Token;
-        uint256 amicaForLiquidity = purchase.totalDeposited - config.graduationCost;
+        uint256 amicaForLiquidity = purchase.totalDeposited - config.graduationThreshold;
 
         // Approve router
         IERC20(erc20Token).approve(address(uniswapRouter), LIQUIDITY_TOKEN_AMOUNT);
@@ -384,7 +390,7 @@ contract PersonaTokenFactory is ERC721, Ownable, ReentrancyGuard {
 
         // Send graduation reward to NFT owner
         require(
-            amicaToken.transfer(ownerOf(tokenId), config.graduationCost),
+            amicaToken.transfer(ownerOf(tokenId), config.graduationThreshold),
             "Reward transfer failed"
         );
 
