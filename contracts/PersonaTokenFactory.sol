@@ -347,8 +347,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 totalToWithdraw = 0;
 
         for (uint256 i = 0; i < purchasesLocal.length; i++) {
-            if (!purchasesLocal[i].withdrawn &&
-                (persona.pairCreated || block.timestamp >= purchasesLocal[i].timestamp + LOCK_DURATION)) {
+            if (!purchasesLocal[i].withdrawn && persona.pairCreated) {
                 totalToWithdraw += purchasesLocal[i].amount;
                 purchasesLocal[i].withdrawn = true;
             }

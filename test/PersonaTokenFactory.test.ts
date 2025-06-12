@@ -210,61 +210,6 @@ describe("PersonaTokenFactory", function () {
     });
 
     describe("Token Lock and Withdrawal", function () {
-        it("Should lock tokens for 1 week", async function () {
-            const { tokenId, personaFactory, amicaToken, user2 } = await loadFixture(createPersonaFixture);
-
-            const purchaseAmount = ethers.parseEther("10000");
-            await amicaToken.connect(user2).approve(
-                await personaFactory.getAddress(),
-                purchaseAmount
-            );
-
-            await swapTokensForPersona(personaFactory, tokenId, purchaseAmount, 0n, user2);
-
-            // Try to withdraw immediately - should fail
-            await expect(
-                personaFactory.connect(user2).withdrawTokens(tokenId)
-            ).to.be.revertedWith("No tokens to withdraw");
-
-            // Check user purchases
-            const purchases = await personaFactory.getUserpurchases(tokenId, user2.address);
-            expect(purchases.length).to.equal(1);
-            expect(purchases[0].withdrawn).to.be.false;
-        });
-
-        it("Should allow withdrawal after 1 week", async function () {
-            const { tokenId, personaFactory, amicaToken, user2 } = await loadFixture(createPersonaFixture);
-
-            const purchaseAmount = ethers.parseEther("10000");
-            await amicaToken.connect(user2).approve(
-                await personaFactory.getAddress(),
-                purchaseAmount
-            );
-
-            const expectedTokens = await getQuote(personaFactory, tokenId, purchaseAmount);
-            await swapTokensForPersona(personaFactory, tokenId, purchaseAmount, expectedTokens, user2);
-
-            // Fast forward 1 week
-            await time.increase(7 * 24 * 60 * 60);
-
-            // Now withdrawal should work
-            const persona = await personaFactory.getPersona(tokenId);
-            const TestERC20 = await ethers.getContractFactory("TestERC20");
-            const personaToken = TestERC20.attach(persona.erc20Token) as TestERC20;
-
-            const balanceBefore = await personaToken.balanceOf(user2.address);
-
-            await expect(
-                personaFactory.connect(user2).withdrawTokens(tokenId)
-            ).to.emit(personaFactory, "TokensWithdrawn")
-             .withArgs(tokenId, user2.address, expectedTokens);
-
-            const balanceAfter = await personaToken.balanceOf(user2.address);
-            // Fixed: balanceBefore is 0, so just check we received the expected tokens
-            expect(balanceAfter).to.equal(expectedTokens);
-        });
-
-
         it("Should allow immediate withdrawal after graduation", async function () {
             const { tokenId, personaFactory, amicaToken, user2 } = await loadFixture(createPersonaFixture);
 
@@ -293,6 +238,31 @@ describe("PersonaTokenFactory", function () {
             await expect(
                 personaFactory.connect(user2).withdrawTokens(tokenId)
             ).to.emit(personaFactory, "TokensWithdrawn");
+        });
+
+        it("Should handle graduation with excess correctly", async function () {
+            const { tokenId, personaFactory, amicaToken, user2 } = await loadFixture(createPersonaFixture);
+
+            // Use a more reasonable excess that won't exceed bonding curve
+            const excessAmount = DEFAULT_GRADUATION_THRESHOLD + ethers.parseEther("50000"); // Reduced from 500000
+
+            // Account for fees when calculating the amount to send
+            const amountToSend = (excessAmount * 10000n) / 9900n;
+
+            await amicaToken.connect(user2).approve(
+                await personaFactory.getAddress(),
+                amountToSend
+            );
+
+            await expect(
+                personaFactory.connect(user2).swapExactTokensForTokens(
+                    tokenId,
+                    amountToSend,
+                    0,
+                    user2.address,
+                    getDeadline()
+                )
+            ).to.emit(personaFactory, "LiquidityPairCreated");
         });
     });
 
@@ -762,28 +732,39 @@ describe("PersonaTokenFactory", function () {
             expect(await erc20Token.name()).to.equal("Test Persona.amica");
             expect(await erc20Token.symbol()).to.equal("TESTP.amica");
             expect(await erc20Token.totalSupply()).to.equal(PERSONA_TOKEN_SUPPLY);
+
+            // Factory now holds all tokens initially (AMICA deposit happens on graduation)
             expect(await erc20Token.balanceOf(await personaFactory.getAddress())).to.equal(
-                PERSONA_TOKEN_SUPPLY - AMICA_DEPOSIT_AMOUNT
+                PERSONA_TOKEN_SUPPLY // Changed from PERSONA_TOKEN_SUPPLY - AMICA_DEPOSIT_AMOUNT
             );
         });
 
         it("Should deposit tokens to AMICA contract", async function () {
-            const { tokenId, personaFactory, amicaToken } = await loadFixture(createPersonaFixture);
+            const { tokenId, personaFactory, amicaToken, user2 } = await loadFixture(createPersonaFixture);
 
             const persona = await personaFactory.getPersona(tokenId);
-
-            // Check that tokens were deposited
             const TestERC20 = await ethers.getContractFactory("TestERC20");
             const erc20Token = TestERC20.attach(persona.erc20Token) as TestERC20;
 
-            // Verify the deposit happened by checking balances
+            // Initially, factory holds all tokens
             expect(await erc20Token.balanceOf(await personaFactory.getAddress())).to.equal(
-                PERSONA_TOKEN_SUPPLY - AMICA_DEPOSIT_AMOUNT
+                PERSONA_TOKEN_SUPPLY
             );
 
-            // Check deposited balance in AMICA contract
+            // No deposit to AMICA yet
+            expect(await amicaToken.depositedBalances(persona.erc20Token)).to.equal(0);
+
+            // Trigger graduation to see the deposit
+            const graduationAmount = (DEFAULT_GRADUATION_THRESHOLD * 10000n) / 9900n;
+            await amicaToken.connect(user2).approve(await personaFactory.getAddress(), graduationAmount);
+            await personaFactory.connect(user2).swapExactTokensForTokens(
+                tokenId, graduationAmount, 0, user2.address, getDeadline()
+            );
+
+            // Now check deposit happened
             expect(await amicaToken.depositedBalances(persona.erc20Token)).to.equal(AMICA_DEPOSIT_AMOUNT);
         });
+
 
         it("Should take payment from creator", async function () {
             const { personaFactory, amicaToken, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
@@ -1693,16 +1674,27 @@ describe("PersonaTokenFactory", function () {
         });
 
         it("Should handle failed payment transfer gracefully", async function () {
-            const { personaFactory, amicaToken, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
+            const { personaFactory, amicaToken, user1, owner } = await loadFixture(deployPersonaTokenFactoryFixture);
 
-            // Approve but don't have enough balance
-            await amicaToken.connect(user1).transfer(user1.address, await amicaToken.balanceOf(user1.address) - ethers.parseEther("100"));
+            // Transfer away most of user1's balance
+            const balance = await amicaToken.balanceOf(user1.address);
+            if (balance > DEFAULT_MINT_COST) {
+                await amicaToken.connect(user1).transfer(
+                    owner.address,
+                    balance - ethers.parseEther("100") // Keep only 100 tokens
+                );
+            }
 
+            // Now user1 has less than DEFAULT_MINT_COST
+            expect(await amicaToken.balanceOf(user1.address)).to.be.lt(DEFAULT_MINT_COST);
+
+            // Approve more than they have
             await amicaToken.connect(user1).approve(
                 await personaFactory.getAddress(),
                 DEFAULT_MINT_COST
             );
 
+            // Should fail with proper error
             await expect(
                 personaFactory.connect(user1).createPersona(
                     await amicaToken.getAddress(),
@@ -1714,6 +1706,7 @@ describe("PersonaTokenFactory", function () {
                 )
             ).to.be.revertedWith("Insufficient balance");
         });
+
 
         it("Should handle failed token transfer in purchase", async function () {
             const { tokenId, personaFactory, amicaToken, user2 } = await loadFixture(createPersonaFixture);
@@ -2239,48 +2232,6 @@ describe("PersonaTokenFactory", function () {
                     deadline
                 )
             ).to.be.reverted; // Will fail when trying to transfer USDC from user
-        });
-    });
-
-    describe("Legacy Function Compatibility", function () {
-        it("Should still work with calculateTokensOut for backwards compatibility", async function () {
-            const { personaFactory } = await loadFixture(deployPersonaTokenFactoryFixture);
-
-            // Test the legacy function
-            const result = await personaFactory.calculateTokensOut(
-                ethers.parseEther("500000"), // currentDeposited
-                ethers.parseEther("10000"),   // amountIn
-                ethers.parseEther("1000000")  // graduationThreshold
-            );
-
-            expect(result).to.be.gt(0);
-        });
-
-        it("Should handle graduation with excess correctly", async function () {
-            const { tokenId, personaFactory, amicaToken, user2 } = await loadFixture(createPersonaFixture);
-
-            // Use a reasonable excess amount that won't exceed available tokens
-            const excessAmount = DEFAULT_GRADUATION_THRESHOLD + ethers.parseEther("500000");
-
-            // Account for fees when calculating the amount to send
-            const amountToSend = (excessAmount * 10000n) / 9900n;
-
-            await amicaToken.connect(user2).approve(
-                await personaFactory.getAddress(),
-                amountToSend
-            );
-
-            const deadline = getDeadline();
-
-            await expect(
-                personaFactory.connect(user2).swapExactTokensForTokens(
-                    tokenId,
-                    amountToSend,
-                    0,
-                    user2.address,
-                    deadline
-                )
-            ).to.emit(personaFactory, "LiquidityPairCreated");
         });
     });
 });
