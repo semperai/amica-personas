@@ -1,5 +1,3 @@
-// test/PersonaLifecycle.test.ts
-
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
