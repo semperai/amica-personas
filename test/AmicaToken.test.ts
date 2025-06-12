@@ -511,9 +511,21 @@ describe("AmicaToken", function () {
             // Give user1 some tokens back
             await amicaToken.withdraw(u1.address, ethers.parseEther("1000"));
 
-            // Try to burn when previously circulating was 0
+            // First, we need to deposit some tokens to be able to claim them
+            // Deploy a test token and deposit it
+            const TestERC20 = await ethers.getContractFactory("TestERC20");
+            const testToken = await TestERC20.deploy("Test", "TEST", ethers.parseEther("10000"));
+
+            // Deposit some tokens to the AmicaToken contract
+            await testToken.approve(await amicaToken.getAddress(), ethers.parseEther("1000"));
+            await amicaToken.deposit(await testToken.getAddress(), ethers.parseEther("1000"));
+
+            // Get the token index
+            const tokenIndex = await amicaToken.tokenIndex(await testToken.getAddress());
+
+            // Now try to burn when circulating supply is not zero
             await expect(
-                amicaToken.connect(u1).burnAndClaim(ethers.parseEther("100"), [1])
+                amicaToken.connect(u1).burnAndClaim(ethers.parseEther("100"), [tokenIndex])
             ).to.not.be.reverted;
         });
     });
