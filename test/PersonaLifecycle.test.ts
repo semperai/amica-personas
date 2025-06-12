@@ -60,8 +60,8 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             ethers.parseEther("100000000") // 100M persona tokens to AMICA
         );
 
-        // Distribute tokens
-        await amicaToken.withdraw(creator.address, ethers.parseEther("10000"));
+        // Distribute tokens - INCREASED AMOUNTS
+        await amicaToken.withdraw(creator.address, ethers.parseEther("20000")); // Increased from 10000
         await amicaToken.withdraw(buyer1.address, ethers.parseEther("5000000"));
         await amicaToken.withdraw(buyer2.address, ethers.parseEther("5000000"));
         await amicaToken.withdraw(buyer3.address, ethers.parseEther("5000000"));
@@ -257,6 +257,9 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 ethers.parseEther("100")
             );
 
+            // Track creator's initial USDC balance
+            const creatorInitialUsdc = await usdc.balanceOf(creator.address);
+
             await personaFactory.connect(creator).createPersona(
                 await usdc.getAddress(),
                 "DeFi Bot",
@@ -269,6 +272,10 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             const tokenId = 0;
             const persona = await personaFactory.getPersona(tokenId);
             console.log(`✓ Persona created with USDC pairing`);
+
+            // Creator should have spent 100 USDC on mint
+            const creatorUsdcAfterMint = await usdc.balanceOf(creator.address);
+            expect(creatorUsdcAfterMint).to.equal(creatorInitialUsdc - ethers.parseEther("100"));
 
             // Verify AMICA deposit still happens
             const depositedToAmica = await amicaToken.depositedBalances(persona.erc20Token);
@@ -613,8 +620,15 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 tokenId, smallAmount, quote, buyer1.address, deadline()
             );
 
-            // Buyer 2 triggers graduation
-            const graduationAmount = DEFAULT_GRADUATION_THRESHOLD;
+            // Get total deposits before graduation
+            const TokenPurchase = await personaFactory.purchases(tokenId);
+            const depositsBeforeGrad = TokenPurchase.totalDeposited;
+
+            // Calculate exact amount needed for graduation
+            // Need to account for fees: if we need X more deposits, we need to send X / 0.99 tokens
+            const remainingNeeded = DEFAULT_GRADUATION_THRESHOLD - depositsBeforeGrad;
+            const graduationAmount = remainingNeeded * 10000n / 9900n; // Account for 1% fee
+
             await amicaToken.connect(buyer2).approve(await personaFactory.getAddress(), graduationAmount);
 
             await expect(

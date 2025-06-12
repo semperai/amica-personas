@@ -82,12 +82,12 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
     // State variables
     uint256 private _currentTokenId;
-    mapping(uint256 => PersonaData) private _personas;
-    mapping(uint256 => TokenPurchase) private _purchases;
+    mapping(uint256 => PersonaData) public personas;
+    mapping(uint256 => TokenPurchase) public purchases;
     mapping(address => PairingConfig) public pairingConfigs;
 
     // New state variables for features
-    mapping(uint256 => mapping(address => UserPurchase[])) private _userPurchases;
+    mapping(uint256 => mapping(address => UserPurchase[])) public userpurchases;
     TradingFeeConfig public tradingFeeConfig;
     uint256 public constant LOCK_DURATION = 7 days;
 
@@ -234,7 +234,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         );
 
         // Store persona data
-        PersonaData storage persona = _personas[tokenId];
+        PersonaData storage persona = personas[tokenId];
         persona.name = name;
         persona.symbol = symbol;
         persona.erc20Token = erc20Token;
@@ -279,7 +279,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         require(keys.length == values.length, "Key-value mismatch");
 
         for (uint256 i = 0; i < keys.length; i++) {
-            _personas[tokenId].metadata[keys[i]] = values[i];
+            personas[tokenId].metadata[keys[i]] = values[i];
             emit MetadataUpdated(tokenId, keys[i]);
         }
     }
@@ -295,7 +295,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         string[] memory values = new string[](keys.length);
 
         for (uint256 i = 0; i < keys.length; i++) {
-            values[i] = _personas[tokenId].metadata[keys[i]];
+            values[i] = personas[tokenId].metadata[keys[i]];
         }
 
         return values;
@@ -316,7 +316,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             uint256 createdAt
         )
     {
-        PersonaData storage persona = _personas[tokenId];
+        PersonaData storage persona = personas[tokenId];
         return (
             persona.name,
             persona.symbol,
@@ -330,29 +330,30 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     /**
      * @notice Get user purchases for a persona
      */
-    function getUserPurchases(uint256 tokenId, address user)
+    function getUserpurchases(uint256 tokenId, address user)
         external
         view
         returns (UserPurchase[] memory)
     {
-        return _userPurchases[tokenId][user];
+        return userpurchases[tokenId][user];
     }
 
     /**
      * @notice Withdraw unlocked tokens
      */
     function withdrawTokens(uint256 tokenId) external nonReentrant {
-        PersonaData storage persona = _personas[tokenId];
+        PersonaData storage persona = personas[tokenId];
         require(persona.erc20Token != address(0), "Invalid token");
 
-        UserPurchase[] storage purchases = _userPurchases[tokenId][msg.sender];
+        // use Local suffix to avoid shadowing
+        UserPurchase[] storage purchasesLocal = userpurchases[tokenId][msg.sender];
         uint256 totalToWithdraw = 0;
 
-        for (uint256 i = 0; i < purchases.length; i++) {
-            if (!purchases[i].withdrawn &&
+        for (uint256 i = 0; i < purchasesLocal.length; i++) {
+            if (!purchasesLocal[i].withdrawn &&
                 (persona.pairCreated || block.timestamp >= persona.createdAt + LOCK_DURATION)) {
-                totalToWithdraw += purchases[i].amount;
-                purchases[i].withdrawn = true;
+                totalToWithdraw += purchasesLocal[i].amount;
+                purchasesLocal[i].withdrawn = true;
             }
         }
 
@@ -390,11 +391,11 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         require(block.timestamp <= deadline, "Transaction expired");
         require(to != address(0), "Invalid recipient");
 
-        PersonaData storage persona = _personas[tokenId];
+        PersonaData storage persona = personas[tokenId];
         require(!persona.pairCreated, "Trading already on Uniswap");
         require(persona.erc20Token != address(0), "Invalid token");
 
-        TokenPurchase storage purchase = _purchases[tokenId];
+        TokenPurchase storage purchase = purchases[tokenId];
 
         // Calculate fees
         uint256 feeAmount = (amountIn * tradingFeeConfig.feePercentage) / BASIS_POINTS;
@@ -426,7 +427,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         purchase.tokensSold += amountOut;
 
         // Store purchase info for lock
-        _userPurchases[tokenId][to].push(UserPurchase({
+        userpurchases[tokenId][to].push(UserPurchase({
             amount: amountOut,
             timestamp: block.timestamp,
             withdrawn: false
@@ -444,7 +445,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @notice Distribute trading fees between creator and AMICA
      */
     function _distributeTradingFees(uint256 tokenId, uint256 feeAmount) private {
-        PersonaData storage persona = _personas[tokenId];
+        PersonaData storage persona = personas[tokenId];
 
         uint256 creatorFees = (feeAmount * tradingFeeConfig.creatorShare) / BASIS_POINTS;
         uint256 amicaFees = feeAmount - creatorFees;
@@ -505,7 +506,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @notice Get a quote for swapping tokens
      */
     function getAmountOut(uint256 tokenId, uint256 amountIn) external view returns (uint256) {
-        TokenPurchase storage purchase = _purchases[tokenId];
+        TokenPurchase storage purchase = purchases[tokenId];
         uint256 totalAvailable = getAvailableTokens(tokenId) + purchase.tokensSold;
 
         // Apply trading fee to input
@@ -534,7 +535,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @notice Get available tokens for sale
      */
     function getAvailableTokens(uint256 tokenId) public view returns (uint256) {
-        PersonaData storage persona = _personas[tokenId];
+        PersonaData storage persona = personas[tokenId];
         if (persona.pairCreated) return 0;
         if (persona.erc20Token == address(0)) return 0;
 
@@ -546,7 +547,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
         uint256 totalForBonding = PERSONA_TOKEN_SUPPLY - amicaDeposit - LIQUIDITY_TOKEN_AMOUNT;
 
-        uint256 sold = _purchases[tokenId].tokensSold;
+        uint256 sold = purchases[tokenId].tokensSold;
         if (sold >= totalForBonding) {
             return 0;
         }
@@ -558,10 +559,10 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @notice Create Uniswap pair when graduation threshold is met
      */
     function _createLiquidityPair(uint256 tokenId) private {
-        PersonaData storage persona = _personas[tokenId];
+        PersonaData storage persona = personas[tokenId];
         require(!persona.pairCreated, "Pair already created");
 
-        TokenPurchase storage purchase = _purchases[tokenId];
+        TokenPurchase storage purchase = purchases[tokenId];
 
         address erc20Token = persona.erc20Token;
 
@@ -609,7 +610,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     {
         _requireOwned(tokenId);
 
-        PersonaData storage persona = _personas[tokenId];
+        PersonaData storage persona = personas[tokenId];
 
         return string(abi.encodePacked(
             'data:application/json;utf8,{"name":"',
