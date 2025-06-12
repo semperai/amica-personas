@@ -1,95 +1,164 @@
-// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract AmicaToken is ERC20, ERC20Burnable, Ownable {
-    address[] public tokens; // IMPORTANT: read from [1]
-    mapping(address => uint256) public tokenToIndexes;
-    // this is used as a cache for balances of tokens deposited
-    mapping(address => uint256) public tokenToBalances;
+/**
+ * @title AmicaToken
+ * @notice Main AMICA token with burn-and-claim mechanism for deposited tokens
+ * @dev Implements a fair distribution mechanism where burning AMICA gives proportional share of deposited tokens
+ */
+contract AmicaToken is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
+    // State variables
+    address[] private _depositedTokens;
+    mapping(address => uint256) public tokenIndex;
+    mapping(address => uint256) public depositedBalances;
 
-    event Withdrawn(address indexed to, uint256 amount);
-    event Recovered(address indexed to, address indexed token, uint256 amount);
-    event Deposited(address indexed user, address indexed token, uint256 amount);
-    event BurnedAndClaimed(address indexed user, uint256 amount, uint256[] indexes);
+    // Constants
+    uint256 public constant TOTAL_SUPPLY = 1_000_000_000 ether;
+    uint256 private constant PRECISION = 1e18;
 
-    constructor(address _initialOwner) ERC20("Amica", "AMICA") Ownable(_initialOwner) {
-        _mint(address(this), 1_000_000_000 ether);
-        tokens.push(address(0x0)); // skip first index (because 0 is reserved for no token)
+    // Events
+    event TokensWithdrawn(address indexed to, uint256 amount);
+    event TokensRecovered(address indexed to, address indexed token, uint256 amount);
+    event TokensDeposited(address indexed depositor, address indexed token, uint256 amount);
+    event TokensBurnedAndClaimed(address indexed user, uint256 amountBurned, address[] tokens, uint256[] amounts);
+
+    constructor(address initialOwner)
+        ERC20("Amica", "AMICA")
+        Ownable(initialOwner)
+    {
+        _mint(address(this), TOTAL_SUPPLY);
+        _depositedTokens.push(address(0)); // Reserve index 0
     }
 
-    /// @notice Withdraw tokens from the contract
-    /// @dev Only the owner can withdraw tokens
-    /// @param to The address to withdraw tokens to
-    /// @param amount The amount of tokens to withdraw
-    /// @dev This function can be used to withdraw any ERC20 tokens held by the contract
-    function withdraw(address to, uint256 amount) external onlyOwner {
-        require(to != address(0), "Cannot withdraw to zero address");
-        transfer(to, amount);
-        emit Withdrawn(to, amount);
-    }
-
-    /// @notice Recover tokens from the contract
-    /// @dev Only the owner can recover tokens sent by mistake
-    /// @param to The address to recover tokens to
-    /// @param tokenAddress The address of the token to recover
-    function recover(address to, address tokenAddress) external onlyOwner {
-        require(to != address(0), "Cannot recover to zero address");
-        IERC20 token = IERC20(tokenAddress);
-        uint256 amount = token.balanceOf(address(this)) - tokenToBalances[tokenAddress];
-        require(amount > 0, "No tokens to recover");
-        token.transfer(to, amount);
-        emit Recovered(to, tokenAddress, amount);
-    }
-
-    /// @notice Get the total circulating supply of AMICA tokens
-    /// @dev Circulating supply is total supply minus the balance held by the contract itself
-    /// @return The total circulating supply of AMICA tokens
-    function circulatingSupply() external view returns (uint256) {
+    /**
+     * @notice Get circulating supply (total minus contract balance)
+     */
+    function circulatingSupply() public view returns (uint256) {
         return totalSupply() - balanceOf(address(this));
     }
 
-    /// @notice Deposit tokens into the contract
-    /// @dev These will be distributed when burning AMICA tokens
-    /// @param tokenAddress The address of the ERC20 token to deposit
-    /// @param amount The amount of tokens to deposit
-    function deposit(address tokenAddress, uint256 amount) external {
-        require(amount > 0, "Amount must be greater than zero");
-        // require(address(token) != address(this), "Cannot deposit AMICA tokens");
-        IERC20 token = IERC20(tokenAddress);
-        token.transferFrom(msg.sender, address(this), amount);
-        if (tokenToIndexes[address(token)] == 0) {
-            tokens.push(address(token));
-            tokenToIndexes[address(token)] = tokens.length - 1;
-        }
-        tokenToBalances[address(token)] += amount;
-        emit Deposited(msg.sender, address(token), amount);
+    /**
+     * @notice Get all deposited token addresses
+     */
+    function getDepositedTokens() external view returns (address[] memory) {
+        return _depositedTokens;
     }
 
-    /// @notice Burn AMICA tokens and claim proportional amounts of deposited tokens
-    /// @dev The amount of AMICA tokens burned determines the share of each deposited token claimed
-    /// @param amount The amount of AMICA tokens to burn
-    /// @param indexes The indexes of the deposited tokens to claim
-    function burnAndClaim(uint256 amount, uint256[] calldata indexes) external {
-        // convert amount into range 0..1eth for shares
-        uint256 shares = (amount * 1 ether) / this.circulatingSupply();
+    /**
+     * @notice Withdraw AMICA tokens from contract
+     * @param to Recipient address
+     * @param amount Amount to withdraw
+     */
+    function withdraw(address to, uint256 amount) external onlyOwner {
+        require(to != address(0), "Invalid recipient");
+        require(amount <= balanceOf(address(this)), "Insufficient balance");
 
-        for (uint256 i = 0; i < indexes.length; i++) {
-            address tokenAddress = tokens[indexes[i]];
-            uint256 balance = tokenToBalances[tokenAddress];
-            if (balance > 0) {
-                // convert shares into claim amount based on balance
-                uint256 claimAmount = (shares * balance) / 1 ether;
-                IERC20(tokenAddress).transfer(msg.sender, claimAmount);
-                tokenToBalances[tokenAddress] -= claimAmount;
-            }
+        _transfer(address(this), to, amount);
+        emit TokensWithdrawn(to, amount);
+    }
+
+    /**
+     * @notice Recover accidentally sent tokens (not deposited ones)
+     * @param token Token address to recover
+     * @param to Recipient address
+     */
+    function recoverToken(address token, address to) external onlyOwner {
+        require(to != address(0), "Invalid recipient");
+        require(token != address(this), "Cannot recover AMICA");
+
+        IERC20 tokenContract = IERC20(token);
+        uint256 contractBalance = tokenContract.balanceOf(address(this));
+        uint256 recoverable = contractBalance - depositedBalances[token];
+
+        require(recoverable > 0, "No tokens to recover");
+
+        require(tokenContract.transfer(to, recoverable), "Transfer failed");
+        emit TokensRecovered(to, token, recoverable);
+    }
+
+    /**
+     * @notice Deposit tokens for distribution
+     * @param token Token address to deposit
+     * @param amount Amount to deposit
+     */
+    function deposit(address token, uint256 amount) external nonReentrant {
+        require(amount > 0, "Invalid amount");
+        require(token != address(0), "Invalid token");
+
+        IERC20(token).transferFrom(msg.sender, address(this), amount);
+
+        // Add token to list if first deposit
+        if (tokenIndex[token] == 0) {
+            _depositedTokens.push(token);
+            tokenIndex[token] = _depositedTokens.length - 1;
         }
 
-        _burn(msg.sender, amount);
-        emit BurnedAndClaimed(msg.sender, amount, indexes);
+        depositedBalances[token] += amount;
+        emit TokensDeposited(msg.sender, token, amount);
+    }
+
+    /**
+     * @notice Burn AMICA and claim proportional share of specified tokens
+     * @param amountToBurn Amount of AMICA to burn
+     * @param tokenIndexes Indexes of tokens to claim
+     */
+    function burnAndClaim(uint256 amountToBurn, uint256[] calldata tokenIndexes)
+        external
+        nonReentrant
+    {
+        require(amountToBurn > 0, "Invalid burn amount");
+        require(tokenIndexes.length > 0, "No tokens selected");
+
+        uint256 currentCirculating = circulatingSupply();
+        require(currentCirculating > 0, "No circulating supply");
+
+        // Calculate share (with precision scaling)
+        uint256 sharePercentage = (amountToBurn * PRECISION) / currentCirculating;
+
+        address[] memory claimedTokens = new address[](tokenIndexes.length);
+        uint256[] memory claimedAmounts = new uint256[](tokenIndexes.length);
+        uint256 validClaims = 0;
+
+        // Process claims
+        for (uint256 i = 0; i < tokenIndexes.length; i++) {
+            require(tokenIndexes[i] < _depositedTokens.length, "Invalid token index");
+
+            address tokenAddress = _depositedTokens[tokenIndexes[i]];
+            if (tokenAddress == address(0)) continue;
+
+            uint256 deposited = depositedBalances[tokenAddress];
+            if (deposited == 0) continue;
+
+            uint256 claimAmount = (deposited * sharePercentage) / PRECISION;
+            if (claimAmount == 0) continue;
+
+            // Update state before transfer
+            depositedBalances[tokenAddress] -= claimAmount;
+
+            // Transfer tokens
+            require(IERC20(tokenAddress).transfer(msg.sender, claimAmount), "Transfer failed");
+
+            claimedTokens[validClaims] = tokenAddress;
+            claimedAmounts[validClaims] = claimAmount;
+            validClaims++;
+        }
+
+        require(validClaims > 0, "No tokens to claim");
+
+        // Burn AMICA tokens
+        _burn(msg.sender, amountToBurn);
+
+        // Emit event with actual claimed tokens
+        assembly {
+            mstore(claimedTokens, validClaims)
+            mstore(claimedAmounts, validClaims)
+        }
+
+        emit TokensBurnedAndClaimed(msg.sender, amountToBurn, claimedTokens, claimedAmounts);
     }
 }
