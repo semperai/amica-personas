@@ -75,6 +75,15 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 creatorShare;      // Creator's share of fees (basis points, e.g., 5000 = 50%)
     }
 
+    struct FeeReductionConfig {
+        uint256 minAmicaForReduction;      // Minimum AMICA to start fee reduction
+        uint256 maxAmicaForReduction;      // AMICA amount for maximum fee reduction
+        uint256 minReductionMultiplier;    // Fee multiplier at minimum AMICA (e.g., 9000 = 0.9 = 90%)
+        uint256 maxReductionMultiplier;    // Fee multiplier at maximum AMICA (e.g., 0 = 0%)
+    }
+
+
+
     IERC20 public amicaToken;
     IUniswapV2Factory public uniswapFactory;
     IUniswapV2Router public uniswapRouter;
@@ -89,6 +98,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     // New state variables for features
     mapping(uint256 => mapping(address => UserPurchase[])) public userpurchases;
     TradingFeeConfig public tradingFeeConfig;
+    FeeReductionConfig public feeReductionConfig;
     uint256 public constant LOCK_DURATION = 7 days;
 
     // Constants - Updated for 33/33/33 split
@@ -115,6 +125,12 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     event TradingFeeConfigUpdated(uint256 feePercentage, uint256 creatorShare);
     event TokensWithdrawn(uint256 indexed tokenId, address indexed user, uint256 amount);
     event TradingFeesCollected(uint256 indexed tokenId, uint256 totalFees, uint256 creatorFees, uint256 amicaFees);
+    event FeeReductionConfigUpdated(
+        uint256 minAmicaForReduction,
+        uint256 maxAmicaForReduction,
+        uint256 minReductionMultiplier,
+        uint256 maxReductionMultiplier
+    );
 
     function initialize(
         address amicaToken_,
@@ -148,6 +164,13 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             feePercentage: 100,    // 1%
             creatorShare: 5000     // 50%
         });
+
+        feeReductionConfig = FeeReductionConfig({
+            minAmicaForReduction: 1000 ether,
+            maxAmicaForReduction: 1_000_000 ether,
+            minReductionMultiplier: 9000,  // 90% of base fee (10% discount)
+            maxReductionMultiplier: 0       // 0% of base fee (100% discount)
+        });
     }
 
     /**
@@ -165,6 +188,39 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
         emit TradingFeeConfigUpdated(feePercentage, creatorShare);
     }
+
+    /**
+     * @notice Configure fee reduction parameters based on AMICA holdings
+     * @param minAmicaForReduction Minimum AMICA tokens to start fee reduction
+     * @param maxAmicaForReduction AMICA tokens needed for maximum fee reduction
+     * @param minReductionMultiplier Fee multiplier at minimum AMICA (basis points)
+     * @param maxReductionMultiplier Fee multiplier at maximum AMICA (basis points)
+     */
+    function configureFeeReduction(
+        uint256 minAmicaForReduction,
+        uint256 maxAmicaForReduction,
+        uint256 minReductionMultiplier,
+        uint256 maxReductionMultiplier
+    ) external onlyOwner {
+        require(minAmicaForReduction < maxAmicaForReduction, "Invalid AMICA range");
+        require(minReductionMultiplier <= BASIS_POINTS, "Invalid min multiplier");
+        require(maxReductionMultiplier <= minReductionMultiplier, "Invalid max multiplier");
+
+        feeReductionConfig = FeeReductionConfig({
+            minAmicaForReduction: minAmicaForReduction,
+            maxAmicaForReduction: maxAmicaForReduction,
+            minReductionMultiplier: minReductionMultiplier,
+            maxReductionMultiplier: maxReductionMultiplier
+        });
+
+        emit FeeReductionConfigUpdated(
+            minAmicaForReduction,
+            maxAmicaForReduction,
+            minReductionMultiplier,
+            maxReductionMultiplier
+        );
+    }
+
 
     /**
      * @notice Configure pairing token parameters
@@ -394,8 +450,9 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
         TokenPurchase storage purchase = purchases[tokenId];
 
-        // Calculate fees
-        uint256 feeAmount = (amountIn * tradingFeeConfig.feePercentage) / BASIS_POINTS;
+        // Calculate fees with AMICA holdings discount
+        uint256 effectiveFeePercentage = getEffectiveFeePercentage(msg.sender);
+        uint256 feeAmount = (amountIn * effectiveFeePercentage) / BASIS_POINTS;
         uint256 amountInAfterFee = amountIn - feeAmount;
 
         // Calculate tokens out using Bancor formula (after fees)
@@ -510,18 +567,42 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Legacy function for backwards compatibility
+     * @notice Calculate effective fee percentage based on user's AMICA holdings
+     * @param user Address of the user
+     * @return effectiveFeePercentage The adjusted fee percentage in basis point    s
      */
-    function calculateTokensOut(uint256 currentDeposited, uint256 amountIn, uint256 graduationThreshold)
-        public
-        pure
-        returns (uint256)
-    {
-        uint256 totalSupply = BONDING_CURVE_AMOUNT;
-        uint256 soldRatio = currentDeposited * 1e18 / graduationThreshold;
-        uint256 tokensSold = totalSupply * soldRatio / 1e18;
+    function getEffectiveFeePercentage(address user) public view returns (uint256) {
+        uint256 amicaBalance = amicaToken.balanceOf(user);
 
-        return getAmountOut(amountIn, tokensSold, totalSupply);
+        // If user has less than minimum, return full fee
+        if (amicaBalance < feeReductionConfig.minAmicaForReduction) {
+            return tradingFeeConfig.feePercentage;
+        }
+
+        // If user has maximum or more, return minimum fee
+        if (amicaBalance >= feeReductionConfig.maxAmicaForReduction) {
+            return (tradingFeeConfig.feePercentage * feeReductionConfig.maxReductionMultiplier) / BASIS_POINTS;
+        }
+
+        // Calculate exponential scaling between min and max
+        // Using logarithmic interpolation for exponential feel
+        uint256 range = feeReductionConfig.maxAmicaForReduction - feeReductionConfig.minAmicaForReduction;
+        uint256 userPosition = amicaBalance - feeReductionConfig.minAmicaForReduction;
+
+        // Calculate progress ratio (0 to 1 scaled to 1e18)
+        uint256 progress = (userPosition * 1e18) / range;
+
+        // Apply exponential curve: progress^2 for stronger exponential effect
+        // This makes early holdings have less impact, later holdings have more
+        uint256 exponentialProgress = (progress * progress) / 1e18;
+
+        // Interpolate between min and max reduction multipliers
+        uint256 multiplierRange = feeReductionConfig.minReductionMultiplier - feeReductionConfig.maxReductionMultiplier;
+        uint256 reduction = (multiplierRange * exponentialProgress) / 1e18;
+        uint256 effectiveMultiplier = feeReductionConfig.minReductionMultiplier - reduction;
+
+        // Calculate final fee
+        return (tradingFeeConfig.feePercentage * effectiveMultiplier) / BASIS_POINTS;
     }
 
     /**
@@ -539,6 +620,63 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
         return BONDING_CURVE_AMOUNT - sold;
     }
+
+    /**
+     * @notice Get fee discount information for a user
+     * @param user Address to check
+     * @return amicaBalance User's AMICA balance
+     * @return baseFeePercentage Base trading fee percentage
+     * @return effectiveFeePercentage User's effective fee after discount
+     * @return discountPercentage Percentage discount applied (0-10000)
+     */
+    function getUserFeeInfo(address user) external view returns (
+        uint256 amicaBalance,
+        uint256 baseFeePercentage,
+        uint256 effectiveFeePercentage,
+        uint256 discountPercentage
+    ) {
+        amicaBalance = amicaToken.balanceOf(user);
+        baseFeePercentage = tradingFeeConfig.feePercentage;
+        effectiveFeePercentage = getEffectiveFeePercentage(user);
+
+        if (baseFeePercentage > 0) {
+            discountPercentage = ((baseFeePercentage - effectiveFeePercentage) * BASIS_POINTS) / baseFeePercentage;
+        } else {
+            discountPercentage = 0;
+        }
+    }
+
+    /**
+     * @notice Preview fee for a specific trade
+     * @param tokenId Persona token ID
+     * @param amountIn Amount of tokens to swap
+     * @param user Address of the user
+     * @return feeAmount Fee that will be charged
+     * @return amountInAfterFee Amount after fee deduction
+     * @return expectedOutput Expected tokens out
+     */
+    function previewSwapWithFee(
+        uint256 tokenId,
+        uint256 amountIn,
+        address user
+    ) external view returns (
+        uint256 feeAmount,
+        uint256 amountInAfterFee,
+        uint256 expectedOutput
+    ) {
+        uint256 effectiveFeePercentage = getEffectiveFeePercentage(user);
+        feeAmount = (amountIn * effectiveFeePercentage) / BASIS_POINTS;
+        amountInAfterFee = amountIn - feeAmount;
+
+        TokenPurchase storage purchase = purchases[tokenId];
+        expectedOutput = getAmountOut(
+            amountInAfterFee,
+            purchase.tokensSold,
+            BONDING_CURVE_AMOUNT
+        );
+    }
+
+
 
     /**
      * @notice Create Uniswap pair when graduation threshold is met

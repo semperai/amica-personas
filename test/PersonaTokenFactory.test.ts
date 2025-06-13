@@ -1274,7 +1274,6 @@ describe("PersonaTokenFactory", function () {
             );
         });
 
-
         it("Should not allow creating pair twice", async function () {
             const { tokenId, personaFactory, amicaToken, user2 } = await loadFixture(createPersonaFixture);
 
