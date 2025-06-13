@@ -140,4 +140,37 @@ describe("Metadata Management", function () {
         const metadata = await personaFactory.getMetadata(tokenId, ["longData"]);
         expect(metadata[0]).to.equal(longValue);
     });
+
+    it("Should handle metadata with unicode and special characters", async function () {
+        const { tokenId, personaFactory, user1 } = await loadFixture(createPersonaFixture);
+
+        const specialKeys = ["emoji", "unicode", "special"];
+        const specialValues = [
+            "🚀🌟💎 Rocket to the moon!",
+            "Üñïçødé tëxt wîth spéçiål çhars",
+            "<script>alert('xss')</script> & \"quotes\" 'test'"
+        ];
+
+        await personaFactory.connect(user1).updateMetadata(
+            tokenId,
+            specialKeys,
+            specialValues
+        );
+
+        const retrieved = await personaFactory.getMetadata(tokenId, specialKeys);
+        expect(retrieved).to.deep.equal(specialValues);
+    });
+
+    it("Should handle empty metadata values", async function () {
+        const { tokenId, personaFactory, user1 } = await loadFixture(createPersonaFixture);
+
+        await personaFactory.connect(user1).updateMetadata(
+            tokenId,
+            ["empty"],
+            [""]
+        );
+
+        const retrieved = await personaFactory.getMetadata(tokenId, ["empty"]);
+        expect(retrieved[0]).to.equal("");
+    });
 });

@@ -82,3 +82,70 @@ describe("Deployment and Initialization", function () {
         ).to.be.revertedWith("Invalid implementation");
     });
 });
+
+describe("Upgrade Scenarios", function () {
+    it("Should maintain state after upgrade", async function () {
+        const { personaFactory, amicaToken, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
+
+        // Create a persona before upgrade
+        await amicaToken.connect(user1).approve(
+            await personaFactory.getAddress(),
+            DEFAULT_MINT_COST
+        );
+
+        await personaFactory.connect(user1).createPersona(
+            await amicaToken.getAddress(),
+            "Pre-Upgrade",
+            "PREUP",
+            [],
+            [],
+            0
+        );
+
+        // Deploy new implementation
+        const PersonaTokenFactoryV2 = await ethers.getContractFactory("PersonaTokenFactory");
+        const newImplementation = await PersonaTokenFactoryV2.deploy();
+
+        // Upgrade
+        const upgraded = await upgrades.upgradeProxy(
+            await personaFactory.getAddress(),
+            PersonaTokenFactoryV2
+        );
+
+        // Verify state is maintained
+        const persona = await upgraded.getPersona(0);
+        expect(persona.name).to.equal("Pre-Upgrade");
+        expect(persona.symbol).to.equal("PREUP");
+
+        // Verify can still create personas
+        await amicaToken.connect(user1).approve(
+            await upgraded.getAddress(),
+            DEFAULT_MINT_COST
+        );
+
+        await expect(
+            upgraded.connect(user1).createPersona(
+                await amicaToken.getAddress(),
+                "Post-Upgrade",
+                "POSTUP",
+                [],
+                [],
+                0
+            )
+        ).to.not.be.reverted;
+    });
+
+    it("Should reject initialization on implementation contract", async function () {
+        const PersonaTokenFactory = await ethers.getContractFactory("PersonaTokenFactory");
+        const implementation = await PersonaTokenFactory.deploy();
+
+        await expect(
+            implementation.initialize(
+                ethers.ZeroAddress,
+                ethers.ZeroAddress,
+                ethers.ZeroAddress,
+                ethers.ZeroAddress
+            )
+        ).to.be.revertedWith("Initializable: contract is already initialized");
+    });
+});

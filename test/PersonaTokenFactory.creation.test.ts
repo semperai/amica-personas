@@ -271,17 +271,6 @@ describe("Persona Creation", function () {
         ).to.be.revertedWithCustomError(amicaToken, "ERC20InsufficientAllowance");
     });
 
-    it("Should handle reentrancy protection", async function () {
-        // This is tested by the nonReentrant modifier
-        // The test would need a malicious contract to properly test reentrancy
-        // For now, we just verify the modifier is in place by checking the function
-        const { personaFactory } = await loadFixture(deployPersonaTokenFactoryFixture);
-
-        // The presence of nonReentrant modifier prevents reentrancy attacks
-        // This is enforced at the contract level
-        expect(true).to.be.true;
-    });
-
     it("Should handle persona creation with all valid name/symbol lengths", async function () {
         const { personaFactory, amicaToken, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
 
@@ -528,5 +517,70 @@ describe("Persona Creation", function () {
                 deadline
             )
         ).to.emit(personaFactory, "TokensPurchased");
+    });
+
+    it("Should handle initial buy that triggers immediate graduation", async function () {
+        const { personaFactory, amicaToken, user1, owner } = await loadFixture(deployPersonaTokenFactoryFixture);
+
+        // Configure with very low graduation threshold
+        const TestToken = await ethers.getContractFactory("TestERC20");
+        const testToken = await TestToken.deploy("Test", "TEST", ethers.parseEther("10000000"));
+
+        await personaFactory.connect(owner).configurePairingToken(
+            await testToken.getAddress(),
+            ethers.parseEther("100"),
+            ethers.parseEther("500") // Very low graduation threshold
+        );
+
+        // Give user enough tokens
+        await testToken.transfer(user1.address, ethers.parseEther("1000"));
+        await testToken.connect(user1).approve(
+            await personaFactory.getAddress(),
+            ethers.parseEther("1000")
+        );
+
+        // Create with initial buy that exceeds graduation
+        await expect(
+            personaFactory.connect(user1).createPersona(
+                await testToken.getAddress(),
+                "Instant Grad",
+                "INSTG",
+                [],
+                [],
+                ethers.parseEther("600") // More than graduation threshold
+            )
+        ).to.emit(personaFactory, "LiquidityPairCreated");
+    });
+
+    it("Should handle initial buy with maximum metadata", async function () {
+        const { personaFactory, amicaToken, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
+
+        // Create maximum metadata
+        const maxKeys = 50; // Reasonable maximum
+        const keys = Array.from({ length: maxKeys }, (_, i) => `key${i}`);
+        const values = Array.from({ length: maxKeys }, (_, i) => `value${i}`.repeat(20)); // Long values
+
+        const totalCost = DEFAULT_MINT_COST + ethers.parseEther("5000");
+        await amicaToken.connect(user1).approve(
+            await personaFactory.getAddress(),
+            totalCost
+        );
+
+        // This should work but consume more gas
+        const tx = await personaFactory.connect(user1).createPersona(
+            await amicaToken.getAddress(),
+            "Max Metadata",
+            "MAXM",
+            keys,
+            values,
+            ethers.parseEther("5000")
+        );
+
+        const receipt = await tx.wait();
+        expect(receipt?.gasUsed).to.be.gt(0);
+
+        // Verify all metadata was stored
+        const retrievedValues = await personaFactory.getMetadata(0, keys);
+        expect(retrievedValues).to.deep.equal(values);
     });
 });

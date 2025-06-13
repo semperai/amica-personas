@@ -1,6 +1,10 @@
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
+import {
+    deployPersonaTokenFactoryFixture,
+} from "./shared/fixtures";
+
 
 describe("AmicaToken", function () {
     // Constants
@@ -653,21 +657,83 @@ describe("AmicaToken", function () {
         });
     });
 
-    describe("ReentrancyGuard", function () {
-        it("Should protect deposit from reentrancy", async function () {
-            const { amicaToken } = await loadFixture(deployWithTokensFixture);
+    it("Should handle burn and claim with exactly 0 circulating supply", async function () {
+        const { amicaToken, owner, user1, user2 } = await loadFixture(deployPersonaTokenFactoryFixture);
 
-            // This test verifies the nonReentrant modifier is in place
-            // A proper reentrancy test would require a malicious contract
-            expect(true).to.be.true;
-        });
+        // Get all tokens in circulation back to contract
+        const user1Balance = await amicaToken.balanceOf(user1.address);
+        const user2Balance = await amicaToken.balanceOf(user2.address);
 
-        it("Should protect burnAndClaim from reentrancy", async function () {
-            const { amicaToken } = await loadFixture(deployWithTokensFixture);
+        if (user1Balance > 0) {
+            await amicaToken.connect(user1).transfer(await amicaToken.getAddress(), user1Balance);
+        }
+        if (user2Balance > 0) {
+            await amicaToken.connect(user2).transfer(await amicaToken.getAddress(), user2Balance);
+        }
 
-            // This test verifies the nonReentrant modifier is in place
-            // A proper reentrancy test would require a malicious contract
-            expect(true).to.be.true;
-        });
+        // Verify circulating supply is 0
+        expect(await amicaToken.circulatingSupply()).to.equal(0);
+
+        // Now trying to burn and claim should fail with "No circulating supply"
+        // First, we need to deposit some tokens to claim
+        const TestToken = await ethers.getContractFactory("TestERC20");
+        const testToken = await TestToken.deploy("Test", "TEST", ethers.parseEther("10000"));
+
+        await testToken.approve(await amicaToken.getAddress(), ethers.parseEther("1000"));
+        await amicaToken.deposit(await testToken.getAddress(), ethers.parseEther("1000"));
+
+        const tokenIndex = await amicaToken.tokenIndex(await testToken.getAddress());
+
+        // This should fail with "No circulating supply" since no tokens are in circulation
+        await expect(
+            amicaToken.burnAndClaim(ethers.parseEther("100"), [tokenIndex])
+        ).to.be.revertedWith("No circulating supply");
+    });
+
+    it("Should handle concurrent deposits of same token", async function () {
+        const { amicaToken, user1, user2 } = await loadFixture(deployPersonaTokenFactoryFixture);
+
+        const TestToken = await ethers.getContractFactory("TestERC20");
+        const testToken = await TestToken.deploy("Test", "TEST", ethers.parseEther("10000"));
+
+        // Give both users tokens
+        await testToken.transfer(user1.address, ethers.parseEther("1000"));
+        await testToken.transfer(user2.address, ethers.parseEther("1000"));
+
+        // Both approve
+        await testToken.connect(user1).approve(await amicaToken.getAddress(), ethers.parseEther("500"));
+        await testToken.connect(user2).approve(await amicaToken.getAddress(), ethers.parseEther("500"));
+
+        // Both deposit "simultaneously"
+        await Promise.all([
+            amicaToken.connect(user1).deposit(await testToken.getAddress(), ethers.parseEther("500")),
+            amicaToken.connect(user2).deposit(await testToken.getAddress(), ethers.parseEther("500"))
+        ]);
+
+        // Check total deposited
+        expect(await amicaToken.depositedBalances(await testToken.getAddress()))
+            .to.equal(ethers.parseEther("1000"));
+
+        // Token should only be in list once
+        const depositedTokens = await amicaToken.getDepositedTokens();
+        const testTokenAddress = await testToken.getAddress();
+        const tokenCount = depositedTokens.filter(t => t === testTokenAddress).length;
+        expect(tokenCount).to.equal(1);
+    });
+
+    it("Should handle recovery when depositedBalance equals contract balance", async function () {
+        const { amicaToken, owner } = await loadFixture(deployPersonaTokenFactoryFixture);
+
+        const TestToken = await ethers.getContractFactory("TestERC20");
+        const testToken = await TestToken.deploy("Test", "TEST", ethers.parseEther("10000"));
+
+        // Deposit exact amount
+        await testToken.approve(await amicaToken.getAddress(), ethers.parseEther("1000"));
+        await amicaToken.deposit(await testToken.getAddress(), ethers.parseEther("1000"));
+
+        // No excess to recover
+        await expect(
+            amicaToken.recoverToken(await testToken.getAddress(), owner.address)
+        ).to.be.revertedWith("No tokens to recover");
     });
 });
