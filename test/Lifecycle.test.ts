@@ -1,17 +1,11 @@
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { TestERC20 } from "../typechain-types";
 
 describe("PersonaTokenFactory - Complete Lifecycle", function () {
     const DEFAULT_MINT_COST = ethers.parseEther("1000");
     const DEFAULT_GRADUATION_THRESHOLD = ethers.parseEther("1000000");
-
-    const AMICA_DEPOSIT_AMOUNT = ethers.parseEther("333333333");
-    const BONDING_CURVE_AMOUNT = ethers.parseEther("333333333");
-    const LIQUIDITY_TOKEN_AMOUNT = ethers.parseEther("333333334");
-
 
     async function deployFullSystemFixture() {
         const [owner, creator, buyer1, buyer2, buyer3, lpHolder] = await ethers.getSigners();

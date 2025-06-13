@@ -1,0 +1,84 @@
+import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import { expect } from "chai";
+import { ethers, upgrades } from "hardhat";
+import {
+    deployPersonaTokenFactoryFixture,
+    deployMocksFixture,
+    DEFAULT_GRADUATION_THRESHOLD,
+    DEFAULT_MINT_COST,
+} from "./shared/fixtures";
+
+describe("Deployment and Initialization", function () {
+    it("Should deploy with correct initial state", async function () {
+        const { personaFactory, amicaToken, mockFactory, mockRouter, erc20Implementation } =
+            await loadFixture(deployPersonaTokenFactoryFixture);
+
+        expect(await personaFactory.name()).to.equal("Amica Persona");
+        expect(await personaFactory.symbol()).to.equal("PERSONA");
+        expect(await personaFactory.amicaToken()).to.equal(await amicaToken.getAddress());
+        expect(await personaFactory.uniswapFactory()).to.equal(await mockFactory.getAddress());
+        expect(await personaFactory.uniswapRouter()).to.equal(await mockRouter.getAddress());
+        expect(await personaFactory.erc20Implementation()).to.equal(await erc20Implementation.getAddress());
+    });
+
+    it("Should set default AMICA pairing config", async function () {
+        const { personaFactory, amicaToken } = await loadFixture(deployPersonaTokenFactoryFixture);
+
+        const config = await personaFactory.pairingConfigs(await amicaToken.getAddress());
+        expect(config.enabled).to.be.true;
+        expect(config.mintCost).to.equal(DEFAULT_MINT_COST);
+        expect(config.graduationThreshold).to.equal(DEFAULT_GRADUATION_THRESHOLD);
+    });
+
+    it("Should initialize default trading fee config", async function () {
+        const { personaFactory } = await loadFixture(deployPersonaTokenFactoryFixture);
+
+        const config = await personaFactory.tradingFeeConfig();
+        expect(config.feePercentage).to.equal(100); // 1%
+        expect(config.creatorShare).to.equal(5000); // 50%
+    });
+
+    it("Should reject initialization with zero addresses", async function () {
+        const [owner] = await ethers.getSigners();
+        const { mockFactory, mockRouter } = await loadFixture(deployMocksFixture);
+
+        const PersonaTokenFactory = await ethers.getContractFactory("PersonaTokenFactory");
+
+        // Test each zero address
+        await expect(
+            upgrades.deployProxy(PersonaTokenFactory, [
+                ethers.ZeroAddress,
+                await mockFactory.getAddress(),
+                await mockRouter.getAddress(),
+                owner.address
+            ])
+        ).to.be.revertedWith("Invalid AMICA token");
+
+        await expect(
+            upgrades.deployProxy(PersonaTokenFactory, [
+                owner.address,
+                ethers.ZeroAddress,
+                await mockRouter.getAddress(),
+                owner.address
+            ])
+        ).to.be.revertedWith("Invalid factory");
+
+        await expect(
+            upgrades.deployProxy(PersonaTokenFactory, [
+                owner.address,
+                await mockFactory.getAddress(),
+                ethers.ZeroAddress,
+                owner.address
+            ])
+        ).to.be.revertedWith("Invalid router");
+
+        await expect(
+            upgrades.deployProxy(PersonaTokenFactory, [
+                owner.address,
+                await mockFactory.getAddress(),
+                await mockRouter.getAddress(),
+                ethers.ZeroAddress
+            ])
+        ).to.be.revertedWith("Invalid implementation");
+    });
+});
