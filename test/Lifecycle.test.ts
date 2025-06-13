@@ -375,34 +375,80 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 ethers.parseEther("0.1")
             );
 
+            // Track creator's initial WETH balance
+            const creatorInitialWeth = await weth.balanceOf(creator.address);
+
             await personaFactory.connect(creator).createPersona(
                 await weth.getAddress(),
                 "ETH Maximalist",
                 "ETHMAX",
-                ["description"],
-                ["Only ETH matters"],
+                ["description", "twitter", "website"],
+                ["Only ETH matters", "@eth_maxi", "https://ethmax.io"],
                 0, // No initial buy
             );
 
             const tokenId = 0;
             const persona = await personaFactory.getPersona(tokenId);
+            console.log(`✓ Persona created with WETH pairing`);
 
-            // 2. Small purchases with ETH
+            // Creator should have spent 0.1 WETH on mint
+            const creatorWethAfterMint = await weth.balanceOf(creator.address);
+            expect(creatorWethAfterMint).to.equal(creatorInitialWeth - ethers.parseEther("0.1"));
+
+            // Verify no AMICA deposit yet
+            const depositedToAmicaBeforeGrad = await amicaToken.depositedBalances(persona.erc20Token);
+            expect(depositedToAmicaBeforeGrad).to.equal(0);
+            console.log(`✓ No AMICA deposit during creation (happens on graduation)`);
+
+            // 2. Multiple purchases with WETH
             const deadline = () => Math.floor(Date.now() / 1000) + 3600;
 
+            // First purchase - early buyer gets better rate
             const wethAmount1 = ethers.parseEther("2");
             await weth.connect(buyer1).approve(await personaFactory.getAddress(), wethAmount1);
-            await personaFactory.connect(buyer1).swapExactTokensForTokens(
-                tokenId, wethAmount1, 0, buyer1.address, deadline()
-            );
+            const quote1 = await personaFactory.getAmountOut(tokenId, wethAmount1);
 
-            // 3. Quick graduation (only 10 WETH threshold)
-            const wethAmount2 = ethers.parseEther("8.5"); // Extra for liquidity
+            await personaFactory.connect(buyer1).swapExactTokensForTokens(
+                tokenId, wethAmount1, quote1, buyer1.address, deadline()
+            );
+            console.log(`✓ Buyer1: ${ethers.formatEther(wethAmount1)} WETH → ${ethers.formatEther(quote1)} ETHMAX`);
+
+            // Second purchase - slightly worse rate
+            const wethAmount2 = ethers.parseEther("3");
             await weth.connect(buyer2).approve(await personaFactory.getAddress(), wethAmount2);
+            const quote2 = await personaFactory.getAmountOut(tokenId, wethAmount2);
+
+            await personaFactory.connect(buyer2).swapExactTokensForTokens(
+                tokenId, wethAmount2, quote2, buyer2.address, deadline()
+            );
+            console.log(`✓ Buyer2: ${ethers.formatEther(wethAmount2)} WETH → ${ethers.formatEther(quote2)} ETHMAX`);
+
+            // Verify price increased
+            const pricePerToken1 = wethAmount1 * ethers.parseEther("1") / quote1;
+            const pricePerToken2 = wethAmount2 * ethers.parseEther("1") / quote2;
+            expect(pricePerToken2).to.be.gt(pricePerToken1);
+            console.log(`✓ Price increased from ${ethers.formatEther(pricePerToken1)} to ${ethers.formatEther(pricePerToken2)} WETH per token`);
+
+            // Check available tokens before graduation
+            const availableBefore = await personaFactory.getAvailableTokens(tokenId);
+            console.log(`✓ Available tokens before graduation: ${ethers.formatEther(availableBefore)}`);
+
+            // 3. Trigger graduation (only 10 WETH threshold)
+            // Already deposited: (2 + 3) * 0.99 = 4.95 WETH
+            // Need: 10 - 4.95 = 5.05 WETH
+            // To get 5.05 after fees: 5.05 / 0.99 ≈ 5.10 WETH
+            const totalDeposited = (wethAmount1 + wethAmount2) * 99n / 100n;
+            const remainingNeeded = ethers.parseEther("10") - totalDeposited;
+            const graduationAmount = (remainingNeeded * 10000n) / 9900n + ethers.parseEther("0.01"); // Small buffer
+
+            await weth.connect(buyer1).approve(await personaFactory.getAddress(), graduationAmount);
+
+            // Track creator balance before graduation
+            const creatorWethBeforeGraduation = await weth.balanceOf(creator.address);
 
             await expect(
-                personaFactory.connect(buyer2).swapExactTokensForTokens(
-                    tokenId, wethAmount2, 0, buyer2.address, deadline()
+                personaFactory.connect(buyer1).swapExactTokensForTokens(
+                    tokenId, graduationAmount, 0, buyer1.address, deadline()
                 )
             ).to.emit(personaFactory, "LiquidityPairCreated");
 
@@ -414,11 +460,70 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             console.log(`✓ Deposited ${ethers.formatEther(depositedToAmica)} ETHMAX tokens to AMICA on graduation`);
 
             // Verify creator received only fees in WETH
-            const totalWethPurchases = wethAmount1 + wethAmount2;
-            const expectedFees = totalWethPurchases * 100n / 10000n * 5000n / 10000n; // 1% fee, 50% to creator
-            const creatorWethBalance = await weth.balanceOf(creator.address);
-            expect(creatorWethBalance).to.be.gte(ethers.parseEther("0.9") + expectedFees); // Initial 1 WETH minus mint cost + fees
-            console.log(`✓ Creator received fees in WETH`);
+            const creatorWethAfter = await weth.balanceOf(creator.address);
+            const graduationFees = graduationAmount * 100n / 10000n * 5000n / 10000n; // 0.5% to creator
+
+            expect(creatorWethAfter).to.be.closeTo(
+                creatorWethBeforeGraduation + graduationFees,
+                ethers.parseEther("0.0001") // Small tolerance for WETH
+            );
+
+            // Calculate total fees received
+            const totalWethPurchases = wethAmount1 + wethAmount2 + graduationAmount;
+            const totalCreatorFees = creatorWethAfter - creatorWethAfterMint;
+            console.log(`✓ Creator received ${ethers.formatEther(totalCreatorFees)} WETH in trading fees`);
+
+            // 4. Verify post-graduation state
+            const personaAfter = await personaFactory.getPersona(tokenId);
+            expect(personaAfter.pairCreated).to.be.true;
+
+            // No tokens available after graduation
+            const availableAfter = await personaFactory.getAvailableTokens(tokenId);
+            expect(availableAfter).to.equal(0);
+            console.log("✓ No tokens available via bonding curve after graduation");
+
+            // 5. Verify Uniswap pair configuration
+            const mockFactory = await ethers.getContractAt(
+                "IUniswapV2Factory",
+                await personaFactory.uniswapFactory()
+            );
+
+            const pairAddress = await mockFactory.getPair(
+                persona.erc20Token,
+                await weth.getAddress()
+            );
+
+            expect(pairAddress).to.not.equal(ethers.ZeroAddress);
+            console.log(`✓ Uniswap pair created: ETHMAX/WETH at ${pairAddress}`);
+
+            // Verify no AMICA pair exists
+            const amicaPairAddress = await mockFactory.getPair(
+                persona.erc20Token,
+                await amicaToken.getAddress()
+            );
+            expect(amicaPairAddress).to.equal(ethers.ZeroAddress);
+            console.log("✓ No ETHMAX/AMICA pair created");
+
+            // 6. Verify buyers can withdraw after graduation
+            await expect(personaFactory.connect(buyer1).withdrawTokens(tokenId))
+                .to.emit(personaFactory, "TokensWithdrawn");
+            console.log("✓ Buyers can withdraw tokens immediately after graduation");
+
+            // 7. Try to buy more - should fail
+            await expect(
+                personaFactory.connect(buyer2).swapExactTokensForTokens(
+                    tokenId, ethers.parseEther("0.1"), 0, buyer2.address, deadline()
+                )
+            ).to.be.revertedWith("Trading already on Uniswap");
+            console.log("✓ Further bonding curve purchases blocked after graduation");
+
+            // Summary
+            console.log("\n=== Final State ===");
+            const TestERC20 = await ethers.getContractFactory("TestERC20");
+            const ethMaxToken = TestERC20.attach(persona.erc20Token) as TestERC20;
+            console.log(`Total ETHMAX supply: ${ethers.formatEther(await ethMaxToken.totalSupply())}`);
+            console.log(`ETHMAX deposited to AMICA: ${ethers.formatEther(depositedToAmica)}`);
+            console.log(`Low graduation threshold (10 WETH) enables quick liquidity`);
         });
     });
 
