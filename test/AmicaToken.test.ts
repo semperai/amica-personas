@@ -658,17 +658,21 @@ describe("AmicaToken", function () {
     });
 
     it("Should handle burn and claim with exactly 0 circulating supply", async function () {
-        const { amicaToken, owner, user1, user2 } = await loadFixture(deployPersonaTokenFactoryFixture);
+        const { amicaToken, owner, user1, user2, user3 } = await loadFixture(deployPersonaTokenFactoryFixture);
 
         // Get all tokens in circulation back to contract
         const user1Balance = await amicaToken.balanceOf(user1.address);
         const user2Balance = await amicaToken.balanceOf(user2.address);
+        const user3Balance = await amicaToken.balanceOf(user3.address);
 
         if (user1Balance > 0) {
             await amicaToken.connect(user1).transfer(await amicaToken.getAddress(), user1Balance);
         }
         if (user2Balance > 0) {
             await amicaToken.connect(user2).transfer(await amicaToken.getAddress(), user2Balance);
+        }
+        if (user3Balance > 0) {
+            await amicaToken.connect(user3).transfer(await amicaToken.getAddress(), user3Balance);
         }
 
         // Verify circulating supply is 0
