@@ -399,7 +399,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 amountInAfterFee = amountIn - feeAmount;
 
         // Calculate tokens out using Bancor formula (after fees)
-        amountOut = getAmountOut(
+        amountOut = _calculateAmountOut(
             amountInAfterFee,
             purchase.tokensSold,
             BONDING_CURVE_AMOUNT
@@ -710,13 +710,16 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     // ============================================================================
 
     /**
-     * @notice Calculate output amount using Bancor-style bonding curve
+     * @notice Internal function to calculate output amount using Bancor-style bonding curve
+     * @param amountIn Input amount (after fees if applicable)
+     * @param reserveSold Amount already sold
+     * @param reserveTotal Total reserve amount
      */
-    function getAmountOut(
+    function _calculateAmountOut(
         uint256 amountIn,
         uint256 reserveSold,
         uint256 reserveTotal
-    ) public pure returns (uint256) {
+    ) internal pure returns (uint256) {
         require(amountIn > 0, "Insufficient input amount");
         require(reserveTotal > reserveSold, "Insufficient reserve");
 
@@ -740,20 +743,57 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
     /**
      * @notice Get a quote for swapping tokens
+     * @param tokenId The persona token ID
+     * @param amountIn Input amount in pairing tokens
+     * @return amountOut Output amount in persona tokens (after fees)
      */
     function getAmountOut(uint256 tokenId, uint256 amountIn) external view returns (uint256) {
         TokenPurchase storage purchase = purchases[tokenId];
 
-        // Apply trading fee to input
+        // Apply trading fee to input (using default fee without user context)
         uint256 feeAmount = (amountIn * tradingFeeConfig.feePercentage) / BASIS_POINTS;
         uint256 amountInAfterFee = amountIn - feeAmount;
 
-        return getAmountOut(amountInAfterFee, purchase.tokensSold, BONDING_CURVE_AMOUNT);
+        return _calculateAmountOut(amountInAfterFee, purchase.tokensSold, BONDING_CURVE_AMOUNT);
     }
 
     /**
-     * @notice Preview fee for a specific trade
+     * @notice Get a quote for swapping tokens with specific user's fee reduction
+     * @param tokenId The persona token ID
+     * @param amountIn Input amount in pairing tokens
+     * @param user The user address to calculate fees for
+     * @return amountOut Output amount in persona tokens (after reduced fees)
      */
+    function getAmountOutForUser(
+        uint256 tokenId, 
+        uint256 amountIn,
+        address user
+    ) external view returns (uint256) {
+        TokenPurchase storage purchase = purchases[tokenId];
+
+        // Calculate user-specific fee with AMICA holdings discount
+        uint256 effectiveFeePercentage = getEffectiveFeePercentage(user);
+        uint256 feeAmount = (amountIn * effectiveFeePercentage) / BASIS_POINTS;
+        uint256 amountInAfterFee = amountIn - feeAmount;
+
+        return _calculateAmountOut(amountInAfterFee, purchase.tokensSold, BONDING_CURVE_AMOUNT);
+    }
+
+    /**
+     * @notice Public wrapper for bonding curve calculation (for testing/UI)
+     * @param amountIn Input amount (no fees applied)
+     * @param reserveSold Amount already sold
+     * @param reserveTotal Total reserve amount
+     */
+    function calculateAmountOut(
+        uint256 amountIn,
+        uint256 reserveSold,
+        uint256 reserveTotal
+    ) external pure returns (uint256) {
+        return _calculateAmountOut(amountIn, reserveSold, reserveTotal);
+    }
+
+    // In previewSwapWithFee, it already uses the user-specific fee calculation correctly:
     function previewSwapWithFee(
         uint256 tokenId,
         uint256 amountIn,
@@ -768,7 +808,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         amountInAfterFee = amountIn - feeAmount;
 
         TokenPurchase storage purchase = purchases[tokenId];
-        expectedOutput = getAmountOut(
+        expectedOutput = _calculateAmountOut(
             amountInAfterFee,
             purchase.tokensSold,
             BONDING_CURVE_AMOUNT

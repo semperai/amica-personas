@@ -150,7 +150,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             // Buyer 1 - Early bird
             const buy1Amount = ethers.parseEther("50000");
             await amicaToken.connect(buyer1).approve(await personaFactory.getAddress(), buy1Amount);
-            const quote1 = await personaFactory["getAmountOut(uint256,uint256)"](tokenId, buy1Amount);
+            const quote1 = await personaFactory.getAmountOut(tokenId, buy1Amount);
 
             await personaFactory.connect(buyer1).swapExactTokensForTokens(
                 tokenId, buy1Amount, quote1, buyer1.address, deadline()
@@ -160,7 +160,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             // Buyer 2 - Mid stage
             const buy2Amount = ethers.parseEther("200000");
             await amicaToken.connect(buyer2).approve(await personaFactory.getAddress(), buy2Amount);
-            const quote2 = await personaFactory["getAmountOut(uint256,uint256)"](tokenId, buy2Amount);
+            const quote2 = await personaFactory.getAmountOut(tokenId, buy2Amount);
 
             await personaFactory.connect(buyer2).swapExactTokensForTokens(
                 tokenId, buy2Amount, quote2, buyer2.address, deadline()
@@ -289,7 +289,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
 
             const usdcAmount1 = ethers.parseEther("5000");
             await usdc.connect(buyer1).approve(await personaFactory.getAddress(), usdcAmount1);
-            const quote1 = await personaFactory["getAmountOut(uint256,uint256)"](tokenId, usdcAmount1);
+            const quote1 = await personaFactory.getAmountOut(tokenId, usdcAmount1);
 
             await personaFactory.connect(buyer1).swapExactTokensForTokens(
                 tokenId, usdcAmount1, quote1, buyer1.address, deadline()

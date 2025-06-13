@@ -36,8 +36,9 @@ export async function getQuote(
     tokenId: number,
     amountIn: bigint
 ): Promise<bigint> {
-    return personaFactory["getAmountOut(uint256,uint256)"](tokenId, amountIn);
+    return personaFactory.getAmountOut(tokenId, amountIn);
 }
+
 
 describe("PersonaTokenFactory", function () {
     // Constants - Access them from the contract instance
@@ -185,7 +186,7 @@ describe("PersonaTokenFactory", function () {
             const amicaContractBalanceBefore = await amicaToken.balanceOf(await amicaToken.getAddress());
 
             // Get quote (which should account for fees)
-            const expectedTokens = await personaFactory["getAmountOut(uint256,uint256)"](tokenId, purchaseAmount);
+            const expectedTokens = await personaFactory.getAmountOut(tokenId, purchaseAmount);
 
             await expect(
                 swapTokensForPersona(personaFactory, tokenId, purchaseAmount, expectedTokens, user2)
@@ -417,7 +418,7 @@ describe("PersonaTokenFactory", function () {
             const total = ethers.parseEther("300000000");
 
             // Get output with the built-in 1% fee
-            const output = await personaFactory["getAmountOut(uint256,uint256,uint256)"](
+            const output = await personaFactory.calculateAmountOut(
                 amountIn,
                 sold,
                 total
@@ -992,7 +993,7 @@ describe("PersonaTokenFactory", function () {
                 purchaseAmount
             );
 
-            const expectedTokens = await personaFactory["getAmountOut(uint256,uint256)"](tokenId, purchaseAmount);
+            const expectedTokens = await personaFactory.getAmountOut(tokenId, purchaseAmount);
 
             const initialBalance = await amicaToken.balanceOf(user2.address);
 
@@ -1086,7 +1087,7 @@ describe("PersonaTokenFactory", function () {
                 purchaseAmount
             );
 
-            const expectedTokens = await personaFactory["getAmountOut(uint256,uint256)"](tokenId, purchaseAmount);
+            const expectedTokens = await personaFactory.getAmountOut(tokenId, purchaseAmount);
             const deadline = Math.floor(Date.now() / 1000) + 3600;
 
             // Require more tokens than calculated
@@ -1151,19 +1152,19 @@ describe("PersonaTokenFactory", function () {
             const amount = ethers.parseEther("10000");
 
             // Using the new getAmountOut function with three parameters
-            const tokensAtStart = await personaFactory["getAmountOut(uint256,uint256,uint256)"](
+            const tokensAtStart = await personaFactory.calculateAmountOut(
                 amount,
                 0,
                 ethers.parseEther("300000000") // totalAvailable
             );
 
-            const tokensAtMiddle = await personaFactory["getAmountOut(uint256,uint256,uint256)"](
+            const tokensAtMiddle = await personaFactory.calculateAmountOut(
                 amount,
                 ethers.parseEther("150000000"), // half sold
                 ethers.parseEther("300000000")
             );
 
-            const tokensAtEnd = await personaFactory["getAmountOut(uint256,uint256,uint256)"](
+            const tokensAtEnd = await personaFactory.calculateAmountOut(
                 amount,
                 ethers.parseEther("290000000"), // almost all sold
                 ethers.parseEther("300000000")
@@ -1319,7 +1320,7 @@ describe("PersonaTokenFactory", function () {
                 purchaseAmount
             );
 
-            const tokensBought = await personaFactory["getAmountOut(uint256,uint256)"](tokenId, purchaseAmount);
+            const tokensBought = await personaFactory.getAmountOut(tokenId, purchaseAmount);
             const deadline = Math.floor(Date.now() / 1000) + 3600;
 
             await personaFactory.connect(user2).swapExactTokensForTokens(tokenId, purchaseAmount, 0, user2.address, deadline);
@@ -1662,11 +1663,10 @@ describe("PersonaTokenFactory", function () {
         it("Should calculate tokens correctly at graduation threshold boundary", async function () {
             const { personaFactory } = await loadFixture(deployPersonaTokenFactoryFixture);
 
-            // Test calculation at exactly the graduation threshold
-            const tokensAtThreshold = await personaFactory.calculateTokensOut(
-                DEFAULT_GRADUATION_THRESHOLD - ethers.parseEther("1"),
+            const tokensAtThreshold = await personaFactory.calculateAmountOut(
                 ethers.parseEther("1"),
-                DEFAULT_GRADUATION_THRESHOLD
+                ethers.parseEther("299999999"), // Almost at threshold
+                ethers.parseEther("300000000")  // BONDING_CURVE_AMOUNT
             );
 
             expect(tokensAtThreshold).to.be.gt(0);
@@ -1760,7 +1760,7 @@ describe("PersonaTokenFactory", function () {
                     amount
                 );
 
-                const expectedTokens = await personaFactory["getAmountOut(uint256,uint256)"](tokenId, amount);
+                const expectedTokens = await personaFactory.getAmountOut(tokenId, amount);
 
                 await personaFactory.connect(user2).swapExactTokensForTokens(tokenId, amount, 0, user2.address, deadline);
 
@@ -2092,7 +2092,7 @@ describe("PersonaTokenFactory", function () {
 
             for (const { sold, total } of testCases) {
                 const amountIn = ethers.parseEther("10000");
-                const output = await personaFactory["getAmountOut(uint256,uint256,uint256)"](
+                const output = await personaFactory.calculateAmountOut(
                     amountIn,
                     sold,
                     total
@@ -2104,7 +2104,7 @@ describe("PersonaTokenFactory", function () {
 
                 // As more tokens are sold, the output should decrease
                 if (sold > 0n) {
-                    const outputAtStart = await personaFactory["getAmountOut(uint256,uint256,uint256)"](
+                    const outputAtStart = await personaFactory.calculateAmountOut(
                         amountIn,
                         0n,
                         total
@@ -2121,7 +2121,7 @@ describe("PersonaTokenFactory", function () {
             const sold = 0n;
             const total = ethers.parseEther("300000000");
 
-            const output = await personaFactory["getAmountOut(uint256,uint256,uint256)"](
+            const output = await personaFactory.calculateAmountOut(
                 amountIn,
                 sold,
                 total
