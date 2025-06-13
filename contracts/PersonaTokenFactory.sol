@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
@@ -43,7 +44,7 @@ interface IERC20Implementation {
  * @notice Factory for creating persona NFTs with associated ERC20 tokens
  * @dev Updated to use 33/33/33 split: 1/3 to AMICA on graduation, 1/3 to bonding curve, 1/3 for liquidity
  */
-contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
     using Strings for uint256;
 
     // ============================================================================
@@ -177,6 +178,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         __ERC721_init("Amica Persona", "PERSONA");
         __Ownable_init(msg.sender);
         __ReentrancyGuard_init();
+        __Pausable_init();
 
         require(amicaToken_ != address(0), "Invalid AMICA token");
         require(uniswapFactory_ != address(0), "Invalid factory");
@@ -213,6 +215,14 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     // ============================================================================
     // ADMIN FUNCTIONS
     // ============================================================================
+
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
+    }
 
     /**
      * @notice Configure pairing token parameters
@@ -300,7 +310,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         string[] memory metadataKeys,
         string[] memory metadataValues,
         uint256 initialBuyAmount
-    ) external nonReentrant returns (uint256) {
+    ) external nonReentrant whenNotPaused returns (uint256) {
         // Validations
         PairingConfig memory config = pairingConfigs[pairingToken];
         require(config.enabled, "Pairing token not enabled");
@@ -373,7 +383,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 amountOutMin,
         address to,
         uint256 deadline
-    ) external nonReentrant returns (uint256 amountOut) {
+    ) external nonReentrant whenNotPaused returns (uint256 amountOut) {
         return _swapExactTokensForTokensInternal(tokenId, amountIn, amountOutMin, to, deadline, false);
     }
 
