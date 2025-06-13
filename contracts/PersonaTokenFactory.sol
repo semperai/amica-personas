@@ -95,11 +95,14 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     mapping(uint256 => TokenPurchase) public purchases;
     mapping(address => PairingConfig) public pairingConfigs;
 
-    // New state variables for features
     mapping(uint256 => mapping(address => UserPurchase[])) public userpurchases;
     TradingFeeConfig public tradingFeeConfig;
     FeeReductionConfig public feeReductionConfig;
-    uint256 public constant LOCK_DURATION = 7 days;
+
+    mapping(address => uint256) public amicaBalanceSnapshot;
+    mapping(address => uint256) public snapshotBlock;
+    uint256 public constant SNAPSHOT_DELAY = 100; // 100 blocks delay for AMICA balance snapshot
+
 
     // Constants - Updated for 33/33/33 split
     uint256 public constant PERSONA_TOKEN_SUPPLY = 1_000_000_000 ether;
@@ -131,6 +134,8 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 minReductionMultiplier,
         uint256 maxReductionMultiplier
     );
+    event SnapshotUpdated(address indexed user, uint256 snapshotBalance, uint256 blockNumber);
+
 
     function initialize(
         address amicaToken_,
@@ -421,6 +426,22 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
+     * @notice Check and potentially create snapshot for fee reduction
+     * @dev Called internally during swaps
+     */
+    function _checkAndUpdateSnapshot(address user) internal {
+        // If user has no snapshot and has enough AMICA, create one
+        if (snapshotBlock[user] == 0) {
+            uint256 balance = amicaToken.balanceOf(user);
+            if (balance >= feeReductionConfig.minAmicaForReduction) {
+                amicaBalanceSnapshot[user] = balance;
+                snapshotBlock[user] = block.number;
+                emit SnapshotUpdated(user, balance, block.number);
+            }
+        }
+    }
+
+    /**
      * @notice Swap exact tokens for persona tokens (similar to Uniswap)
      */
     function swapExactTokensForTokens(
@@ -449,6 +470,9 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         require(persona.erc20Token != address(0), "Invalid token");
 
         TokenPurchase storage purchase = purchases[tokenId];
+
+        // Auto-snapshot if needed (won't apply to this trade due to delay)
+        _checkAndUpdateSnapshot(msg.sender);
 
         // Calculate fees with AMICA holdings discount
         uint256 effectiveFeePercentage = getEffectiveFeePercentage(msg.sender);
@@ -567,33 +591,65 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
+     * @notice Update user's AMICA balance snapshot
+     * @dev User must wait SNAPSHOT_DELAY blocks before fee reduction applies
+     */
+    function updateAmicaSnapshot() external {
+        uint256 currentBalance = amicaToken.balanceOf(msg.sender);
+        require(currentBalance >= feeReductionConfig.minAmicaForReduction,
+                "Insufficient AMICA balance");
+
+        amicaBalanceSnapshot[msg.sender] = currentBalance;
+        snapshotBlock[msg.sender] = block.number;
+
+        emit SnapshotUpdated(msg.sender, currentBalance, block.number);
+    }
+
+    /**
+     * @notice Get effective AMICA balance for fee calculation
+     * @dev Returns minimum of snapshot balance and current balance
+     */
+    function getEffectiveAmicaBalance(address user) public view returns (uint256) {
+        // Check if user has a valid snapshot
+        if (snapshotBlock[user] == 0 ||
+            block.number < snapshotBlock[user] + SNAPSHOT_DELAY) {
+            return 0; // No valid snapshot or still in delay period
+        }
+
+        uint256 currentBalance = amicaToken.balanceOf(user);
+        uint256 snapshotBalance = amicaBalanceSnapshot[user];
+
+        // Return minimum of snapshot and current balance
+        // This prevents both flash loans AND selling after snapshot
+        return currentBalance < snapshotBalance ? currentBalance : snapshotBalance;
+    }
+
+    /**
      * @notice Calculate effective fee percentage based on user's AMICA holdings
      * @param user Address of the user
-     * @return effectiveFeePercentage The adjusted fee percentage in basis point    s
+     * @return effectiveFeePercentage The adjusted fee percentage in basis points
      */
     function getEffectiveFeePercentage(address user) public view returns (uint256) {
-        uint256 amicaBalance = amicaToken.balanceOf(user);
+        uint256 effectiveBalance = getEffectiveAmicaBalance(user);
 
-        // If user has less than minimum, return full fee
-        if (amicaBalance < feeReductionConfig.minAmicaForReduction) {
+        // If no effective balance, return full fee
+        if (effectiveBalance < feeReductionConfig.minAmicaForReduction) {
             return tradingFeeConfig.feePercentage;
         }
 
         // If user has maximum or more, return minimum fee
-        if (amicaBalance >= feeReductionConfig.maxAmicaForReduction) {
+        if (effectiveBalance >= feeReductionConfig.maxAmicaForReduction) {
             return (tradingFeeConfig.feePercentage * feeReductionConfig.maxReductionMultiplier) / BASIS_POINTS;
         }
 
         // Calculate exponential scaling between min and max
-        // Using logarithmic interpolation for exponential feel
         uint256 range = feeReductionConfig.maxAmicaForReduction - feeReductionConfig.minAmicaForReduction;
-        uint256 userPosition = amicaBalance - feeReductionConfig.minAmicaForReduction;
+        uint256 userPosition = effectiveBalance - feeReductionConfig.minAmicaForReduction;
 
         // Calculate progress ratio (0 to 1 scaled to 1e18)
         uint256 progress = (userPosition * 1e18) / range;
 
-        // Apply exponential curve: progress^2 for stronger exponential effect
-        // This makes early holdings have less impact, later holdings have more
+        // Apply exponential curve: progress^2
         uint256 exponentialProgress = (progress * progress) / 1e18;
 
         // Interpolate between min and max reduction multipliers
@@ -622,20 +678,35 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Get fee discount information for a user
-     * @param user Address to check
-     * @return amicaBalance User's AMICA balance
-     * @return baseFeePercentage Base trading fee percentage
-     * @return effectiveFeePercentage User's effective fee after discount
-     * @return discountPercentage Percentage discount applied (0-10000)
+     * @notice Get detailed fee information for a user
      */
     function getUserFeeInfo(address user) external view returns (
-        uint256 amicaBalance,
+        uint256 currentBalance,
+        uint256 snapshotBalance,
+        uint256 effectiveBalance,
+        uint256 snapshotBlock_,
+        bool isEligible,
+        uint256 blocksUntilEligible,
         uint256 baseFeePercentage,
         uint256 effectiveFeePercentage,
         uint256 discountPercentage
     ) {
-        amicaBalance = amicaToken.balanceOf(user);
+        currentBalance = amicaToken.balanceOf(user);
+        snapshotBalance = amicaBalanceSnapshot[user];
+        effectiveBalance = getEffectiveAmicaBalance(user);
+        snapshotBlock_ = snapshotBlock[user];
+
+        if (snapshotBlock_ > 0 && block.number >= snapshotBlock_ + SNAPSHOT_DELAY) {
+            isEligible = true;
+            blocksUntilEligible = 0;
+        } else if (snapshotBlock_ > 0) {
+            isEligible = false;
+            blocksUntilEligible = (snapshotBlock_ + SNAPSHOT_DELAY) - block.number;
+        } else {
+            isEligible = false;
+            blocksUntilEligible = SNAPSHOT_DELAY;
+        }
+
         baseFeePercentage = tradingFeeConfig.feePercentage;
         effectiveFeePercentage = getEffectiveFeePercentage(user);
 
