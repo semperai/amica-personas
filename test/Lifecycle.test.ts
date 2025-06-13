@@ -131,9 +131,10 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             const persona = await personaFactory.getPersona(tokenId);
             console.log(`✓ ERC20 token deployed at: ${persona.erc20Token}`);
 
-            // Verify AMICA deposit
+            // Verify NO AMICA deposit yet (happens on graduation)
             const depositedToAmica = await amicaToken.depositedBalances(persona.erc20Token);
             console.log(`✓ Deposited to AMICA: ${ethers.formatEther(depositedToAmica)} tokens`);
+            expect(depositedToAmica).to.equal(0);
 
             // 2. Early buyers purchase tokens
             const deadline = () => Math.floor(Date.now() / 1000) + 3600;
@@ -206,6 +207,11 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
 
             expect(liquidityEvent).to.not.be.undefined;
             console.log("\n✓ GRADUATION! Liquidity pair created on Uniswap");
+
+            // NOW check AMICA deposit after graduation
+            const depositedToAmicaAfterGrad = await amicaToken.depositedBalances(persona.erc20Token);
+            expect(depositedToAmicaAfterGrad).to.equal(ethers.parseEther("333333333"));
+            console.log(`✓ Deposited ${ethers.formatEther(depositedToAmicaAfterGrad)} ASSIST tokens to AMICA on graduation`);
 
             // Verify creator only received trading fees, not graduation reward
             const creatorBalanceAfter = await amicaToken.balanceOf(creator.address);
@@ -291,30 +297,46 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             console.log(`✓ Buyer1: ${ethers.formatEther(usdcAmount1)} USDC → ${ethers.formatEther(quote1)} DEFI`);
 
             // 3. Trigger graduation with USDC
-            const graduationAmount = ethers.parseEther("45000"); // Total 50k USDC
+            // Need to reach 50k USDC total AFTER fees
+            // Already deposited: 5000 * 0.99 = 4950
+            // Need: 50000 - 4950 = 45050
+            // To get 45050 after 1% fee, need to send: 45050 / 0.99 ≈ 45505.05
+            const remainingNeeded = ethers.parseEther("50000") - (usdcAmount1 * 99n / 100n);
+            const graduationAmount = (remainingNeeded * 10000n) / 9900n + ethers.parseEther("1"); // Add 1 USDC buffer
+
             await usdc.connect(buyer2).approve(await personaFactory.getAddress(), graduationAmount);
 
-            // IMPORTANT: Capture creator balance AFTER mint but BEFORE graduation
-            const creatorUsdcBefore = await usdc.balanceOf(creator.address);
+            // Capture creator balance right before graduation (after they received fees from buyer1)
+            const creatorUsdcBeforeGraduation = await usdc.balanceOf(creator.address);
 
-            await personaFactory.connect(buyer2).swapExactTokensForTokens(
-                tokenId, graduationAmount, 0, buyer2.address, deadline()
-            );
+            // This should trigger graduation
+            await expect(
+                personaFactory.connect(buyer2).swapExactTokensForTokens(
+                    tokenId, graduationAmount, 0, buyer2.address, deadline()
+                )
+            ).to.emit(personaFactory, "LiquidityPairCreated");
 
-            // NOW check AMICA deposit after graduation
+            // NOW check AMICA deposit after graduation - it's the DEFI tokens that get deposited
             const depositedToAmicaAfterGrad = await amicaToken.depositedBalances(persona.erc20Token);
             expect(depositedToAmicaAfterGrad).to.equal(ethers.parseEther("333333333"));
-            console.log(`✓ Deposited ${ethers.formatEther(depositedToAmicaAfterGrad)} tokens to AMICA on graduation`);
+            console.log(`✓ Deposited ${ethers.formatEther(depositedToAmicaAfterGrad)} DEFI tokens to AMICA on graduation`);
 
-            // Verify creator received only USDC fees (not graduation reward)
+            // Verify creator received only USDC fees from the graduation purchase
             const creatorUsdcAfter = await usdc.balanceOf(creator.address);
-            const totalUsdcPurchases = usdcAmount1 + graduationAmount;
-            const totalFees = totalUsdcPurchases * 100n / 10000n; // 1% fee
-            const creatorFees = totalFees * 5000n / 10000n; // 50% to creator
 
-            // Use closeTo to handle any potential rounding issues
-            expect(creatorUsdcAfter).to.be.closeTo(creatorUsdcBefore + creatorFees, ethers.parseEther("0.01"));
-            console.log(`✓ Creator received ${ethers.formatEther(creatorFees)} USDC in trading fees only`);
+            // Only calculate fees for the graduation transaction
+            const graduationFees = graduationAmount * 100n / 10000n; // 1% fee
+            const creatorGraduationFees = graduationFees * 5000n / 10000n; // 50% to creator
+
+            // Creator should have received fees only from the graduation transaction
+            expect(creatorUsdcAfter).to.be.closeTo(
+                creatorUsdcBeforeGraduation + creatorGraduationFees,
+                ethers.parseEther("0.01")
+            );
+
+            // Log total fees received (from both transactions)
+            const totalCreatorFees = creatorUsdcAfter - creatorUsdcAfterMint;
+            console.log(`✓ Creator received ${ethers.formatEther(totalCreatorFees)} USDC in trading fees only`);
 
             // 4. Verify Uniswap pair is DEFI/USDC (not DEFI/AMICA)
             const mockFactory = await ethers.getContractAt(
@@ -386,6 +408,11 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
 
             console.log("✓ Graduated with only 10 WETH!");
 
+            // Verify ETHMAX tokens were deposited to AMICA
+            const depositedToAmica = await amicaToken.depositedBalances(persona.erc20Token);
+            expect(depositedToAmica).to.equal(ethers.parseEther("333333333"));
+            console.log(`✓ Deposited ${ethers.formatEther(depositedToAmica)} ETHMAX tokens to AMICA on graduation`);
+
             // Verify creator received only fees in WETH
             const totalWethPurchases = wethAmount1 + wethAmount2;
             const expectedFees = totalWethPurchases * 100n / 10000n * 5000n / 10000n; // 1% fee, 50% to creator
@@ -430,27 +457,35 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             // IMPORTANT: Need to graduate both personas first to trigger AMICA deposits
             const deadline = () => Math.floor(Date.now() / 1000) + 3600;
 
-            // Graduate AMICA persona
+            // Graduate AMICA persona (need to account for fees)
+            const amicaGradAmount = (DEFAULT_GRADUATION_THRESHOLD * 10100n) / 9900n; // Add buffer for fees
             await amicaToken.connect(buyer1).approve(
                 await personaFactory.getAddress(),
-                DEFAULT_GRADUATION_THRESHOLD + ethers.parseEther("100000")
+                amicaGradAmount
             );
-            await personaFactory.connect(buyer1).swapExactTokensForTokens(
-                0, DEFAULT_GRADUATION_THRESHOLD + ethers.parseEther("100000"), 0, buyer1.address, deadline()
-            );
+            await expect(
+                personaFactory.connect(buyer1).swapExactTokensForTokens(
+                    0, amicaGradAmount, 0, buyer1.address, deadline()
+                )
+            ).to.emit(personaFactory, "LiquidityPairCreated");
 
-            // Graduate USDC persona
+            // Graduate USDC persona (50k USDC threshold from fixture)
+            const usdcGradAmount = (ethers.parseEther("50000") * 10100n) / 9900n; // Add buffer for fees
             await usdc.connect(buyer1).approve(
                 await personaFactory.getAddress(),
-                ethers.parseEther("50000") // USDC graduation threshold
+                usdcGradAmount
             );
-            await personaFactory.connect(buyer1).swapExactTokensForTokens(
-                1, ethers.parseEther("50000"), 0, buyer1.address, deadline()
-            );
+            await expect(
+                personaFactory.connect(buyer1).swapExactTokensForTokens(
+                    1, usdcGradAmount, 0, buyer1.address, deadline()
+                )
+            ).to.emit(personaFactory, "LiquidityPairCreated");
 
-            // Now both personas should have deposited to AMICA
-            expect(await amicaToken.depositedBalances(persona1.erc20Token)).to.be.gt(0);
-            expect(await amicaToken.depositedBalances(persona2.erc20Token)).to.be.gt(0);
+            // Now both personas should have deposited their tokens to AMICA
+            const deposit1 = await amicaToken.depositedBalances(persona1.erc20Token);
+            const deposit2 = await amicaToken.depositedBalances(persona2.erc20Token);
+            expect(deposit1).to.equal(ethers.parseEther("333333333"));
+            expect(deposit2).to.equal(ethers.parseEther("333333333"));
 
             // Give owner some AMICA to burn
             await amicaToken.withdraw(owner.address, ethers.parseEther("1000000"));
