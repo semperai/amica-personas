@@ -104,6 +104,14 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 maxReductionMultiplier;    // Fee multiplier at maximum AMICA (e.g., 0 = 0%)
     }
 
+    // FIXED: Struct to hold both current and pending snapshots
+    struct UserSnapshot {
+        uint256 currentBalance;      // Currently active snapshot balance
+        uint256 currentBlock;        // Block when current snapshot was taken
+        uint256 pendingBalance;      // Pending snapshot balance (if any)
+        uint256 pendingBlock;        // Block when pending snapshot was taken
+    }
+
     // ============================================================================
     // STATE VARIABLES
     // ============================================================================
@@ -127,9 +135,8 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     TradingFeeConfig public tradingFeeConfig;
     FeeReductionConfig public feeReductionConfig;
 
-    // AMICA snapshot system
-    mapping(address => uint256) public amicaBalanceSnapshot;
-    mapping(address => uint256) public snapshotBlock;
+    // FIXED: Updated snapshot system to handle both current and pending
+    mapping(address => UserSnapshot) public userSnapshots;
 
     // ============================================================================
     // EVENTS
@@ -527,14 +534,26 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
     /**
      * @notice Update user's AMICA balance snapshot
+     * @dev FIXED: Now properly handles pending snapshots
      */
     function updateAmicaSnapshot() external {
         uint256 currentBalance = amicaToken.balanceOf(msg.sender);
         require(currentBalance >= feeReductionConfig.minAmicaForReduction,
                 "Insufficient AMICA balance");
 
-        amicaBalanceSnapshot[msg.sender] = currentBalance;
-        snapshotBlock[msg.sender] = block.number;
+        UserSnapshot storage snapshot = userSnapshots[msg.sender];
+
+        // Check if pending snapshot can be promoted to current
+        if (snapshot.pendingBlock > 0 && block.number >= snapshot.pendingBlock + SNAPSHOT_DELAY) {
+            snapshot.currentBalance = snapshot.pendingBalance;
+            snapshot.currentBlock = snapshot.pendingBlock;
+            snapshot.pendingBalance = 0;
+            snapshot.pendingBlock = 0;
+        }
+
+        // Set new pending snapshot
+        snapshot.pendingBalance = currentBalance;
+        snapshot.pendingBlock = block.number;
 
         emit SnapshotUpdated(msg.sender, currentBalance, block.number);
     }
@@ -650,23 +669,36 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
     /**
      * @notice Get effective AMICA balance for fee calculation
+     * @dev FIXED: Now properly uses the active snapshot
      */
     function getEffectiveAmicaBalance(address user) public view returns (uint256) {
-        // Check if user has a valid snapshot
-        if (snapshotBlock[user] == 0 ||
-            block.number < snapshotBlock[user] + SNAPSHOT_DELAY) {
-            return 0; // No valid snapshot or still in delay period
+        UserSnapshot storage snapshot = userSnapshots[user];
+
+        // First check if pending snapshot should be promoted
+        uint256 activeBalance;
+        uint256 activeBlock;
+
+        if (snapshot.pendingBlock > 0 && block.number >= snapshot.pendingBlock + SNAPSHOT_DELAY) {
+            // Pending snapshot is now active
+            activeBalance = snapshot.pendingBalance;
+            activeBlock = snapshot.pendingBlock;
+        } else if (snapshot.currentBlock > 0 && block.number >= snapshot.currentBlock + SNAPSHOT_DELAY) {
+            // Use current snapshot
+            activeBalance = snapshot.currentBalance;
+            activeBlock = snapshot.currentBlock;
+        } else {
+            // No valid snapshot
+            return 0;
         }
 
-        uint256 currentBalance = amicaToken.balanceOf(user);
-        uint256 snapshotBalance = amicaBalanceSnapshot[user];
-
         // Return minimum of snapshot and current balance
-        return currentBalance < snapshotBalance ? currentBalance : snapshotBalance;
+        uint256 currentBalance = amicaToken.balanceOf(user);
+        return currentBalance < activeBalance ? currentBalance : activeBalance;
     }
 
     /**
      * @notice Get detailed fee information for a user
+     * @dev FIXED: Updated to work with new snapshot system
      */
     function getUserFeeInfo(address user) external view returns (
         uint256 currentBalance,
@@ -680,17 +712,39 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 discountPercentage
     ) {
         currentBalance = amicaToken.balanceOf(user);
-        snapshotBalance = amicaBalanceSnapshot[user];
         effectiveBalance = getEffectiveAmicaBalance(user);
-        snapshotBlock_ = snapshotBlock[user];
 
-        if (snapshotBlock_ > 0 && block.number >= snapshotBlock_ + SNAPSHOT_DELAY) {
+        UserSnapshot storage snapshot = userSnapshots[user];
+
+        // Determine which snapshot is active/pending
+        if (snapshot.pendingBlock > 0 && block.number >= snapshot.pendingBlock + SNAPSHOT_DELAY) {
+            // Pending is now active
+            snapshotBalance = snapshot.pendingBalance;
+            snapshotBlock_ = snapshot.pendingBlock;
             isEligible = true;
             blocksUntilEligible = 0;
-        } else if (snapshotBlock_ > 0) {
+        } else if (snapshot.currentBlock > 0 && block.number >= snapshot.currentBlock + SNAPSHOT_DELAY) {
+            // Current is active
+            snapshotBalance = snapshot.currentBalance;
+            snapshotBlock_ = snapshot.currentBlock;
+            isEligible = true;
+            blocksUntilEligible = 0;
+        } else if (snapshot.pendingBlock > 0) {
+            // Pending exists but not active yet
+            snapshotBalance = snapshot.pendingBalance;
+            snapshotBlock_ = snapshot.pendingBlock;
             isEligible = false;
-            blocksUntilEligible = (snapshotBlock_ + SNAPSHOT_DELAY) - block.number;
+            blocksUntilEligible = (snapshot.pendingBlock + SNAPSHOT_DELAY) - block.number;
+        } else if (snapshot.currentBlock > 0) {
+            // Current exists but not active yet (shouldn't happen in practice)
+            snapshotBalance = snapshot.currentBalance;
+            snapshotBlock_ = snapshot.currentBlock;
+            isEligible = false;
+            blocksUntilEligible = (snapshot.currentBlock + SNAPSHOT_DELAY) - block.number;
         } else {
+            // No snapshot
+            snapshotBalance = 0;
+            snapshotBlock_ = 0;
             isEligible = false;
             blocksUntilEligible = SNAPSHOT_DELAY;
         }
@@ -703,6 +757,23 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         } else {
             discountPercentage = 0;
         }
+    }
+
+    // FIXED: Add backwards compatibility getters for tests
+    function amicaBalanceSnapshot(address user) external view returns (uint256) {
+        UserSnapshot storage snapshot = userSnapshots[user];
+        if (snapshot.pendingBlock > 0) {
+            return snapshot.pendingBalance;
+        }
+        return snapshot.currentBalance;
+    }
+
+    function snapshotBlock(address user) external view returns (uint256) {
+        UserSnapshot storage snapshot = userSnapshots[user];
+        if (snapshot.pendingBlock > 0) {
+            return snapshot.pendingBlock;
+        }
+        return snapshot.currentBlock;
     }
 
     // ============================================================================
@@ -765,7 +836,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @return amountOut Output amount in persona tokens (after reduced fees)
      */
     function getAmountOutForUser(
-        uint256 tokenId, 
+        uint256 tokenId,
         uint256 amountIn,
         address user
     ) external view returns (uint256) {
@@ -821,14 +892,25 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
     /**
      * @notice Check and potentially create snapshot for fee reduction
+     * @dev FIXED: Now properly handles the dual snapshot system
      */
     function _checkAndUpdateSnapshot(address user) internal {
-        // If user has no snapshot and has enough AMICA, create one
-        if (snapshotBlock[user] == 0) {
+        UserSnapshot storage snapshot = userSnapshots[user];
+
+        // Check if pending snapshot should be promoted
+        if (snapshot.pendingBlock > 0 && block.number >= snapshot.pendingBlock + SNAPSHOT_DELAY) {
+            snapshot.currentBalance = snapshot.pendingBalance;
+            snapshot.currentBlock = snapshot.pendingBlock;
+            snapshot.pendingBalance = 0;
+            snapshot.pendingBlock = 0;
+        }
+
+        // If user has no snapshot (neither current nor pending) and has enough AMICA, create one
+        if (snapshot.currentBlock == 0 && snapshot.pendingBlock == 0) {
             uint256 balance = amicaToken.balanceOf(user);
             if (balance >= feeReductionConfig.minAmicaForReduction) {
-                amicaBalanceSnapshot[user] = balance;
-                snapshotBlock[user] = block.number;
+                snapshot.pendingBalance = balance;
+                snapshot.pendingBlock = block.number;
                 emit SnapshotUpdated(user, balance, block.number);
             }
         }
