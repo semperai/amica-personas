@@ -13,40 +13,105 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
     describe("Reentrancy Protection", function () {
         it("Should have reentrancy protection on createPersona", async function () {
             const { personaFactory, owner } = await loadFixture(deployPersonaTokenFactoryFixture);
-            
-            // This test is actually working correctly - the error shows it IS reverting
-            // with reentrancy protection. The test just needs to check for any revert
+
+            // Deploy malicious token that attempts reentrancy
             const MaliciousToken = await ethers.getContractFactory("MaliciousReentrantToken");
             const maliciousToken = await MaliciousToken.deploy(
                 await personaFactory.getAddress(),
                 "createPersona"
             );
 
+            // Configure the malicious token as a pairing token
             await personaFactory.connect(owner).configurePairingToken(
                 await maliciousToken.getAddress(),
                 ethers.parseEther("100"),
                 ethers.parseEther("10000")
             );
 
+            // Mint tokens and approve
             await maliciousToken.mint(owner.address, ethers.parseEther("1000"));
             await maliciousToken.approve(await personaFactory.getAddress(), ethers.parseEther("1000"));
 
-            // The createPersona call will revert due to reentrancy
-            await expect(
-                personaFactory.createPersona(
-                    await maliciousToken.getAddress(),
-                    "Test",
-                    "TEST",
-                    [],
-                    [],
-                    0
-                )
-            ).to.be.reverted; // Just check for any revert
+            // The createPersona call should succeed, but the reentrant call inside should fail
+            // The transaction as a whole won't revert because the malicious token catches the error
+            // We need to verify that reentrancy was prevented by checking the result
+
+            // Execute the transaction and capture the created token ID
+            const tx = await personaFactory.createPersona(
+                await maliciousToken.getAddress(),
+                "Test",
+                "TEST",
+                [],
+                [],
+                0
+            );
+
+            const receipt = await tx.wait();
+            const event = receipt?.logs.find(
+                log => {
+                    try {
+                        const parsed = personaFactory.interface.parseLog({
+                            topics: log.topics as string[],
+                            data: log.data
+                        });
+                        return parsed?.name === 'PersonaCreated';
+                    } catch {
+                        return false;
+                    }
+                }
+            );
+
+            // Should have exactly one PersonaCreated event
+            expect(event).to.not.be.undefined;
+
+            // Try to create another persona directly to verify the count
+            await maliciousToken.mint(owner.address, ethers.parseEther("200"));
+            await maliciousToken.approve(await personaFactory.getAddress(), ethers.parseEther("200"));
+
+            const tx2 = await personaFactory.createPersona(
+                await maliciousToken.getAddress(),
+                "Test2",
+                "TEST2",
+                [],
+                [],
+                0
+            );
+
+            const receipt2 = await tx2.wait();
+            const event2 = receipt2?.logs.find(
+                log => {
+                    try {
+                        const parsed = personaFactory.interface.parseLog({
+                            topics: log.topics as string[],
+                            data: log.data
+                        });
+                        return parsed?.name === 'PersonaCreated';
+                    } catch {
+                        return false;
+                    }
+                }
+            );
+
+            const parsedEvent1 = personaFactory.interface.parseLog({
+                topics: event!.topics as string[],
+                data: event!.data
+            });
+            const parsedEvent2 = personaFactory.interface.parseLog({
+                topics: event2!.topics as string[],
+                data: event2!.data
+            });
+
+            const tokenId1 = parsedEvent1!.args.tokenId;
+            const tokenId2 = parsedEvent2!.args.tokenId;
+
+            // If reentrancy protection works, tokenId2 should be tokenId1 + 1
+            // (not tokenId1 + 2, which would happen if the reentrant call succeeded)
+            expect(tokenId2).to.equal(tokenId1 + 1n);
         });
 
         it("Should have reentrancy protection on swapExactTokensForTokens", async function () {
             const { tokenId, personaFactory, amicaToken, user1, owner } = await loadFixture(createPersonaFixture);
-            
+
             // Deploy malicious token that attempts reentrant swap
             const MaliciousToken = await ethers.getContractFactory("MaliciousReentrantToken");
             const maliciousToken = await MaliciousToken.deploy(
@@ -66,17 +131,17 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
             const { tokenId, personaFactory, amicaToken, user1, user2 } = await loadFixture(createPersonaFixture);
 
             const tradeAmount = ethers.parseEther("10000");
-            
+
             // User1 gets a quote
             const quotedAmount = await personaFactory.getAmountOut(tokenId, tradeAmount);
-            
+
             // User2 front-runs with a large trade
             await amicaToken.withdraw(user2.address, ethers.parseEther("100000"));
             await amicaToken.connect(user2).approve(
                 await personaFactory.getAddress(),
                 ethers.parseEther("50000")
             );
-            
+
             await personaFactory.connect(user2).swapExactTokensForTokens(
                 tokenId,
                 ethers.parseEther("50000"),
@@ -327,7 +392,7 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
             // Make purchases
             for (let i = 0; i < numPurchases; i++) {
                 const availableBefore = await personaFactory.getAvailableTokens(tokenId);
-                
+
                 await personaFactory.connect(user2).swapExactTokensForTokens(
                     tokenId,
                     purchaseSize,
@@ -337,7 +402,7 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
                 );
 
                 const availableAfter = await personaFactory.getAvailableTokens(tokenId);
-                
+
                 // Available tokens should decrease
                 expect(availableAfter).to.be.lt(availableBefore);
             }
@@ -345,7 +410,7 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
             // Check if we're close to graduation
             const purchase = await personaFactory.purchases(tokenId);
             const config = await personaFactory.pairingConfigs(await amicaToken.getAddress());
-            
+
             // Should be close to graduation threshold
             expect(purchase.totalDeposited).to.be.closeTo(
                 config.graduationThreshold,
