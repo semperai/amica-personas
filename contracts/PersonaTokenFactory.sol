@@ -8,6 +8,10 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
+// ============================================================================
+// INTERFACES
+// ============================================================================
+
 interface IUniswapV2Factory {
     function createPair(address tokenA, address tokenB) external returns (address pair);
     function getPair(address tokenA, address tokenB) external view returns (address pair);
@@ -42,7 +46,25 @@ interface IERC20Implementation {
 contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using Strings for uint256;
 
-    // Structs
+    // ============================================================================
+    // CONSTANTS
+    // ============================================================================
+
+    // Token distribution constants (33/33/33 split)
+    uint256 public constant PERSONA_TOKEN_SUPPLY = 1_000_000_000 ether;
+    uint256 public constant AMICA_DEPOSIT_AMOUNT = 333_333_333 ether;     // 1/3 for AMICA (on graduation)
+    uint256 public constant BONDING_CURVE_AMOUNT = 333_333_333 ether;    // 1/3 for bonding curve
+    uint256 public constant LIQUIDITY_TOKEN_AMOUNT = 333_333_334 ether;  // 1/3 for liquidity (+ rounding)
+
+    // Other constants
+    string private constant TOKEN_SUFFIX = ".amica";
+    uint256 private constant BASIS_POINTS = 10000;
+    uint256 public constant SNAPSHOT_DELAY = 100; // 100 blocks delay for AMICA balance snapshot
+
+    // ============================================================================
+    // STRUCTS
+    // ============================================================================
+
     struct PersonaData {
         string name;
         string symbol;
@@ -82,38 +104,37 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 maxReductionMultiplier;    // Fee multiplier at maximum AMICA (e.g., 0 = 0%)
     }
 
+    // ============================================================================
+    // STATE VARIABLES
+    // ============================================================================
 
-
+    // Core protocol contracts
     IERC20 public amicaToken;
     IUniswapV2Factory public uniswapFactory;
     IUniswapV2Router public uniswapRouter;
     address public erc20Implementation;
 
-    // State variables
+    // Token tracking
     uint256 private _currentTokenId;
+
+    // Mappings for persona data
     mapping(uint256 => PersonaData) public personas;
     mapping(uint256 => TokenPurchase) public purchases;
-    mapping(address => PairingConfig) public pairingConfigs;
-
     mapping(uint256 => mapping(address => UserPurchase[])) public userpurchases;
+
+    // Configuration mappings
+    mapping(address => PairingConfig) public pairingConfigs;
     TradingFeeConfig public tradingFeeConfig;
     FeeReductionConfig public feeReductionConfig;
 
+    // AMICA snapshot system
     mapping(address => uint256) public amicaBalanceSnapshot;
     mapping(address => uint256) public snapshotBlock;
-    uint256 public constant SNAPSHOT_DELAY = 100; // 100 blocks delay for AMICA balance snapshot
 
+    // ============================================================================
+    // EVENTS
+    // ============================================================================
 
-    // Constants - Updated for 33/33/33 split
-    uint256 public constant PERSONA_TOKEN_SUPPLY = 1_000_000_000 ether;
-    uint256 public constant AMICA_DEPOSIT_AMOUNT = 333_333_333 ether;     // 1/3 for AMICA (on graduation)
-    uint256 public constant BONDING_CURVE_AMOUNT = 333_333_333 ether;    // 1/3 for bonding curve
-    uint256 public constant LIQUIDITY_TOKEN_AMOUNT = 333_333_334 ether;  // 1/3 for liquidity (+ rounding)
-
-    string private constant TOKEN_SUFFIX = ".amica";
-    uint256 private constant BASIS_POINTS = 10000;
-
-    // Events
     event PersonaCreated(
         uint256 indexed tokenId,
         address indexed creator,
@@ -136,6 +157,9 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     );
     event SnapshotUpdated(address indexed user, uint256 snapshotBalance, uint256 blockNumber);
 
+    // ============================================================================
+    // INITIALIZATION
+    // ============================================================================
 
     function initialize(
         address amicaToken_,
@@ -170,6 +194,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             creatorShare: 5000     // 50%
         });
 
+        // Initialize fee reduction config
         feeReductionConfig = FeeReductionConfig({
             minAmicaForReduction: 1000 ether,
             maxAmicaForReduction: 1_000_000 ether,
@@ -178,54 +203,9 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         });
     }
 
-    /**
-     * @notice Configure trading fee parameters
-     */
-    function configureTradingFees(
-        uint256 feePercentage,
-        uint256 creatorShare
-    ) external onlyOwner {
-        require(feePercentage <= 1000, "Fee too high"); // Max 10%
-        require(creatorShare <= BASIS_POINTS, "Invalid creator share");
-
-        tradingFeeConfig.feePercentage = feePercentage;
-        tradingFeeConfig.creatorShare = creatorShare;
-
-        emit TradingFeeConfigUpdated(feePercentage, creatorShare);
-    }
-
-    /**
-     * @notice Configure fee reduction parameters based on AMICA holdings
-     * @param minAmicaForReduction Minimum AMICA tokens to start fee reduction
-     * @param maxAmicaForReduction AMICA tokens needed for maximum fee reduction
-     * @param minReductionMultiplier Fee multiplier at minimum AMICA (basis points)
-     * @param maxReductionMultiplier Fee multiplier at maximum AMICA (basis points)
-     */
-    function configureFeeReduction(
-        uint256 minAmicaForReduction,
-        uint256 maxAmicaForReduction,
-        uint256 minReductionMultiplier,
-        uint256 maxReductionMultiplier
-    ) external onlyOwner {
-        require(minAmicaForReduction < maxAmicaForReduction, "Invalid AMICA range");
-        require(minReductionMultiplier <= BASIS_POINTS, "Invalid min multiplier");
-        require(maxReductionMultiplier <= minReductionMultiplier, "Invalid max multiplier");
-
-        feeReductionConfig = FeeReductionConfig({
-            minAmicaForReduction: minAmicaForReduction,
-            maxAmicaForReduction: maxAmicaForReduction,
-            minReductionMultiplier: minReductionMultiplier,
-            maxReductionMultiplier: maxReductionMultiplier
-        });
-
-        emit FeeReductionConfigUpdated(
-            minAmicaForReduction,
-            maxAmicaForReduction,
-            minReductionMultiplier,
-            maxReductionMultiplier
-        );
-    }
-
+    // ============================================================================
+    // ADMIN FUNCTIONS
+    // ============================================================================
 
     /**
      * @notice Configure pairing token parameters
@@ -253,6 +233,54 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         pairingConfigs[token].enabled = false;
         emit PairingConfigUpdated(token);
     }
+
+    /**
+     * @notice Configure trading fee parameters
+     */
+    function configureTradingFees(
+        uint256 feePercentage,
+        uint256 creatorShare
+    ) external onlyOwner {
+        require(feePercentage <= 1000, "Fee too high"); // Max 10%
+        require(creatorShare <= BASIS_POINTS, "Invalid creator share");
+
+        tradingFeeConfig.feePercentage = feePercentage;
+        tradingFeeConfig.creatorShare = creatorShare;
+
+        emit TradingFeeConfigUpdated(feePercentage, creatorShare);
+    }
+
+    /**
+     * @notice Configure fee reduction parameters based on AMICA holdings
+     */
+    function configureFeeReduction(
+        uint256 minAmicaForReduction,
+        uint256 maxAmicaForReduction,
+        uint256 minReductionMultiplier,
+        uint256 maxReductionMultiplier
+    ) external onlyOwner {
+        require(minAmicaForReduction < maxAmicaForReduction, "Invalid AMICA range");
+        require(minReductionMultiplier <= BASIS_POINTS, "Invalid min multiplier");
+        require(maxReductionMultiplier <= minReductionMultiplier, "Invalid max multiplier");
+
+        feeReductionConfig = FeeReductionConfig({
+            minAmicaForReduction: minAmicaForReduction,
+            maxAmicaForReduction: maxAmicaForReduction,
+            minReductionMultiplier: minReductionMultiplier,
+            maxReductionMultiplier: maxReductionMultiplier
+        });
+
+        emit FeeReductionConfigUpdated(
+            minAmicaForReduction,
+            maxAmicaForReduction,
+            minReductionMultiplier,
+            maxReductionMultiplier
+        );
+    }
+
+    // ============================================================================
+    // CORE FUNCTIONS - PERSONA CREATION
+    // ============================================================================
 
     /**
      * @notice Create a new persona with associated ERC20 token
@@ -325,121 +353,9 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         return tokenId;
     }
 
-    /**
-     * @notice Update persona metadata
-     */
-    function updateMetadata(
-        uint256 tokenId,
-        string[] memory keys,
-        string[] memory values
-    ) external {
-        require(ownerOf(tokenId) == msg.sender, "Not token owner");
-        require(keys.length == values.length, "Key-value mismatch");
-
-        for (uint256 i = 0; i < keys.length; i++) {
-            personas[tokenId].metadata[keys[i]] = values[i];
-            emit MetadataUpdated(tokenId, keys[i]);
-        }
-    }
-
-    /**
-     * @notice Get persona metadata
-     */
-    function getMetadata(uint256 tokenId, string[] memory keys)
-        external
-        view
-        returns (string[] memory)
-    {
-        string[] memory values = new string[](keys.length);
-
-        for (uint256 i = 0; i < keys.length; i++) {
-            values[i] = personas[tokenId].metadata[keys[i]];
-        }
-
-        return values;
-    }
-
-    /**
-     * @notice Get persona details
-     */
-    function getPersona(uint256 tokenId)
-        external
-        view
-        returns (
-            string memory name,
-            string memory symbol,
-            address erc20Token,
-            address pairToken,
-            bool pairCreated,
-            uint256 createdAt
-        )
-    {
-        PersonaData storage persona = personas[tokenId];
-        return (
-            persona.name,
-            persona.symbol,
-            persona.erc20Token,
-            persona.pairToken,
-            persona.pairCreated,
-            persona.createdAt
-        );
-    }
-
-    /**
-     * @notice Get user purchases for a persona
-     */
-    function getUserpurchases(uint256 tokenId, address user)
-        external
-        view
-        returns (UserPurchase[] memory)
-    {
-        return userpurchases[tokenId][user];
-    }
-
-    /**
-     * @notice Withdraw unlocked tokens
-     */
-    function withdrawTokens(uint256 tokenId) external nonReentrant {
-        PersonaData storage persona = personas[tokenId];
-        require(persona.erc20Token != address(0), "Invalid token");
-
-        // use Local suffix to avoid shadowing
-        UserPurchase[] storage purchasesLocal = userpurchases[tokenId][msg.sender];
-        uint256 totalToWithdraw = 0;
-
-        for (uint256 i = 0; i < purchasesLocal.length; i++) {
-            if (!purchasesLocal[i].withdrawn && persona.pairCreated) {
-                totalToWithdraw += purchasesLocal[i].amount;
-                purchasesLocal[i].withdrawn = true;
-            }
-        }
-
-        require(totalToWithdraw > 0, "No tokens to withdraw");
-
-        // Transfer tokens
-        require(
-            IERC20(persona.erc20Token).transfer(msg.sender, totalToWithdraw),
-            "Transfer failed"
-        );
-
-        emit TokensWithdrawn(tokenId, msg.sender, totalToWithdraw);
-    }
-
-    /**
-     * @notice Check and potentially create snapshot for fee reduction
-     * @dev Called internally during swaps
-     */
-    function _checkAndUpdateSnapshot(address user) internal {
-        // If user has no snapshot and has enough AMICA, create one
-        if (snapshotBlock[user] == 0) {
-            uint256 balance = amicaToken.balanceOf(user);
-            if (balance >= feeReductionConfig.minAmicaForReduction) {
-                amicaBalanceSnapshot[user] = balance;
-                snapshotBlock[user] = block.number;
-                emit SnapshotUpdated(user, balance, block.number);
-            }
-        }
-    }
+    // ============================================================================
+    // CORE FUNCTIONS - TRADING
+    // ============================================================================
 
     /**
      * @notice Swap exact tokens for persona tokens (similar to Uniswap)
@@ -454,13 +370,16 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         return _swapExactTokensForTokensInternal(tokenId, amountIn, amountOutMin, to, deadline, false);
     }
 
+    /**
+     * @notice Internal swap implementation
+     */
     function _swapExactTokensForTokensInternal(
         uint256 tokenId,
         uint256 amountIn,
         uint256 amountOutMin,
         address to,
         uint256 deadline,
-        bool isInternal  // Add this parameter
+        bool isInternal
     ) private returns (uint256 amountOut) {
         require(block.timestamp <= deadline, "Transaction expired");
         require(to != address(0), "Invalid recipient");
@@ -490,7 +409,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         require(amountOut <= getAvailableTokens(tokenId), "Insufficient liquidity");
 
         // Only transfer tokens if this is NOT an internal call
-        // Internal calls mean tokens are already in the contract
         if (!isInternal) {
             require(
                 IERC20(persona.pairToken).transferFrom(msg.sender, address(this), amountIn),
@@ -529,24 +447,267 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Distribute trading fees between creator and AMICA
+     * @notice Withdraw unlocked tokens
      */
-    function _distributeTradingFees(uint256 tokenId, uint256 feeAmount) private {
+    function withdrawTokens(uint256 tokenId) external nonReentrant {
         PersonaData storage persona = personas[tokenId];
+        require(persona.erc20Token != address(0), "Invalid token");
 
-        uint256 creatorFees = (feeAmount * tradingFeeConfig.creatorShare) / BASIS_POINTS;
-        uint256 amicaFees = feeAmount - creatorFees;
+        UserPurchase[] storage purchasesLocal = userpurchases[tokenId][msg.sender];
+        uint256 totalToWithdraw = 0;
 
-        // Send creator's share
-        if (creatorFees > 0) {
-            IERC20(persona.pairToken).transfer(ownerOf(tokenId), creatorFees);
+        for (uint256 i = 0; i < purchasesLocal.length; i++) {
+            if (!purchasesLocal[i].withdrawn && persona.pairCreated) {
+                totalToWithdraw += purchasesLocal[i].amount;
+                purchasesLocal[i].withdrawn = true;
+            }
         }
 
-        // AMICA's share stays in contract for now
-        // It will be used for liquidity if graduation happens
+        require(totalToWithdraw > 0, "No tokens to withdraw");
 
-        emit TradingFeesCollected(tokenId, feeAmount, creatorFees, amicaFees);
+        // Transfer tokens
+        require(
+            IERC20(persona.erc20Token).transfer(msg.sender, totalToWithdraw),
+            "Transfer failed"
+        );
+
+        emit TokensWithdrawn(tokenId, msg.sender, totalToWithdraw);
     }
+
+    // ============================================================================
+    // METADATA FUNCTIONS
+    // ============================================================================
+
+    /**
+     * @notice Update persona metadata
+     */
+    function updateMetadata(
+        uint256 tokenId,
+        string[] memory keys,
+        string[] memory values
+    ) external {
+        require(ownerOf(tokenId) == msg.sender, "Not token owner");
+        require(keys.length == values.length, "Key-value mismatch");
+
+        for (uint256 i = 0; i < keys.length; i++) {
+            personas[tokenId].metadata[keys[i]] = values[i];
+            emit MetadataUpdated(tokenId, keys[i]);
+        }
+    }
+
+    /**
+     * @notice Override tokenURI for custom metadata
+     */
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        override
+        returns (string memory)
+    {
+        _requireOwned(tokenId);
+
+        PersonaData storage persona = personas[tokenId];
+
+        return string(abi.encodePacked(
+            'data:application/json;utf8,{"name":"',
+            persona.name,
+            '","symbol":"',
+            persona.symbol,
+            '","tokenId":"',
+            tokenId.toString(),
+            '","erc20Token":"',
+            Strings.toHexString(uint160(persona.erc20Token), 20),
+            '"}'
+        ));
+    }
+
+    // ============================================================================
+    // FEE MANAGEMENT FUNCTIONS
+    // ============================================================================
+
+    /**
+     * @notice Update user's AMICA balance snapshot
+     */
+    function updateAmicaSnapshot() external {
+        uint256 currentBalance = amicaToken.balanceOf(msg.sender);
+        require(currentBalance >= feeReductionConfig.minAmicaForReduction,
+                "Insufficient AMICA balance");
+
+        amicaBalanceSnapshot[msg.sender] = currentBalance;
+        snapshotBlock[msg.sender] = block.number;
+
+        emit SnapshotUpdated(msg.sender, currentBalance, block.number);
+    }
+
+    /**
+     * @notice Calculate effective fee percentage based on user's AMICA holdings
+     */
+    function getEffectiveFeePercentage(address user) public view returns (uint256) {
+        uint256 effectiveBalance = getEffectiveAmicaBalance(user);
+
+        // If no effective balance, return full fee
+        if (effectiveBalance < feeReductionConfig.minAmicaForReduction) {
+            return tradingFeeConfig.feePercentage;
+        }
+
+        // If user has maximum or more, return minimum fee
+        if (effectiveBalance >= feeReductionConfig.maxAmicaForReduction) {
+            return (tradingFeeConfig.feePercentage * feeReductionConfig.maxReductionMultiplier) / BASIS_POINTS;
+        }
+
+        // Calculate exponential scaling between min and max
+        uint256 range = feeReductionConfig.maxAmicaForReduction - feeReductionConfig.minAmicaForReduction;
+        uint256 userPosition = effectiveBalance - feeReductionConfig.minAmicaForReduction;
+
+        // Calculate progress ratio (0 to 1 scaled to 1e18)
+        uint256 progress = (userPosition * 1e18) / range;
+
+        // Apply exponential curve: progress^2
+        uint256 exponentialProgress = (progress * progress) / 1e18;
+
+        // Interpolate between min and max reduction multipliers
+        uint256 multiplierRange = feeReductionConfig.minReductionMultiplier - feeReductionConfig.maxReductionMultiplier;
+        uint256 reduction = (multiplierRange * exponentialProgress) / 1e18;
+        uint256 effectiveMultiplier = feeReductionConfig.minReductionMultiplier - reduction;
+
+        // Calculate final fee
+        return (tradingFeeConfig.feePercentage * effectiveMultiplier) / BASIS_POINTS;
+    }
+
+    // ============================================================================
+    // VIEW FUNCTIONS - GETTERS
+    // ============================================================================
+
+    /**
+     * @notice Get persona details
+     */
+    function getPersona(uint256 tokenId)
+        external
+        view
+        returns (
+            string memory name,
+            string memory symbol,
+            address erc20Token,
+            address pairToken,
+            bool pairCreated,
+            uint256 createdAt
+        )
+    {
+        PersonaData storage persona = personas[tokenId];
+        return (
+            persona.name,
+            persona.symbol,
+            persona.erc20Token,
+            persona.pairToken,
+            persona.pairCreated,
+            persona.createdAt
+        );
+    }
+
+    /**
+     * @notice Get persona metadata
+     */
+    function getMetadata(uint256 tokenId, string[] memory keys)
+        external
+        view
+        returns (string[] memory)
+    {
+        string[] memory values = new string[](keys.length);
+
+        for (uint256 i = 0; i < keys.length; i++) {
+            values[i] = personas[tokenId].metadata[keys[i]];
+        }
+
+        return values;
+    }
+
+    /**
+     * @notice Get user purchases for a persona
+     */
+    function getUserpurchases(uint256 tokenId, address user)
+        external
+        view
+        returns (UserPurchase[] memory)
+    {
+        return userpurchases[tokenId][user];
+    }
+
+    /**
+     * @notice Get available tokens for sale
+     */
+    function getAvailableTokens(uint256 tokenId) public view returns (uint256) {
+        PersonaData storage persona = personas[tokenId];
+        if (persona.pairCreated) return 0;
+        if (persona.erc20Token == address(0)) return 0;
+
+        uint256 sold = purchases[tokenId].tokensSold;
+        if (sold >= BONDING_CURVE_AMOUNT) {
+            return 0;
+        }
+
+        return BONDING_CURVE_AMOUNT - sold;
+    }
+
+    /**
+     * @notice Get effective AMICA balance for fee calculation
+     */
+    function getEffectiveAmicaBalance(address user) public view returns (uint256) {
+        // Check if user has a valid snapshot
+        if (snapshotBlock[user] == 0 ||
+            block.number < snapshotBlock[user] + SNAPSHOT_DELAY) {
+            return 0; // No valid snapshot or still in delay period
+        }
+
+        uint256 currentBalance = amicaToken.balanceOf(user);
+        uint256 snapshotBalance = amicaBalanceSnapshot[user];
+
+        // Return minimum of snapshot and current balance
+        return currentBalance < snapshotBalance ? currentBalance : snapshotBalance;
+    }
+
+    /**
+     * @notice Get detailed fee information for a user
+     */
+    function getUserFeeInfo(address user) external view returns (
+        uint256 currentBalance,
+        uint256 snapshotBalance,
+        uint256 effectiveBalance,
+        uint256 snapshotBlock_,
+        bool isEligible,
+        uint256 blocksUntilEligible,
+        uint256 baseFeePercentage,
+        uint256 effectiveFeePercentage,
+        uint256 discountPercentage
+    ) {
+        currentBalance = amicaToken.balanceOf(user);
+        snapshotBalance = amicaBalanceSnapshot[user];
+        effectiveBalance = getEffectiveAmicaBalance(user);
+        snapshotBlock_ = snapshotBlock[user];
+
+        if (snapshotBlock_ > 0 && block.number >= snapshotBlock_ + SNAPSHOT_DELAY) {
+            isEligible = true;
+            blocksUntilEligible = 0;
+        } else if (snapshotBlock_ > 0) {
+            isEligible = false;
+            blocksUntilEligible = (snapshotBlock_ + SNAPSHOT_DELAY) - block.number;
+        } else {
+            isEligible = false;
+            blocksUntilEligible = SNAPSHOT_DELAY;
+        }
+
+        baseFeePercentage = tradingFeeConfig.feePercentage;
+        effectiveFeePercentage = getEffectiveFeePercentage(user);
+
+        if (baseFeePercentage > 0) {
+            discountPercentage = ((baseFeePercentage - effectiveFeePercentage) * BASIS_POINTS) / baseFeePercentage;
+        } else {
+            discountPercentage = 0;
+        }
+    }
+
+    // ============================================================================
+    // VIEW FUNCTIONS - CALCULATIONS
+    // ============================================================================
 
     /**
      * @notice Calculate output amount using Bancor-style bonding curve
@@ -591,140 +752,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Update user's AMICA balance snapshot
-     * @dev User must wait SNAPSHOT_DELAY blocks before fee reduction applies
-     */
-    function updateAmicaSnapshot() external {
-        uint256 currentBalance = amicaToken.balanceOf(msg.sender);
-        require(currentBalance >= feeReductionConfig.minAmicaForReduction,
-                "Insufficient AMICA balance");
-
-        amicaBalanceSnapshot[msg.sender] = currentBalance;
-        snapshotBlock[msg.sender] = block.number;
-
-        emit SnapshotUpdated(msg.sender, currentBalance, block.number);
-    }
-
-    /**
-     * @notice Get effective AMICA balance for fee calculation
-     * @dev Returns minimum of snapshot balance and current balance
-     */
-    function getEffectiveAmicaBalance(address user) public view returns (uint256) {
-        // Check if user has a valid snapshot
-        if (snapshotBlock[user] == 0 ||
-            block.number < snapshotBlock[user] + SNAPSHOT_DELAY) {
-            return 0; // No valid snapshot or still in delay period
-        }
-
-        uint256 currentBalance = amicaToken.balanceOf(user);
-        uint256 snapshotBalance = amicaBalanceSnapshot[user];
-
-        // Return minimum of snapshot and current balance
-        // This prevents both flash loans AND selling after snapshot
-        return currentBalance < snapshotBalance ? currentBalance : snapshotBalance;
-    }
-
-    /**
-     * @notice Calculate effective fee percentage based on user's AMICA holdings
-     * @param user Address of the user
-     * @return effectiveFeePercentage The adjusted fee percentage in basis points
-     */
-    function getEffectiveFeePercentage(address user) public view returns (uint256) {
-        uint256 effectiveBalance = getEffectiveAmicaBalance(user);
-
-        // If no effective balance, return full fee
-        if (effectiveBalance < feeReductionConfig.minAmicaForReduction) {
-            return tradingFeeConfig.feePercentage;
-        }
-
-        // If user has maximum or more, return minimum fee
-        if (effectiveBalance >= feeReductionConfig.maxAmicaForReduction) {
-            return (tradingFeeConfig.feePercentage * feeReductionConfig.maxReductionMultiplier) / BASIS_POINTS;
-        }
-
-        // Calculate exponential scaling between min and max
-        uint256 range = feeReductionConfig.maxAmicaForReduction - feeReductionConfig.minAmicaForReduction;
-        uint256 userPosition = effectiveBalance - feeReductionConfig.minAmicaForReduction;
-
-        // Calculate progress ratio (0 to 1 scaled to 1e18)
-        uint256 progress = (userPosition * 1e18) / range;
-
-        // Apply exponential curve: progress^2
-        uint256 exponentialProgress = (progress * progress) / 1e18;
-
-        // Interpolate between min and max reduction multipliers
-        uint256 multiplierRange = feeReductionConfig.minReductionMultiplier - feeReductionConfig.maxReductionMultiplier;
-        uint256 reduction = (multiplierRange * exponentialProgress) / 1e18;
-        uint256 effectiveMultiplier = feeReductionConfig.minReductionMultiplier - reduction;
-
-        // Calculate final fee
-        return (tradingFeeConfig.feePercentage * effectiveMultiplier) / BASIS_POINTS;
-    }
-
-    /**
-     * @notice Get available tokens for sale
-     */
-    function getAvailableTokens(uint256 tokenId) public view returns (uint256) {
-        PersonaData storage persona = personas[tokenId];
-        if (persona.pairCreated) return 0;
-        if (persona.erc20Token == address(0)) return 0;
-
-        uint256 sold = purchases[tokenId].tokensSold;
-        if (sold >= BONDING_CURVE_AMOUNT) {
-            return 0;
-        }
-
-        return BONDING_CURVE_AMOUNT - sold;
-    }
-
-    /**
-     * @notice Get detailed fee information for a user
-     */
-    function getUserFeeInfo(address user) external view returns (
-        uint256 currentBalance,
-        uint256 snapshotBalance,
-        uint256 effectiveBalance,
-        uint256 snapshotBlock_,
-        bool isEligible,
-        uint256 blocksUntilEligible,
-        uint256 baseFeePercentage,
-        uint256 effectiveFeePercentage,
-        uint256 discountPercentage
-    ) {
-        currentBalance = amicaToken.balanceOf(user);
-        snapshotBalance = amicaBalanceSnapshot[user];
-        effectiveBalance = getEffectiveAmicaBalance(user);
-        snapshotBlock_ = snapshotBlock[user];
-
-        if (snapshotBlock_ > 0 && block.number >= snapshotBlock_ + SNAPSHOT_DELAY) {
-            isEligible = true;
-            blocksUntilEligible = 0;
-        } else if (snapshotBlock_ > 0) {
-            isEligible = false;
-            blocksUntilEligible = (snapshotBlock_ + SNAPSHOT_DELAY) - block.number;
-        } else {
-            isEligible = false;
-            blocksUntilEligible = SNAPSHOT_DELAY;
-        }
-
-        baseFeePercentage = tradingFeeConfig.feePercentage;
-        effectiveFeePercentage = getEffectiveFeePercentage(user);
-
-        if (baseFeePercentage > 0) {
-            discountPercentage = ((baseFeePercentage - effectiveFeePercentage) * BASIS_POINTS) / baseFeePercentage;
-        } else {
-            discountPercentage = 0;
-        }
-    }
-
-    /**
      * @notice Preview fee for a specific trade
-     * @param tokenId Persona token ID
-     * @param amountIn Amount of tokens to swap
-     * @param user Address of the user
-     * @return feeAmount Fee that will be charged
-     * @return amountInAfterFee Amount after fee deduction
-     * @return expectedOutput Expected tokens out
      */
     function previewSwapWithFee(
         uint256 tokenId,
@@ -747,7 +775,44 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         );
     }
 
+    // ============================================================================
+    // INTERNAL FUNCTIONS
+    // ============================================================================
 
+    /**
+     * @notice Check and potentially create snapshot for fee reduction
+     */
+    function _checkAndUpdateSnapshot(address user) internal {
+        // If user has no snapshot and has enough AMICA, create one
+        if (snapshotBlock[user] == 0) {
+            uint256 balance = amicaToken.balanceOf(user);
+            if (balance >= feeReductionConfig.minAmicaForReduction) {
+                amicaBalanceSnapshot[user] = balance;
+                snapshotBlock[user] = block.number;
+                emit SnapshotUpdated(user, balance, block.number);
+            }
+        }
+    }
+
+    /**
+     * @notice Distribute trading fees between creator and AMICA
+     */
+    function _distributeTradingFees(uint256 tokenId, uint256 feeAmount) private {
+        PersonaData storage persona = personas[tokenId];
+
+        uint256 creatorFees = (feeAmount * tradingFeeConfig.creatorShare) / BASIS_POINTS;
+        uint256 amicaFees = feeAmount - creatorFees;
+
+        // Send creator's share
+        if (creatorFees > 0) {
+            IERC20(persona.pairToken).transfer(ownerOf(tokenId), creatorFees);
+        }
+
+        // AMICA's share stays in contract for now
+        // It will be used for liquidity if graduation happens
+
+        emit TradingFeesCollected(tokenId, feeAmount, creatorFees, amicaFees);
+    }
 
     /**
      * @notice Create Uniswap pair when graduation threshold is met
@@ -795,31 +860,5 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             uniswapFactory.getPair(erc20Token, persona.pairToken),
             liquidity
         );
-    }
-
-    /**
-     * @notice Override tokenURI for custom metadata
-     */
-    function tokenURI(uint256 tokenId)
-        public
-        view
-        override
-        returns (string memory)
-    {
-        _requireOwned(tokenId);
-
-        PersonaData storage persona = personas[tokenId];
-
-        return string(abi.encodePacked(
-            'data:application/json;utf8,{"name":"',
-            persona.name,
-            '","symbol":"',
-            persona.symbol,
-            '","tokenId":"',
-            tokenId.toString(),
-            '","erc20Token":"',
-            Strings.toHexString(uint160(persona.erc20Token), 20),
-            '"}'
-        ));
     }
 }
