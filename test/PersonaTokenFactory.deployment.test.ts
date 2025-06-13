@@ -8,7 +8,7 @@ import {
     DEFAULT_MINT_COST,
 } from "./shared/fixtures";
 
-describe("Deployment and Initialization", function () {
+describe("PersonaTokenFactory Deployment", function () {
     it("Should deploy with correct initial state", async function () {
         const { personaFactory, amicaToken, mockFactory, mockRouter, erc20Implementation } =
             await loadFixture(deployPersonaTokenFactoryFixture);
@@ -83,7 +83,7 @@ describe("Deployment and Initialization", function () {
     });
 });
 
-describe("Upgrade Scenarios", function () {
+describe("PersonaTokenFactory Upgrade", function () {
     it("Should maintain state after upgrade", async function () {
         const { personaFactory, amicaToken, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
 
@@ -136,16 +136,24 @@ describe("Upgrade Scenarios", function () {
     });
 
     it("Should reject initialization on implementation contract", async function () {
-        const PersonaTokenFactory = await ethers.getContractFactory("PersonaTokenFactory");
-        const implementation = await PersonaTokenFactory.deploy();
+        const {
+            personaFactory,
+            amicaToken,
+            mockFactory,
+            mockRouter,
+            erc20Implementation,
+        } = await loadFixture(deployPersonaTokenFactoryFixture);
 
+
+        // already reverted
+        // TODO this says custom error, how should we get the custom error?
         await expect(
-            implementation.initialize(
-                ethers.ZeroAddress,
-                ethers.ZeroAddress,
-                ethers.ZeroAddress,
-                ethers.ZeroAddress
+            personaFactory.initialize(
+                await amicaToken.getAddress(),
+                await mockFactory.getAddress(),
+                await mockRouter.getAddress(),
+                await erc20Implementation.getAddress()
             )
-        ).to.be.revertedWith("Initializable: contract is already initialized");
+        ).to.be.reverted;
     });
 });

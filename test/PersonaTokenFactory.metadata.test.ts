@@ -5,7 +5,7 @@ import {
     createPersonaFixture,
 } from "./shared/fixtures";
 
-describe("Metadata Management", function () {
+describe("PersonaTokenFactory Metadata Management", function () {
     it("Should update metadata by token owner", async function () {
         const { tokenId, personaFactory, user1 } = await loadFixture(createPersonaFixture);
 

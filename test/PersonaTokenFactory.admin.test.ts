@@ -5,7 +5,7 @@ import {
     deployPersonaTokenFactoryFixture,
 } from "./shared/fixtures";
 
-describe("Admin", function () {
+describe("PersonaTokenFactory Admin", function () {
     it("Should allow owner to configure new pairing tokens", async function () {
         const { personaFactory, owner } = await loadFixture(deployPersonaTokenFactoryFixture);
 

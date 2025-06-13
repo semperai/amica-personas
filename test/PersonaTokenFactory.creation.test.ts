@@ -12,7 +12,7 @@ import {
     PERSONA_TOKEN_SUPPLY
 } from "./shared/fixtures";
 
-describe("Persona Creation", function () {
+describe("PersonaTokenFactory Creation", function () {
     it("Should create persona with correct parameters", async function () {
         const { personaFactory, amicaToken, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
 

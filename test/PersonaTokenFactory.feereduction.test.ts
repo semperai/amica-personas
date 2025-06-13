@@ -8,7 +8,7 @@ import {
     getDeadline,
 } from "./shared/fixtures";
 
-describe("Fee Reduction System", function () {
+describe("PersonaTokenFactory Fee Reduction System", function () {
     const SNAPSHOT_DELAY = 100; // 100 blocks delay
     const MIN_AMICA_FOR_REDUCTION = ethers.parseEther("1000");
     const MAX_AMICA_FOR_REDUCTION = ethers.parseEther("1000000");

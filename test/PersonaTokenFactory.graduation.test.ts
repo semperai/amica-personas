@@ -12,7 +12,7 @@ import {
     LIQUIDITY_TOKEN_AMOUNT,
 } from "./shared/fixtures";
 
-describe("No Graduation Reward", function () {
+describe("PersonaTokenFactory Graduation", function () {
     it("Should not send graduation reward to creator", async function () {
         const { tokenId, personaFactory, amicaToken, user1, user2 } = await loadFixture(createPersonaFixture);
 

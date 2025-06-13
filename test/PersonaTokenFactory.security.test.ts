@@ -9,7 +9,7 @@ import {
     getDeadline,
 } from "./shared/fixtures";
 
-describe("Security and Edge Cases", function () {
+describe("PersonaTokenFactory Security and Edge Cases", function () {
     describe("Reentrancy Protection", function () {
         it("Should have reentrancy protection on createPersona", async function () {
             const { personaFactory, owner } = await loadFixture(deployPersonaTokenFactoryFixture);
