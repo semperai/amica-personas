@@ -529,49 +529,41 @@ describe("PersonaTokenFactory Graduation", function () {
     it("Should handle multiple withdrawal attempts", async function () {
         const { tokenId, personaFactory, amicaToken, user2 } = await loadFixture(createPersonaFixture);
 
-        // Make a single purchase
-        await amicaToken.withdraw(user2.address, ethers.parseEther("10000"));
+        // First, make a purchase that won't trigger graduation
+        const firstPurchase = ethers.parseEther("100000");
         await amicaToken.connect(user2).approve(
             await personaFactory.getAddress(),
-            ethers.parseEther("10000")
+            firstPurchase + DEFAULT_GRADUATION_THRESHOLD
         );
 
         await personaFactory.connect(user2).swapExactTokensForTokens(
             tokenId,
-            ethers.parseEther("1000"),
+            firstPurchase,
             0,
             user2.address,
             getDeadline()
         );
 
-        // Trigger graduation with remaining balance
-        const graduationAmount = DEFAULT_GRADUATION_THRESHOLD;
-        await amicaToken.connect(user2).approve(
-            await personaFactory.getAddress(),
-            graduationAmount
-        );
-
+        // Now trigger graduation with a separate purchase
         await personaFactory.connect(user2).swapExactTokensForTokens(
             tokenId,
-            graduationAmount,
+            DEFAULT_GRADUATION_THRESHOLD,
             0,
             user2.address,
             getDeadline()
         );
+
+        // Verify graduation happened
+        const persona = await personaFactory.getPersona(tokenId);
+        expect(persona.pairCreated).to.be.true;
 
         // First withdrawal should succeed
         await expect(personaFactory.connect(user2).withdrawTokens(tokenId))
             .to.emit(personaFactory, "TokensWithdrawn");
 
-        // Get user purchases to check if all are withdrawn
-        const purchases = await personaFactory.getUserpurchases(tokenId, user2.address);
-        const allWithdrawn = purchases.every((p: any) => p.withdrawn);
-
-        if (allWithdrawn) {
-            // Second withdrawal should fail if all purchases are withdrawn
-            await expect(
-                personaFactory.connect(user2).withdrawTokens(tokenId)
-            ).to.be.revertedWith("No tokens to withdraw");
-        }
+        // Second withdrawal should fail since all tokens are already withdrawn
+        await expect(
+            personaFactory.connect(user2).withdrawTokens(tokenId)
+        ).to.be.revertedWith("No tokens to withdraw");
     });
 });
