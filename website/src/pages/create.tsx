@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Layout from '@/components/Layout';
 import { useAccount, useWriteContract } from 'wagmi';
-import { parseEther } from 'viem';
+import { parseEther, zeroAddress } from 'viem';
 import { FACTORY_ABI, getAddressesForChain } from '@/lib/contracts';
 import { useRouter } from 'next/router';
 
@@ -54,7 +54,9 @@ export default function CreatePersonaPage() {
           formData.symbol,
           formData.metadataKeys,
           formData.metadataValues,
-          parseEther(formData.initialBuyAmount)
+          parseEther(formData.initialBuyAmount),
+          zeroAddress, // agent address, can be set to zero
+          0, // initial requirement of agent tokens
         ]
       });
       
