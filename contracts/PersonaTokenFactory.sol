@@ -649,7 +649,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     /**
      * @notice Get user purchases for a persona
      */
-    function getUserpurchases(uint256 tokenId, address user)
+    function getUserPurchases(uint256 tokenId, address user)
         external
         view
         returns (UserPurchase[] memory)

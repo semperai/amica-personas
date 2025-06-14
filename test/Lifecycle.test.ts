@@ -690,7 +690,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             const tokenId = 0;
 
             // Check creator's purchases
-            const purchases = await personaFactory.getUserpurchases(tokenId, creator.address);
+            const purchases = await personaFactory.getUserPurchases(tokenId, creator.address);
             expect(purchases.length).to.equal(1);
             expect(purchases[0].amount).to.be.gt(0);
             console.log(`✓ Creator bought ${ethers.formatEther(purchases[0].amount)} tokens at launch`);

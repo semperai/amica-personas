@@ -327,7 +327,7 @@ describe("PersonaTokenFactory Creation", function () {
 
         // Creator should have bought tokens (but locked)
         const tokenId = 0;
-        const purchases = await personaFactory.getUserpurchases(tokenId, user1.address);
+        const purchases = await personaFactory.getUserPurchases(tokenId, user1.address);
         expect(purchases.length).to.equal(1);
         expect(purchases[0].amount).to.be.gt(0);
     });
