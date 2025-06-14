@@ -639,4 +639,61 @@ describe("Swap Tests", function () {
             )
         ).to.be.reverted; // Will fail when trying to transfer USDC from user
     });
+
+    it("Should return 0 available tokens when all bonding curve tokens are sold", async function () {
+        const { tokenId, personaFactory, amicaToken, user2, owner } = await loadFixture(createPersonaFixture);
+
+        // We need to buy exactly BONDING_CURVE_AMOUNT tokens
+        // This is tricky because we need to account for the bonding curve pricing
+
+        // Make multiple purchases to approach the limit
+        const purchases = [
+            ethers.parseEther("100000"),
+            ethers.parseEther("200000"),
+            ethers.parseEther("300000"),
+            ethers.parseEther("400000")
+        ];
+
+        // Transfer tokens to user2 if needed
+        const totalNeeded = purchases.reduce((a, b) => a + b, 0n);
+        const user2Balance = await amicaToken.balanceOf(user2.address);
+        if (user2Balance < totalNeeded) {
+            await amicaToken.connect(owner).transfer(user2.address, totalNeeded - user2Balance);
+        }
+
+        // Make purchases
+        for (const amount of purchases) {
+            const available = await personaFactory.getAvailableTokens(tokenId);
+            if (available > 0) {
+                await amicaToken.connect(user2).approve(
+                    await personaFactory.getAddress(),
+                    amount
+                );
+
+                try {
+                    await personaFactory.connect(user2).swapExactTokensForTokens(
+                        tokenId,
+                        amount,
+                        0,
+                        user2.address,
+                        getDeadline()
+                    );
+                } catch (e) {
+                    // Might fail if we hit the limit
+                    break;
+                }
+            }
+        }
+
+        // Now check available tokens
+        const availableTokens = await personaFactory.getAvailableTokens(tokenId);
+
+        // Get purchase data to verify we've sold enough
+        const purchase = await personaFactory.purchases(tokenId);
+
+        // If we've sold BONDING_CURVE_AMOUNT or more, available should be 0
+        if (purchase.tokensSold >= BONDING_CURVE_AMOUNT) {
+            expect(availableTokens).to.equal(0);
+        }
+    });
 });

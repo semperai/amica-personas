@@ -134,7 +134,12 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     TradingFeeConfig public tradingFeeConfig;
     FeeReductionConfig public feeReductionConfig;
 
+    // User snapshots for AMICA balance
     mapping(address => UserSnapshot) public userSnapshots;
+
+    // Gap for future upgrades
+    uint256[50] private __gap;
+
 
     // ============================================================================
     // EVENTS
