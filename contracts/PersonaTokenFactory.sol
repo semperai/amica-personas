@@ -463,7 +463,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     /**
      * @notice Withdraw unlocked tokens
      */
-    function withdrawTokens(uint256 tokenId) external nonReentrant {
+    function withdrawTokens(uint256 tokenId) external nonReentrant whenNotPaused {
         PersonaData storage persona = personas[tokenId];
         require(persona.erc20Token != address(0), "Invalid token");
 
