@@ -18,10 +18,4 @@ contract MockUniswapV2Pair is ERC20 {
         liquidity = 1000 ether; // Mock liquidity amount
         _mint(to, liquidity);
     }
-
-    // allow transfers to zero address
-    function transfer(address to, uint256 amount) public virtual override returns (bool) {
-        _update(_msgSender(), to, amount);
-        return true;
-    }
 }

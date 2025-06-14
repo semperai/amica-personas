@@ -42,7 +42,6 @@ interface IERC20Implementation {
 /**
  * @title PersonaTokenFactory
  * @notice Factory for creating persona NFTs with associated ERC20 tokens
- * @dev Updated to use 33/33/33 split: 1/3 to AMICA on graduation, 1/3 to bonding curve, 1/3 for liquidity
  */
 contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
     using Strings for uint256;
@@ -105,7 +104,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 maxReductionMultiplier;    // Fee multiplier at maximum AMICA (e.g., 0 = 0%)
     }
 
-    // FIXED: Struct to hold both current and pending snapshots
     struct UserSnapshot {
         uint256 currentBalance;      // Currently active snapshot balance
         uint256 currentBlock;        // Block when current snapshot was taken
@@ -136,7 +134,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     TradingFeeConfig public tradingFeeConfig;
     FeeReductionConfig public feeReductionConfig;
 
-    // FIXED: Updated snapshot system to handle both current and pending
     mapping(address => UserSnapshot) public userSnapshots;
 
     // ============================================================================
@@ -544,7 +541,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
     /**
      * @notice Update user's AMICA balance snapshot
-     * @dev FIXED: Now properly handles pending snapshots
      */
     function updateAmicaSnapshot() external {
         uint256 currentBalance = amicaToken.balanceOf(msg.sender);
@@ -679,7 +675,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
     /**
      * @notice Get effective AMICA balance for fee calculation
-     * @dev FIXED: Now properly uses the active snapshot
      */
     function getEffectiveAmicaBalance(address user) public view returns (uint256) {
         UserSnapshot storage snapshot = userSnapshots[user];
@@ -708,7 +703,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
     /**
      * @notice Get detailed fee information for a user
-     * @dev FIXED: Updated to work with new snapshot system
      */
     function getUserFeeInfo(address user) external view returns (
         uint256 currentBalance,
@@ -769,7 +763,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         }
     }
 
-    // FIXED: Add backwards compatibility getters for tests
     function amicaBalanceSnapshot(address user) external view returns (uint256) {
         UserSnapshot storage snapshot = userSnapshots[user];
         if (snapshot.pendingBlock > 0) {
@@ -902,7 +895,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
     /**
      * @notice Check and potentially create snapshot for fee reduction
-     * @dev FIXED: Now properly handles the dual snapshot system
      */
     function _checkAndUpdateSnapshot(address user) internal {
         UserSnapshot storage snapshot = userSnapshots[user];

@@ -3,7 +3,6 @@ pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
@@ -12,7 +11,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  * @notice Main AMICA token with burn-and-claim mechanism for deposited tokens
  * @dev Implements a fair distribution mechanism where burning AMICA gives proportional share of deposited tokens
  */
-contract AmicaToken is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
+contract AmicaToken is ERC20, Ownable, ReentrancyGuard {
     // State variables
     address[] private _depositedTokens;
     mapping(address => uint256) public tokenIndex;

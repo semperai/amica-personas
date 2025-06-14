@@ -632,31 +632,6 @@ describe("AmicaToken", function () {
         });
     });
 
-    describe("ERC20 Burnable Functions", function () {
-        it("Should allow users to burn their own tokens", async function () {
-            const { amicaToken, user1 } = await loadFixture(deployAmicaTokenFixture);
-
-            const initialBalance = await amicaToken.balanceOf(user1.address);
-            const burnAmount = ethers.parseEther("1000");
-
-            await amicaToken.connect(user1).burn(burnAmount);
-
-            expect(await amicaToken.balanceOf(user1.address)).to.equal(initialBalance - burnAmount);
-            expect(await amicaToken.totalSupply()).to.equal(TOTAL_SUPPLY - burnAmount);
-        });
-
-        it("Should allow approved spender to burn tokens", async function () {
-            const { amicaToken, user1, user2 } = await loadFixture(deployAmicaTokenFixture);
-
-            const burnAmount = ethers.parseEther("500");
-            await amicaToken.connect(user1).approve(user2.address, burnAmount);
-
-            await amicaToken.connect(user2).burnFrom(user1.address, burnAmount);
-
-            expect(await amicaToken.balanceOf(user1.address)).to.equal(ethers.parseEther("9500"));
-        });
-    });
-
     it("Should handle burn and claim with exactly 0 circulating supply", async function () {
         const { amicaToken, owner, user1, user2, user3 } = await loadFixture(deployPersonaTokenFactoryFixture);
 
