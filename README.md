@@ -4,7 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.24-blue)](https://soliditylang.org)
-[![OpenZeppelin](https://img.shields.io/badge/OpenZeppelin-5.0+-green)](https://openzeppelin.com)
+[![OpenZeppelin](https://img.shields.io/badge/OpenZeppelin-5.3+-green)](https://openzeppelin.com)
 
 ## 🌟 Overview
 
