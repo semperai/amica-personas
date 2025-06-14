@@ -1,6 +1,6 @@
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 
 describe("AmicaToken Mainnet Behavior (Mocked)", function () {
     const TOTAL_SUPPLY = ethers.parseEther("1000000000");
@@ -136,7 +136,7 @@ describe("AmicaToken Mainnet Behavior (Mocked)", function () {
             
             // Deploy PersonaTokenFactory
             const PersonaTokenFactory = await ethers.getContractFactory("PersonaTokenFactory");
-            const personaFactory = await ethers.upgrades.deployProxy(
+            const personaFactory = await upgrades.deployProxy(
                 PersonaTokenFactory,
                 [
                     await amicaToken.getAddress(),
