@@ -2,7 +2,7 @@ import Layout from '@/components/Layout';
 import { PersonaList } from '@/components/PersonaList';
 import { TrendingPersonas } from '@/components/TrendingPersonas';
 
-export default function Home() {
+export default function HomePage() {
   return (
     <Layout>
       <div className="mb-8">

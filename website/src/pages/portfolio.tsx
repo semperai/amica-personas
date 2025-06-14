@@ -4,7 +4,7 @@ import { MyPersonas } from '@/components/MyPersonas';
 import { TradingHistory } from '@/components/TradingHistory';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 
-export default function Portfolio() {
+export default function PortfolioPage() {
   const { address } = useAccount();
 
   if (!address) {

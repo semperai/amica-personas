@@ -2,6 +2,8 @@ import { ReactNode } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useApiStatus } from '@/components/ApiStatusProvider';
+import { ApiSetupGuide } from '@/components/ApiSetupGuide';
 
 interface LayoutProps {
   children: ReactNode;
@@ -9,6 +11,7 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   const router = useRouter();
+  const { isOnline, isChecking } = useApiStatus();
   
   const isActive = (path: string) => {
     return router.pathname === path ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-600 hover:text-purple-600';
@@ -16,6 +19,13 @@ const Layout = ({ children }: LayoutProps) => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* API Status Banner */}
+      {!isChecking && !isOnline && (
+        <div className="bg-yellow-500 text-white px-4 py-2 text-center text-sm">
+          <span>⚠️ API service is currently offline. Some features may not work properly.</span>
+        </div>
+      )}
+
       {/* Navigation */}
       <nav className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -78,6 +88,9 @@ const Layout = ({ children }: LayoutProps) => {
           </div>
         </div>
       </footer>
+      
+      {/* API Setup Guide (development only) */}
+      <ApiSetupGuide />
     </div>
   );
 };

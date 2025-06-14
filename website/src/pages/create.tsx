@@ -5,7 +5,7 @@ import { parseEther } from 'viem';
 import { FACTORY_ABI, getAddressesForChain } from '@/lib/contracts';
 import { useRouter } from 'next/router';
 
-export default function CreatePersona() {
+export default function CreatePersonaPage() {
   const { address, chainId } = useAccount();
   const router = useRouter();
   const { writeContract, isPending } = useWriteContract();

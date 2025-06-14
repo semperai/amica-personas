@@ -1,4 +1,11 @@
-import { useRouter } from 'next/router';
+if (error) {
+    return (
+      <div className="bg-white rounded-lg shadow p-6 mt-6">
+        <h3 className="text-lg font-semibold mb-4">Recent Trades</h3>
+        <p className="text-gray-500">Unable to load trades</p>
+      </div>
+    );
+  }import { useRouter } from 'next/router';
 import { NextPage } from 'next';
 import Layout from '@/components/Layout';
 import PersonaMetadata from '@/components/PersonaMetadata';
@@ -56,16 +63,17 @@ interface Trade {
 const TradeHistory = ({ chainId, tokenId }: { chainId: string; tokenId: string }) => {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     const loadTrades = async () => {
       try {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-        const res = await fetch(`${API_URL}/api/personas/${chainId}/${tokenId}/trades?limit=10`);
-        const data = await res.json();
+        setError(false);
+        const data = await fetchPersonaTrades(chainId, tokenId, 10);
         setTrades(data.trades || []);
       } catch (error) {
         console.error('Failed to load trades:', error);
+        setError(true);
       } finally {
         setLoading(false);
       }
@@ -83,6 +91,15 @@ const TradeHistory = ({ chainId, tokenId }: { chainId: string; tokenId: string }
           <div className="h-4 bg-gray-200 rounded"></div>
           <div className="h-4 bg-gray-200 rounded"></div>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-lg shadow p-6 mt-6">
+        <h3 className="text-lg font-semibold mb-4">Recent Trades</h3>
+        <p className="text-gray-500">Unable to load trades</p>
       </div>
     );
   }
@@ -124,5 +141,6 @@ const TradeHistory = ({ chainId, tokenId }: { chainId: string; tokenId: string }
 
 import { useState, useEffect } from 'react';
 import { formatEther } from 'viem';
+import { fetchPersonaTrades } from '@/lib/api';
 
 export default PersonaDetailPage;

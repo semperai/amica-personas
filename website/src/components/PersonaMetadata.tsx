@@ -43,14 +43,17 @@ interface PersonaData {
 const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
   const [persona, setPersona] = useState<PersonaData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadPersona = async () => {
       try {
+        setError(null);
         const data = await fetchPersonaDetail(chainId, tokenId);
         setPersona(data);
       } catch (error) {
         console.error('Failed to load persona:', error);
+        setError('Failed to load persona details. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -73,10 +76,18 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
     );
   }
 
-  if (!persona) {
+  if (error || !persona) {
     return (
       <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <p className="text-red-600">Failed to load persona details</p>
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error || 'Persona not found'}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }
