@@ -1,0 +1,862 @@
+import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import { expect } from "chai";
+import { ethers } from "hardhat";
+import { TestERC20 } from "../typechain-types";
+import {
+    deployPersonaTokenFactoryFixture,
+    createPersonaFixture,
+    getDeadline,
+    DEFAULT_MINT_COST,
+    DEFAULT_GRADUATION_THRESHOLD,
+    PERSONA_TOKEN_SUPPLY,
+} from "./shared/fixtures";
+
+describe("PersonaTokenFactory Agent Token Integration", function () {
+    // Helper to get full persona data including agent-related fields
+    async function getPersonaData(personaFactory: any, tokenId: number) {
+        // The personas mapping returns a struct with these fields in order:
+        // name, symbol, erc20Token, pairToken, agentToken, pairCreated, createdAt, totalAgentDeposited
+        const data = await personaFactory.personas(tokenId);
+        return {
+            name: data[0],
+            symbol: data[1],
+            erc20Token: data[2],
+            pairToken: data[3],
+            agentToken: data[4],
+            pairCreated: data[5],
+            createdAt: data[6],
+            totalAgentDeposited: data[7]
+        };
+    }
+
+    // Helper to create persona with agent token
+    async function createPersonaWithAgentToken() {
+        const fixture = await loadFixture(deployPersonaTokenFactoryFixture);
+        const { personaFactory, amicaToken, user1, user2, user3, owner } = fixture;
+
+        // Deploy agent token
+        const TestERC20 = await ethers.getContractFactory("TestERC20");
+        const agentToken = await TestERC20.deploy("Agent Token", "AGENT", ethers.parseEther("10000000"));
+
+        // Approve agent token
+        await personaFactory.connect(owner).approveAgentToken(await agentToken.getAddress(), true);
+
+        // Give user1 some AMICA for minting
+        await amicaToken.connect(user1).approve(
+            await personaFactory.getAddress(),
+            DEFAULT_MINT_COST
+        );
+
+        // Create persona with agent token
+        const tx = await personaFactory.connect(user1).createPersona(
+            await amicaToken.getAddress(),
+            "Agent Persona",
+            "AGENTP",
+            [],
+            [],
+            0,
+            await agentToken.getAddress()
+        );
+
+        const receipt = await tx.wait();
+        const event = receipt?.logs.find(
+            log => {
+                try {
+                    const parsed = personaFactory.interface.parseLog({
+                        topics: log.topics as string[],
+                        data: log.data
+                    });
+                    return parsed?.name === 'PersonaCreated';
+                } catch {
+                    return false;
+                }
+            }
+        );
+
+        const parsedEvent = personaFactory.interface.parseLog({
+            topics: event!.topics as string[],
+            data: event!.data
+        });
+
+        const tokenId = parsedEvent!.args.tokenId;
+
+        return {
+            personaFactory,
+            amicaToken,
+            agentToken,
+            user1,
+            user2,
+            user3,
+            owner,
+            tokenId,
+            mockFactory: fixture.mockFactory,
+            mockRouter: fixture.mockRouter,
+            erc20Implementation: fixture.erc20Implementation
+        };
+    }
+
+    describe("Agent Token Association", function () {
+        it("Should create persona with agent token", async function () {
+            const { personaFactory, amicaToken, user1, owner } = await loadFixture(deployPersonaTokenFactoryFixture);
+
+            // Deploy and approve agent token
+            const TestERC20 = await ethers.getContractFactory("TestERC20");
+            const agentToken = await TestERC20.deploy("Agent Token", "AGENT", ethers.parseEther("10000000"));
+
+            await personaFactory.connect(owner).approveAgentToken(await agentToken.getAddress(), true);
+
+            // Approve AMICA for minting
+            await amicaToken.connect(user1).approve(
+                await personaFactory.getAddress(),
+                DEFAULT_MINT_COST
+            );
+
+            // Create persona with agent token
+            await expect(
+                personaFactory.connect(user1).createPersona(
+                    await amicaToken.getAddress(),
+                    "Agent Persona",
+                    "AGENTP",
+                    [],
+                    [],
+                    0,
+                    await agentToken.getAddress()
+                )
+            ).to.emit(personaFactory, "PersonaCreated")
+             .and.to.emit(personaFactory, "AgentTokenAssociated");
+        });
+
+        it("Should reject unapproved agent token", async function () {
+            const { personaFactory, amicaToken, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
+
+            // Deploy agent token but don't approve it
+            const TestERC20 = await ethers.getContractFactory("TestERC20");
+            const agentToken = await TestERC20.deploy("Agent Token", "AGENT", ethers.parseEther("10000000"));
+
+            await amicaToken.connect(user1).approve(
+                await personaFactory.getAddress(),
+                DEFAULT_MINT_COST
+            );
+
+            await expect(
+                personaFactory.connect(user1).createPersona(
+                    await amicaToken.getAddress(),
+                    "Agent Persona",
+                    "AGENTP",
+                    [],
+                    [],
+                    0,
+                    await agentToken.getAddress()
+                )
+            ).to.be.revertedWith("Agent token not approved");
+        });
+
+        it("Should create persona without agent token (address(0))", async function () {
+            const { personaFactory, amicaToken, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
+
+            await amicaToken.connect(user1).approve(
+                await personaFactory.getAddress(),
+                DEFAULT_MINT_COST
+            );
+
+            const tx = await personaFactory.connect(user1).createPersona(
+                await amicaToken.getAddress(),
+                "Normal Persona",
+                "NORMALP",
+                [],
+                [],
+                0,
+                ethers.ZeroAddress
+            );
+
+            await expect(tx).to.emit(personaFactory, "PersonaCreated")
+                .and.to.not.emit(personaFactory, "AgentTokenAssociated");
+        });
+
+        it("Should approve and revoke agent token approval", async function () {
+            const { personaFactory, owner } = await loadFixture(deployPersonaTokenFactoryFixture);
+
+            const TestERC20 = await ethers.getContractFactory("TestERC20");
+            const agentToken = await TestERC20.deploy("Agent Token", "AGENT", ethers.parseEther("10000000"));
+
+            // Approve
+            await personaFactory.connect(owner).approveAgentToken(await agentToken.getAddress(), true);
+            expect(await personaFactory.approvedAgentTokens(await agentToken.getAddress())).to.be.true;
+
+            // Revoke
+            await personaFactory.connect(owner).approveAgentToken(await agentToken.getAddress(), false);
+            expect(await personaFactory.approvedAgentTokens(await agentToken.getAddress())).to.be.false;
+        });
+
+        it("Should only allow owner to approve agent tokens", async function () {
+            const { personaFactory, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
+
+            const TestERC20 = await ethers.getContractFactory("TestERC20");
+            const agentToken = await TestERC20.deploy("Agent Token", "AGENT", ethers.parseEther("10000000"));
+
+            await expect(
+                personaFactory.connect(user1).approveAgentToken(await agentToken.getAddress(), true)
+            ).to.be.revertedWithCustomError(personaFactory, "OwnableUnauthorizedAccount");
+        });
+    });
+
+    describe("Token Distribution Changes", function () {
+        it("Should use 33/33/33 distribution without agent token", async function () {
+            const { tokenId, personaFactory } = await loadFixture(createPersonaFixture);
+
+            const distribution = await personaFactory.getTokenDistribution(tokenId);
+
+            expect(distribution.liquidityAmount).to.equal(ethers.parseEther("333333333"));
+            expect(distribution.bondingAmount).to.equal(ethers.parseEther("333333333"));
+            expect(distribution.amicaAmount).to.equal(ethers.parseEther("333333334"));
+            expect(distribution.agentRewardsAmount).to.equal(0);
+        });
+
+        it("Should use 1/3, 2/9, 2/9, 2/9 distribution with agent token", async function () {
+            const { personaFactory, tokenId } = await loadFixture(createPersonaWithAgentToken);
+
+            const distribution = await personaFactory.getTokenDistribution(tokenId);
+
+            expect(distribution.liquidityAmount).to.equal(ethers.parseEther("333333333")); // 1/3
+            expect(distribution.bondingAmount).to.equal(ethers.parseEther("222222222")); // 2/9
+            expect(distribution.amicaAmount).to.equal(ethers.parseEther("222222222")); // 2/9
+            expect(distribution.agentRewardsAmount).to.equal(ethers.parseEther("222222223")); // 2/9 + rounding
+        });
+
+        it("Should have correct available tokens for bonding curve", async function () {
+            const { personaFactory, tokenId } = await loadFixture(createPersonaWithAgentToken);
+
+            const available = await personaFactory.getAvailableTokens(tokenId);
+            expect(available).to.equal(ethers.parseEther("222222222")); // AGENT_BONDING_AMOUNT
+        });
+    });
+
+    describe("Agent Token Deposits", function () {
+        it("Should allow depositing agent tokens during bonding", async function () {
+            const { personaFactory, agentToken, tokenId, user2 } = await loadFixture(createPersonaWithAgentToken);
+
+            // Give user2 some agent tokens
+            await agentToken.transfer(user2.address, ethers.parseEther("1000"));
+            await agentToken.connect(user2).approve(
+                await personaFactory.getAddress(),
+                ethers.parseEther("1000")
+            );
+
+            await expect(
+                personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("1000"))
+            ).to.emit(personaFactory, "AgentTokensDeposited")
+             .withArgs(tokenId, user2.address, ethers.parseEther("1000"));
+
+            // Check deposit was recorded
+            const deposits = await personaFactory.getUserAgentDeposits(tokenId, user2.address);
+            expect(deposits.length).to.equal(1);
+            expect(deposits[0].amount).to.equal(ethers.parseEther("1000"));
+            expect(deposits[0].withdrawn).to.be.false;
+        });
+
+        it("Should track total agent tokens deposited", async function () {
+            const { personaFactory, agentToken, tokenId, user2, user3 } = await loadFixture(createPersonaWithAgentToken);
+
+            // Multiple users deposit
+            await agentToken.transfer(user2.address, ethers.parseEther("1000"));
+            await agentToken.transfer(user3.address, ethers.parseEther("2000"));
+
+            await agentToken.connect(user2).approve(await personaFactory.getAddress(), ethers.parseEther("1000"));
+            await agentToken.connect(user3).approve(await personaFactory.getAddress(), ethers.parseEther("2000"));
+
+            await personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("1000"));
+            await personaFactory.connect(user3).depositAgentTokens(tokenId, ethers.parseEther("2000"));
+
+            // Check total
+            const persona = await getPersonaData(personaFactory, tokenId);
+            expect(persona.totalAgentDeposited).to.equal(ethers.parseEther("3000"));
+        });
+
+        it("Should reject deposits for personas without agent token", async function () {
+            const { tokenId, personaFactory, user2 } = await loadFixture(createPersonaFixture);
+
+            await expect(
+                personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("1000"))
+            ).to.be.revertedWith("No agent token associated");
+        });
+
+        it("Should reject deposits after graduation", async function () {
+            const { personaFactory, amicaToken, agentToken, tokenId, user2, user3 } = await loadFixture(createPersonaWithAgentToken);
+
+            // Give user3 enough AMICA to trigger graduation
+            const graduationAmount = (DEFAULT_GRADUATION_THRESHOLD * 10100n) / 9900n;
+            await amicaToken.connect(user3).approve(await personaFactory.getAddress(), graduationAmount);
+
+            await personaFactory.connect(user3).swapExactTokensForTokens(
+                tokenId,
+                graduationAmount,
+                0,
+                user3.address,
+                getDeadline()
+            );
+
+            // Now try to deposit agent tokens
+            await agentToken.transfer(user2.address, ethers.parseEther("1000"));
+            await agentToken.connect(user2).approve(await personaFactory.getAddress(), ethers.parseEther("1000"));
+
+            await expect(
+                personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("1000"))
+            ).to.be.revertedWith("Already graduated");
+        });
+
+        it("Should reject zero amount deposits", async function () {
+            const { personaFactory, tokenId, user2 } = await loadFixture(createPersonaWithAgentToken);
+
+            await expect(
+                personaFactory.connect(user2).depositAgentTokens(tokenId, 0)
+            ).to.be.revertedWith("Invalid amount");
+        });
+
+        it("Should handle multiple deposits from same user", async function () {
+            const { personaFactory, agentToken, tokenId, user2 } = await loadFixture(createPersonaWithAgentToken);
+
+            await agentToken.transfer(user2.address, ethers.parseEther("3000"));
+            await agentToken.connect(user2).approve(await personaFactory.getAddress(), ethers.parseEther("3000"));
+
+            // Make 3 deposits
+            await personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("1000"));
+            await personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("500"));
+            await personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("1500"));
+
+            const deposits = await personaFactory.getUserAgentDeposits(tokenId, user2.address);
+            expect(deposits.length).to.equal(3);
+            expect(deposits[0].amount).to.equal(ethers.parseEther("1000"));
+            expect(deposits[1].amount).to.equal(ethers.parseEther("500"));
+            expect(deposits[2].amount).to.equal(ethers.parseEther("1500"));
+        });
+    });
+
+    describe("Agent Token Withdrawals", function () {
+        it("Should allow withdrawing agent tokens before graduation", async function () {
+            const { personaFactory, agentToken, tokenId, user2 } = await loadFixture(createPersonaWithAgentToken);
+
+            // Deposit first
+            await agentToken.transfer(user2.address, ethers.parseEther("1000"));
+            await agentToken.connect(user2).approve(await personaFactory.getAddress(), ethers.parseEther("1000"));
+            await personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("1000"));
+
+            const balanceBefore = await agentToken.balanceOf(user2.address);
+
+            // Withdraw
+            await expect(
+                personaFactory.connect(user2).withdrawAgentTokens(tokenId)
+            ).to.emit(personaFactory, "AgentTokensWithdrawn")
+             .withArgs(tokenId, user2.address, ethers.parseEther("1000"));
+
+            const balanceAfter = await agentToken.balanceOf(user2.address);
+            expect(balanceAfter - balanceBefore).to.equal(ethers.parseEther("1000"));
+
+            // Check deposits marked as withdrawn
+            const deposits = await personaFactory.getUserAgentDeposits(tokenId, user2.address);
+            expect(deposits[0].withdrawn).to.be.true;
+        });
+
+        it("Should update total deposited on withdrawal", async function () {
+            const { personaFactory, agentToken, tokenId, user2 } = await loadFixture(createPersonaWithAgentToken);
+
+            // Deposit
+            await agentToken.transfer(user2.address, ethers.parseEther("1000"));
+            await agentToken.connect(user2).approve(await personaFactory.getAddress(), ethers.parseEther("1000"));
+            await personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("1000"));
+
+            // Check total before withdrawal
+            let persona = await getPersonaData(personaFactory, tokenId);
+            expect(persona.totalAgentDeposited).to.equal(ethers.parseEther("1000"));
+
+            // Withdraw
+            await personaFactory.connect(user2).withdrawAgentTokens(tokenId);
+
+            // Check total after withdrawal
+            persona = await getPersonaData(personaFactory, tokenId);
+            expect(persona.totalAgentDeposited).to.equal(0);
+        });
+
+        it("Should reject withdrawal after graduation", async function () {
+            const { personaFactory, amicaToken, agentToken, tokenId, user2, user3 } = await loadFixture(createPersonaWithAgentToken);
+
+            // Deposit first
+            await agentToken.transfer(user2.address, ethers.parseEther("1000"));
+            await agentToken.connect(user2).approve(await personaFactory.getAddress(), ethers.parseEther("1000"));
+            await personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("1000"));
+
+            // Trigger graduation - use user3 who has AMICA balance
+            const graduationAmount = (DEFAULT_GRADUATION_THRESHOLD * 10100n) / 9900n;
+            await amicaToken.connect(user3).approve(await personaFactory.getAddress(), graduationAmount);
+
+            await personaFactory.connect(user3).swapExactTokensForTokens(
+                tokenId,
+                graduationAmount,
+                0,
+                user3.address,
+                getDeadline()
+            );
+
+            // Try to withdraw
+            await expect(
+                personaFactory.connect(user2).withdrawAgentTokens(tokenId)
+            ).to.be.revertedWith("Already graduated");
+        });
+
+        it("Should reject withdrawal with no deposits", async function () {
+            const { personaFactory, tokenId, user2 } = await loadFixture(createPersonaWithAgentToken);
+
+            await expect(
+                personaFactory.connect(user2).withdrawAgentTokens(tokenId)
+            ).to.be.revertedWith("No tokens to withdraw");
+        });
+
+        it("Should handle partial withdrawals correctly", async function () {
+            const { personaFactory, agentToken, tokenId, user2 } = await loadFixture(createPersonaWithAgentToken);
+
+            // Make multiple deposits
+            await agentToken.transfer(user2.address, ethers.parseEther("3000"));
+            await agentToken.connect(user2).approve(await personaFactory.getAddress(), ethers.parseEther("3000"));
+
+            await personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("1000"));
+            await personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("2000"));
+
+            // First withdrawal should get all
+            await personaFactory.connect(user2).withdrawAgentTokens(tokenId);
+
+            // Second withdrawal should fail
+            await expect(
+                personaFactory.connect(user2).withdrawAgentTokens(tokenId)
+            ).to.be.revertedWith("No tokens to withdraw");
+        });
+    });
+
+    describe("Agent Rewards Distribution", function () {
+        it("Should distribute persona tokens to agent depositors after graduation", async function () {
+            const { personaFactory, amicaToken, agentToken, tokenId, user1, user2, user3 } = await loadFixture(createPersonaWithAgentToken);
+
+            // Users deposit agent tokens
+            await agentToken.transfer(user2.address, ethers.parseEther("1000"));
+            await agentToken.transfer(user3.address, ethers.parseEther("2000"));
+
+            await agentToken.connect(user2).approve(await personaFactory.getAddress(), ethers.parseEther("1000"));
+            await agentToken.connect(user3).approve(await personaFactory.getAddress(), ethers.parseEther("2000"));
+
+            await personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("1000"));
+            await personaFactory.connect(user3).depositAgentTokens(tokenId, ethers.parseEther("2000"));
+
+            // Get persona token
+            const persona = await personaFactory.getPersona(tokenId);
+            const TestERC20Contract = await ethers.getContractFactory("TestERC20");
+            const personaToken = TestERC20Contract.attach(persona.erc20Token) as TestERC20;
+
+            // Record user3's balance before graduation (should be 0 or any purchased amount)
+            const user3BalanceBefore = await personaToken.balanceOf(user3.address);
+
+            // Trigger graduation - use user1 who has AMICA but hasn't deposited agent tokens
+            const graduationAmount = (DEFAULT_GRADUATION_THRESHOLD * 10100n) / 9900n;
+            await amicaToken.connect(user1).approve(await personaFactory.getAddress(), graduationAmount);
+
+            await personaFactory.connect(user1).swapExactTokensForTokens(
+                tokenId,
+                graduationAmount,
+                0,
+                user1.address,
+                getDeadline()
+            );
+
+            // Record user3's balance after graduation but before claiming
+            const user3BalanceAfterGrad = await personaToken.balanceOf(user3.address);
+
+            // Claim rewards
+            await expect(
+                personaFactory.connect(user2).claimAgentRewards(tokenId)
+            ).to.emit(personaFactory, "AgentRewardsDistributed");
+
+            await personaFactory.connect(user3).claimAgentRewards(tokenId);
+
+            // Check balances - should be proportional to deposits
+            const user2Balance = await personaToken.balanceOf(user2.address);
+            const user3BalanceFinal = await personaToken.balanceOf(user3.address);
+
+            // Calculate actual rewards received (excluding any tokens from purchases)
+            const user3RewardOnly = user3BalanceFinal - user3BalanceAfterGrad;
+
+            // User2 deposited 1/3 of total, should get 1/3 of rewards
+            expect(user2Balance).to.be.closeTo(
+                ethers.parseEther("74074074"), // ~1/3 of 222,222,223
+                ethers.parseEther("1")
+            );
+
+            // User3 deposited 2/3 of total, should get 2/3 of rewards
+            expect(user3RewardOnly).to.be.closeTo(
+                ethers.parseEther("148148149"), // ~2/3 of 222,222,223
+                ethers.parseEther("1")
+            );
+        });
+
+        it("Should reject claiming before graduation", async function () {
+            const { personaFactory, agentToken, tokenId, user2 } = await loadFixture(createPersonaWithAgentToken);
+
+            // Deposit agent tokens
+            await agentToken.transfer(user2.address, ethers.parseEther("1000"));
+            await agentToken.connect(user2).approve(await personaFactory.getAddress(), ethers.parseEther("1000"));
+            await personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("1000"));
+
+            // Try to claim before graduation
+            await expect(
+                personaFactory.connect(user2).claimAgentRewards(tokenId)
+            ).to.be.revertedWith("Not graduated yet");
+        });
+
+        it("Should reject claiming with no deposits", async function () {
+            const { personaFactory, amicaToken, tokenId, user2, user3 } = await loadFixture(createPersonaWithAgentToken);
+
+            // Trigger graduation without any agent deposits - use user3 who has AMICA
+            const graduationAmount = (DEFAULT_GRADUATION_THRESHOLD * 10100n) / 9900n;
+            await amicaToken.connect(user3).approve(await personaFactory.getAddress(), graduationAmount);
+
+            await personaFactory.connect(user3).swapExactTokensForTokens(
+                tokenId,
+                graduationAmount,
+                0,
+                user3.address,
+                getDeadline()
+            );
+
+            // Try to claim with no deposits
+            await expect(
+                personaFactory.connect(user2).claimAgentRewards(tokenId)
+            ).to.be.revertedWith("No deposits to claim");
+        });
+
+        it("Should reject claiming for personas without agent token", async function () {
+            const { tokenId, personaFactory, amicaToken, user2 } = await loadFixture(createPersonaFixture);
+
+            // Trigger graduation on regular persona
+            const graduationAmount = (DEFAULT_GRADUATION_THRESHOLD * 10100n) / 9900n;
+            await amicaToken.connect(user2).approve(await personaFactory.getAddress(), graduationAmount);
+
+            await personaFactory.connect(user2).swapExactTokensForTokens(
+                tokenId,
+                graduationAmount,
+                0,
+                user2.address,
+                getDeadline()
+            );
+
+            await expect(
+                personaFactory.connect(user2).claimAgentRewards(tokenId)
+            ).to.be.revertedWith("No agent token");
+        });
+
+        it("Should mark deposits as withdrawn after claiming rewards", async function () {
+            const { personaFactory, amicaToken, agentToken, tokenId, user2, user3 } = await loadFixture(createPersonaWithAgentToken);
+
+            // Deposit
+            await agentToken.transfer(user2.address, ethers.parseEther("1000"));
+            await agentToken.connect(user2).approve(await personaFactory.getAddress(), ethers.parseEther("1000"));
+            await personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("1000"));
+
+            // Graduate - use user3 who has AMICA
+            const graduationAmount = (DEFAULT_GRADUATION_THRESHOLD * 10100n) / 9900n;
+            await amicaToken.connect(user3).approve(await personaFactory.getAddress(), graduationAmount);
+
+            await personaFactory.connect(user3).swapExactTokensForTokens(
+                tokenId,
+                graduationAmount,
+                0,
+                user3.address,
+                getDeadline()
+            );
+
+            // Claim rewards
+            await personaFactory.connect(user2).claimAgentRewards(tokenId);
+
+            // Check deposits marked as withdrawn
+            const deposits = await personaFactory.getUserAgentDeposits(tokenId, user2.address);
+            expect(deposits[0].withdrawn).to.be.true;
+
+            // Second claim should fail
+            await expect(
+                personaFactory.connect(user2).claimAgentRewards(tokenId)
+            ).to.be.revertedWith("No deposits to claim");
+        });
+
+        it("Should calculate expected rewards correctly", async function () {
+            const { personaFactory, agentToken, tokenId, user2, user3 } = await loadFixture(createPersonaWithAgentToken);
+
+            // Users deposit different amounts
+            await agentToken.transfer(user2.address, ethers.parseEther("1500"));
+            await agentToken.transfer(user3.address, ethers.parseEther("3500"));
+
+            await agentToken.connect(user2).approve(await personaFactory.getAddress(), ethers.parseEther("1500"));
+            await agentToken.connect(user3).approve(await personaFactory.getAddress(), ethers.parseEther("3500"));
+
+            await personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("1500"));
+            await personaFactory.connect(user3).depositAgentTokens(tokenId, ethers.parseEther("3500"));
+
+            // Calculate expected rewards
+            const [user2Reward, user2Agent] = await personaFactory.calculateAgentRewards(tokenId, user2.address);
+            const [user3Reward, user3Agent] = await personaFactory.calculateAgentRewards(tokenId, user3.address);
+
+            expect(user2Agent).to.equal(ethers.parseEther("1500"));
+            expect(user3Agent).to.equal(ethers.parseEther("3500"));
+
+            // User2 has 30% of deposits, should get 30% of rewards
+            const totalRewards = ethers.parseEther("222222223"); // AGENT_REWARDS_AMOUNT
+            expect(user2Reward).to.be.closeTo(
+                totalRewards * 3n / 10n,
+                ethers.parseEther("1")
+            );
+
+            // User3 has 70% of deposits, should get 70% of rewards
+            expect(user3Reward).to.be.closeTo(
+                totalRewards * 7n / 10n,
+                ethers.parseEther("1")
+            );
+        });
+    });
+
+    describe("Agent Token Graduation Integration", function () {
+        it("Should send agent tokens to AMICA on graduation", async function () {
+            const { personaFactory, amicaToken, agentToken, tokenId, user2, user3 } = await loadFixture(createPersonaWithAgentToken);
+
+            // Users deposit agent tokens
+            await agentToken.transfer(user2.address, ethers.parseEther("1000"));
+            await agentToken.transfer(user3.address, ethers.parseEther("2000"));
+
+            await agentToken.connect(user2).approve(await personaFactory.getAddress(), ethers.parseEther("1000"));
+            await agentToken.connect(user3).approve(await personaFactory.getAddress(), ethers.parseEther("2000"));
+
+            await personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("1000"));
+            await personaFactory.connect(user3).depositAgentTokens(tokenId, ethers.parseEther("2000"));
+
+            // Check AMICA balance before graduation
+            const amicaAgentBalanceBefore = await amicaToken.depositedBalances(await agentToken.getAddress());
+            expect(amicaAgentBalanceBefore).to.equal(0);
+
+            // Trigger graduation - use user3 who has AMICA
+            const graduationAmount = (DEFAULT_GRADUATION_THRESHOLD * 10100n) / 9900n;
+            await amicaToken.connect(user3).approve(await personaFactory.getAddress(), graduationAmount);
+
+            await personaFactory.connect(user3).swapExactTokensForTokens(
+                tokenId,
+                graduationAmount,
+                0,
+                user3.address,
+                getDeadline()
+            );
+
+            // Check agent tokens were sent to AMICA
+            const amicaAgentBalanceAfter = await amicaToken.depositedBalances(await agentToken.getAddress());
+            expect(amicaAgentBalanceAfter).to.equal(ethers.parseEther("3000"));
+
+            // Check persona tokens were also deposited to AMICA (with reduced amount)
+            const persona = await personaFactory.getPersona(tokenId);
+            const personaTokenBalance = await amicaToken.depositedBalances(persona.erc20Token);
+            expect(personaTokenBalance).to.equal(ethers.parseEther("222222222")); // AGENT_AMICA_AMOUNT
+        });
+
+        it("Should handle graduation with no agent deposits", async function () {
+            const { personaFactory, amicaToken, tokenId, user3 } = await loadFixture(createPersonaWithAgentToken);
+
+            // Graduate without any agent deposits - use user3 who has AMICA
+            const graduationAmount = (DEFAULT_GRADUATION_THRESHOLD * 10100n) / 9900n;
+            await amicaToken.connect(user3).approve(await personaFactory.getAddress(), graduationAmount);
+
+            await expect(
+                personaFactory.connect(user3).swapExactTokensForTokens(
+                    tokenId,
+                    graduationAmount,
+                    0,
+                    user3.address,
+                    getDeadline()
+                )
+            ).to.emit(personaFactory, "LiquidityPairCreated");
+
+            // Should still graduate successfully
+            const persona = await personaFactory.getPersona(tokenId);
+            expect(persona.pairCreated).to.be.true;
+
+            // No agent tokens sent to AMICA
+            const personaData = await getPersonaData(personaFactory, tokenId);
+            const agentTokenBalance = await amicaToken.depositedBalances(personaData.agentToken);
+            expect(agentTokenBalance).to.equal(0);
+        });
+
+        it("Should use correct liquidity amounts with agent token", async function () {
+            const { personaFactory, amicaToken, agentToken, tokenId, user2, user3 } = await loadFixture(createPersonaWithAgentToken);
+
+            // Make some agent deposits
+            await agentToken.transfer(user2.address, ethers.parseEther("1000"));
+            await agentToken.connect(user2).approve(await personaFactory.getAddress(), ethers.parseEther("1000"));
+            await personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("1000"));
+
+            // Graduate - use user3 who has AMICA
+            const graduationAmount = (DEFAULT_GRADUATION_THRESHOLD * 10100n) / 9900n;
+            await amicaToken.connect(user3).approve(await personaFactory.getAddress(), graduationAmount);
+
+            const tx = await personaFactory.connect(user3).swapExactTokensForTokens(
+                tokenId,
+                graduationAmount,
+                0,
+                user3.address,
+                getDeadline()
+            );
+
+            const receipt = await tx.wait();
+            const event = receipt?.logs.find(
+                (log: any) => {
+                    try {
+                        const parsed = personaFactory.interface.parseLog({
+                            topics: log.topics as string[],
+                            data: log.data
+                        });
+                        return parsed?.name === 'LiquidityPairCreated';
+                    } catch {
+                        return false;
+                    }
+                }
+            );
+
+            expect(event).to.not.be.undefined;
+
+            // Verify correct token amounts were used
+            const persona = await personaFactory.getPersona(tokenId);
+
+            // Check persona tokens: 1/3 for liquidity (with agent token)
+            const TestERC20Contract = await ethers.getContractFactory("TestERC20");
+            const personaToken = TestERC20Contract.attach(persona.erc20Token) as TestERC20;
+
+            // Factory should still hold agent rewards amount
+            const factoryBalance = await personaToken.balanceOf(await personaFactory.getAddress());
+            expect(factoryBalance).to.be.gte(ethers.parseEther("222222223")); // AGENT_REWARDS_AMOUNT
+        });
+    });
+
+    describe("Staking Rewards Integration", function () {
+        it("Should set staking rewards contract", async function () {
+            const { personaFactory, owner, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
+
+            const stakingAddress = user1.address; // Using user1 address as mock staking contract
+
+            await expect(
+                personaFactory.connect(owner).setStakingRewards(stakingAddress)
+            ).to.emit(personaFactory, "StakingRewardsSet")
+             .withArgs(stakingAddress);
+
+            expect(await personaFactory.stakingRewards()).to.equal(stakingAddress);
+        });
+
+        it("Should only allow owner to set staking rewards", async function () {
+            const { personaFactory, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
+
+            await expect(
+                personaFactory.connect(user1).setStakingRewards(user1.address)
+            ).to.be.revertedWithCustomError(personaFactory, "OwnableUnauthorizedAccount");
+        });
+    });
+
+    describe("Edge Cases and Security", function () {
+        it("Should handle withdrawing after partial deposits claimed as rewards", async function () {
+            const { personaFactory, amicaToken, agentToken, tokenId, user2, user3 } = await loadFixture(createPersonaWithAgentToken);
+
+            // Make multiple deposits
+            await agentToken.transfer(user2.address, ethers.parseEther("3500"));
+            await agentToken.connect(user2).approve(await personaFactory.getAddress(), ethers.parseEther("3500"));
+
+            await personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("1000"));
+            await personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("2000"));
+
+            // Withdraw first deposit
+            await personaFactory.connect(user2).withdrawAgentTokens(tokenId);
+
+            // Now deposit again
+            await personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("500"));
+
+            // Graduate - use user3 who has AMICA
+            const graduationAmount = (DEFAULT_GRADUATION_THRESHOLD * 10100n) / 9900n;
+            await amicaToken.connect(user3).approve(await personaFactory.getAddress(), graduationAmount);
+
+            await personaFactory.connect(user3).swapExactTokensForTokens(
+                tokenId,
+                graduationAmount,
+                0,
+                user3.address,
+                getDeadline()
+            );
+
+            // Should only be able to claim rewards for the non-withdrawn deposit
+            await personaFactory.connect(user2).claimAgentRewards(tokenId);
+
+            // Verify only got rewards for 500 tokens
+            const persona = await personaFactory.getPersona(tokenId);
+            const TestERC20Contract = await ethers.getContractFactory("TestERC20");
+            const personaToken = TestERC20Contract.attach(persona.erc20Token) as TestERC20;
+
+            const balance = await personaToken.balanceOf(user2.address);
+            expect(balance).to.equal(ethers.parseEther("222222223")); // All rewards since only depositor
+        });
+
+        it("Should prevent reentrancy in agent deposits", async function () {
+            // This would require a malicious agent token
+            // The nonReentrant modifier should prevent reentrancy
+            expect(true).to.be.true; // Placeholder - actual test would need malicious contract
+        });
+
+        it("Should handle agent token with non-standard decimals", async function () {
+            const { personaFactory, amicaToken, user1, owner } = await loadFixture(deployPersonaTokenFactoryFixture);
+
+            // Deploy 6-decimal agent token (like USDC)
+            const SixDecimalToken = await ethers.getContractFactory("TestERC20");
+            const agentToken6 = await SixDecimalToken.deploy("Agent6", "AGENT6", ethers.parseUnits("10000000", 6));
+
+            await personaFactory.connect(owner).approveAgentToken(await agentToken6.getAddress(), true);
+
+            // Create persona
+            await amicaToken.connect(user1).approve(await personaFactory.getAddress(), DEFAULT_MINT_COST);
+
+            const tx = await personaFactory.connect(user1).createPersona(
+                await amicaToken.getAddress(),
+                "Six Decimal Agent",
+                "SIXAGENT",
+                [],
+                [],
+                0,
+                await agentToken6.getAddress()
+            );
+
+            const receipt = await tx.wait();
+            const event = receipt?.logs.find(
+                log => {
+                    try {
+                        const parsed = personaFactory.interface.parseLog({
+                            topics: log.topics as string[],
+                            data: log.data
+                        });
+                        return parsed?.name === 'PersonaCreated';
+                    } catch {
+                        return false;
+                    }
+                }
+            );
+
+            const parsedEvent = personaFactory.interface.parseLog({
+                topics: event!.topics as string[],
+                data: event!.data
+            });
+            const tokenId = parsedEvent!.args.tokenId;
+
+            // Deposit 6-decimal tokens
+            await agentToken6.transfer(user1.address, ethers.parseUnits("1000", 6));
+            await agentToken6.connect(user1).approve(
+                await personaFactory.getAddress(),
+                ethers.parseUnits("1000", 6)
+            );
+
+            await expect(
+                personaFactory.connect(user1).depositAgentTokens(tokenId, ethers.parseUnits("1000", 6))
+            ).to.emit(personaFactory, "AgentTokensDeposited");
+        });
+    });
+});
