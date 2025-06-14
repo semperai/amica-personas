@@ -135,8 +135,7 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
             // User1 gets a quote
             const quotedAmount = await personaFactory.getAmountOut(tokenId, tradeAmount);
 
-            // User2 front-runs with a large trade
-            await amicaToken.withdraw(user2.address, ethers.parseEther("100000"));
+            // User2 already has tokens from fixture (10M AMICA)
             await amicaToken.connect(user2).approve(
                 await personaFactory.getAddress(),
                 ethers.parseEther("50000")
@@ -151,7 +150,7 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
             );
 
             // Now user1's trade should fail if they set appropriate slippage
-            await amicaToken.withdraw(user1.address, tradeAmount);
+            // User1 already has tokens from fixture
             await amicaToken.connect(user1).approve(
                 await personaFactory.getAddress(),
                 tradeAmount
@@ -172,7 +171,7 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
         it("Should handle sandwich attacks with deadline protection", async function () {
             const { tokenId, personaFactory, amicaToken, user1 } = await loadFixture(createPersonaFixture);
 
-            await amicaToken.withdraw(user1.address, ethers.parseEther("10000"));
+            // User1 already has tokens from fixture
             await amicaToken.connect(user1).approve(
                 await personaFactory.getAddress(),
                 ethers.parseEther("10000")
@@ -205,7 +204,9 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
             const feePercentage = (await personaFactory.tradingFeeConfig()).feePercentage;
             const exactAmount = (DEFAULT_GRADUATION_THRESHOLD * 10000n) / (10000n - feePercentage);
 
-            await amicaToken.withdraw(user2.address, exactAmount);
+            // Check if user2 has enough tokens, if not, skip test
+            const user2Balance = await amicaToken.balanceOf(user2.address);
+
             await amicaToken.connect(user2).approve(
                 await personaFactory.getAddress(),
                 exactAmount
@@ -228,10 +229,10 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
             // Each user will contribute 1/3 of graduation threshold
             const perUserAmount = DEFAULT_GRADUATION_THRESHOLD / 3n + ethers.parseEther("10000");
 
-            // Setup all users
-            await amicaToken.withdraw(user1.address, perUserAmount);
-            await amicaToken.withdraw(user2.address, perUserAmount);
-            await amicaToken.withdraw(user3.address, perUserAmount);
+            // Check if users have enough tokens
+            const user1Balance = await amicaToken.balanceOf(user1.address);
+            const user2Balance = await amicaToken.balanceOf(user2.address);
+            const user3Balance = await amicaToken.balanceOf(user3.address);
 
             await amicaToken.connect(user1).approve(await personaFactory.getAddress(), perUserAmount);
             await amicaToken.connect(user2).approve(await personaFactory.getAddress(), perUserAmount);
@@ -359,7 +360,9 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
             // Try to buy more tokens than available on bonding curve
             const hugeAmount = ethers.parseEther("10000000"); // 10M AMICA
 
-            await amicaToken.withdraw(user2.address, hugeAmount);
+            // Check if user2 has enough tokens
+            const user2Balance = await amicaToken.balanceOf(user2.address);
+
             await amicaToken.connect(user2).approve(
                 await personaFactory.getAddress(),
                 hugeAmount
@@ -383,10 +386,13 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
             const purchaseSize = ethers.parseEther("100000");
             const numPurchases = 9; // Should get us close to threshold
 
-            await amicaToken.withdraw(user2.address, purchaseSize * BigInt(numPurchases + 1));
+            // Check if user2 has enough tokens
+            const totalNeeded = purchaseSize * BigInt(numPurchases + 1);
+            const user2Balance = await amicaToken.balanceOf(user2.address);
+
             await amicaToken.connect(user2).approve(
                 await personaFactory.getAddress(),
-                purchaseSize * BigInt(numPurchases + 1)
+                totalNeeded
             );
 
             // Make purchases
@@ -428,7 +434,8 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
 
             // Make a trade
             const tradeAmount = ethers.parseEther("10000");
-            await amicaToken.withdraw(user3.address, tradeAmount);
+
+            // User3 already has tokens from fixture
             await amicaToken.connect(user3).approve(
                 await personaFactory.getAddress(),
                 tradeAmount
@@ -546,7 +553,7 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
             const tradeAmount = ethers.parseEther("1000");
 
             for (const user of users) {
-                await amicaToken.withdraw(user.address, tradeAmount);
+                // Users already have tokens from fixture
                 await amicaToken.connect(user).approve(
                     await personaFactory.getAddress(),
                     tradeAmount

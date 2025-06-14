@@ -14,6 +14,31 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
         const AmicaToken = await ethers.getContractFactory("AmicaToken");
         const amicaToken = await AmicaToken.deploy(owner.address);
 
+        // Since we're not on mainnet, we need to set up a bridge wrapper to mint tokens
+        const AmicaBridgeWrapper = await ethers.getContractFactory("AmicaBridgeWrapper");
+        
+        // Deploy a mock bridged token
+        const TestERC20 = await ethers.getContractFactory("TestERC20");
+        const bridgedAmica = await TestERC20.deploy("Bridged Amica", "BAMICA", ethers.parseEther("100000000"));
+        
+        // Deploy bridge wrapper
+        const bridgeWrapper = await AmicaBridgeWrapper.deploy(
+            await bridgedAmica.getAddress(),
+            await amicaToken.getAddress(),
+            owner.address
+        );
+        
+        // Set bridge wrapper in AmicaToken
+        await amicaToken.setBridgeWrapper(await bridgeWrapper.getAddress());
+        
+        // Now we can mint native AMICA by wrapping bridged tokens
+        // Give owner bridged tokens
+        await bridgedAmica.transfer(owner.address, ethers.parseEther("50000000"));
+        
+        // Wrap bridged tokens to get native AMICA
+        await bridgedAmica.approve(await bridgeWrapper.getAddress(), ethers.parseEther("50000000"));
+        await bridgeWrapper.wrap(ethers.parseEther("50000000"));
+
         // Deploy mocks
         const MockUniswapV2Factory = await ethers.getContractFactory("MockUniswapV2Factory");
         const mockFactory = await MockUniswapV2Factory.deploy();
@@ -39,7 +64,6 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
         );
 
         // Deploy additional tokens for pairing
-        const TestERC20 = await ethers.getContractFactory("TestERC20");
         const usdc = await TestERC20.deploy("USD Coin", "USDC", ethers.parseEther("100000000"));
         const weth = await TestERC20.deploy("Wrapped Ether", "WETH", ethers.parseEther("1000000"));
 
@@ -56,11 +80,11 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             ethers.parseEther("10"),       // 10 WETH graduation
         );
 
-        // Distribute tokens - INCREASED AMOUNTS
-        await amicaToken.withdraw(creator.address, ethers.parseEther("20000")); // Increased from 10000
-        await amicaToken.withdraw(buyer1.address, ethers.parseEther("5000000"));
-        await amicaToken.withdraw(buyer2.address, ethers.parseEther("5000000"));
-        await amicaToken.withdraw(buyer3.address, ethers.parseEther("5000000"));
+        // Distribute tokens - Transfer AMICA from owner instead of using withdraw
+        await amicaToken.transfer(creator.address, ethers.parseEther("20000"));
+        await amicaToken.transfer(buyer1.address, ethers.parseEther("5000000"));
+        await amicaToken.transfer(buyer2.address, ethers.parseEther("5000000"));
+        await amicaToken.transfer(buyer3.address, ethers.parseEther("5000000"));
 
         await usdc.transfer(creator.address, ethers.parseEther("1000"));
         await usdc.transfer(buyer1.address, ethers.parseEther("100000"));
@@ -592,8 +616,9 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             expect(deposit1).to.equal(ethers.parseEther("333333333"));
             expect(deposit2).to.equal(ethers.parseEther("333333333"));
 
-            // Give owner some AMICA to burn
-            await amicaToken.withdraw(owner.address, ethers.parseEther("1000000"));
+            // Owner already has AMICA from the fixture setup
+            const ownerAmicaBalance = await amicaToken.balanceOf(owner.address);
+            expect(ownerAmicaBalance).to.be.gt(ethers.parseEther("1000000"));
 
             // Get token indices in AMICA contract
             const index1 = await amicaToken.tokenIndex(persona1.erc20Token);

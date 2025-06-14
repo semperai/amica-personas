@@ -262,13 +262,19 @@ describe("PersonaTokenFactory Graduation", function () {
     });
 
     it("Should add correct liquidity amounts", async function () {
-        const { tokenId, personaFactory, amicaToken, user2 } = await loadFixture(createPersonaFixture);
+        const { tokenId, personaFactory, amicaToken, user2, owner } = await loadFixture(createPersonaFixture);
 
         // Purchase slightly more than graduation threshold
         const excess = ethers.parseEther("100000");
         const purchaseAmount = (DEFAULT_GRADUATION_THRESHOLD * 10100n) / 9900n + excess;
-        
-        await amicaToken.withdraw(user2.address, purchaseAmount);
+
+        // Transfer tokens from owner instead of using withdraw
+        // Check if user2 needs more tokens
+        const user2Balance = await amicaToken.balanceOf(user2.address);
+        if (user2Balance < purchaseAmount) {
+            await amicaToken.connect(owner).transfer(user2.address, purchaseAmount - user2Balance);
+        }
+
         await amicaToken.connect(user2).approve(
             await personaFactory.getAddress(),
             purchaseAmount
@@ -307,7 +313,7 @@ describe("PersonaTokenFactory Graduation", function () {
         // With 33/33/33 split: LIQUIDITY_TOKEN_AMOUNT is fixed at 333,333,334
         // The pairing token amount for liquidity is all deposited tokens (after fees)
         const expectedPersonaTokens = ethers.parseEther("333333334"); // LIQUIDITY_TOKEN_AMOUNT
-        
+
         // Get actual deposited amount from purchase data
         const purchase = await personaFactory.purchases(tokenId);
         const pairingTokenAmount = purchase.totalDeposited;
@@ -484,11 +490,17 @@ describe("PersonaTokenFactory Graduation", function () {
     });
 
     it("Should handle LP tokens after graduation", async function () {
-        const { tokenId, personaFactory, amicaToken, user2, mockFactory } = await loadFixture(createPersonaFixture);
+        const { tokenId, personaFactory, amicaToken, user2, mockFactory, owner } = await loadFixture(createPersonaFixture);
 
         // Trigger graduation
         const graduationAmount = (DEFAULT_GRADUATION_THRESHOLD * 10100n) / 9900n;
-        await amicaToken.withdraw(user2.address, graduationAmount);
+
+        // Transfer tokens from owner instead of using withdraw
+        const user2Balance = await amicaToken.balanceOf(user2.address);
+        if (user2Balance < graduationAmount) {
+            await amicaToken.connect(owner).transfer(user2.address, graduationAmount - user2Balance);
+        }
+
         await amicaToken.connect(user2).approve(
             await personaFactory.getAddress(),
             graduationAmount
@@ -512,7 +524,7 @@ describe("PersonaTokenFactory Graduation", function () {
         // Since we're using mocks, we need to check if the mock created a pair
         // In the real implementation, LP tokens would be held by the factory
         expect(pairAddress).to.not.equal(ethers.ZeroAddress);
-        
+
         // Verify pair was marked as created
         expect(persona.pairCreated).to.be.true;
     });

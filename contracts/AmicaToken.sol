@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -11,11 +12,14 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  * @notice Main AMICA token with burn-and-claim mechanism for deposited tokens
  * @dev Implements a fair distribution mechanism where burning AMICA gives proportional share of deposited tokens
  */
-contract AmicaToken is ERC20, Ownable, ReentrancyGuard {
+contract AmicaToken is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
     // State variables
     address[] private _depositedTokens;
     mapping(address => uint256) public tokenIndex;
     mapping(address => uint256) public depositedBalances;
+
+    // Bridge wrapper contract (can be set post-deployment)
+    address public bridgeWrapper;
 
     // Constants
     uint256 public constant TOTAL_SUPPLY = 1_000_000_000 ether;
@@ -26,13 +30,39 @@ contract AmicaToken is ERC20, Ownable, ReentrancyGuard {
     event TokensRecovered(address indexed to, address indexed token, uint256 amount);
     event TokensDeposited(address indexed depositor, address indexed token, uint256 amount);
     event TokensBurnedAndClaimed(address indexed user, uint256 amountBurned, address[] tokens, uint256[] amounts);
+    event BridgeWrapperSet(address indexed wrapper);
 
     constructor(address initialOwner)
         ERC20("Amica", "AMICA")
         Ownable(initialOwner)
     {
-        _mint(address(this), TOTAL_SUPPLY);
+        // Only mint on Ethereum mainnet
+        // On other chains, supply starts at 0 and is minted via bridge wrapper
+        if (block.chainid == 1) {
+            _mint(address(this), TOTAL_SUPPLY);
+        }
         _depositedTokens.push(address(0)); // Reserve index 0
+    }
+
+    /**
+     * @notice Set the bridge wrapper contract address
+     * @param _bridgeWrapper Address of the bridge wrapper contract
+     */
+    function setBridgeWrapper(address _bridgeWrapper) external onlyOwner {
+        require(_bridgeWrapper != address(0), "Invalid wrapper address");
+        bridgeWrapper = _bridgeWrapper;
+        emit BridgeWrapperSet(_bridgeWrapper);
+    }
+
+    /**
+     * @notice Mint tokens (only callable by bridge wrapper on non-mainnet chains)
+     * @param to Recipient address
+     * @param amount Amount to mint
+     */
+    function mint(address to, uint256 amount) external virtual {
+        require(msg.sender == bridgeWrapper, "Only bridge wrapper can mint");
+        require(block.chainid != 1, "Cannot mint on mainnet");
+        _mint(to, amount);
     }
 
     /**

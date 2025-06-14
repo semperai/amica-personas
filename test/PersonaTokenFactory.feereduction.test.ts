@@ -17,37 +17,27 @@ describe("PersonaTokenFactory Fee Reduction System", function () {
         it("Should create snapshot when user has sufficient AMICA", async function () {
             const { personaFactory, amicaToken, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
 
-            // Get initial balance from fixture
-            const initialBalance = await amicaToken.balanceOf(user1.address);
-
-            // Give user1 enough AMICA
-            await amicaToken.withdraw(user1.address, MIN_AMICA_FOR_REDUCTION);
-
-            const totalBalance = initialBalance + MIN_AMICA_FOR_REDUCTION;
+            // User1 already has 10M AMICA from fixture
+            const currentBalance = await amicaToken.balanceOf(user1.address);
+            expect(currentBalance).to.be.gte(MIN_AMICA_FOR_REDUCTION);
 
             // Update snapshot
             await expect(personaFactory.connect(user1).updateAmicaSnapshot())
                 .to.emit(personaFactory, "SnapshotUpdated")
-                .withArgs(user1.address, totalBalance, await ethers.provider.getBlockNumber() + 1);
+                .withArgs(user1.address, currentBalance, await ethers.provider.getBlockNumber() + 1);
 
             // Check snapshot was recorded
-            expect(await personaFactory.amicaBalanceSnapshot(user1.address)).to.equal(totalBalance);
+            expect(await personaFactory.amicaBalanceSnapshot(user1.address)).to.equal(currentBalance);
             expect(await personaFactory.snapshotBlock(user1.address)).to.be.gt(0);
         });
 
         it("Should reject snapshot creation with insufficient AMICA", async function () {
             const { personaFactory, amicaToken, user1, owner } = await loadFixture(deployPersonaTokenFactoryFixture);
 
-            // First, check current balance
+            // Transfer most tokens away to ensure user has less than minimum
             const currentBalance = await amicaToken.balanceOf(user1.address);
-
-            // If user has too much, transfer it away
-            if (currentBalance >= MIN_AMICA_FOR_REDUCTION) {
-                await amicaToken.connect(user1).transfer(
-                    owner.address,
-                    currentBalance - ethers.parseEther("500") // Keep only 500
-                );
-            }
+            const transferAmount = currentBalance - ethers.parseEther("500"); // Keep only 500
+            await amicaToken.connect(user1).transfer(owner.address, transferAmount);
 
             // Verify balance is below minimum
             expect(await amicaToken.balanceOf(user1.address)).to.be.lt(MIN_AMICA_FOR_REDUCTION);
@@ -59,8 +49,8 @@ describe("PersonaTokenFactory Fee Reduction System", function () {
         it("Should auto-create snapshot on first trade if eligible", async function () {
             const { tokenId, personaFactory, amicaToken, user2 } = await loadFixture(createPersonaFixture);
 
-            // Give user2 enough AMICA
-            await amicaToken.withdraw(user2.address, ethers.parseEther("10000"));
+            // User2 already has 10M AMICA from fixture
+            expect(await amicaToken.balanceOf(user2.address)).to.be.gte(MIN_AMICA_FOR_REDUCTION);
 
             // Approve for trade
             await amicaToken.connect(user2).approve(
@@ -86,8 +76,7 @@ describe("PersonaTokenFactory Fee Reduction System", function () {
         it("Should not update snapshot on subsequent trades", async function () {
             const { tokenId, personaFactory, amicaToken, user2 } = await loadFixture(createPersonaFixture);
 
-            // Give user2 AMICA and create snapshot
-            await amicaToken.withdraw(user2.address, ethers.parseEther("10000"));
+            // User2 already has tokens, create snapshot
             await personaFactory.connect(user2).updateAmicaSnapshot();
 
             const initialSnapshotBlock = await personaFactory.snapshotBlock(user2.address);
@@ -116,8 +105,7 @@ describe("PersonaTokenFactory Fee Reduction System", function () {
         it("Should return 0 before snapshot delay passes", async function () {
             const { personaFactory, amicaToken, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
 
-            // Give user1 AMICA and create snapshot
-            await amicaToken.withdraw(user1.address, ethers.parseEther("10000"));
+            // User1 already has tokens, create snapshot
             await personaFactory.connect(user1).updateAmicaSnapshot();
 
             // Immediately check effective balance
@@ -127,69 +115,64 @@ describe("PersonaTokenFactory Fee Reduction System", function () {
         it("Should return snapshot balance after delay passes", async function () {
             const { personaFactory, amicaToken, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
 
-            const initialBalance = await amicaToken.balanceOf(user1.address);
-            const additionalAmount = ethers.parseEther("10000");
-
-            await amicaToken.withdraw(user1.address, additionalAmount);
-            const totalBalance = initialBalance + additionalAmount;
-
+            const snapshotBalance = await amicaToken.balanceOf(user1.address);
             await personaFactory.connect(user1).updateAmicaSnapshot();
 
             // Mine blocks to pass delay
             await mine(SNAPSHOT_DELAY);
 
-            expect(await personaFactory.getEffectiveAmicaBalance(user1.address)).to.equal(totalBalance);
+            expect(await personaFactory.getEffectiveAmicaBalance(user1.address)).to.equal(snapshotBalance);
         });
 
         it("Should return minimum of snapshot and current balance", async function () {
             const { personaFactory, amicaToken, user1, user2 } = await loadFixture(deployPersonaTokenFactoryFixture);
 
             const initialBalance = await amicaToken.balanceOf(user1.address);
-            const additionalAmount = ethers.parseEther("10000");
-
-            await amicaToken.withdraw(user1.address, additionalAmount);
-            const totalBalance = initialBalance + additionalAmount;
-
             await personaFactory.connect(user1).updateAmicaSnapshot();
 
             // Mine blocks to pass delay
             await mine(SNAPSHOT_DELAY);
 
             // Transfer some AMICA away
-            await amicaToken.connect(user1).transfer(user2.address, ethers.parseEther("4000"));
+            const transferAmount = ethers.parseEther("4000");
+            await amicaToken.connect(user1).transfer(user2.address, transferAmount);
 
             // Effective balance should be current balance (not snapshot)
             const currentBalance = await amicaToken.balanceOf(user1.address);
-            expect(await personaFactory.getEffectiveAmicaBalance(user1.address))
-                .to.equal(currentBalance);
+            expect(currentBalance).to.equal(initialBalance - transferAmount);
+            expect(await personaFactory.getEffectiveAmicaBalance(user1.address)).to.equal(currentBalance);
         });
 
         it("Should handle user receiving more AMICA after snapshot", async function () {
             const { personaFactory, amicaToken, user1, user2 } = await loadFixture(deployPersonaTokenFactoryFixture);
 
-            const initialBalance = await amicaToken.balanceOf(user1.address);
-            const firstWithdraw = ethers.parseEther("5000");
-
-            await amicaToken.withdraw(user1.address, firstWithdraw);
-            const snapshotBalance = initialBalance + firstWithdraw;
-
+            // Create snapshot with current balance
+            const snapshotBalance = await amicaToken.balanceOf(user1.address);
             await personaFactory.connect(user1).updateAmicaSnapshot();
 
             // Mine blocks to pass delay
             await mine(SNAPSHOT_DELAY);
 
-            // Receive more AMICA
-            await amicaToken.withdraw(user1.address, ethers.parseEther("5000"));
+            // Receive more AMICA from user2
+            await amicaToken.connect(user2).transfer(user1.address, ethers.parseEther("5000"));
 
             // Effective balance should be snapshot balance (not current higher balance)
-            expect(await personaFactory.getEffectiveAmicaBalance(user1.address))
-                .to.equal(snapshotBalance);
+            expect(await personaFactory.getEffectiveAmicaBalance(user1.address)).to.equal(snapshotBalance);
         });
     });
 
     describe("Fee Calculation with AMICA Holdings", function () {
-        async function setupUserWithAmica(personaFactory: any, amicaToken: any, user: any, amount: bigint) {
-            await amicaToken.withdraw(user.address, amount);
+        async function setupUserWithAmica(personaFactory: any, amicaToken: any, user: any, targetAmount: bigint, owner: any) {
+            const currentBalance = await amicaToken.balanceOf(user.address);
+
+            if (currentBalance > targetAmount) {
+                // Transfer excess away
+                await amicaToken.connect(user).transfer(owner.address, currentBalance - targetAmount);
+            } else if (currentBalance < targetAmount) {
+                // Need more tokens - transfer from owner
+                await amicaToken.connect(owner).transfer(user.address, targetAmount - currentBalance);
+            }
+
             await personaFactory.connect(user).updateAmicaSnapshot();
             await mine(SNAPSHOT_DELAY);
         }
@@ -199,12 +182,10 @@ describe("PersonaTokenFactory Fee Reduction System", function () {
 
             // Transfer away most balance to ensure user has less than minimum
             const currentBalance = await amicaToken.balanceOf(user1.address);
-            if (currentBalance > ethers.parseEther("500")) {
-                await amicaToken.connect(user1).transfer(
-                    owner.address,
-                    currentBalance - ethers.parseEther("500")
-                );
-            }
+            await amicaToken.connect(user1).transfer(
+                owner.address,
+                currentBalance - ethers.parseEther("500")
+            );
 
             // Verify user has less than minimum
             expect(await amicaToken.balanceOf(user1.address)).to.be.lt(MIN_AMICA_FOR_REDUCTION);
@@ -216,21 +197,8 @@ describe("PersonaTokenFactory Fee Reduction System", function () {
         it("Should apply 10% discount at minimum threshold", async function () {
             const { personaFactory, amicaToken, user1, owner } = await loadFixture(deployPersonaTokenFactoryFixture);
 
-            // Reset user balance to exactly minimum
-            const currentBalance = await amicaToken.balanceOf(user1.address);
-
-            if (currentBalance > MIN_AMICA_FOR_REDUCTION) {
-                await amicaToken.connect(user1).transfer(
-                    owner.address,
-                    currentBalance - MIN_AMICA_FOR_REDUCTION
-                );
-            } else if (currentBalance < MIN_AMICA_FOR_REDUCTION) {
-                await amicaToken.withdraw(user1.address, MIN_AMICA_FOR_REDUCTION - currentBalance);
-            }
-
-            // Create snapshot
-            await personaFactory.connect(user1).updateAmicaSnapshot();
-            await mine(SNAPSHOT_DELAY);
+            // Set user balance to exactly minimum threshold
+            await setupUserWithAmica(personaFactory, amicaToken, user1, MIN_AMICA_FOR_REDUCTION, owner);
 
             const baseFee = (await personaFactory.tradingFeeConfig()).feePercentage;
             const effectiveFee = await personaFactory.getEffectiveFeePercentage(user1.address);
@@ -240,9 +208,9 @@ describe("PersonaTokenFactory Fee Reduction System", function () {
         });
 
         it("Should apply 100% discount at maximum threshold", async function () {
-            const { personaFactory, amicaToken, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
+            const { personaFactory, amicaToken, user1, owner } = await loadFixture(deployPersonaTokenFactoryFixture);
 
-            await setupUserWithAmica(personaFactory, amicaToken, user1, MAX_AMICA_FOR_REDUCTION);
+            await setupUserWithAmica(personaFactory, amicaToken, user1, MAX_AMICA_FOR_REDUCTION, owner);
 
             expect(await personaFactory.getEffectiveFeePercentage(user1.address)).to.equal(0);
         });
@@ -254,18 +222,7 @@ describe("PersonaTokenFactory Fee Reduction System", function () {
             const range = MAX_AMICA_FOR_REDUCTION - MIN_AMICA_FOR_REDUCTION;
             const targetBalance = MIN_AMICA_FOR_REDUCTION + range / 4n;
 
-            // Set user balance to target
-            const currentBalance = await amicaToken.balanceOf(user1.address);
-
-            if (currentBalance > targetBalance) {
-                await amicaToken.connect(user1).transfer(owner.address, currentBalance - targetBalance);
-            } else {
-                await amicaToken.withdraw(user1.address, targetBalance - currentBalance);
-            }
-
-            // Create snapshot and wait
-            await personaFactory.connect(user1).updateAmicaSnapshot();
-            await mine(SNAPSHOT_DELAY);
+            await setupUserWithAmica(personaFactory, amicaToken, user1, targetBalance, owner);
 
             const baseFee = (await personaFactory.tradingFeeConfig()).feePercentage;
             const fee25 = await personaFactory.getEffectiveFeePercentage(user1.address);
@@ -282,18 +239,7 @@ describe("PersonaTokenFactory Fee Reduction System", function () {
             const range = MAX_AMICA_FOR_REDUCTION - MIN_AMICA_FOR_REDUCTION;
             const targetBalance = MIN_AMICA_FOR_REDUCTION + range / 2n;
 
-            // Set user balance to target
-            const currentBalance = await amicaToken.balanceOf(user1.address);
-
-            if (currentBalance > targetBalance) {
-                await amicaToken.connect(user1).transfer(owner.address, currentBalance - targetBalance);
-            } else {
-                await amicaToken.withdraw(user1.address, targetBalance - currentBalance);
-            }
-
-            // Create snapshot and wait
-            await personaFactory.connect(user1).updateAmicaSnapshot();
-            await mine(SNAPSHOT_DELAY);
+            await setupUserWithAmica(personaFactory, amicaToken, user1, targetBalance, owner);
 
             const baseFee = (await personaFactory.tradingFeeConfig()).feePercentage;
             const fee50 = await personaFactory.getEffectiveFeePercentage(user1.address);
@@ -305,17 +251,22 @@ describe("PersonaTokenFactory Fee Reduction System", function () {
 
     describe("Trading with Fee Reduction", function () {
         it("Should apply fee reduction to actual trades", async function () {
-            const { tokenId, personaFactory, amicaToken, user2, user3 } = await loadFixture(createPersonaFixture);
+            const { tokenId, personaFactory, amicaToken, user2, user3, owner } = await loadFixture(createPersonaFixture);
 
             const tradeAmount = ethers.parseEther("10000");
 
             // Setup user2 with max AMICA (0% fee)
-            await amicaToken.withdraw(user2.address, MAX_AMICA_FOR_REDUCTION + tradeAmount);
+            // User2 already has 10M tokens, just need to create snapshot
             await personaFactory.connect(user2).updateAmicaSnapshot();
             await mine(SNAPSHOT_DELAY);
 
-            // Setup user3 with no AMICA (full fee)
-            await amicaToken.withdraw(user3.address, tradeAmount);
+            // Setup user3 with minimal AMICA (full fee)
+            // Transfer most of user3's tokens away
+            const user3Balance = await amicaToken.balanceOf(user3.address);
+            await amicaToken.connect(user3).transfer(
+                owner.address,
+                user3Balance - tradeAmount - ethers.parseEther("100") // Keep just enough for trade
+            );
 
             // Get quotes for both users
             const quoteUser2 = await personaFactory.getAmountOutForUser(tokenId, tradeAmount, user2.address);
@@ -338,22 +289,12 @@ describe("PersonaTokenFactory Fee Reduction System", function () {
 
             const tradeAmount = ethers.parseEther("10000");
 
-            // Setup user with minimum AMICA (10% discount)
+            // Setup user2 with exactly minimum AMICA (10% discount)
             const currentBalance = await amicaToken.balanceOf(user2.address);
             const targetBalance = MIN_AMICA_FOR_REDUCTION + tradeAmount;
 
-            if (currentBalance < targetBalance) {
-                await amicaToken.withdraw(user2.address, targetBalance - currentBalance);
-            }
-
-            // We need to set up the snapshot and wait for the delay
-            // Reset the user2 balance to exactly minimum threshold
-            const newBalance = await amicaToken.balanceOf(user2.address);
-            if (newBalance > MIN_AMICA_FOR_REDUCTION + tradeAmount) {
-                await amicaToken.connect(user2).transfer(
-                    owner.address,
-                    newBalance - MIN_AMICA_FOR_REDUCTION - tradeAmount
-                );
+            if (currentBalance > targetBalance) {
+                await amicaToken.connect(user2).transfer(owner.address, currentBalance - targetBalance);
             }
 
             await personaFactory.connect(user2).updateAmicaSnapshot();
@@ -385,18 +326,13 @@ describe("PersonaTokenFactory Fee Reduction System", function () {
         it("Should return complete fee information for user", async function () {
             const { personaFactory, amicaToken, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
 
-            const initialBalance = await amicaToken.balanceOf(user1.address);
-            const additionalAmount = ethers.parseEther("50000");
-
-            await amicaToken.withdraw(user1.address, additionalAmount);
-            const totalBalance = initialBalance + additionalAmount;
-
+            const currentBalance = await amicaToken.balanceOf(user1.address);
             await personaFactory.connect(user1).updateAmicaSnapshot();
 
             // Check before delay
             let feeInfo = await personaFactory.getUserFeeInfo(user1.address);
-            expect(feeInfo.currentBalance).to.equal(totalBalance);
-            expect(feeInfo.snapshotBalance).to.equal(totalBalance);
+            expect(feeInfo.currentBalance).to.equal(currentBalance);
+            expect(feeInfo.snapshotBalance).to.equal(currentBalance);
             expect(feeInfo.effectiveBalance).to.equal(0); // Before delay
             expect(feeInfo.isEligible).to.be.false;
             expect(feeInfo.blocksUntilEligible).to.equal(SNAPSHOT_DELAY);
@@ -405,17 +341,24 @@ describe("PersonaTokenFactory Fee Reduction System", function () {
             await mine(SNAPSHOT_DELAY);
 
             feeInfo = await personaFactory.getUserFeeInfo(user1.address);
-            expect(feeInfo.effectiveBalance).to.equal(totalBalance);
+            expect(feeInfo.effectiveBalance).to.equal(currentBalance);
             expect(feeInfo.isEligible).to.be.true;
             expect(feeInfo.blocksUntilEligible).to.equal(0);
             expect(feeInfo.discountPercentage).to.be.gt(0);
         });
 
         it("Should show correct discount percentage", async function () {
-            const { personaFactory, amicaToken, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
+            const { personaFactory, amicaToken, user1, owner } = await loadFixture(deployPersonaTokenFactoryFixture);
 
-            // Setup with max AMICA for 100% discount
-            await amicaToken.withdraw(user1.address, MAX_AMICA_FOR_REDUCTION);
+            // Transfer tokens from owner to user1 to reach max AMICA
+            const currentBalance = await amicaToken.balanceOf(user1.address);
+            if (currentBalance < MAX_AMICA_FOR_REDUCTION) {
+                await amicaToken.connect(owner).transfer(
+                    user1.address,
+                    MAX_AMICA_FOR_REDUCTION - currentBalance
+                );
+            }
+
             await personaFactory.connect(user1).updateAmicaSnapshot();
             await mine(SNAPSHOT_DELAY);
 
@@ -430,10 +373,7 @@ describe("PersonaTokenFactory Fee Reduction System", function () {
             const { personaFactory, amicaToken, user1, user2 } = await loadFixture(deployPersonaTokenFactoryFixture);
 
             // Initial snapshot
-            const initialBalance = await amicaToken.balanceOf(user1.address);
-            await amicaToken.withdraw(user1.address, ethers.parseEther("100000"));
-            const firstSnapshotBalance = initialBalance + ethers.parseEther("100000");
-
+            const firstSnapshotBalance = await amicaToken.balanceOf(user1.address);
             await personaFactory.connect(user1).updateAmicaSnapshot();
             await mine(SNAPSHOT_DELAY);
 
@@ -442,7 +382,7 @@ describe("PersonaTokenFactory Fee Reduction System", function () {
                 .to.equal(firstSnapshotBalance);
 
             // Transfer away most AMICA
-            await amicaToken.connect(user1).transfer(user2.address, ethers.parseEther("90000"));
+            await amicaToken.connect(user1).transfer(user2.address, ethers.parseEther("9000000"));
             const balanceAfterTransfer = await amicaToken.balanceOf(user1.address);
 
             // Before new snapshot takes effect, should use min of old snapshot and current balance
@@ -467,22 +407,17 @@ describe("PersonaTokenFactory Fee Reduction System", function () {
 
             // Transfer all user1's balance away first
             const initialBalance = await amicaToken.balanceOf(user1.address);
-            if (initialBalance > 0) {
-                await amicaToken.connect(user1).transfer(owner.address, initialBalance);
-            }
+            await amicaToken.connect(user1).transfer(owner.address, initialBalance);
 
             // User has no AMICA initially
             expect(await amicaToken.balanceOf(user1.address)).to.equal(0);
 
             // Simulate flash loan: receive AMICA, create snapshot, return AMICA
-            await amicaToken.withdraw(user1.address, MAX_AMICA_FOR_REDUCTION);
+            await amicaToken.connect(owner).transfer(user1.address, MAX_AMICA_FOR_REDUCTION);
             await personaFactory.connect(user1).updateAmicaSnapshot();
 
             // Return AMICA (simulating flash loan repayment)
-            await amicaToken.connect(user1).transfer(
-                await amicaToken.getAddress(),
-                MAX_AMICA_FOR_REDUCTION
-            );
+            await amicaToken.connect(user1).transfer(owner.address, MAX_AMICA_FOR_REDUCTION);
 
             // Even after delay, effective balance should be 0 (current balance)
             await mine(SNAPSHOT_DELAY);
@@ -498,7 +433,14 @@ describe("PersonaTokenFactory Fee Reduction System", function () {
             await personaFactory.connect(owner).configureTradingFees(0, 5000);
 
             // Even with max AMICA, fee should still be 0
-            await amicaToken.withdraw(user1.address, MAX_AMICA_FOR_REDUCTION);
+            const currentBalance = await amicaToken.balanceOf(user1.address);
+            if (currentBalance < MAX_AMICA_FOR_REDUCTION) {
+                await amicaToken.connect(owner).transfer(
+                    user1.address,
+                    MAX_AMICA_FOR_REDUCTION - currentBalance
+                );
+            }
+
             await personaFactory.connect(user1).updateAmicaSnapshot();
             await mine(SNAPSHOT_DELAY);
 
@@ -579,8 +521,7 @@ describe("PersonaTokenFactory Fee Reduction System", function () {
 
             const tradeAmount = ethers.parseEther("10000");
 
-            // Setup user with AMICA for fee reduction
-            await amicaToken.withdraw(user2.address, ethers.parseEther("100000"));
+            // User2 already has tokens, create snapshot
             await personaFactory.connect(user2).updateAmicaSnapshot();
             await mine(SNAPSHOT_DELAY);
 

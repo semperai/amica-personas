@@ -96,6 +96,36 @@ export async function deployPersonaTokenFactoryFixture(): Promise<PersonaTokenFa
     const AmicaToken = await ethers.getContractFactory("AmicaToken");
     const amicaToken = await AmicaToken.deploy(owner.address);
 
+    // Since we're not on mainnet, we need to set up a bridge wrapper to mint tokens
+    const AmicaBridgeWrapper = await ethers.getContractFactory("AmicaBridgeWrapper");
+    
+    // Deploy a mock bridged token
+    const TestERC20 = await ethers.getContractFactory("TestERC20");
+    const bridgedAmica = await TestERC20.deploy("Bridged Amica", "BAMICA", ethers.parseEther("100000000"));
+    
+    // Deploy bridge wrapper
+    const bridgeWrapper = await AmicaBridgeWrapper.deploy(
+        await bridgedAmica.getAddress(),
+        await amicaToken.getAddress(),
+        owner.address
+    );
+    
+    // Set bridge wrapper in AmicaToken
+    await amicaToken.setBridgeWrapper(await bridgeWrapper.getAddress());
+    
+    // Now we can mint native AMICA by wrapping bridged tokens
+    const userAmount = ethers.parseEther("10000000");
+    
+    // Give owner bridged tokens
+    await bridgedAmica.transfer(owner.address, ethers.parseEther("50000000"));
+    
+    // Wrap bridged tokens to get native AMICA for each user
+    for (const user of [user1, user2, user3]) {
+        await bridgedAmica.approve(await bridgeWrapper.getAddress(), userAmount);
+        await bridgeWrapper.wrap(userAmount);
+        await amicaToken.transfer(user.address, userAmount);
+    }
+
     // Deploy ERC20Implementation
     const ERC20Implementation = await ethers.getContractFactory("ERC20Implementation");
     const erc20Implementation = await ERC20Implementation.deploy();
@@ -118,12 +148,6 @@ export async function deployPersonaTokenFactoryFixture(): Promise<PersonaTokenFa
     AMICA_DEPOSIT_AMOUNT = await personaFactory.AMICA_DEPOSIT_AMOUNT();
     BONDING_CURVE_AMOUNT = await personaFactory.BONDING_CURVE_AMOUNT();
     LIQUIDITY_TOKEN_AMOUNT = await personaFactory.LIQUIDITY_TOKEN_AMOUNT();
-
-    // Give users some AMICA tokens
-    const userAmount = ethers.parseEther("10000000"); // Increased for testing
-    await amicaToken.withdraw(user1.address, userAmount);
-    await amicaToken.withdraw(user2.address, userAmount);
-    await amicaToken.withdraw(user3.address, userAmount);
 
     return {
         personaFactory,
