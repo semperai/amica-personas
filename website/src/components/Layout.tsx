@@ -11,16 +11,23 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   const router = useRouter();
-  const { isOnline, isChecking } = useApiStatus();
-  
+  const { isOnline, isChecking, isMockMode } = useApiStatus();
+
   const isActive = (path: string) => {
     return router.pathname === path ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-600 hover:text-purple-600';
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Mock Mode Banner */}
+      {isMockMode && (
+        <div className="bg-purple-600 text-white px-4 py-2 text-center text-sm">
+          <span>🧪 Mock Mode Enabled - Using test data for development</span>
+        </div>
+      )}
+
       {/* API Status Banner */}
-      {!isChecking && !isOnline && (
+      {!isChecking && !isOnline && !isMockMode && (
         <div className="bg-yellow-500 text-white px-4 py-2 text-center text-sm">
           <span>⚠️ API service is currently offline. Some features may not work properly.</span>
         </div>
@@ -35,7 +42,7 @@ const Layout = ({ children }: LayoutProps) => {
                 <span className="text-2xl font-bold text-purple-600">Amica</span>
                 <span className="text-2xl font-light text-gray-800 ml-2">Personas</span>
               </Link>
-              
+
               <div className="ml-10 flex items-center space-x-8">
                 <Link href="/" className={`${isActive('/')} px-3 py-2 text-sm font-medium transition-colors`}>
                   Explore
@@ -51,7 +58,7 @@ const Layout = ({ children }: LayoutProps) => {
                 </Link>
               </div>
             </div>
-            
+
             <div className="flex items-center">
               <ConnectButton />
             </div>
@@ -70,6 +77,7 @@ const Layout = ({ children }: LayoutProps) => {
           <div className="flex justify-between items-center">
             <div className="text-sm text-gray-500">
               © 2024 Amica Protocol. All rights reserved.
+              {isMockMode && <span className="ml-2">(Mock Mode)</span>}
             </div>
             <div className="flex space-x-6">
               <a href="#" className="text-gray-400 hover:text-gray-500">
@@ -88,7 +96,7 @@ const Layout = ({ children }: LayoutProps) => {
           </div>
         </div>
       </footer>
-      
+
       {/* API Setup Guide (development only) */}
       <ApiSetupGuide />
     </div>
