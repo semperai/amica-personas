@@ -7,7 +7,7 @@ interface TradingHistoryProps {
 }
 
 interface Trade {
-  persona: {
+  persona?: {  // Make persona optional to match API
     id: string;
     name: string;
     symbol: string;
@@ -15,7 +15,7 @@ interface Trade {
   amountIn: string;
   amountOut: string;
   timestamp: string;
-  chain: {
+  chain?: {  // Make chain optional to match API
     id: string;
     name: string;
   };
@@ -68,17 +68,21 @@ export function TradingHistory({ address }: TradingHistoryProps) {
             {trades.map((trade, index) => (
               <tr key={index} className="border-t">
                 <td className="px-4 py-2">
-                  <div>
-                    <p className="font-medium">{trade.persona.name}</p>
-                    <p className="text-sm text-gray-500">${trade.persona.symbol}</p>
-                  </div>
+                  {trade.persona ? (
+                    <div>
+                      <p className="font-medium">{trade.persona.name}</p>
+                      <p className="text-sm text-gray-500">${trade.persona.symbol}</p>
+                    </div>
+                  ) : (
+                    <p className="text-gray-500">Unknown</p>
+                  )}
                 </td>
                 <td className="px-4 py-2">{formatEther(BigInt(trade.amountIn))} ETH</td>
                 <td className="px-4 py-2">{formatEther(BigInt(trade.amountOut))}</td>
                 <td className="px-4 py-2">
                   {new Date(trade.timestamp).toLocaleDateString()}
                 </td>
-                <td className="px-4 py-2">{trade.chain.name}</td>
+                <td className="px-4 py-2">{trade.chain?.name || 'Unknown'}</td>
               </tr>
             ))}
           </tbody>

@@ -12,32 +12,33 @@ interface MetadataItem {
   value: string;
 }
 
+// Update the interface to match what the API returns
 interface PersonaData {
   id: string;
-  tokenId: string;
   name: string;
   symbol: string;
   creator: string;
   erc20Token: string;
   pairToken: string;
-  pairCreated: boolean;
+  pairCreated?: boolean;
   pairAddress?: string;
   totalVolume24h: string;
   totalVolumeAllTime: string;
-  totalTrades24h: number;
-  totalTradesAllTime: number;
-  uniqueTraders24h: number;
-  uniqueTradersAllTime: number;
-  totalDeposited: string;
-  tokensSold: string;
-  graduationThreshold: string;
+  totalTrades24h?: number;
+  totalTradesAllTime?: number;
+  uniqueTraders24h?: number;
+  uniqueTradersAllTime?: number;
+  totalDeposited?: string;
+  tokensSold?: string;
+  graduationThreshold?: string;
   isGraduated: boolean;
-  createdAt: string;
+  createdAt?: string;
   chain: {
     id: string;
     name: string;
   };
   metadata?: MetadataItem[];
+  tokenId: string;
 }
 
 const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
@@ -50,7 +51,18 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
       try {
         setError(null);
         const data = await fetchPersonaDetail(chainId, tokenId);
-        setPersona(data);
+        // Add the tokenId from props since API doesn't return it
+        if (data) {
+          setPersona({
+            ...data,
+            creator: data.creator ?? '',
+            tokenId,
+            erc20Token: data.erc20Token ?? '',
+            pairToken: data.pairToken ?? '',
+          });
+        } else {
+          setPersona(null);
+        }
       } catch (error) {
         console.error('Failed to load persona:', error);
         setError('Failed to load persona details. Please try again later.');
@@ -81,8 +93,8 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <div className="text-center">
           <p className="text-red-600 mb-4">{error || 'Persona not found'}</p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
           >
             Try Again
@@ -113,7 +125,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div>
           <p className="text-sm text-gray-500">Creator</p>
-          <a 
+          <a
             href={`https://etherscan.io/address/${persona.creator}`}
             target="_blank"
             rel="noopener noreferrer"
@@ -147,7 +159,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
             <span className="text-gray-900 font-medium">{progress.toFixed(1)}%</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
+            <div
               className="bg-purple-600 h-2 rounded-full transition-all duration-300"
               style={{ width: `${Math.min(progress, 100)}%` }}
             />

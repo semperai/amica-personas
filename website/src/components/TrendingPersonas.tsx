@@ -8,7 +8,7 @@ interface TrendingPersona {
   name: string;
   symbol: string;
   totalVolume24h: string;
-  growthMultiplier: number;
+  growthMultiplier?: number;  // Make growthMultiplier optional
   chain: {
     id: string;
     name: string;
@@ -52,9 +52,11 @@ export function TrendingPersonas() {
               <div className="bg-white rounded-lg p-4 hover:bg-gray-50 transition-colors">
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="font-semibold">{persona.name}</h3>
-                  <span className="text-green-600 font-bold">
-                    +{Math.round(persona.growthMultiplier * 100)}%
-                  </span>
+                  {persona.growthMultiplier !== undefined && (
+                    <span className="text-green-600 font-bold">
+                      +{Math.round(persona.growthMultiplier * 100)}%
+                    </span>
+                  )}
                 </div>
                 <p className="text-sm text-gray-600">
                   24h: {formatEther(BigInt(persona.totalVolume24h))} ETH

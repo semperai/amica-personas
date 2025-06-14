@@ -10,14 +10,93 @@ interface FetchPersonasParams {
   creator?: string;
 }
 
-interface ApiError {
-  error: string;
-  message?: string;
+// Types for personas
+interface PersonaChain {
+  id: string;
+  name: string;
 }
 
-interface ApiResponse<T> {
-  data?: T;
-  error?: string;
+interface Persona {
+  id: string;
+  name: string;
+  symbol: string;
+  totalVolume24h: string;
+  totalVolumeAllTime: string;
+  isGraduated: boolean;
+  chain: PersonaChain;
+  growthMultiplier?: number;
+  creator?: string;
+  erc20Token?: string;
+  pairToken?: string;
+  pairCreated?: boolean;
+  pairAddress?: string;
+  totalTrades24h?: number;
+  totalTradesAllTime?: number;
+  uniqueTraders24h?: number;
+  uniqueTradersAllTime?: number;
+  totalDeposited?: string;
+  tokensSold?: string;
+  graduationThreshold?: string;
+  createdAt?: string;
+  metadata?: Array<{ key: string; value: string }>;
+}
+
+interface PersonasResponse {
+  personas: Persona[];
+  total: number;
+  limit?: number;
+  offset?: number;
+}
+
+interface Trade {
+  id: string;
+  trader: string;
+  amountIn: string;
+  amountOut: string;
+  feeAmount: string;
+  timestamp: string;
+  block: string;
+  txHash: string;
+  persona?: {
+    id: string;
+    name: string;
+    symbol: string;
+  };
+  chain?: {
+    id: string;
+    name: string;
+  };
+}
+
+interface BridgeActivity {
+  action: string;
+  amount: string;
+  timestamp: string;
+  chain: {
+    id: string;
+    name: string;
+  };
+}
+
+interface VolumeChartData {
+  date: string;
+  volume: string;
+  trades: number;
+  uniqueTraders?: number;
+}
+
+interface UserPortfolioResponse {
+  createdPersonas: Persona[];
+  tradedPersonasCount: number;
+  totalTradeVolume: string;
+  totalBridgedVolume: string;
+  recentTrades: Trade[];
+  bridgeActivities: BridgeActivity[];
+}
+
+interface TradesResponse {
+  trades: Trade[];
+  total: number;
 }
 
 // Generic fetch wrapper with error handling
@@ -54,7 +133,7 @@ async function fetchWithErrorHandling<T>(url: string, defaultValue: T): Promise<
   }
 }
 
-export async function fetchPersonas(params?: FetchPersonasParams) {
+export async function fetchPersonas(params?: FetchPersonasParams): Promise<PersonasResponse> {
   const query = new URLSearchParams();
   
   if (params) {
@@ -65,12 +144,7 @@ export async function fetchPersonas(params?: FetchPersonasParams) {
     });
   }
   
-  return fetchWithErrorHandling<{
-    personas: any[];
-    total: number;
-    limit?: number;
-    offset?: number;
-  }>(`${API_URL}/api/personas?${query}`, {
+  return fetchWithErrorHandling<PersonasResponse>(`${API_URL}/api/personas?${query}`, {
     personas: [],
     total: 0,
     limit: params?.limit,
@@ -78,36 +152,29 @@ export async function fetchPersonas(params?: FetchPersonasParams) {
   });
 }
 
-export async function fetchPersonaDetail(chainId: string, tokenId: string) {
-  return fetchWithErrorHandling<any>(
+export async function fetchPersonaDetail(chainId: string, tokenId: string): Promise<Persona | null> {
+  return fetchWithErrorHandling<Persona | null>(
     `${API_URL}/api/personas/${chainId}/${tokenId}`,
-    null // Return null for single entity fetches
+    null
   );
 }
 
-export async function fetchVolumeChart(chainId: string, tokenId: string, days = 30) {
-  return fetchWithErrorHandling<any[]>(
+export async function fetchVolumeChart(chainId: string, tokenId: string, days = 30): Promise<VolumeChartData[]> {
+  return fetchWithErrorHandling<VolumeChartData[]>(
     `${API_URL}/api/personas/${chainId}/${tokenId}/volume-chart?days=${days}`,
-    [] // Empty array for chart data
+    []
   );
 }
 
-export async function fetchTrending() {
-  return fetchWithErrorHandling<any[]>(
+export async function fetchTrending(): Promise<Persona[]> {
+  return fetchWithErrorHandling<Persona[]>(
     `${API_URL}/api/trending`,
-    [] // Empty array for trending
+    []
   );
 }
 
-export async function fetchUserPortfolio(address: string) {
-  return fetchWithErrorHandling<{
-    createdPersonas: any[];
-    tradedPersonasCount: number;
-    totalTradeVolume: string;
-    totalBridgedVolume: string;
-    recentTrades: any[];
-    bridgeActivities: any[];
-  }>(`${API_URL}/api/users/${address}/portfolio`, {
+export async function fetchUserPortfolio(address: string): Promise<UserPortfolioResponse> {
+  return fetchWithErrorHandling<UserPortfolioResponse>(`${API_URL}/api/users/${address}/portfolio`, {
     createdPersonas: [],
     tradedPersonasCount: 0,
     totalTradeVolume: "0",
@@ -117,14 +184,14 @@ export async function fetchUserPortfolio(address: string) {
   });
 }
 
-export async function fetchPersonaTrades(chainId: string, tokenId: string, limit = 10) {
-  return fetchWithErrorHandling<{
-    trades: any[];
-    total: number;
-  }>(`${API_URL}/api/personas/${chainId}/${tokenId}/trades?limit=${limit}`, {
-    trades: [],
-    total: 0
-  });
+export async function fetchPersonaTrades(chainId: string, tokenId: string, limit = 10): Promise<TradesResponse> {
+  return fetchWithErrorHandling<TradesResponse>(
+    `${API_URL}/api/personas/${chainId}/${tokenId}/trades?limit=${limit}`,
+    {
+      trades: [],
+      total: 0
+    }
+  );
 }
 
 // Health check function

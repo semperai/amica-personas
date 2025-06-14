@@ -1,51 +1,12 @@
-if (error) {
-    return (
-      <div className="bg-white rounded-lg shadow p-6 mt-6">
-        <h3 className="text-lg font-semibold mb-4">Recent Trades</h3>
-        <p className="text-gray-500">Unable to load trades</p>
-      </div>
-    );
-  }import { useRouter } from 'next/router';
+import { useRouter } from 'next/router';
+import { useState, useEffect } from 'react';
 import { NextPage } from 'next';
+import { formatEther } from 'viem';
 import Layout from '@/components/Layout';
 import PersonaMetadata from '@/components/PersonaMetadata';
 import TradingInterface from '@/components/TradingInterface';
 import PriceChart from '@/components/PriceChart';
-
-const PersonaDetailPage: NextPage = () => {
-  const router = useRouter();
-  const { chainId, tokenId } = router.query;
-
-  // Handle loading state while router params are being resolved
-  if (!router.isReady || !chainId || !tokenId) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-        </div>
-      </Layout>
-    );
-  }
-
-  // Ensure we have string values
-  const chainIdStr = Array.isArray(chainId) ? chainId[0] : chainId;
-  const tokenIdStr = Array.isArray(tokenId) ? tokenId[0] : tokenId;
-
-  return (
-    <Layout>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div>
-          <PersonaMetadata chainId={chainIdStr} tokenId={tokenIdStr} />
-          <PriceChart chainId={chainIdStr} tokenId={tokenIdStr} />
-        </div>
-        <div>
-          <TradingInterface chainId={chainIdStr} tokenId={tokenIdStr} />
-          <TradeHistory chainId={chainIdStr} tokenId={tokenIdStr} />
-        </div>
-      </div>
-    </Layout>
-  );
-};
+import { fetchPersonaTrades } from '@/lib/api';
 
 // Trade interface
 interface Trade {
@@ -139,8 +100,39 @@ const TradeHistory = ({ chainId, tokenId }: { chainId: string; tokenId: string }
   );
 };
 
-import { useState, useEffect } from 'react';
-import { formatEther } from 'viem';
-import { fetchPersonaTrades } from '@/lib/api';
+const PersonaDetailPage: NextPage = () => {
+  const router = useRouter();
+  const { chainId, tokenId } = router.query;
+
+  // Handle loading state while router params are being resolved
+  if (!router.isReady || !chainId || !tokenId) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Ensure we have string values
+  const chainIdStr = Array.isArray(chainId) ? chainId[0] : chainId;
+  const tokenIdStr = Array.isArray(tokenId) ? tokenId[0] : tokenId;
+
+  return (
+    <Layout>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div>
+          <PersonaMetadata chainId={chainIdStr} tokenId={tokenIdStr} />
+          <PriceChart chainId={chainIdStr} tokenId={tokenIdStr} />
+        </div>
+        <div>
+          <TradingInterface chainId={chainIdStr} tokenId={tokenIdStr} />
+          <TradeHistory chainId={chainIdStr} tokenId={tokenIdStr} />
+        </div>
+      </div>
+    </Layout>
+  );
+};
 
 export default PersonaDetailPage;
