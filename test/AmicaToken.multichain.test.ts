@@ -1,6 +1,6 @@
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { expect } from "chai";
-import { ethers, network } from "hardhat";
+import { ethers } from "hardhat";
 
 describe("AmicaToken Multi-chain Behavior", function () {
     const TOTAL_SUPPLY = ethers.parseEther("1000000000");
@@ -12,31 +12,17 @@ describe("AmicaToken Multi-chain Behavior", function () {
         return { amicaToken, owner, user1, user2 };
     }
 
-    describe("Mainnet Behavior (chainId = 1)", function () {
-        before(async function () {
-            // Fork mainnet or set chainId to 1
-            await network.provider.request({
-                method: "hardhat_reset",
-                params: [{
-                    forking: {
-                        jsonRpcUrl: process.env.MAINNET_RPC_URL || "https://eth-mainnet.alchemyapi.io/v2/your-api-key",
-                        blockNumber: 19000000, // Recent mainnet block
-                    },
-                    chainId: 1
-                }]
-            });
-        });
+    async function deployMainnetAmicaTokenFixture() {
+        const [owner, user1, user2] = await ethers.getSigners();
+        // Deploy the mainnet mock that overrides chainId check
+        const AmicaTokenMainnetMock = await ethers.getContractFactory("AmicaTokenMainnetMock");
+        const amicaToken = await AmicaTokenMainnetMock.deploy(owner.address);
+        return { amicaToken, owner, user1, user2 };
+    }
 
-        after(async function () {
-            // Reset back to hardhat network
-            await network.provider.request({
-                method: "hardhat_reset",
-                params: []
-            });
-        });
-
+    describe("Mainnet Behavior (using mock)", function () {
         it("Should mint total supply to contract on mainnet", async function () {
-            const { amicaToken } = await loadFixture(deployAmicaTokenFixture);
+            const { amicaToken } = await loadFixture(deployMainnetAmicaTokenFixture);
             
             // On mainnet, total supply should be minted to the contract
             expect(await amicaToken.totalSupply()).to.equal(TOTAL_SUPPLY);
@@ -44,7 +30,7 @@ describe("AmicaToken Multi-chain Behavior", function () {
         });
 
         it("Should allow withdraw on mainnet", async function () {
-            const { amicaToken, owner, user1 } = await loadFixture(deployAmicaTokenFixture);
+            const { amicaToken, owner, user1 } = await loadFixture(deployMainnetAmicaTokenFixture);
             
             const withdrawAmount = ethers.parseEther("10000");
             
@@ -56,7 +42,7 @@ describe("AmicaToken Multi-chain Behavior", function () {
         });
 
         it("Should reject mint calls on mainnet", async function () {
-            const { amicaToken, owner } = await loadFixture(deployAmicaTokenFixture);
+            const { amicaToken, owner } = await loadFixture(deployMainnetAmicaTokenFixture);
             
             // Even if we set a bridge wrapper, mint should fail on mainnet
             const mockBridgeWrapper = owner.address;
@@ -68,7 +54,7 @@ describe("AmicaToken Multi-chain Behavior", function () {
         });
 
         it("Should handle burn and claim correctly on mainnet", async function () {
-            const { amicaToken, owner, user1 } = await loadFixture(deployAmicaTokenFixture);
+            const { amicaToken, owner, user1 } = await loadFixture(deployMainnetAmicaTokenFixture);
             
             // Withdraw some tokens to user
             await amicaToken.withdraw(user1.address, ethers.parseEther("100000"));
