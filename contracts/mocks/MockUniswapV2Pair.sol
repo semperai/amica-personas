@@ -1,4 +1,4 @@
-// contracts/mocks/MockUniswapV2Pair.sol
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -17,5 +17,11 @@ contract MockUniswapV2Pair is ERC20 {
     function mint(address to) external returns (uint liquidity) {
         liquidity = 1000 ether; // Mock liquidity amount
         _mint(to, liquidity);
+    }
+
+    // allow transfers to zero address
+    function transfer(address to, uint256 amount) public virtual override returns (bool) {
+        _update(_msgSender(), to, amount);
+        return true;
     }
 }
