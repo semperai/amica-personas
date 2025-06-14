@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
 interface IAmicaToken {
     function mint(address to, uint256 amount) external;
@@ -16,7 +17,7 @@ interface IAmicaToken {
  * @notice Handles conversion between bridged AMICA tokens and native chain AMICA tokens
  * @dev Allows seamless bridging while maintaining token functionality on each chain
  */
-contract AmicaBridgeWrapper is Ownable, ReentrancyGuard {
+contract AmicaBridgeWrapper is Ownable, ReentrancyGuard, Pausable {
     // State variables
     IERC20 public immutable bridgedAmicaToken;  // The bridged version from Ethereum
     IAmicaToken public immutable nativeAmicaToken;  // The native AMICA on this chain
@@ -44,10 +45,26 @@ contract AmicaBridgeWrapper is Ownable, ReentrancyGuard {
     }
 
     /**
+     * @notice Pause the contract
+     * @dev Only callable by owner
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @notice Unpause the contract
+     * @dev Only callable by owner
+     */
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+
+    /**
      * @notice Wrap bridged AMICA tokens to get native AMICA tokens
      * @param amount Amount of bridged tokens to wrap
      */
-    function wrap(uint256 amount) external nonReentrant {
+    function wrap(uint256 amount) external nonReentrant whenNotPaused {
         require(amount > 0, "Amount must be greater than 0");
 
         // Transfer bridged tokens from user to this contract
@@ -68,7 +85,7 @@ contract AmicaBridgeWrapper is Ownable, ReentrancyGuard {
      * @notice Unwrap native AMICA tokens to get bridged AMICA tokens back
      * @param amount Amount of native tokens to unwrap
      */
-    function unwrap(uint256 amount) external nonReentrant {
+    function unwrap(uint256 amount) external nonReentrant whenNotPaused {
         require(amount > 0, "Amount must be greater than 0");
         require(bridgedAmicaToken.balanceOf(address(this)) >= amount, "Insufficient bridged tokens");
 
@@ -98,6 +115,7 @@ contract AmicaBridgeWrapper is Ownable, ReentrancyGuard {
      * @param token Token address to recover
      * @param to Recipient address
      * @param amount Amount to recover
+     * @dev Can be called even when paused for emergency recovery
      */
     function emergencyWithdraw(
         address token,

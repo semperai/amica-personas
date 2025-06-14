@@ -1,127 +1,240 @@
 # Amica Protocol
 
-A decentralized platform for creating and trading AI persona tokens with automated market making and fair launch mechanics.
+> A multi-chain decentralized platform for creating and trading AI persona tokens with automated market making and fair launch mechanics.
 
-## Overview
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Solidity](https://img.shields.io/badge/Solidity-0.8.24-blue)](https://soliditylang.org)
+[![OpenZeppelin](https://img.shields.io/badge/OpenZeppelin-5.0+-green)](https://openzeppelin.com)
 
-Amica Protocol enables creators to launch ERC20 tokens representing AI personas, with built-in bonding curves for price discovery and automatic Uniswap integration upon reaching graduation thresholds.
+## 🌟 Overview
 
-## Core Components
+Amica Protocol revolutionizes AI persona monetization by enabling creators to launch ERC20 tokens representing AI personas. With built-in bonding curves for price discovery and automatic Uniswap integration, the protocol ensures fair launches and sustainable economics across multiple blockchain networks.
 
-### 1. **AmicaToken (AMICA)**
-- Total Supply: 1,000,000,000 AMICA
-- Burn-and-claim mechanism: Burn AMICA to receive proportional share of deposited persona tokens
-- Governs the ecosystem and captures value from all persona tokens
+### Key Features
 
-### 2. **PersonaTokenFactory**
-- Creates persona NFTs with associated ERC20 tokens
-- Implements bonding curve for initial price discovery
-- Automatically creates Uniswap pairs upon graduation
+- 🚀 **Multi-Chain Support**: Deploy seamlessly across Ethereum, Arbitrum, Optimism, Polygon, Base, Avalanche, and BSC
+- 🤖 **AI Persona Tokens**: Each persona is an NFT with an associated ERC20 token
+- 📈 **Bonding Curves**: Automated price discovery with virtual AMM mechanics
+- 🔄 **Auto-Graduation**: Automatic Uniswap pair creation at threshold
+- 💰 **Fee Reduction**: AMICA holders enjoy trading fee discounts up to 100%
+- 🔥 **Burn Mechanism**: Burn AMICA to claim proportional share of all persona tokens
 
-## Tokenomics
+## 🏗️ Architecture
 
-### Persona Token Distribution (33/33/33 Split)
-Each persona token has 1 billion supply distributed as:
-- **33.33%** (333,333,333): Deposited to AMICA contract upon graduation
-- **33.33%** (333,333,333): Available on bonding curve
-- **33.34%** (333,333,334): Added to Uniswap liquidity upon graduation
+### Core Contracts
 
-### Trading Fees
-- Default: 1% on all bonding curve trades
-- Split: 50% to creator, 50% to protocol
-- Fee reduction: Hold AMICA to reduce fees (up to 100% discount)
-
-### Fee Reduction Mechanism
-Users holding AMICA tokens receive trading fee discounts:
-- Minimum: 1,000 AMICA = 10% discount
-- Maximum: 1,000,000 AMICA = 100% discount (no fees)
-- Uses exponential curve for progression
-- Requires 100-block snapshot delay to prevent gaming
-
-## User Flow
-
-### For Creators
-1. **Create Persona**: Pay mint cost in pairing token (AMICA, USDC, WETH, etc.)
-2. **Optional Initial Buy**: Purchase tokens at launch to prevent sniping
-3. **Earn Fees**: Receive 50% of trading fees as NFT owner
-4. **Transfer Ownership**: NFT (and fee rights) can be traded
-
-### For Traders
-1. **Buy on Bonding Curve**: Purchase tokens with increasing price
-2. **Tokens Locked**: Cannot withdraw until graduation or 7 days
-3. **Graduation**: Automatic Uniswap pair creation at threshold
-4. **Withdraw**: Claim tokens after graduation
-
-### For AMICA Holders
-1. **Stake for Discounts**: Snapshot AMICA balance for fee reduction
-2. **Burn for Rewards**: Burn AMICA to claim deposited persona tokens
-3. **Governance**: (Future) Participate in protocol decisions
-
-## Technical Features
-
-### Bonding Curve
-- Virtual AMM with 100,000 AMICA : 33,333,333 persona token reserves
-- Price increases exponentially as supply decreases
-- 1% protocol fee on output (separate from trading fees)
-
-### Graduation Mechanism
-When total deposits reach the threshold:
-1. 333,333,333 tokens deposited to AMICA contract
-2. All pairing tokens + 333,333,334 persona tokens added to Uniswap
-3. Bonding curve disabled, trading moves to Uniswap
-4. All locked tokens become withdrawable
-
-### Pairing Flexibility
-- Default: AMICA pairing with 1,000 AMICA mint cost
-- Custom pairings: USDC, WETH, or any ERC20
-- Each pairing has configurable mint cost and graduation threshold
-
-### Security Features
-- Reentrancy protection on all external functions
-- Clone pattern for gas-efficient token deployment
-- Upgradeable proxy for factory contract
-- Slippage protection and deadlines on swaps
-
-## Smart Contract Architecture
-
-### Contracts
-- `AmicaToken.sol`: Main AMICA token with burn mechanism
-- `PersonaTokenFactory.sol`: Factory for creating personas
-- `ERC20Implementation.sol`: Cloneable ERC20 template
-
-### Key Functions
-
-#### PersonaTokenFactory
-- `createPersona()`: Launch new persona with NFT and token
-- `swapExactTokensForTokens()`: Buy on bonding curve
-- `withdrawTokens()`: Claim unlocked tokens
-- `updateAmicaSnapshot()`: Register AMICA balance for discounts
-
-#### AmicaToken
-- `burnAndClaim()`: Burn AMICA for persona tokens
-- `deposit()`: Used by personas to deposit tokens
-- `withdraw()`: Owner function to distribute AMICA
-
-## Economic Model
-
-### Value Accrual to AMICA
-1. **Direct Deposits**: 33.33% of each persona token supply
-2. **Trading Volume**: 50% of all trading fees
-3. **Burn Mechanism**: Deflationary pressure from claims
-
-### Incentive Alignment
-- **Creators**: Earn from trading fees, incentivized to build community
-- **Early Buyers**: Get better prices but accept 7-day lock
-- **AMICA Holders**: Reduce fees and claim persona tokens
-- **Protocol**: Sustainable revenue from fees and deposits
-
-## Installation
-
-```bash
-npm install
+```
+AmicaToken.sol          - Main AMICA token with burn-and-claim mechanism
+PersonaTokenFactory.sol - Factory for creating personas with bonding curves
+ERC20Implementation.sol - Gas-efficient cloneable ERC20 template
+AmicaBridgeWrapper.sol  - Enables cross-chain AMICA conversion
 ```
 
-## Testing
+### Multi-Chain Infrastructure
+
+The protocol uses a hub-and-spoke model:
+- **Ethereum Mainnet**: Primary deployment with full AMICA supply
+- **L2s/Alt Chains**: Bridge wrappers convert bridged AMICA to native tokens
+
+## 💸 Tokenomics
+
+### AMICA Token
+- **Total Supply**: 1,000,000,000 AMICA
+- **Initial Distribution**: 100% to contract on Ethereum mainnet
+- **Cross-Chain**: Bridged tokens wrapped to native on each chain
+
+### Persona Token Distribution (1B Supply)
+```
+33.33% (333,333,333) → Deposited to AMICA contract upon graduation
+33.33% (333,333,333) → Available on bonding curve for trading
+33.34% (333,333,334) → Added to Uniswap liquidity pool
+```
+
+### Fee Structure
+- **Base Trading Fee**: 1% on bonding curve trades
+- **Fee Split**: 50% creator / 50% protocol
+- **AMICA Holder Discounts**:
+  - 1,000 AMICA = 10% discount
+  - 1,000,000 AMICA = 100% discount (fee-free trading)
+  - Exponential curve between min/max
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js v18+
+- npm or yarn
+- Hardhat
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/your-org/amica-protocol
+cd amica-protocol
+
+# Install dependencies
+npm install
+
+# Copy environment variables
+cp .env.example .env
+```
+
+### Configuration
+
+Edit `.env` with your settings:
+```env
+# Network RPCs
+MAINNET_RPC_URL=https://eth-mainnet.alchemyapi.io/v2/YOUR_KEY
+ARBITRUM_RPC_URL=https://arb-mainnet.g.alchemy.com/v2/YOUR_KEY
+# ... add other networks
+
+# Private Keys
+DEPLOYER_PRIVATE_KEY=your_private_key
+
+# Etherscan API Keys (for verification)
+ETHERSCAN_API_KEY=your_etherscan_key
+ARBISCAN_API_KEY=your_arbiscan_key
+# ... add other scanners
+
+# Optional
+BRIDGED_AMICA_ADDRESS=0x... # For L2 deployments
+```
+
+## 📦 Deployment
+
+### Single Chain Deployment
+
+Deploy to Ethereum mainnet:
+```bash
+npx hardhat run scripts/deploy-multichain.ts --network mainnet --verify
+```
+
+Deploy to L2/Alt chain with bridged AMICA:
+```bash
+npx hardhat run scripts/deploy-multichain.ts \
+  --network arbitrum \
+  --bridged-amica 0x123... \
+  --verify
+```
+
+### Multi-Chain Deployment
+
+Deploy to all supported chains:
+```bash
+npx hardhat run scripts/deploy-all-chains.ts
+```
+
+### Deployment Options
+
+```bash
+--bridged-amica <address>  # Bridged AMICA token address (required for non-mainnet)
+--verify                   # Verify contracts on block explorer
+--gas-price <gwei>        # Override gas price
+--gas-limit <amount>      # Override gas limit
+```
+
+## 🛠️ Scripts
+
+### Deployment Scripts
+
+| Script | Description |
+|--------|-------------|
+| `deploy-multichain.ts` | Deploy contracts to any supported chain |
+| `deploy-all-chains.ts` | Orchestrate deployment across all chains |
+| `deployment-status.ts` | Check deployment status on all chains |
+| `verify.ts` | Verify contracts on block explorers |
+
+### Bridge Scripts
+
+| Script | Description |
+|--------|-------------|
+| `bridge-conversion.ts` | Convert between bridged and native AMICA |
+| `--unwrap` flag | Convert native back to bridged AMICA |
+
+### Utility Scripts
+
+| Script | Description |
+|--------|-------------|
+| `tasks.ts` | Hardhat tasks for common operations |
+
+## 🔄 Cross-Chain Operations
+
+### Bridging AMICA
+
+1. **Bridge from Ethereum**: Use canonical bridge to move AMICA to L2
+2. **Wrap on L2**: Convert bridged AMICA to native using bridge wrapper
+3. **Use on L2**: Trade, create personas, and earn fee discounts
+4. **Unwrap to Bridge Back**: Convert native to bridged for return to Ethereum
+
+### Example: Bridge to Arbitrum
+
+```bash
+# After bridging AMICA from Ethereum to Arbitrum...
+
+# Set environment variables
+export BRIDGE_WRAPPER_ADDRESS=0x... # From deployment
+export BRIDGED_AMICA_ADDRESS=0x...  # Bridged token address
+export AMOUNT_TO_CONVERT=1000       # Amount in ether units
+
+# Convert bridged to native
+npx hardhat run scripts/bridge-conversion.ts --network arbitrum
+
+# Convert back (for bridging to Ethereum)
+npx hardhat run scripts/bridge-conversion.ts --network arbitrum --unwrap
+```
+
+## 📊 Monitoring
+
+### Check Deployment Status
+
+```bash
+npx hardhat run scripts/deployment-status.ts
+```
+
+Output:
+```
+🌐 AMICA Protocol Deployment Status
+
+📍 Ethereum Mainnet (Chain ID: 1)
+   Deployments: 1
+   Latest deployment: 2024-03-14T10:30:00Z
+   Contracts:
+     - AmicaToken: 0x123...
+     - PersonaFactory: 0x456...
+
+📍 Arbitrum One (Chain ID: 42161)
+   Deployments: 1
+   Latest deployment: 2024-03-14T11:00:00Z
+   Contracts:
+     - AmicaToken: 0x789...
+     - PersonaFactory: 0xabc...
+     - BridgeWrapper: 0xdef...
+```
+
+### Deployment Files
+
+Deployments are saved to `deployments/<chainId>.json`:
+```json
+{
+  "chainId": 42161,
+  "chainName": "arbitrum",
+  "addresses": {
+    "amicaToken": "0x...",
+    "personaFactory": "0x...",
+    "bridgeWrapper": "0x...",
+    "erc20Implementation": "0x..."
+  },
+  "blockNumber": 123456,
+  "timestamp": "2024-03-14T10:30:00Z",
+  "deployer": "0x...",
+  "transactionHashes": {
+    "amicaToken": "0x...",
+    "personaFactory": "0x..."
+  }
+}
+```
+
+## 🧪 Testing
 
 ```bash
 # Run all tests
@@ -132,32 +245,76 @@ npm run test:coverage
 
 # Run with gas reporting
 npm run test:gas
+
+# Run specific test file
+npx hardhat test test/AmicaToken.test.ts
 ```
 
-## Deployment
+## 🔐 Security
 
-1. Copy `env.example` to `.env` and fill in your values
-2. Run deployment script:
+### Features
+- ✅ ReentrancyGuard on all external functions
+- ✅ Pausable bridge wrapper for emergency situations
+- ✅ 100-block snapshot delay prevents flash loan attacks
+- ✅ Clone pattern for gas-efficient deployments
+- ✅ Comprehensive test coverage
+- ✅ OpenZeppelin 5.0+ battle-tested libraries
 
-```bash
-# Deploy to local hardhat network
-npm run node
-npm run deploy:local
+### Audits
+- [ ] Pending professional audit
 
-# Deploy to mainnet/testnet
-npx hardhat run scripts/deploy.ts --network <network-name>
-```
+## 📈 User Flows
 
-## Contract Addresses
+### For Creators
+1. **Create Persona** → Pay mint cost (1000 AMICA default)
+2. **Optional Initial Buy** → Prevent sniping by buying first
+3. **Earn Trading Fees** → 50% of all bonding curve trades
+4. **Transfer Ownership** → NFT can be sold/transferred
 
-See deployment output for contract addresses.
+### For Traders
+1. **Buy on Curve** → Purchase with increasing price
+2. **Wait for Unlock** → 7 days or until graduation
+3. **Trade on Uniswap** → After graduation threshold met
+4. **Claim Rewards** → Burn AMICA for persona tokens
 
-## Security
+### For AMICA Holders
+1. **Snapshot Balance** → Register holdings for fee discount
+2. **Trade with Discount** → Up to 100% fee reduction
+3. **Burn for Rewards** → Claim share of all persona tokens
+4. **Bridge Cross-Chain** → Use AMICA on any supported network
 
-- All contracts use OpenZeppelin 5.0+ libraries
-- ReentrancyGuard on critical functions
-- Comprehensive test coverage
+## 🌐 Supported Networks
 
-## License
+| Network | Chain ID | Status | Uniswap | Bridge Support |
+|---------|----------|--------|---------|----------------|
+| Ethereum | 1 | ✅ Live | V2 | Native |
+| Arbitrum | 42161 | ✅ Live | V2 | Canonical Bridge |
+| Optimism | 10 | ✅ Live | V2 | Canonical Bridge |
+| Polygon | 137 | ✅ Live | V2 | Polygon Bridge |
+| Base | 8453 | ✅ Live | V2 | Base Bridge |
+| Avalanche | 43114 | ✅ Live | V2 | Avalanche Bridge |
+| BSC | 56 | ✅ Live | V2 | Binance Bridge |
 
-MIT
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md).
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🔗 Links
+
+- Website: [heyamica.com](https://heyamica.com)
+- Documentation: [docs.heyamica.com](https://docs.heyamica.com)
+- Twitter: [@heyamica](https://twitter.com/heyamica)
+
+## ⚠️ Disclaimer
+
+This software is provided "as is", without warranty of any kind. Use at your own risk. Always do your own research and audit smart contracts before interacting with them.
