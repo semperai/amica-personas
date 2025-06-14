@@ -130,6 +130,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 ["description", "twitter", "website"],
                 ["Your friendly AI assistant", "@ai_assist", "https://ai-assist.com"],
                 0,
+                ethers.ZeroAddress,
             );
 
             const receipt = await createTx.wait();
@@ -234,7 +235,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
 
             // NOW check AMICA deposit after graduation
             const depositedToAmicaAfterGrad = await amicaToken.depositedBalances(persona.erc20Token);
-            expect(depositedToAmicaAfterGrad).to.equal(ethers.parseEther("333333333"));
+            expect(depositedToAmicaAfterGrad).to.equal(ethers.parseEther("333333334"));
             console.log(`✓ Deposited ${ethers.formatEther(depositedToAmicaAfterGrad)} ASSIST tokens to AMICA on graduation`);
 
             // Verify creator only received trading fees, not graduation reward
@@ -293,6 +294,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 ["description"],
                 ["Automated DeFi trading bot"],
                 0, // No initial buy
+                ethers.ZeroAddress,
             );
 
             const tokenId = 0;
@@ -342,7 +344,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
 
             // NOW check AMICA deposit after graduation - it's the DEFI tokens that get deposited
             const depositedToAmicaAfterGrad = await amicaToken.depositedBalances(persona.erc20Token);
-            expect(depositedToAmicaAfterGrad).to.equal(ethers.parseEther("333333333"));
+            expect(depositedToAmicaAfterGrad).to.equal(ethers.parseEther("333333334"));
             console.log(`✓ Deposited ${ethers.formatEther(depositedToAmicaAfterGrad)} DEFI tokens to AMICA on graduation`);
 
             // Verify creator received only USDC fees from the graduation purchase
@@ -409,6 +411,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 ["description", "twitter", "website"],
                 ["Only ETH matters", "@eth_maxi", "https://ethmax.io"],
                 0, // No initial buy
+                ethers.ZeroAddress,
             );
 
             const tokenId = 0;
@@ -480,7 +483,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
 
             // Verify ETHMAX tokens were deposited to AMICA
             const depositedToAmica = await amicaToken.depositedBalances(persona.erc20Token);
-            expect(depositedToAmica).to.equal(ethers.parseEther("333333333"));
+            expect(depositedToAmica).to.equal(ethers.parseEther("333333334"));
             console.log(`✓ Deposited ${ethers.formatEther(depositedToAmica)} ETHMAX tokens to AMICA on graduation`);
 
             // Verify creator received only fees in WETH
@@ -567,6 +570,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 [],
                 [],
                 0,
+                ethers.ZeroAddress,
             );
 
             // USDC persona
@@ -578,6 +582,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 [],
                 [],
                 0,
+                ethers.ZeroAddress,
             );
 
             const persona1 = await personaFactory.getPersona(0);
@@ -613,8 +618,8 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             // Now both personas should have deposited their tokens to AMICA
             const deposit1 = await amicaToken.depositedBalances(persona1.erc20Token);
             const deposit2 = await amicaToken.depositedBalances(persona2.erc20Token);
-            expect(deposit1).to.equal(ethers.parseEther("333333333"));
-            expect(deposit2).to.equal(ethers.parseEther("333333333"));
+            expect(deposit1).to.equal(ethers.parseEther("333333334"));
+            expect(deposit2).to.equal(ethers.parseEther("333333334"));
 
             // Owner already has AMICA from the fixture setup
             const ownerAmicaBalance = await amicaToken.balanceOf(owner.address);
@@ -681,7 +686,8 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 "NOSNIPE",
                 ["description"],
                 ["Token with creator initial buy"],
-                initialBuyAmount
+                initialBuyAmount,
+                ethers.ZeroAddress,
             );
 
             await expect(tx).to.emit(personaFactory, "PersonaCreated");
@@ -731,6 +737,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 [],
                 [],
                 0, // No initial buy
+                ethers.ZeroAddress,
             );
 
             const tokenId = 0;

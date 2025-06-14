@@ -16,11 +16,24 @@ export const SECONDS_IN_DAY = 86400;
 export const DEFAULT_MINT_COST = ethers.parseEther("1000");
 export const DEFAULT_GRADUATION_THRESHOLD = ethers.parseEther("1000000");
 
-// Variables that will be set from contract
-export let PERSONA_TOKEN_SUPPLY: bigint;
-export let AMICA_DEPOSIT_AMOUNT: bigint;
-export let BONDING_CURVE_AMOUNT: bigint;
-export let LIQUIDITY_TOKEN_AMOUNT: bigint;
+// Token distribution constants - matching the contract
+export const PERSONA_TOKEN_SUPPLY = ethers.parseEther("1000000000");
+
+// Standard distribution (no agent token)
+export const STANDARD_LIQUIDITY_AMOUNT = ethers.parseEther("333333333");
+export const STANDARD_BONDING_AMOUNT = ethers.parseEther("333333333");
+export const STANDARD_AMICA_AMOUNT = ethers.parseEther("333333334");
+
+// Agent distribution
+export const AGENT_LIQUIDITY_AMOUNT = ethers.parseEther("333333333");
+export const AGENT_BONDING_AMOUNT = ethers.parseEther("222222222");
+export const AGENT_AMICA_AMOUNT = ethers.parseEther("222222222");
+export const AGENT_REWARDS_AMOUNT = ethers.parseEther("222222223");
+
+// Default values for backward compatibility (standard case)
+export const LIQUIDITY_TOKEN_AMOUNT = STANDARD_LIQUIDITY_AMOUNT;
+export const BONDING_CURVE_AMOUNT = STANDARD_BONDING_AMOUNT;
+export const AMICA_DEPOSIT_AMOUNT = STANDARD_AMICA_AMOUNT;
 
 // Helper functions
 export function getDeadline(offsetSeconds: number = SECONDS_IN_HOUR): number {
@@ -53,6 +66,19 @@ export async function getQuote(
     amountIn: bigint
 ): Promise<bigint> {
     return personaFactory.getAmountOut(tokenId, amountIn);
+}
+
+// Helper to get token distribution for a specific persona
+export async function getTokenDistribution(
+    personaFactory: PersonaTokenFactory,
+    tokenId: number
+): Promise<{
+    liquidityAmount: bigint;
+    bondingAmount: bigint;
+    amicaAmount: bigint;
+    agentRewardsAmount: bigint;
+}> {
+    return personaFactory.getTokenDistribution(tokenId);
 }
 
 // Fixture interfaces
@@ -143,11 +169,11 @@ export async function deployPersonaTokenFactoryFixture(): Promise<PersonaTokenFa
         { initializer: "initialize" }
     ) as unknown as PersonaTokenFactory;
 
-    // Get constants from contract
-    PERSONA_TOKEN_SUPPLY = await personaFactory.PERSONA_TOKEN_SUPPLY();
-    AMICA_DEPOSIT_AMOUNT = await personaFactory.AMICA_DEPOSIT_AMOUNT();
-    BONDING_CURVE_AMOUNT = await personaFactory.BONDING_CURVE_AMOUNT();
-    LIQUIDITY_TOKEN_AMOUNT = await personaFactory.LIQUIDITY_TOKEN_AMOUNT();
+    // Remove these lines - constants are now defined at the top of the file
+    // PERSONA_TOKEN_SUPPLY = await personaFactory.PERSONA_TOKEN_SUPPLY();
+    // AMICA_DEPOSIT_AMOUNT = await personaFactory.AMICA_DEPOSIT_AMOUNT();
+    // BONDING_CURVE_AMOUNT = await personaFactory.BONDING_CURVE_AMOUNT();
+    // LIQUIDITY_TOKEN_AMOUNT = await personaFactory.LIQUIDITY_TOKEN_AMOUNT();
 
     return {
         personaFactory,
@@ -172,7 +198,7 @@ export async function createPersonaFixture(): Promise<CreatePersonaFixture> {
         DEFAULT_MINT_COST
     );
 
-    // Create persona
+    // Create persona (without agent token)
     const tx = await personaFactory.connect(user1).createPersona(
         await amicaToken.getAddress(),
         "Test Persona",
@@ -180,6 +206,7 @@ export async function createPersonaFixture(): Promise<CreatePersonaFixture> {
         ["description", "image"],
         ["A test persona", "https://example.com/image.png"],
         0,
+        ethers.ZeroAddress  // No agent token
     );
 
     const receipt = await tx.wait();
@@ -204,4 +231,60 @@ export async function createPersonaFixture(): Promise<CreatePersonaFixture> {
     const tokenId = parsedEvent!.args.tokenId;
 
     return { ...fixture, tokenId };
+}
+
+// Additional fixture for creating persona with agent token
+export async function createPersonaWithAgentFixture(): Promise<CreatePersonaFixture & { agentToken: TestERC20 }> {
+    const fixture = await loadFixture(deployPersonaTokenFactoryFixture);
+    const { personaFactory, amicaToken, user1, owner } = fixture;
+
+    // Deploy an agent token
+    const TestERC20 = await ethers.getContractFactory("TestERC20");
+    const agentToken = await TestERC20.deploy("Agent Token", "AGENT", ethers.parseEther("1000000000"));
+
+    // Approve agent token in factory
+    await personaFactory.connect(owner).approveAgentToken(await agentToken.getAddress(), true);
+
+    // Give user1 some agent tokens
+    await agentToken.transfer(user1.address, ethers.parseEther("1000000"));
+
+    // Approve AMICA for minting
+    await amicaToken.connect(user1).approve(
+        await personaFactory.getAddress(),
+        DEFAULT_MINT_COST
+    );
+
+    // Create persona with agent token
+    const tx = await personaFactory.connect(user1).createPersona(
+        await amicaToken.getAddress(),
+        "Agent Persona",
+        "AGENTP",
+        ["description", "image"],
+        ["A persona with agent token", "https://example.com/agent.png"],
+        0,
+        await agentToken.getAddress()
+    );
+
+    const receipt = await tx.wait();
+    const event = receipt?.logs.find(
+        log => {
+            try {
+                const parsed = personaFactory.interface.parseLog({
+                    topics: log.topics as string[],
+                    data: log.data
+                });
+                return parsed?.name === 'PersonaCreated';
+            } catch {
+                return false;
+            }
+        }
+    );
+
+    const parsedEvent = personaFactory.interface.parseLog({
+        topics: event!.topics as string[],
+        data: event!.data
+    });
+    const tokenId = parsedEvent!.args.tokenId;
+
+    return { ...fixture, tokenId, agentToken };
 }

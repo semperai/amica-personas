@@ -41,7 +41,7 @@ interface IERC20Implementation {
 
 /**
  * @title PersonaTokenFactory
- * @notice Factory for creating persona NFTs with associated ERC20 tokens
+ * @notice Factory for creating persona NFTs with associated ERC20 tokens and optional agent token integration
  */
 contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
     using Strings for uint256;
@@ -50,11 +50,19 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     // CONSTANTS
     // ============================================================================
 
-    // Token distribution constants (33/33/33 split)
+    // Token distribution constants
     uint256 public constant PERSONA_TOKEN_SUPPLY = 1_000_000_000 ether;
-    uint256 public constant AMICA_DEPOSIT_AMOUNT = 333_333_333 ether;     // 1/3 for AMICA (on graduation)
-    uint256 public constant BONDING_CURVE_AMOUNT = 333_333_333 ether;    // 1/3 for bonding curve
-    uint256 public constant LIQUIDITY_TOKEN_AMOUNT = 333_333_334 ether;  // 1/3 for liquidity (+ rounding)
+
+    // Distribution without agent token (33/33/33)
+    uint256 public constant STANDARD_LIQUIDITY_AMOUNT = 333_333_333 ether;
+    uint256 public constant STANDARD_BONDING_AMOUNT = 333_333_333 ether;
+    uint256 public constant STANDARD_AMICA_AMOUNT = 333_333_334 ether;
+
+    // Distribution with agent token (1/3, 2/9, 2/9, 2/9)
+    uint256 public constant AGENT_LIQUIDITY_AMOUNT = 333_333_333 ether;
+    uint256 public constant AGENT_BONDING_AMOUNT = 222_222_222 ether;
+    uint256 public constant AGENT_AMICA_AMOUNT = 222_222_222 ether;
+    uint256 public constant AGENT_REWARDS_AMOUNT = 222_222_223 ether;
 
     // Other constants
     string private constant TOKEN_SUFFIX = ".amica";
@@ -70,8 +78,10 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         string symbol;
         address erc20Token;
         address pairToken;
+        address agentToken;           // Optional associated agent token
         bool pairCreated;
         uint256 createdAt;
+        uint256 totalAgentDeposited;  // Total agent tokens deposited
         mapping(string => string) metadata;
     }
 
@@ -87,6 +97,12 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     struct UserPurchase {
+        uint256 amount;
+        uint256 timestamp;
+        bool withdrawn;
+    }
+
+    struct AgentDeposit {
         uint256 amount;
         uint256 timestamp;
         bool withdrawn;
@@ -129,6 +145,13 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     mapping(uint256 => TokenPurchase) public purchases;
     mapping(uint256 => mapping(address => UserPurchase[])) public userpurchases;
 
+    // Agent token deposits
+    mapping(uint256 => mapping(address => AgentDeposit[])) public agentDeposits;
+    mapping(address => bool) public approvedAgentTokens;  // Whitelist of agent tokens
+
+    // Staking rewards contract (deployed separately)
+    address public stakingRewards;
+
     // Configuration mappings
     mapping(address => PairingConfig) public pairingConfigs;
     TradingFeeConfig public tradingFeeConfig;
@@ -139,7 +162,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
     // Gap for future upgrades
     uint256[50] private __gap;
-
 
     // ============================================================================
     // EVENTS
@@ -166,6 +188,11 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 maxReductionMultiplier
     );
     event SnapshotUpdated(address indexed user, uint256 snapshotBalance, uint256 blockNumber);
+    event AgentTokenAssociated(uint256 indexed tokenId, address indexed agentToken);
+    event AgentTokensDeposited(uint256 indexed tokenId, address indexed depositor, uint256 amount);
+    event AgentTokensWithdrawn(uint256 indexed tokenId, address indexed depositor, uint256 amount);
+    event AgentRewardsDistributed(uint256 indexed tokenId, address indexed recipient, uint256 personaTokens, uint256 agentShare);
+    event StakingRewardsSet(address indexed stakingRewards);
 
     // ============================================================================
     // INITIALIZATION
@@ -297,13 +324,29 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         );
     }
 
+    /**
+     * @notice Approve an agent token for use in the system
+     */
+    function approveAgentToken(address token, bool approved) external onlyOwner {
+        approvedAgentTokens[token] = approved;
+    }
+
+    /**
+     * @notice Set the staking rewards contract
+     */
+    function setStakingRewards(address _stakingRewards) external onlyOwner {
+        stakingRewards = _stakingRewards;
+        emit StakingRewardsSet(_stakingRewards);
+    }
+
     // ============================================================================
     // CORE FUNCTIONS - PERSONA CREATION
     // ============================================================================
 
     /**
-     * @notice Create a new persona with associated ERC20 token
+     * @notice Create a new persona with associated ERC20 token and optional agent token
      * @param initialBuyAmount Optional amount to buy on the bonding curve at launch
+     * @param agentToken Optional agent token address (can be address(0))
      */
     function createPersona(
         address pairingToken,
@@ -311,8 +354,14 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         string memory symbol,
         string[] memory metadataKeys,
         string[] memory metadataValues,
-        uint256 initialBuyAmount
+        uint256 initialBuyAmount,
+        address agentToken
     ) external nonReentrant whenNotPaused returns (uint256) {
+        // Validate agent token if provided
+        if (agentToken != address(0)) {
+            require(approvedAgentTokens[agentToken], "Agent token not approved");
+        }
+
         // Validations
         PairingConfig memory config = pairingConfigs[pairingToken];
         require(config.enabled, "Pairing token not enabled");
@@ -347,6 +396,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         persona.symbol = symbol;
         persona.erc20Token = erc20Token;
         persona.pairToken = pairingToken;
+        persona.agentToken = agentToken;
         persona.createdAt = block.timestamp;
 
         // Store metadata
@@ -356,6 +406,10 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         }
 
         emit PersonaCreated(tokenId, msg.sender, erc20Token, name, symbol);
+
+        if (agentToken != address(0)) {
+            emit AgentTokenAssociated(tokenId, agentToken);
+        }
 
         // Handle initial buy if specified
         if (initialBuyAmount > 0) {
@@ -418,10 +472,13 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 amountInAfterFee = amountIn - feeAmount;
 
         // Calculate tokens out using Bancor formula (after fees)
+        uint256 bondingAmount = persona.agentToken != address(0) ?
+            AGENT_BONDING_AMOUNT : STANDARD_BONDING_AMOUNT;
+
         amountOut = _calculateAmountOut(
             amountInAfterFee,
             purchase.tokensSold,
-            BONDING_CURVE_AMOUNT
+            bondingAmount
         );
 
         require(amountOut >= amountOutMin, "Insufficient output amount");
@@ -491,6 +548,105 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         );
 
         emit TokensWithdrawn(tokenId, msg.sender, totalToWithdraw);
+    }
+
+    // ============================================================================
+    // AGENT TOKEN FUNCTIONS
+    // ============================================================================
+
+    /**
+     * @notice Deposit agent tokens during bonding phase
+     * @dev Users can withdraw before graduation, but get persona token rewards after
+     */
+    function depositAgentTokens(uint256 tokenId, uint256 amount) external nonReentrant whenNotPaused {
+        PersonaData storage persona = personas[tokenId];
+        require(persona.agentToken != address(0), "No agent token associated");
+        require(!persona.pairCreated, "Already graduated");
+        require(amount > 0, "Invalid amount");
+
+        // Transfer agent tokens from user
+        require(
+            IERC20(persona.agentToken).transferFrom(msg.sender, address(this), amount),
+            "Transfer failed"
+        );
+
+        // Record deposit
+        agentDeposits[tokenId][msg.sender].push(AgentDeposit({
+            amount: amount,
+            timestamp: block.timestamp,
+            withdrawn: false
+        }));
+
+        persona.totalAgentDeposited += amount;
+
+        emit AgentTokensDeposited(tokenId, msg.sender, amount);
+    }
+
+    /**
+     * @notice Withdraw agent tokens before graduation
+     */
+    function withdrawAgentTokens(uint256 tokenId) external nonReentrant whenNotPaused {
+        PersonaData storage persona = personas[tokenId];
+        require(!persona.pairCreated, "Already graduated");
+
+        AgentDeposit[] storage deposits = agentDeposits[tokenId][msg.sender];
+        uint256 totalToWithdraw = 0;
+
+        for (uint256 i = 0; i < deposits.length; i++) {
+            if (!deposits[i].withdrawn) {
+                totalToWithdraw += deposits[i].amount;
+                deposits[i].withdrawn = true;
+            }
+        }
+
+        require(totalToWithdraw > 0, "No tokens to withdraw");
+
+        persona.totalAgentDeposited -= totalToWithdraw;
+
+        // Return agent tokens
+        require(
+            IERC20(persona.agentToken).transfer(msg.sender, totalToWithdraw),
+            "Transfer failed"
+        );
+
+        emit AgentTokensWithdrawn(tokenId, msg.sender, totalToWithdraw);
+    }
+
+    /**
+     * @notice Claim persona token rewards after graduation (for agent depositors)
+     */
+    function claimAgentRewards(uint256 tokenId) external nonReentrant {
+        PersonaData storage persona = personas[tokenId];
+        require(persona.pairCreated, "Not graduated yet");
+        require(persona.agentToken != address(0), "No agent token");
+
+        AgentDeposit[] storage deposits = agentDeposits[tokenId][msg.sender];
+        uint256 userAgentAmount = 0;
+
+        // Calculate user's total non-withdrawn deposits
+        for (uint256 i = 0; i < deposits.length; i++) {
+            if (!deposits[i].withdrawn) {
+                userAgentAmount += deposits[i].amount;
+                deposits[i].withdrawn = true;  // Mark as claimed
+            }
+        }
+
+        require(userAgentAmount > 0, "No deposits to claim");
+
+        // Calculate pro-rata share of persona tokens
+        uint256 personaReward = 0;
+        if (persona.totalAgentDeposited > 0) {
+            personaReward = (AGENT_REWARDS_AMOUNT * userAgentAmount) / persona.totalAgentDeposited;
+        }
+
+        if (personaReward > 0) {
+            require(
+                IERC20(persona.erc20Token).transfer(msg.sender, personaReward),
+                "Persona transfer failed"
+            );
+        }
+
+        emit AgentRewardsDistributed(tokenId, msg.sender, personaReward, userAgentAmount);
     }
 
     // ============================================================================
@@ -663,6 +819,17 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
+     * @notice Get user's agent token deposits
+     */
+    function getUserAgentDeposits(uint256 tokenId, address user)
+        external
+        view
+        returns (AgentDeposit[] memory)
+    {
+        return agentDeposits[tokenId][user];
+    }
+
+    /**
      * @notice Get available tokens for sale
      */
     function getAvailableTokens(uint256 tokenId) public view returns (uint256) {
@@ -670,12 +837,15 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         if (persona.pairCreated) return 0;
         if (persona.erc20Token == address(0)) return 0;
 
+        uint256 bondingAmount = persona.agentToken != address(0) ?
+            AGENT_BONDING_AMOUNT : STANDARD_BONDING_AMOUNT;
+
         uint256 sold = purchases[tokenId].tokensSold;
-        if (sold >= BONDING_CURVE_AMOUNT) {
+        if (sold >= bondingAmount) {
             return 0;
         }
 
-        return BONDING_CURVE_AMOUNT - sold;
+        return bondingAmount - sold;
     }
 
     /**
@@ -768,6 +938,59 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         }
     }
 
+    /**
+     * @notice Get token distribution for a persona
+     * @param tokenId The persona token ID
+     * @return liquidityAmount Amount allocated for liquidity
+     * @return bondingAmount Amount allocated for bonding curve
+     * @return amicaAmount Amount allocated for AMICA deposit
+     * @return agentRewardsAmount Amount allocated for agent depositors (0 if no agent token)
+     */
+    function getTokenDistribution(uint256 tokenId) external view returns (
+        uint256 liquidityAmount,
+        uint256 bondingAmount,
+        uint256 amicaAmount,
+        uint256 agentRewardsAmount
+    ) {
+        PersonaData storage persona = personas[tokenId];
+
+        if (persona.agentToken != address(0)) {
+            // With agent token: 1/3, 2/9, 2/9, 2/9
+            liquidityAmount = AGENT_LIQUIDITY_AMOUNT;
+            bondingAmount = AGENT_BONDING_AMOUNT;
+            amicaAmount = AGENT_AMICA_AMOUNT;
+            agentRewardsAmount = AGENT_REWARDS_AMOUNT;
+        } else {
+            // Without agent token: 1/3, 1/3, 1/3, 0
+            liquidityAmount = STANDARD_LIQUIDITY_AMOUNT;
+            bondingAmount = STANDARD_BONDING_AMOUNT;
+            amicaAmount = STANDARD_AMICA_AMOUNT;
+            agentRewardsAmount = 0;
+        }
+    }
+
+    /**
+     * @notice Calculate expected agent rewards for a user
+     */
+    function calculateAgentRewards(uint256 tokenId, address user)
+        external
+        view
+        returns (uint256 personaReward, uint256 agentAmount)
+    {
+        PersonaData storage persona = personas[tokenId];
+
+        AgentDeposit[] storage deposits = agentDeposits[tokenId][user];
+        for (uint256 i = 0; i < deposits.length; i++) {
+            if (!deposits[i].withdrawn) {
+                agentAmount += deposits[i].amount;
+            }
+        }
+
+        if (persona.totalAgentDeposited > 0 && agentAmount > 0) {
+            personaReward = (AGENT_REWARDS_AMOUNT * agentAmount) / persona.totalAgentDeposited;
+        }
+    }
+
     function amicaBalanceSnapshot(address user) external view returns (uint256) {
         UserSnapshot storage snapshot = userSnapshots[user];
         if (snapshot.pendingBlock > 0) {
@@ -828,12 +1051,16 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      */
     function getAmountOut(uint256 tokenId, uint256 amountIn) external view returns (uint256) {
         TokenPurchase storage purchase = purchases[tokenId];
+        PersonaData storage persona = personas[tokenId];
+
+        uint256 bondingAmount = persona.agentToken != address(0) ?
+            AGENT_BONDING_AMOUNT : STANDARD_BONDING_AMOUNT;
 
         // Apply trading fee to input (using default fee without user context)
         uint256 feeAmount = (amountIn * tradingFeeConfig.feePercentage) / BASIS_POINTS;
         uint256 amountInAfterFee = amountIn - feeAmount;
 
-        return _calculateAmountOut(amountInAfterFee, purchase.tokensSold, BONDING_CURVE_AMOUNT);
+        return _calculateAmountOut(amountInAfterFee, purchase.tokensSold, bondingAmount);
     }
 
     /**
@@ -849,13 +1076,17 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         address user
     ) external view returns (uint256) {
         TokenPurchase storage purchase = purchases[tokenId];
+        PersonaData storage persona = personas[tokenId];
+
+        uint256 bondingAmount = persona.agentToken != address(0) ?
+            AGENT_BONDING_AMOUNT : STANDARD_BONDING_AMOUNT;
 
         // Calculate user-specific fee with AMICA holdings discount
         uint256 effectiveFeePercentage = getEffectiveFeePercentage(user);
         uint256 feeAmount = (amountIn * effectiveFeePercentage) / BASIS_POINTS;
         uint256 amountInAfterFee = amountIn - feeAmount;
 
-        return _calculateAmountOut(amountInAfterFee, purchase.tokensSold, BONDING_CURVE_AMOUNT);
+        return _calculateAmountOut(amountInAfterFee, purchase.tokensSold, bondingAmount);
     }
 
     /**
@@ -887,10 +1118,15 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         amountInAfterFee = amountIn - feeAmount;
 
         TokenPurchase storage purchase = purchases[tokenId];
+        PersonaData storage persona = personas[tokenId];
+
+        uint256 bondingAmount = persona.agentToken != address(0) ?
+            AGENT_BONDING_AMOUNT : STANDARD_BONDING_AMOUNT;
+
         expectedOutput = _calculateAmountOut(
             amountInAfterFee,
             purchase.tokensSold,
-            BONDING_CURVE_AMOUNT
+            bondingAmount
         );
     }
 
@@ -951,18 +1187,29 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         require(!persona.pairCreated, "Pair already created");
 
         TokenPurchase storage purchase = purchases[tokenId];
-
         address erc20Token = persona.erc20Token;
 
-        // Now deposit tokens to AMICA contract (on graduation)
-        IERC20(erc20Token).approve(address(amicaToken), AMICA_DEPOSIT_AMOUNT);
-        IAmicaToken(address(amicaToken)).deposit(erc20Token, AMICA_DEPOSIT_AMOUNT);
+        // Determine amounts based on whether agent token is present
+        uint256 liquidityAmount = persona.agentToken != address(0) ?
+            AGENT_LIQUIDITY_AMOUNT : STANDARD_LIQUIDITY_AMOUNT;
+        uint256 amicaAmount = persona.agentToken != address(0) ?
+            AGENT_AMICA_AMOUNT : STANDARD_AMICA_AMOUNT;
 
-        // All pairing tokens go to liquidity (no graduation reward to creator)
+        // 1. Deposit to AMICA contract
+        IERC20(erc20Token).approve(address(amicaToken), amicaAmount);
+        IAmicaToken(address(amicaToken)).deposit(erc20Token, amicaAmount);
+
+        // 2. If agent tokens were deposited, send them to AMICA too
+        if (persona.agentToken != address(0) && persona.totalAgentDeposited > 0) {
+            IERC20(persona.agentToken).approve(address(amicaToken), persona.totalAgentDeposited);
+            IAmicaToken(address(amicaToken)).deposit(persona.agentToken, persona.totalAgentDeposited);
+        }
+
+        // 3. Create liquidity pair
         uint256 pairingTokenForLiquidity = purchase.totalDeposited;
 
-        // Approve router for both tokens
-        IERC20(erc20Token).approve(address(uniswapRouter), LIQUIDITY_TOKEN_AMOUNT);
+        // Approve router
+        IERC20(erc20Token).approve(address(uniswapRouter), liquidityAmount);
         IERC20(persona.pairToken).approve(address(uniswapRouter), pairingTokenForLiquidity);
 
         // Create pair if needed
@@ -976,7 +1223,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         (, , uint256 liquidity) = uniswapRouter.addLiquidity(
             erc20Token,
             persona.pairToken,
-            LIQUIDITY_TOKEN_AMOUNT,
+            liquidityAmount,
             pairingTokenForLiquidity,
             0,
             0,
@@ -986,10 +1233,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
         persona.pairCreated = true;
 
-        emit LiquidityPairCreated(
-            tokenId,
-            pairAddress,
-            liquidity
-        );
+        emit LiquidityPairCreated(tokenId, pairAddress, liquidity);
     }
 }

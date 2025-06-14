@@ -99,7 +99,8 @@ describe("PersonaTokenFactory Upgrade", function () {
             "PREUP",
             [],
             [],
-            0
+            0,
+            ethers.ZeroAddress,
         );
 
         // Deploy new implementation
@@ -130,7 +131,8 @@ describe("PersonaTokenFactory Upgrade", function () {
                 "POSTUP",
                 [],
                 [],
-                0
+                0,
+                ethers.ZeroAddress,
             )
         ).to.not.be.reverted;
     });

@@ -162,7 +162,8 @@ describe("AmicaToken Mainnet Behavior (Mocked)", function () {
                     "TEST",
                     [],
                     [],
-                    0
+                    0,
+                    ethers.ZeroAddress,
                 )
             ).to.emit(personaFactory, "PersonaCreated");
             

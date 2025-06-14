@@ -618,6 +618,7 @@ describe("Swap Tests", function () {
             [],
             [],
             0,
+            ethers.ZeroAddress,
         );
 
         // Try to swap with AMICA instead of USDC - should fail

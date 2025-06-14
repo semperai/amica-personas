@@ -43,7 +43,8 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
                 "TEST",
                 [],
                 [],
-                0
+                0,
+                ethers.ZeroAddress,
             );
 
             const receipt = await tx.wait();
@@ -74,7 +75,8 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
                 "TEST2",
                 [],
                 [],
-                0
+                0,
+                ethers.ZeroAddress,
             );
 
             const receipt2 = await tx2.wait();
@@ -292,7 +294,8 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
                     "INST",
                     [],
                     [],
-                    ethers.parseEther("1") // Any initial buy should trigger
+                    ethers.parseEther("1"), // Any initial buy should trigger
+                    ethers.ZeroAddress,
                 )
             ).to.emit(personaFactory, "LiquidityPairCreated");
         });
@@ -323,7 +326,8 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
                     "TEST",
                     [],
                     [],
-                    0
+                    0,
+                    ethers.ZeroAddress,
                 )
             ).to.be.revertedWith("Insufficient balance");
         });
@@ -515,7 +519,8 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
                     "SIXD",
                     [],
                     [],
-                    ethers.parseUnits("50", 6) // Initial buy with 6 decimals
+                    ethers.parseUnits("50", 6), // Initial buy with 6 decimals
+                    ethers.ZeroAddress,
                 )
             ).to.emit(personaFactory, "PersonaCreated");
         });
@@ -538,7 +543,8 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
                     "TEST",
                     [],
                     [],
-                    0
+                    0,
+                    ethers.ZeroAddress,
                 )
             ).to.be.revertedWith("Pairing token not enabled");
         });

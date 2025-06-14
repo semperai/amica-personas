@@ -49,7 +49,8 @@ describe("PersonaTokenFactory Pause/Unpause", function () {
                     "TEST",
                     [],
                     [],
-                    0
+                    0,
+                    ethers.ZeroAddress,
                 )
             ).to.be.revertedWithCustomError(personaFactory, "EnforcedPause");
         });
@@ -67,7 +68,8 @@ describe("PersonaTokenFactory Pause/Unpause", function () {
                 "TEST",
                 [],
                 [],
-                0
+                0,
+                ethers.ZeroAddress,
             );
             const receipt = await tx.wait();
             const event = receipt?.logs.find(log => {
@@ -181,7 +183,8 @@ describe("PersonaTokenFactory Pause/Unpause", function () {
                     "TEST",
                     [],
                     [],
-                    0
+                    0,
+                    ethers.ZeroAddress,
                 )
             ).to.emit(personaFactory, "PersonaCreated");
         });
@@ -199,7 +202,8 @@ describe("PersonaTokenFactory Pause/Unpause", function () {
                 "TEST",
                 [],
                 [],
-                0
+                0,
+                ethers.ZeroAddress,
             );
             const receipt = await tx.wait();
             const event = receipt?.logs.find(log => {
@@ -282,7 +286,8 @@ describe("PersonaTokenFactory Pause/Unpause", function () {
                 "TEST",
                 ["key1"],
                 ["value1"],
-                0
+                0,
+                ethers.ZeroAddress,
             );
             const receipt = await tx.wait();
             const event = receipt?.logs.find(log => {
@@ -336,7 +341,8 @@ describe("PersonaTokenFactory Pause/Unpause", function () {
                 "TEST",
                 [],
                 [],
-                0 // No initial buy
+                0, // No initial buy
+                ethers.ZeroAddress,
             );
             const receipt = await tx.wait();
             const event = receipt?.logs.find(log => {
@@ -405,7 +411,8 @@ describe("PersonaTokenFactory Pause/Unpause", function () {
                 "P1",
                 [],
                 [],
-                0
+                0,
+                ethers.ZeroAddress,
             );
 
             // Owner pauses
@@ -419,7 +426,8 @@ describe("PersonaTokenFactory Pause/Unpause", function () {
                     "P2",
                     [],
                     [],
-                    0
+                    0,
+                    ethers.ZeroAddress,
                 )
             ).to.be.revertedWithCustomError(personaFactory, "EnforcedPause");
 

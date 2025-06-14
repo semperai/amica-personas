@@ -138,6 +138,7 @@ describe("PersonaTokenFactory Graduation", function () {
             [],
             [],
             0,
+            ethers.ZeroAddress,
         );
 
         // Purchase enough to trigger graduation (account for fees)
@@ -427,6 +428,7 @@ describe("PersonaTokenFactory Graduation", function () {
             ["description"],
             ["A persona paired with USDC"],
             0,
+            ethers.ZeroAddress,
         );
 
         // User2 creates persona with WETH pairing
@@ -442,6 +444,7 @@ describe("PersonaTokenFactory Graduation", function () {
             ["description"],
             ["A persona paired with WETH"],
             0,
+            ethers.ZeroAddress,
         );
 
         // Verify both personas were created
@@ -486,7 +489,7 @@ describe("PersonaTokenFactory Graduation", function () {
 
         // NOW check AMICA deposit after graduation
         expect(await amicaToken.depositedBalances(persona1.erc20Token))
-            .to.equal(ethers.parseEther("333333333"));
+            .to.equal(ethers.parseEther("333333334"));
     });
 
     it("Should handle LP tokens after graduation", async function () {
