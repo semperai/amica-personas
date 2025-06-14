@@ -1157,21 +1157,59 @@ describe("PersonaTokenFactory Agent Token Integration", function () {
             expect(eligible).to.be.false;
             expect(reason).to.equal("Below graduation threshold");
 
-            // Buy more to exceed graduation threshold
-            const remainingAmount = (DEFAULT_GRADUATION_THRESHOLD * 10100n) / 9900n - buyAmount;
-            await amicaToken.connect(user2).approve(await personaFactory.getAddress(), remainingAmount);
+            // Now let's buy an amount that will get us VERY close to the threshold but not trigger graduation
+            // Get current state
+            let purchaseInfo = await personaFactory.purchases(tokenId);
+            const tradingFeeConfig = await personaFactory.tradingFeeConfig();
+            const feePercentage = tradingFeeConfig.feePercentage;
+            const BASIS_POINTS = 10000n;
+
+            // We want to get to just under the threshold (e.g., 99.9% of it)
+            const targetDeposited = (DEFAULT_GRADUATION_THRESHOLD * 999n) / 1000n; // 99.9% of threshold
+            const neededAfterFees = targetDeposited - purchaseInfo.totalDeposited;
+            const nextBuyAmount = (neededAfterFees * BASIS_POINTS) / (BASIS_POINTS - feePercentage);
+
+            await amicaToken.connect(user2).approve(await personaFactory.getAddress(), nextBuyAmount);
             await personaFactory.connect(user2).swapExactTokensForTokens(
                 tokenId,
-                remainingAmount,
+                nextBuyAmount,
                 0,
                 user2.address,
                 getDeadline()
             );
 
-            // Now should be eligible (we already have enough agent tokens)
+            // Should still not be eligible (just under threshold)
             [eligible, reason] = await personaFactory.canGraduate(tokenId);
-            expect(eligible).to.be.true;
-            expect(reason).to.equal("");
+            expect(eligible).to.be.false;
+            expect(reason).to.equal("Below graduation threshold");
+
+            // Now buy just enough to exceed the threshold
+            purchaseInfo = await personaFactory.purchases(tokenId);
+            const finalNeededAfterFees = DEFAULT_GRADUATION_THRESHOLD - purchaseInfo.totalDeposited + ethers.parseEther("1");
+            const finalBuyAmount = (finalNeededAfterFees * BASIS_POINTS) / (BASIS_POINTS - feePercentage);
+
+            await amicaToken.connect(user2).approve(await personaFactory.getAddress(), finalBuyAmount);
+
+            // This transaction should trigger graduation
+            const graduationTx = await personaFactory.connect(user2).swapExactTokensForTokens(
+                tokenId,
+                finalBuyAmount,
+                0,
+                user2.address,
+                getDeadline()
+            );
+
+            // Check that graduation happened
+            await expect(graduationTx).to.emit(personaFactory, "LiquidityPairCreated");
+
+            // Now canGraduate should return false with "Already graduated"
+            [eligible, reason] = await personaFactory.canGraduate(tokenId);
+            expect(eligible).to.be.false;
+            expect(reason).to.equal("Already graduated");
+
+            // Verify the persona is indeed graduated
+            const persona = await personaFactory.getPersona(tokenId);
+            expect(persona.pairCreated).to.be.true;
         });
 
         it("Should emit event when minimum agent tokens threshold is reached", async function () {
