@@ -969,8 +969,10 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         IERC20(persona.pairToken).approve(address(uniswapRouter), pairingTokenForLiquidity);
 
         // Create pair if needed
-        if (uniswapFactory.getPair(erc20Token, persona.pairToken) == address(0)) {
+        address pairAddress = uniswapFactory.getPair(erc20Token, persona.pairToken);
+        if (pairAddress == address(0x0)) {
             uniswapFactory.createPair(erc20Token, persona.pairToken);
+            pairAddress = uniswapFactory.getPair(erc20Token, persona.pairToken);
         }
 
         // Add liquidity
@@ -989,7 +991,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
         emit LiquidityPairCreated(
             tokenId,
-            uniswapFactory.getPair(erc20Token, persona.pairToken),
+            pairAddress,
             liquidity
         );
     }
