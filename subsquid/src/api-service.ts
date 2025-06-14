@@ -61,24 +61,24 @@ async function queryGraphQL<T = any>(query: string, variables: any = {}): Promis
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query, variables })
   })
-  
+
   const result = await response.json() as GraphQLResponse<T>
-  
+
   if (result.errors) {
     throw new Error(result.errors[0].message)
   }
-  
+
   if (!result.data) {
     throw new Error('No data returned from GraphQL')
   }
-  
+
   return result.data
 }
 
 // Error handler middleware
 const errorHandler = (err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error('API Error:', err)
-  res.status(500).json({ 
+  res.status(500).json({
     error: err.message || 'Internal server error',
     timestamp: new Date().toISOString()
   })
@@ -112,7 +112,7 @@ app.get('/api/chains', async (req: Request, res: Response, next: NextFunction) =
         }
       }
     `
-    
+
     const data = await queryGraphQL<{ chains: any[] }>(query)
     res.json(data.chains)
   } catch (error) {
@@ -132,7 +132,7 @@ app.get('/api/personas', async (req: Request<{}, {}, {}, PersonaQuery>, res: Res
       creator = null,
       chainId = null
     } = req.query
-    
+
     // Build where clause
     const whereConditions: string[] = []
     if (search) {
@@ -147,11 +147,11 @@ app.get('/api/personas', async (req: Request<{}, {}, {}, PersonaQuery>, res: Res
     if (chainId) {
       whereConditions.push(`chain: { id_eq: "${chainId}" }`)
     }
-    
-    const whereClause = whereConditions.length > 0 
+
+    const whereClause = whereConditions.length > 0
       ? `where: { ${whereConditions.join(', ')} }`
       : ''
-    
+
     const query = `
       query GetPersonas {
         personas(
@@ -186,18 +186,18 @@ app.get('/api/personas', async (req: Request<{}, {}, {}, PersonaQuery>, res: Res
             value
           }
         }
-        
+
         personasConnection(${whereClause}) {
           totalCount
         }
       }
     `
-    
+
     const data = await queryGraphQL<{
       personas: Persona[]
       personasConnection: { totalCount: number }
     }>(query)
-    
+
     res.json({
       personas: data.personas,
       total: data.personasConnection.totalCount,
@@ -214,7 +214,7 @@ app.get('/api/personas/:chainId/:tokenId', async (req: Request, res: Response, n
   try {
     const { chainId, tokenId } = req.params
     const id = `${chainId}-${tokenId}`
-    
+
     const query = `
       query GetPersona($id: String!) {
         persona(id: $id) {
@@ -249,13 +249,13 @@ app.get('/api/personas/:chainId/:tokenId', async (req: Request, res: Response, n
         }
       }
     `
-    
+
     const data = await queryGraphQL<{ persona: Persona | null }>(query, { id })
-    
+
     if (!data.persona) {
       return res.status(404).json({ error: 'Persona not found' })
     }
-    
+
     res.json(data.persona)
   } catch (error) {
     next(error)
@@ -268,7 +268,7 @@ app.get('/api/personas/:chainId/:tokenId/trades', async (req: Request, res: Resp
     const { chainId, tokenId } = req.params
     const { limit = '50', offset = '0' } = req.query
     const id = `${chainId}-${tokenId}`
-    
+
     const query = `
       query GetTrades($id: String!, $limit: Int!, $offset: Int!) {
         trades(
@@ -286,13 +286,13 @@ app.get('/api/personas/:chainId/:tokenId/trades', async (req: Request, res: Resp
           block
           txHash
         }
-        
+
         tradesConnection(where: { persona: { id_eq: $id } }) {
           totalCount
         }
       }
     `
-    
+
     const data = await queryGraphQL<{
       trades: any[]
       tradesConnection: { totalCount: number }
@@ -301,7 +301,7 @@ app.get('/api/personas/:chainId/:tokenId/trades', async (req: Request, res: Resp
       limit: parseInt(limit as string),
       offset: parseInt(offset as string)
     })
-    
+
     res.json({
       trades: data.trades,
       total: data.tradesConnection.totalCount
@@ -317,7 +317,7 @@ app.get('/api/personas/:chainId/:tokenId/volume-chart', async (req: Request, res
     const { chainId, tokenId } = req.params
     const { days = '30' } = req.query
     const id = `${chainId}-${tokenId}`
-    
+
     const query = `
       query GetVolumeChart($id: String!, $days: Int!) {
         dailyVolumes(
@@ -332,7 +332,7 @@ app.get('/api/personas/:chainId/:tokenId/volume-chart', async (req: Request, res
         }
       }
     `
-    
+
     const data = await queryGraphQL<{
       dailyVolumes: Array<{
         date: string
@@ -344,31 +344,31 @@ app.get('/api/personas/:chainId/:tokenId/volume-chart', async (req: Request, res
       id,
       days: parseInt(days as string)
     })
-    
+
     // Fill in missing days with zero values
     const chartData: any[] = []
     const volumeMap = new Map(
       data.dailyVolumes.map((dv) => [dv.date.split('T')[0], dv])
     )
-    
+
     const today = new Date()
     today.setUTCHours(0, 0, 0, 0)
-    
+
     for (let i = 0; i < parseInt(days as string); i++) {
       const date = new Date(today)
       date.setDate(date.getDate() - i)
       const dateStr = date.toISOString().split('T')[0]
-      
+
       const volume = volumeMap.get(dateStr) || {
         date: dateStr,
         volume: '0',
         trades: 0,
         uniqueTraders: 0
       }
-      
+
       chartData.unshift(volume)
     }
-    
+
     res.json(chartData)
   } catch (error) {
     next(error)
@@ -388,14 +388,14 @@ app.get('/api/stats', async (req: Request, res: Response, next: NextFunction) =>
           totalChains
           lastUpdated
         }
-        
+
         chains {
           id
           name
           totalPersonas
           totalVolume
         }
-        
+
         recentPersonas: personas(
           orderBy: createdAt_DESC
           limit: 10
@@ -408,7 +408,7 @@ app.get('/api/stats', async (req: Request, res: Response, next: NextFunction) =>
             name
           }
         }
-        
+
         topVolume24h: personas(
           orderBy: totalVolume24h_DESC
           limit: 5
@@ -422,9 +422,9 @@ app.get('/api/stats', async (req: Request, res: Response, next: NextFunction) =>
         }
       }
     `
-    
+
     const data = await queryGraphQL(query)
-    
+
     res.json({
       global: data.globalStats,
       chainBreakdown: data.chains,
@@ -440,11 +440,11 @@ app.get('/api/stats', async (req: Request, res: Response, next: NextFunction) =>
 app.get('/api/bridge/activity', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { user = null, limit = '50', offset = '0' } = req.query
-    
-    const whereClause = user 
+
+    const whereClause = user
       ? `where: { user_eq: "${(user as string).toLowerCase()}" }`
       : ''
-    
+
     const query = `
       query GetBridgeActivity {
         bridgeActivities(
@@ -464,15 +464,15 @@ app.get('/api/bridge/activity', async (req: Request, res: Response, next: NextFu
             name
           }
         }
-        
+
         bridgeActivitiesConnection(${whereClause}) {
           totalCount
         }
       }
     `
-    
+
     const data = await queryGraphQL(query)
-    
+
     res.json({
       activities: data.bridgeActivities,
       total: data.bridgeActivitiesConnection.totalCount
@@ -486,11 +486,11 @@ app.get('/api/bridge/activity', async (req: Request, res: Response, next: NextFu
 app.get('/api/amica/deposits', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { token = null, limit = '50', offset = '0' } = req.query
-    
-    const whereClause = token 
+
+    const whereClause = token
       ? `where: { token_eq: "${(token as string).toLowerCase()}" }`
       : ''
-    
+
     const query = `
       query GetAmicaDeposits {
         amicaTokenDeposits(
@@ -510,15 +510,15 @@ app.get('/api/amica/deposits', async (req: Request, res: Response, next: NextFun
             name
           }
         }
-        
+
         amicaTokenDepositsConnection(${whereClause}) {
           totalCount
         }
       }
     `
-    
+
     const data = await queryGraphQL(query)
-    
+
     res.json({
       deposits: data.amicaTokenDeposits,
       total: data.amicaTokenDepositsConnection.totalCount
@@ -532,14 +532,14 @@ app.get('/api/amica/deposits', async (req: Request, res: Response, next: NextFun
 app.get('/api/leaderboard/global', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { period = '24h', metric = 'volume' } = req.query
-    
+
     let orderBy: string
     if (period === '24h') {
       orderBy = metric === 'volume' ? 'totalVolume24h_DESC' : 'totalTrades24h_DESC'
     } else {
       orderBy = metric === 'volume' ? 'totalVolumeAllTime_DESC' : 'totalTradesAllTime_DESC'
     }
-    
+
     const query = `
       query GetGlobalLeaderboard {
         personas(
@@ -565,9 +565,9 @@ app.get('/api/leaderboard/global', async (req: Request, res: Response, next: Nex
         }
       }
     `
-    
+
     const data = await queryGraphQL<{ personas: Persona[] }>(query)
-    
+
     res.json(data.personas)
   } catch (error) {
     next(error)
@@ -581,7 +581,7 @@ app.get('/api/trending', async (req: Request, res: Response, next: NextFunction)
     const query = `
       query GetTrending {
         personas(
-          where: { 
+          where: {
             totalVolume24h_gt: "0"
             totalTradesAllTime_gt: 10
           }
@@ -606,32 +606,32 @@ app.get('/api/trending', async (req: Request, res: Response, next: NextFunction)
         }
       }
     `
-    
+
     const data = await queryGraphQL<{ personas: Persona[] }>(query)
-    
+
     // Calculate growth scores
     const trending = data.personas.map((persona) => {
-      const daysActive = Math.max(1, 
+      const daysActive = Math.max(1,
         Math.floor((Date.now() - new Date(persona.createdAt).getTime()) / (1000 * 60 * 60 * 24))
       )
       const avgDailyVolume = BigInt(persona.totalVolumeAllTime) / BigInt(daysActive)
       const currentDailyVolume = BigInt(persona.totalVolume24h)
-      
+
       // Growth multiplier (how many times the average is current volume)
       const growthMultiplier = avgDailyVolume > 0n
         ? Number(currentDailyVolume * 100n / avgDailyVolume) / 100
         : 0
-      
+
       return {
         ...persona,
         growthMultiplier,
         daysActive
       }
     })
-    
+
     // Sort by growth multiplier
     trending.sort((a, b) => b.growthMultiplier - a.growthMultiplier)
-    
+
     res.json(trending)
   } catch (error) {
     next(error)
@@ -642,17 +642,17 @@ app.get('/api/trending', async (req: Request, res: Response, next: NextFunction)
 app.get('/api/search', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { q = '', chainId = null } = req.query
-    
+
     if (!q || (q as string).length < 2) {
       return res.json([])
     }
-    
+
     const chainFilter = chainId ? `chain: { id_eq: "${chainId}" }` : ''
-    
+
     const query = `
       query SearchPersonas($search: String!) {
         byName: personas(
-          where: { 
+          where: {
             name_containsInsensitive: $search
             ${chainFilter}
           }
@@ -669,9 +669,9 @@ app.get('/api/search', async (req: Request, res: Response, next: NextFunction) =
             name
           }
         }
-        
+
         bySymbol: personas(
-          where: { 
+          where: {
             symbol_containsInsensitive: $search
             ${chainFilter}
           }
@@ -690,18 +690,18 @@ app.get('/api/search', async (req: Request, res: Response, next: NextFunction) =
         }
       }
     `
-    
+
     const data = await queryGraphQL<{
       byName: Persona[]
       bySymbol: Persona[]
     }>(query, { search: q })
-    
+
     // Combine and deduplicate results
     const combined = [...data.byName, ...data.bySymbol]
     const unique = Array.from(
       new Map(combined.map(p => [p.id, p])).values()
     )
-    
+
     res.json(unique.slice(0, 20))
   } catch (error) {
     next(error)
@@ -713,7 +713,7 @@ app.get('/api/users/:address/portfolio', async (req: Request, res: Response, nex
   try {
     const { address } = req.params
     const userAddress = address.toLowerCase()
-    
+
     const query = `
       query GetUserPortfolio($user: String!) {
         # Get personas created by user
@@ -731,7 +731,7 @@ app.get('/api/users/:address/portfolio', async (req: Request, res: Response, nex
             name
           }
         }
-        
+
         # Get user's trades
         trades: trades(
           where: { trader_eq: $user }
@@ -751,7 +751,7 @@ app.get('/api/users/:address/portfolio', async (req: Request, res: Response, nex
             name
           }
         }
-        
+
         # Get bridge activities
         bridgeActivities: bridgeActivities(
           where: { user_eq: $user }
@@ -767,16 +767,16 @@ app.get('/api/users/:address/portfolio', async (req: Request, res: Response, nex
         }
       }
     `
-    
+
     const data = await queryGraphQL(query, { user: userAddress })
-    
+
     // Calculate portfolio stats
     const tradedPersonas = new Set(data.trades.map((t: any) => t.persona.id))
     const totalVolume = data.trades.reduce((sum: bigint, t: any) => sum + BigInt(t.amountIn), 0n)
     const totalBridged = data.bridgeActivities
       .filter((a: any) => a.action === 'WRAP')
       .reduce((sum: bigint, a: any) => sum + BigInt(a.amount), 0n)
-    
+
     res.json({
       createdPersonas: data.createdPersonas,
       tradedPersonasCount: tradedPersonas.size,
@@ -800,7 +800,7 @@ app.get('/health', async (req: Request, res: Response, next: NextFunction) => {
           name
           totalPersonas
         }
-        
+
         _meta {
           block {
             number
@@ -809,9 +809,9 @@ app.get('/health', async (req: Request, res: Response, next: NextFunction) => {
         }
       }
     `
-    
+
     const data = await queryGraphQL(query)
-    
+
     res.json({
       status: 'ok',
       timestamp: new Date().toISOString(),
