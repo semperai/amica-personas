@@ -1,0 +1,61 @@
+version: "3"
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: squid
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+
+  processor:
+    build: .
+    environment:
+      - DB_NAME=squid
+      - DB_PORT=5432
+      - DB_HOST=db
+      - DB_PASS=postgres
+      - ETHEREUM_RPC=${ETHEREUM_RPC}
+      - BASE_RPC=${BASE_RPC}
+      - ARBITRUM_RPC=${ARBITRUM_RPC}
+      - ENABLED_CHAINS=${ENABLED_CHAINS:-1,8453,42161}
+    depends_on:
+      - db
+    command: npm run processor:start
+
+  query-node:
+    build: .
+    environment:
+      - DB_NAME=squid
+      - DB_PORT=5432
+      - DB_HOST=db
+      - DB_PASS=postgres
+      - GQL_PORT=4350
+    ports:
+      - "4350:4350"
+    depends_on:
+      - db
+    command: npm run query-node:start
+  
+  api:
+    build: .
+    environment:
+      - PORT=3001
+      - GRAPHQL_ENDPOINT=http://query-node:4350/graphql
+    ports:
+      - "3001:3001"
+    depends_on:
+      - query-node
+    command: npm run api:start
+
+  # Optional: Monitoring with Grafana
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./grafana:/var/lib/grafana

@@ -1,0 +1,110 @@
+type Chain @entity {
+  id: ID! # chain ID
+  name: String! @index
+  amicaToken: String!
+  factoryAddress: String!
+  bridgeWrapperAddress: String
+  totalPersonas: Int!
+  totalVolume: BigInt!
+}
+
+type Persona @entity {
+  id: ID! # chainId-tokenId
+  chain: Chain!
+  tokenId: BigInt! @index
+  creator: String! @index
+  name: String! @index
+  symbol: String! @index
+  erc20Token: String! @index
+  pairToken: String! @index
+  pairCreated: Boolean!
+  pairAddress: String
+  createdAt: DateTime!
+  createdAtBlock: BigInt!
+  
+  # Trading stats
+  totalVolume24h: BigInt!
+  totalVolumeAllTime: BigInt!
+  totalTrades24h: Int!
+  totalTradesAllTime: Int!
+  uniqueTraders24h: Int!
+  uniqueTradersAllTime: Int!
+  
+  # Bonding curve stats
+  totalDeposited: BigInt!
+  tokensSold: BigInt!
+  graduationThreshold: BigInt!
+  isGraduated: Boolean!
+  
+  # Relations
+  metadata: [Metadata!]! @derivedFrom(field: "persona")
+  trades: [Trade!]! @derivedFrom(field: "persona")
+}
+
+type Metadata @entity {
+  id: ID! # persona.id + key
+  persona: Persona!
+  key: String! @index
+  value: String!
+  updatedAt: DateTime!
+  updatedAtBlock: BigInt!
+}
+
+type Trade @entity {
+  id: ID! # chainId-txHash-logIndex
+  chain: Chain!
+  persona: Persona!
+  trader: String! @index
+  amountIn: BigInt!
+  amountOut: BigInt!
+  feeAmount: BigInt!
+  timestamp: DateTime!
+  block: BigInt!
+  txHash: String! @index
+}
+
+type DailyVolume @entity {
+  id: ID! # persona.id + date
+  persona: Persona!
+  date: DateTime! @index
+  volume: BigInt!
+  trades: Int!
+  uniqueTraders: Int!
+}
+
+type BridgeActivity @entity {
+  id: ID! # chainId-txHash-logIndex
+  chain: Chain!
+  user: String! @index
+  action: BridgeAction!
+  amount: BigInt!
+  timestamp: DateTime!
+  block: BigInt!
+  txHash: String! @index
+}
+
+enum BridgeAction {
+  WRAP
+  UNWRAP
+}
+
+type AmicaTokenDeposit @entity {
+  id: ID! # chainId-txHash-logIndex
+  chain: Chain!
+  depositor: String! @index
+  token: String! @index
+  amount: BigInt!
+  timestamp: DateTime!
+  block: BigInt!
+  txHash: String! @index
+}
+
+type GlobalStats @entity {
+  id: ID! # "global"
+  totalPersonas: Int!
+  totalVolume24h: BigInt!
+  totalVolumeAllTime: BigInt!
+  totalBridgedVolume: BigInt!
+  totalChains: Int!
+  lastUpdated: DateTime!
+}
