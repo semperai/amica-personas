@@ -200,14 +200,15 @@ describe("AmicaBridgeWrapper", function () {
             ).to.emit(bridgeWrapper, "EmergencyWithdraw")
              .withArgs(await bridgedAmica.getAddress(), owner.address, extraAmount);
             
-            // Cannot withdraw more than excess
+            // Try to withdraw 1 wei when there's no excess left
+            // This should fail with "No excess tokens" not "Amount exceeds excess"
             await expect(
                 bridgeWrapper.connect(owner).emergencyWithdraw(
                     await bridgedAmica.getAddress(),
                     owner.address,
-                    BigInt(1) // Even 1 wei more than excess should fail
+                    BigInt(1)
                 )
-            ).to.be.revertedWith("Amount exceeds excess");
+            ).to.be.revertedWith("No excess tokens");
         });
         
         it("Should not allow non-owner to call emergency withdraw", async function () {
