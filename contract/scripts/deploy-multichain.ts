@@ -13,6 +13,8 @@ interface DeploymentOptions {
   verify?: boolean;
   gasPrice?: bigint;
   gasLimit?: bigint;
+  deployStaking?: boolean;
+  stakingRewardsPerBlock?: string;
 }
 
 async function deployContracts(options: DeploymentOptions = {}): Promise<DeploymentAddresses> {
@@ -126,6 +128,41 @@ async function deployContracts(options: DeploymentOptions = {}): Promise<Deploym
     console.log("✅ Bridge wrapper set");
   }
   
+  // Deploy PersonaStakingRewards if requested
+  let stakingRewardsAddress: string | undefined;
+  if (options.deployStaking) {
+    console.log("\n5️⃣ Deploying PersonaStakingRewards...");
+    const PersonaStakingRewards = await ethers.getContractFactory("PersonaStakingRewards");
+    const rewardsPerBlock = options.stakingRewardsPerBlock ? 
+      ethers.parseEther(options.stakingRewardsPerBlock) : 
+      ethers.parseEther("10"); // Default 10 AMICA per block
+    
+    const currentBlock = await ethers.provider.getBlockNumber();
+    const startBlock = currentBlock + 100; // Start rewards 100 blocks from now
+    
+    const stakingRewards = await PersonaStakingRewards.deploy(
+      amicaAddress,
+      personaFactoryAddress,
+      rewardsPerBlock,
+      startBlock,
+      {
+        gasPrice: options.gasPrice,
+        gasLimit: options.gasLimit,
+      }
+    );
+    await stakingRewards.waitForDeployment();
+    stakingRewardsAddress = await stakingRewards.getAddress();
+    txHashes.stakingRewards = stakingRewards.deploymentTransaction()?.hash;
+    console.log(`✅ PersonaStakingRewards deployed to: ${stakingRewardsAddress}`);
+    
+    // Set staking rewards in PersonaTokenFactory
+    console.log("\n🔗 Setting staking rewards in PersonaTokenFactory...");
+    const personaFactory = await ethers.getContractAt("PersonaTokenFactory", personaFactoryAddress);
+    const tx = await personaFactory.setStakingRewards(stakingRewardsAddress);
+    await tx.wait();
+    console.log("✅ Staking rewards set");
+  }
+  
   // If mainnet, withdraw initial supply
   if (chainId === 1) {
     console.log("\n💰 Withdrawing initial AMICA supply to deployer...");
@@ -148,6 +185,7 @@ async function deployContracts(options: DeploymentOptions = {}): Promise<Deploym
       bridgeWrapper: bridgeWrapperAddress,
       erc20Implementation: erc20ImplAddress,
       bridgedAmicaAddress: options.bridgedAmicaAddress,
+      stakingRewards: stakingRewardsAddress,
     },
     blockNumber: await ethers.provider.getBlockNumber(),
     timestamp: new Date().toISOString(),
@@ -160,13 +198,18 @@ async function deployContracts(options: DeploymentOptions = {}): Promise<Deploym
   // Verify contracts if requested
   if (options.verify) {
     console.log("\n🔍 Starting contract verification...");
-    await verifyContracts(deployment.addresses, deployer.address);
+    await verifyContracts(deployment.addresses, deployer.address, rewardsPerBlock, startBlock);
   }
   
   return deployment.addresses;
 }
 
-async function verifyContracts(addresses: DeploymentAddresses, deployerAddress: string) {
+async function verifyContracts(
+  addresses: DeploymentAddresses, 
+  deployerAddress: string,
+  rewardsPerBlock?: bigint,
+  startBlock?: number
+) {
   const verifications = [
     {
       name: "AmicaToken",
@@ -185,6 +228,14 @@ async function verifyContracts(addresses: DeploymentAddresses, deployerAddress: 
       name: "AmicaBridgeWrapper",
       address: addresses.bridgeWrapper,
       args: [addresses.bridgedAmicaAddress, addresses.amicaToken, deployerAddress],
+    });
+  }
+  
+  if (addresses.stakingRewards && rewardsPerBlock && startBlock) {
+    verifications.push({
+      name: "PersonaStakingRewards",
+      address: addresses.stakingRewards,
+      args: [addresses.amicaToken, addresses.personaFactory, rewardsPerBlock, startBlock],
     });
   }
   
@@ -218,6 +269,12 @@ async function main() {
         break;
       case "--gas-limit":
         options.gasLimit = BigInt(args[++i]);
+        break;
+      case "--deploy-staking":
+        options.deployStaking = true;
+        break;
+      case "--staking-rewards-per-block":
+        options.stakingRewardsPerBlock = args[++i];
         break;
     }
   }
