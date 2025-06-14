@@ -51,6 +51,7 @@ describe("PersonaTokenFactory Pause/Unpause", function () {
                     [],
                     0,
                     ethers.ZeroAddress,
+                    0, // No minimum agent tokens
                 )
             ).to.be.revertedWithCustomError(personaFactory, "EnforcedPause");
         });
@@ -70,6 +71,7 @@ describe("PersonaTokenFactory Pause/Unpause", function () {
                 [],
                 0,
                 ethers.ZeroAddress,
+                0, // No minimum agent tokens
             );
             const receipt = await tx.wait();
             const event = receipt?.logs.find(log => {
@@ -185,6 +187,7 @@ describe("PersonaTokenFactory Pause/Unpause", function () {
                     [],
                     0,
                     ethers.ZeroAddress,
+                    0, // No minimum agent tokens
                 )
             ).to.emit(personaFactory, "PersonaCreated");
         });
@@ -204,6 +207,7 @@ describe("PersonaTokenFactory Pause/Unpause", function () {
                 [],
                 0,
                 ethers.ZeroAddress,
+                0, // No minimum agent tokens
             );
             const receipt = await tx.wait();
             const event = receipt?.logs.find(log => {
@@ -288,6 +292,7 @@ describe("PersonaTokenFactory Pause/Unpause", function () {
                 ["value1"],
                 0,
                 ethers.ZeroAddress,
+                0, // No minimum agent tokens
             );
             const receipt = await tx.wait();
             const event = receipt?.logs.find(log => {
@@ -343,6 +348,7 @@ describe("PersonaTokenFactory Pause/Unpause", function () {
                 [],
                 0, // No initial buy
                 ethers.ZeroAddress,
+                0, // No minimum agent tokens
             );
             const receipt = await tx.wait();
             const event = receipt?.logs.find(log => {
@@ -413,6 +419,7 @@ describe("PersonaTokenFactory Pause/Unpause", function () {
                 [],
                 0,
                 ethers.ZeroAddress,
+                0, // No minimum agent tokens
             );
 
             // Owner pauses
@@ -428,6 +435,7 @@ describe("PersonaTokenFactory Pause/Unpause", function () {
                     [],
                     0,
                     ethers.ZeroAddress,
+                    0, // No minimum agent tokens
                 )
             ).to.be.revertedWithCustomError(personaFactory, "EnforcedPause");
 

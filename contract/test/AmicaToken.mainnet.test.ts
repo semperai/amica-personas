@@ -164,6 +164,7 @@ describe("AmicaToken Mainnet Behavior (Mocked)", function () {
                     [],
                     0,
                     ethers.ZeroAddress,
+                    0, // No minimum agent tokens
                 )
             ).to.emit(personaFactory, "PersonaCreated");
             

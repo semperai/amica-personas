@@ -101,6 +101,7 @@ describe("PersonaTokenFactory Upgrade", function () {
             [],
             0,
             ethers.ZeroAddress,
+            0, // No minimum agent tokens
         );
 
         // Deploy new implementation
@@ -133,6 +134,7 @@ describe("PersonaTokenFactory Upgrade", function () {
                 [],
                 0,
                 ethers.ZeroAddress,
+                0, // No minimum agent tokens
             )
         ).to.not.be.reverted;
     });

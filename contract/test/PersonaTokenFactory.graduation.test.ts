@@ -139,6 +139,7 @@ describe("PersonaTokenFactory Graduation", function () {
             [],
             0,
             ethers.ZeroAddress,
+            0, // No minimum agent tokens
         );
 
         // Purchase enough to trigger graduation (account for fees)
@@ -429,6 +430,7 @@ describe("PersonaTokenFactory Graduation", function () {
             ["A persona paired with USDC"],
             0,
             ethers.ZeroAddress,
+            0, // No minimum agent tokens
         );
 
         // User2 creates persona with WETH pairing
@@ -445,6 +447,7 @@ describe("PersonaTokenFactory Graduation", function () {
             ["A persona paired with WETH"],
             0,
             ethers.ZeroAddress,
+            0, // No minimum agent tokens
         );
 
         // Verify both personas were created

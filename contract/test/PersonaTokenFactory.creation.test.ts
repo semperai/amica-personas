@@ -31,6 +31,7 @@ describe("PersonaTokenFactory Creation", function () {
             ["A cool AI persona", "https://coolpersona.ai"],
             0,
             ethers.ZeroAddress,
+            0, // No minimum agent tokens
         );
 
         const receipt = await tx.wait();
@@ -139,6 +140,7 @@ describe("PersonaTokenFactory Creation", function () {
             [],
             0,
             ethers.ZeroAddress,
+            0, // No minimum agent tokens
         );
 
         expect(await amicaToken.balanceOf(user1.address)).to.equal(
@@ -169,6 +171,7 @@ describe("PersonaTokenFactory Creation", function () {
                 [],
                 0,
                 ethers.ZeroAddress,
+                0, // No minimum agent tokens
             )
         ).to.be.revertedWith("Pairing token not enabled");
     });
@@ -191,6 +194,7 @@ describe("PersonaTokenFactory Creation", function () {
                 [],
                 0,
                 ethers.ZeroAddress,
+                0, // No minimum agent tokens
             )
         ).to.be.revertedWith("Invalid name length");
 
@@ -204,6 +208,7 @@ describe("PersonaTokenFactory Creation", function () {
                 [],
                 0,
                 ethers.ZeroAddress,
+                0, // No minimum agent tokens
             )
         ).to.be.revertedWith("Invalid name length");
     });
@@ -226,6 +231,7 @@ describe("PersonaTokenFactory Creation", function () {
                 [],
                 0,
                 ethers.ZeroAddress,
+                0, // No minimum agent tokens
             )
         ).to.be.revertedWith("Invalid symbol length");
 
@@ -239,6 +245,7 @@ describe("PersonaTokenFactory Creation", function () {
                 [],
                 0,
                 ethers.ZeroAddress,
+                0, // No minimum agent tokens
             )
         ).to.be.revertedWith("Invalid symbol length");
     });
@@ -260,6 +267,7 @@ describe("PersonaTokenFactory Creation", function () {
                 ["value1"], // Missing value2
                 0,
                 ethers.ZeroAddress,
+                0, // No minimum agent tokens
             )
         ).to.be.revertedWith("Metadata mismatch");
     });
@@ -276,6 +284,7 @@ describe("PersonaTokenFactory Creation", function () {
                 [],
                 0,
                 ethers.ZeroAddress,
+                0, // No minimum agent tokens
             )
         ).to.be.revertedWithCustomError(amicaToken, "ERC20InsufficientAllowance");
     });
@@ -297,6 +306,7 @@ describe("PersonaTokenFactory Creation", function () {
             [],
             0,
             ethers.ZeroAddress,
+            0, // No minimum agent tokens
         );
 
         // Test maximum valid lengths
@@ -308,6 +318,7 @@ describe("PersonaTokenFactory Creation", function () {
             [],
             0,
             ethers.ZeroAddress,
+            0, // No minimum agent tokens
         );
 
         expect(await personaFactory.ownerOf(0)).to.equal(user1.address);
@@ -333,6 +344,7 @@ describe("PersonaTokenFactory Creation", function () {
             [],
             initialBuyAmount,
             ethers.ZeroAddress,
+            0, // No minimum agent tokens
         );
 
         await expect(tx).to.emit(personaFactory, "TokensPurchased");
@@ -374,6 +386,7 @@ describe("PersonaTokenFactory Creation", function () {
                 [],
                 0,
                 ethers.ZeroAddress,
+                0, // No minimum agent tokens
             )
         ).to.be.revertedWith("Insufficient balance");
     });
@@ -409,6 +422,7 @@ describe("PersonaTokenFactory Creation", function () {
                 [],
                 0,
                 ethers.ZeroAddress,
+                0, // No minimum agent tokens
             )
         ).to.be.revertedWith("Insufficient balance");
     });
@@ -444,6 +458,7 @@ describe("PersonaTokenFactory Creation", function () {
                 [],
                 0,
                 ethers.ZeroAddress,
+                0, // No minimum agent tokens
             );
         }
 
@@ -515,6 +530,7 @@ describe("PersonaTokenFactory Creation", function () {
             [],
             0,
             ethers.ZeroAddress,
+            0, // No minimum agent tokens
         );
 
         // Test swapping with 6-decimal token
@@ -565,6 +581,7 @@ describe("PersonaTokenFactory Creation", function () {
                 [],
                 ethers.parseEther("600"), // More than graduation threshold
                 ethers.ZeroAddress,
+                0, // No minimum agent tokens
             )
         ).to.emit(personaFactory, "LiquidityPairCreated");
     });
@@ -592,6 +609,7 @@ describe("PersonaTokenFactory Creation", function () {
             values,
             ethers.parseEther("5000"),
             ethers.ZeroAddress,
+            0, // No minimum agent tokens
         );
 
         const receipt = await tx.wait();

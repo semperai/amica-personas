@@ -82,6 +82,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         bool pairCreated;
         uint256 createdAt;
         uint256 totalAgentDeposited;  // Total agent tokens deposited
+        uint256 minAgentTokens;       // Minimum agent tokens required for graduation
         mapping(string => string) metadata;
     }
 
@@ -355,12 +356,16 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         string[] memory metadataKeys,
         string[] memory metadataValues,
         uint256 initialBuyAmount,
-        address agentToken
+        address agentToken,
+        uint256 minAgentTokens
     ) external nonReentrant whenNotPaused returns (uint256) {
         // Validate agent token if provided
         if (agentToken != address(0)) {
             require(approvedAgentTokens[agentToken], "Agent token not approved");
+        } else {
+            require(minAgentTokens == 0, "Cannot set min agent tokens without agent token");
         }
+
 
         // Validations
         PairingConfig memory config = pairingConfigs[pairingToken];
@@ -398,6 +403,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         persona.pairToken = pairingToken;
         persona.agentToken = agentToken;
         persona.createdAt = block.timestamp;
+        persona.minAgentTokens = minAgentTokens;
 
         // Store metadata
         for (uint256 i = 0; i < metadataKeys.length; i++) {
@@ -765,6 +771,34 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     // ============================================================================
 
     /**
+     * @notice Check if a persona is eligible for graduation
+     * @param tokenId The persona token ID
+     * @return eligible Whether the persona can graduate
+     * @return reason If not eligible, the reason why
+     */
+    function canGraduate(uint256 tokenId) external view returns (bool eligible, string memory reason) {
+        PersonaData storage persona = personas[tokenId];
+
+        if (persona.pairCreated) {
+            return (false, "Already graduated");
+        }
+
+        TokenPurchase storage purchase = purchases[tokenId];
+        if (purchase.totalDeposited < pairingConfigs[persona.pairToken].graduationThreshold) {
+            return (false, "Below graduation threshold");
+        }
+
+        if (persona.agentToken != address(0) && persona.minAgentTokens > 0) {
+            if (persona.totalAgentDeposited < persona.minAgentTokens) {
+                return (false, "Insufficient agent tokens deposited");
+            }
+        }
+
+        return (true, "");
+    }
+
+
+    /**
      * @notice Get persona details
      */
     function getPersona(uint256 tokenId)
@@ -776,7 +810,8 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             address erc20Token,
             address pairToken,
             bool pairCreated,
-            uint256 createdAt
+            uint256 createdAt,
+            uint256 minAgentTokens
         )
     {
         PersonaData storage persona = personas[tokenId];
@@ -786,7 +821,8 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             persona.erc20Token,
             persona.pairToken,
             persona.pairCreated,
-            persona.createdAt
+            persona.createdAt,
+            persona.minAgentTokens
         );
     }
 
@@ -1185,6 +1221,14 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     function _createLiquidityPair(uint256 tokenId) private {
         PersonaData storage persona = personas[tokenId];
         require(!persona.pairCreated, "Pair already created");
+
+        if (persona.agentToken != address(0) && persona.minAgentTokens > 0) {
+            require(
+                persona.totalAgentDeposited >= persona.minAgentTokens,
+                "Insufficient agent tokens deposited"
+            );
+        }
+
 
         TokenPurchase storage purchase = purchases[tokenId];
         address erc20Token = persona.erc20Token;

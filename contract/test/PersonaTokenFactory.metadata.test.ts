@@ -9,7 +9,6 @@ describe("PersonaTokenFactory Metadata Management", function () {
     it("Should update metadata by token owner", async function () {
         const { tokenId, personaFactory, user1 } = await loadFixture(createPersonaFixture);
 
-        // Fixed: Check events separately
         await expect(
             personaFactory.connect(user1).updateMetadata(
                 tokenId,

@@ -206,7 +206,8 @@ export async function createPersonaFixture(): Promise<CreatePersonaFixture> {
         ["description", "image"],
         ["A test persona", "https://example.com/image.png"],
         0,
-        ethers.ZeroAddress  // No agent token
+        ethers.ZeroAddress,  // No agent token
+        0, // No minimum agent tokens
     );
 
     const receipt = await tx.wait();
@@ -262,7 +263,8 @@ export async function createPersonaWithAgentFixture(): Promise<CreatePersonaFixt
         ["description", "image"],
         ["A persona with agent token", "https://example.com/agent.png"],
         0,
-        await agentToken.getAddress()
+        await agentToken.getAddress(),
+        0, // No minimum agent tokens
     );
 
     const receipt = await tx.wait();

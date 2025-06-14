@@ -45,6 +45,7 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
                 [],
                 0,
                 ethers.ZeroAddress,
+                0, // No minimum agent tokens
             );
 
             const receipt = await tx.wait();
@@ -77,6 +78,7 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
                 [],
                 0,
                 ethers.ZeroAddress,
+                0, // No minimum agent tokens
             );
 
             const receipt2 = await tx2.wait();
@@ -296,6 +298,7 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
                     [],
                     ethers.parseEther("1"), // Any initial buy should trigger
                     ethers.ZeroAddress,
+                    0, // No minimum agent tokens
                 )
             ).to.emit(personaFactory, "LiquidityPairCreated");
         });
@@ -328,6 +331,7 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
                     [],
                     0,
                     ethers.ZeroAddress,
+                    0, // No minimum agent tokens
                 )
             ).to.be.revertedWith("Insufficient balance");
         });
@@ -521,6 +525,7 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
                     [],
                     ethers.parseUnits("50", 6), // Initial buy with 6 decimals
                     ethers.ZeroAddress,
+                    0, // No minimum agent tokens
                 )
             ).to.emit(personaFactory, "PersonaCreated");
         });
@@ -545,6 +550,7 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
                     [],
                     0,
                     ethers.ZeroAddress,
+                    0, // No minimum agent tokens
                 )
             ).to.be.revertedWith("Pairing token not enabled");
         });

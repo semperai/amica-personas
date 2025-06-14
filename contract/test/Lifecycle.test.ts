@@ -131,6 +131,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 ["Your friendly AI assistant", "@ai_assist", "https://ai-assist.com"],
                 0,
                 ethers.ZeroAddress,
+                0, // No minimum agent tokens
             );
 
             const receipt = await createTx.wait();
@@ -295,6 +296,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 ["Automated DeFi trading bot"],
                 0, // No initial buy
                 ethers.ZeroAddress,
+                0, // No minimum agent tokens
             );
 
             const tokenId = 0;
@@ -412,6 +414,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 ["Only ETH matters", "@eth_maxi", "https://ethmax.io"],
                 0, // No initial buy
                 ethers.ZeroAddress,
+                0, // No minimum agent tokens
             );
 
             const tokenId = 0;
@@ -571,6 +574,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 [],
                 0,
                 ethers.ZeroAddress,
+                0, // No minimum agent tokens
             );
 
             // USDC persona
@@ -583,6 +587,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 [],
                 0,
                 ethers.ZeroAddress,
+                0, // No minimum agent tokens
             );
 
             const persona1 = await personaFactory.getPersona(0);
@@ -688,6 +693,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 ["Token with creator initial buy"],
                 initialBuyAmount,
                 ethers.ZeroAddress,
+                0, // No minimum agent tokens
             );
 
             await expect(tx).to.emit(personaFactory, "PersonaCreated");
@@ -738,6 +744,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 [],
                 0, // No initial buy
                 ethers.ZeroAddress,
+                0, // No minimum agent tokens
             );
 
             const tokenId = 0;

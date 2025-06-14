@@ -619,6 +619,7 @@ describe("Swap Tests", function () {
             [],
             0,
             ethers.ZeroAddress,
+            0, // No minimum agent tokens
         );
 
         // Try to swap with AMICA instead of USDC - should fail
