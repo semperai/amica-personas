@@ -199,6 +199,11 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     // INITIALIZATION
     // ============================================================================
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     function initialize(
         address amicaToken_,
         address uniswapFactory_,

@@ -35,6 +35,11 @@ contract AmicaToken is ERC20Upgradeable, ERC20BurnableUpgradeable, OwnableUpgrad
     event TokensBurnedAndClaimed(address indexed user, uint256 amountBurned, address[] tokens, uint256[] amounts);
     event BridgeWrapperSet(address indexed wrapper);
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     /**
      * @notice Initialize the contract (called by proxy)
      * @param initialOwner Address of the initial owner
