@@ -1,6 +1,7 @@
+// src/pages/create.tsx
 import { useState } from 'react';
 import Layout from '@/components/Layout';
-import { useAccount, useWriteContract } from 'wagmi';
+import { useAccount, useWriteContract, useReadContract } from 'wagmi';
 import { parseEther, zeroAddress } from 'viem';
 import { FACTORY_ABI, getAddressesForChain } from '@/lib/contracts';
 import { useRouter } from 'next/router';
@@ -9,11 +10,13 @@ export default function CreatePersonaPage() {
   const { address, chainId } = useAccount();
   const router = useRouter();
   const { writeContract, isPending } = useWriteContract();
-  
+
   const [formData, setFormData] = useState({
     name: '',
     symbol: '',
     pairingToken: '',
+    agentToken: '',
+    minAgentTokens: '0',
     metadataKeys: [] as string[],
     metadataValues: [] as string[],
     initialBuyAmount: '0'
@@ -21,6 +24,11 @@ export default function CreatePersonaPage() {
 
   const [newMetadataKey, setNewMetadataKey] = useState('');
   const [newMetadataValue, setNewMetadataValue] = useState('');
+  const [showAgentConfig, setShowAgentConfig] = useState(false);
+
+  // Get default pairing token (AMICA) for current chain
+  const addresses = chainId ? getAddressesForChain(chainId) : null;
+  const defaultPairingToken = addresses?.amica || '';
 
   const handleAddMetadata = () => {
     if (newMetadataKey && newMetadataValue) {
@@ -36,30 +44,34 @@ export default function CreatePersonaPage() {
 
   const handleCreate = async () => {
     if (!address || !chainId) return;
-    
+
     const addresses = getAddressesForChain(chainId);
     if (!addresses) {
       alert('This chain is not supported');
       return;
     }
-    
+
     try {
+      const pairingToken = formData.pairingToken || defaultPairingToken;
+      const agentToken = showAgentConfig && formData.agentToken ? formData.agentToken : zeroAddress;
+      const minAgentTokens = showAgentConfig && formData.minAgentTokens ? parseEther(formData.minAgentTokens) : BigInt(0);
+
       await writeContract({
         address: addresses.factory as `0x${string}`,
         abi: FACTORY_ABI,
         functionName: 'createPersona',
         args: [
-          formData.pairingToken as `0x${string}`,
+          pairingToken as `0x${string}`,
           formData.name,
           formData.symbol,
           formData.metadataKeys,
           formData.metadataValues,
           parseEther(formData.initialBuyAmount),
-          zeroAddress, // agent address, can be set to zero
-          0, // initial requirement of agent tokens
+          agentToken as `0x${string}`,
+          minAgentTokens,
         ]
       });
-      
+
       // Redirect to explore page after successful creation
       setTimeout(() => {
         router.push('/');
@@ -73,7 +85,7 @@ export default function CreatePersonaPage() {
     <Layout>
       <div className="max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">Create New Persona</h1>
-        
+
         <div className="bg-white rounded-lg shadow p-6">
           <div className="mb-6">
             <label className="block text-sm font-medium mb-2">Name</label>
@@ -101,15 +113,80 @@ export default function CreatePersonaPage() {
           </div>
 
           <div className="mb-6">
-            <label className="block text-sm font-medium mb-2">Pairing Token Address</label>
+            <label className="block text-sm font-medium mb-2">Pairing Token Address (optional)</label>
             <input
               type="text"
               value={formData.pairingToken}
               onChange={(e) => setFormData({ ...formData, pairingToken: e.target.value })}
               className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-mono"
-              placeholder="0x..."
+              placeholder={defaultPairingToken || "0x..."}
             />
-            <p className="text-xs text-gray-500 mt-1">The token used for bonding curve trading (usually AMICA)</p>
+            <p className="text-xs text-gray-500 mt-1">
+              The token used for bonding curve trading (defaults to AMICA if left empty)
+            </p>
+          </div>
+
+          {/* Agent Token Configuration */}
+          <div className="mb-6 p-4 bg-purple-50 rounded-lg">
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-sm font-medium">Enable Agent Token Integration</label>
+              <button
+                type="button"
+                onClick={() => setShowAgentConfig(!showAgentConfig)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full ${
+                  showAgentConfig ? 'bg-purple-600' : 'bg-gray-200'
+                } transition-colors`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    showAgentConfig ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {showAgentConfig && (
+              <div className="space-y-4 mt-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Agent Token Address</label>
+                  <input
+                    type="text"
+                    value={formData.agentToken}
+                    onChange={(e) => setFormData({ ...formData, agentToken: e.target.value })}
+                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-mono"
+                    placeholder="0x..."
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Must be an approved agent token. Contact admin to whitelist new tokens.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Minimum Agent Tokens Required</label>
+                  <input
+                    type="number"
+                    value={formData.minAgentTokens}
+                    onChange={(e) => setFormData({ ...formData, minAgentTokens: e.target.value })}
+                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="0"
+                    step="0.01"
+                    min="0"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Minimum agent tokens that must be deposited before graduation (0 = no requirement)
+                  </p>
+                </div>
+
+                <div className="p-3 bg-purple-100 rounded text-sm">
+                  <p className="font-medium mb-1">Agent Token Benefits:</p>
+                  <ul className="text-xs space-y-1 ml-4 list-disc">
+                    <li>Modified token distribution: 1/3 liquidity, 2/9 each for bonding, AMICA deposit, and agent rewards</li>
+                    <li>Agent token depositors receive persona tokens proportionally after graduation</li>
+                    <li>Creates additional utility and alignment with partner projects</li>
+                  </ul>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="mb-6">
@@ -150,7 +227,7 @@ export default function CreatePersonaPage() {
                 Add
               </button>
             </div>
-            
+
             {formData.metadataKeys.length > 0 && (
               <div className="space-y-2">
                 {formData.metadataKeys.map((key, index) => (
@@ -178,7 +255,7 @@ export default function CreatePersonaPage() {
 
           <button
             onClick={handleCreate}
-            disabled={!address || isPending || !formData.name || !formData.symbol || !formData.pairingToken}
+            disabled={!address || isPending || !formData.name || !formData.symbol}
             className="w-full bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
           >
             {isPending ? 'Creating...' : 'Create Persona'}

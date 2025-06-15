@@ -1,3 +1,4 @@
+// src/pages/persona/[chainId]/[tokenId].tsx
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
 import { NextPage } from 'next';
@@ -6,6 +7,7 @@ import Layout from '@/components/Layout';
 import PersonaMetadata from '@/components/PersonaMetadata';
 import TradingInterface from '@/components/TradingInterface';
 import PriceChart from '@/components/PriceChart';
+import AgentDeposits from '@/components/AgentDeposits';
 import { fetchPersonaTrades } from '@/lib/api';
 
 // Trade interface
@@ -90,6 +92,11 @@ const TradeHistory = ({ chainId, tokenId }: { chainId: string; tokenId: string }
                   <p className="text-xs text-gray-500">
                     {formatEther(BigInt(trade.amountOut))} tokens
                   </p>
+                  {BigInt(trade.feeAmount) > 0 && (
+                    <p className="text-xs text-purple-600">
+                      Fee: {formatEther(BigInt(trade.feeAmount))} AMICA
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -125,6 +132,7 @@ const PersonaDetailPage: NextPage = () => {
         <div>
           <PersonaMetadata chainId={chainIdStr} tokenId={tokenIdStr} />
           <PriceChart chainId={chainIdStr} tokenId={tokenIdStr} />
+          <AgentDeposits chainId={chainIdStr} tokenId={tokenIdStr} />
         </div>
         <div>
           <TradingInterface chainId={chainIdStr} tokenId={tokenIdStr} />

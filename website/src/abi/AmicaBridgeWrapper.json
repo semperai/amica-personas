@@ -1,22 +1,6 @@
 [
   {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_bridgedAmicaToken",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "_nativeAmicaToken",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "_owner",
-        "type": "address"
-      }
-    ],
+    "inputs": [],
     "stateMutability": "nonpayable",
     "type": "constructor"
   },
@@ -28,6 +12,16 @@
   {
     "inputs": [],
     "name": "ExpectedPause",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidInitialization",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NotInitializing",
     "type": "error"
   },
   {
@@ -80,6 +74,19 @@
       }
     ],
     "name": "EmergencyWithdraw",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint64",
+        "name": "version",
+        "type": "uint64"
+      }
+    ],
+    "name": "Initialized",
     "type": "event"
   },
   {
@@ -215,6 +222,29 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_bridgedAmicaToken",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_nativeAmicaToken",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_owner",
+        "type": "address"
+      }
+    ],
+    "name": "initialize",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "nativeAmicaToken",
     "outputs": [
@@ -322,6 +352,24 @@
       }
     ],
     "name": "unwrap",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_bridgedAmicaToken",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_nativeAmicaToken",
+        "type": "address"
+      }
+    ],
+    "name": "updateBridgeTokens",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
