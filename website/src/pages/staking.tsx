@@ -430,7 +430,7 @@ export default function StakingPage() {
               Please connect your wallet to view staking pools
             </p>
             <div className="flex justify-center">
-              <div className="bg-white/10 backdrop-blur-md rounded-full p-1 inline-block">
+              <div className="p-1 inline-block">
                 <ConnectButton />
               </div>
             </div>

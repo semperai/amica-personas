@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import Layout from '@/components/Layout';
 import { useAccount, useWriteContract, useReadContract } from 'wagmi';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { parseEther, zeroAddress } from 'viem';
 import { FACTORY_ABI, getAddressesForChain } from '@/lib/contracts';
 import { useRouter } from 'next/router';
@@ -253,18 +254,26 @@ export default function CreatePersonaPage() {
             )}
           </div>
 
-          <button
-            onClick={handleCreate}
-            disabled={!address || isPending || !formData.name || !formData.symbol}
-            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-xl hover:from-purple-600 hover:to-pink-600 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transition-all duration-300 font-light text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-          >
-            {isPending ? 'Creating...' : 'Create Persona'}
-          </button>
-
-          {!address && (
-            <p className="text-center text-sm text-white/50 mt-6">
-              Please connect your wallet to create a persona
-            </p>
+          {!address ? (
+            <div className="bg-white/5 backdrop-blur-md rounded-2xl p-12 border border-white/10 text-center">
+              <h2 className="text-2xl font-light text-white mb-4">Connect Your Wallet</h2>
+              <p className="text-white/60 mb-8">
+                Please connect your wallet to create a persona
+              </p>
+              <div className="flex justify-center">
+                <div className="p-1 inline-block">
+                  <ConnectButton />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={handleCreate}
+              disabled={!address || isPending || !formData.name || !formData.symbol}
+              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-xl hover:from-purple-600 hover:to-pink-600 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transition-all duration-300 font-light text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            >
+              {isPending ? 'Creating...' : 'Create Persona'}
+            </button>
           )}
         </div>
       </div>
