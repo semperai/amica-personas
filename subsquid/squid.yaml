@@ -1,18 +1,38 @@
-manifestVersion: subsquid.io/v0.1
-name: subsquid
+# squid.yaml
+manifest_version: subsquid.io/v0.1
+name: amica-multichain
 version: 1
-description: 'The very first evm squid from manifest  '
-build: 
+description: Amica protocol indexer for Ethereum and Base
+
+build:
+  node_version: 20
+
 deploy:
-  addons:
-    postgres: 
-    rpc:
-      - eth.http
+  env:
+    # Ethereum configuration
+    ETHEREUM_RPC: ${{ secrets.ETHEREUM_RPC }}
+    ETHEREUM_DEPLOYMENT_BLOCK: ${{ secrets.ETHEREUM_DEPLOYMENT_BLOCK }}
+    ETHEREUM_FACTORY_ADDRESS: ${{ secrets.ETHEREUM_FACTORY_ADDRESS }}
+    ETHEREUM_AMICA_TOKEN: ${{ secrets.ETHEREUM_AMICA_TOKEN }}
+    ETHEREUM_STAKING_REWARDS: ${{ secrets.ETHEREUM_STAKING_REWARDS }}
+    
+    # Base configuration
+    BASE_RPC: ${{ secrets.BASE_RPC }}
+    BASE_DEPLOYMENT_BLOCK: ${{ secrets.BASE_DEPLOYMENT_BLOCK }}
+    BASE_FACTORY_ADDRESS: ${{ secrets.BASE_FACTORY_ADDRESS }}
+    BASE_AMICA_TOKEN: ${{ secrets.BASE_AMICA_TOKEN }}
+    BASE_BRIDGE_WRAPPER: ${{ secrets.BASE_BRIDGE_WRAPPER }}
+    BASE_STAKING_REWARDS: ${{ secrets.BASE_STAKING_REWARDS }}
+  
   processor:
     cmd:
-      - sqd
-      - process:prod
+      - npx
+      - squid-processor
+      - run
+      - lib/main.js
+    
   api:
     cmd:
-      - sqd
-      - serve:prod
+      - npx
+      - squid-graphql-server
+      - --production

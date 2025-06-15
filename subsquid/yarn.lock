@@ -378,7 +378,7 @@
     easy-table "^1.2.0"
     sync-fetch "^0.5.2"
 
-"@subsquid/evm-abi@^0.3.1", "@subsquid/evm-abi@^2.3.0":
+"@subsquid/evm-abi@^0.3.1":
   version "0.3.1"
   resolved "https://registry.yarnpkg.com/@subsquid/evm-abi/-/evm-abi-0.3.1.tgz#c68dc9e86b41d0dd856c500deb5c1c5aa69e0ca8"
   integrity sha512-kWD8KjPBj4bR7u2Ct0xZmmVVkto0DKbSv9LQoh3fdGpS1UXbMg1jt4idupd970U8O7u3JJoTosgtApaXbKfoig==
@@ -386,7 +386,7 @@
     "@subsquid/evm-codec" "^0.3.0"
     keccak256 "^1.0.6"
 
-"@subsquid/evm-codec@^0.3.0", "@subsquid/evm-codec@^1.2.2":
+"@subsquid/evm-codec@^0.3.0":
   version "0.3.0"
   resolved "https://registry.yarnpkg.com/@subsquid/evm-codec/-/evm-codec-0.3.0.tgz#f32a4746b4823d0f26ceb17c33baa41e4adb5038"
   integrity sha512-W6EIiC7MJN2oWdbgzpUSDop+UtROdFAlvsrzc10g3AnCAaK31nH59tkTjylRxgECewWFCFWZrwsVp+a+lwvXMA==
@@ -410,7 +410,7 @@
     "@subsquid/util-internal-validation" "^0.7.0"
     "@subsquid/util-timeout" "^2.3.2"
 
-"@subsquid/evm-typegen@^3.3.2":
+"@subsquid/evm-typegen@^4.4.0":
   version "4.4.0"
   resolved "https://registry.yarnpkg.com/@subsquid/evm-typegen/-/evm-typegen-4.4.0.tgz#b4cc8885d76a8ea592897c01ee6871f4a24de288"
   integrity sha512-NcrmHRALoduuJcTk7MZIuY9ld3ltI5d/192mv7F4AnZwCzmEJpzeIq1taIvyDiFI4KALPZUokVjm+QZSaU/6iQ==
@@ -2303,6 +2303,11 @@ redis-parser@^3.0.0:
   integrity sha512-DJnGAeenTdpMEH6uAJRK/uiyEIH9WVsUmoLwzudwGJUwZPp80PDBWPHXSAGNPwNvIXAbe7MSUB1zQFugFml66A==
   dependencies:
     redis-errors "^1.0.0"
+
+reflect-metadata@^0.2.2:
+  version "0.2.2"
+  resolved "https://registry.yarnpkg.com/reflect-metadata/-/reflect-metadata-0.2.2.tgz#400c845b6cba87a21f2c65c4aeb158f4fa4d9c5b"
+  integrity sha512-urBwgfrvVP/eAyXx4hluJivBKzuEbSQs9rKWCrCkbSxNv8mxPcUZKeuoF3Uy4mJl3Lwprp6yy5/39VWigZ4K6Q==
 
 regexp.prototype.flags@^1.5.1:
   version "1.5.4"
