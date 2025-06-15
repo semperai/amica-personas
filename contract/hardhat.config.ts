@@ -36,22 +36,22 @@ const config: HardhatUserConfig = {
       url: "http://127.0.0.1:8545",
     },
     mainnet: {
-      url: `https://mainnet.infura.io/v3/${INFURA_KEY}`,
+      url: `https://eth.llamarpc.com`,
       accounts: [PRIVATE_KEY],
       chainId: 1,
     },
     sepolia: {
-      url: `https://sepolia.infura.io/v3/${INFURA_KEY}`,
+      url: `https://sepolia.gateway.tenderly.co`,
       accounts: [PRIVATE_KEY],
       chainId: 11155111,
     },
     arbitrum: {
-      url: `https://arbitrum-mainnet.infura.io/v3/${INFURA_KEY}`,
+      url: `https://arb1.arbitrum.io/rpc`,
       accounts: [PRIVATE_KEY],
       chainId: 42161,
     },
     arbitrumSepolia: {
-      url: `https://arbitrum-sepolia.infura.io/v3/${INFURA_KEY}`,
+      url: `https://sepolia-rollup.arbitrum.io/rpc`,
       accounts: [PRIVATE_KEY],
       chainId: 421614,
     },
