@@ -8,28 +8,12 @@ import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
+import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 
 // ============================================================================
 // INTERFACES
 // ============================================================================
-
-interface IUniswapV2Factory {
-    function createPair(address tokenA, address tokenB) external returns (address pair);
-    function getPair(address tokenA, address tokenB) external view returns (address pair);
-}
-
-interface IUniswapV2Router {
-    function addLiquidity(
-        address tokenA,
-        address tokenB,
-        uint amountADesired,
-        uint amountBDesired,
-        uint amountAMin,
-        uint amountBMin,
-        address to,
-        uint deadline
-    ) external returns (uint amountA, uint amountB, uint liquidity);
-}
 
 interface IAmicaToken {
     function deposit(address token, uint256 amount) external;
@@ -135,7 +119,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     // Core protocol contracts
     IERC20 public amicaToken;
     IUniswapV2Factory public uniswapFactory;
-    IUniswapV2Router public uniswapRouter;
+    IUniswapV2Router02 public uniswapRouter;
     address public erc20Implementation;
 
     // Token tracking
@@ -222,7 +206,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
         amicaToken = IERC20(amicaToken_);
         uniswapFactory = IUniswapV2Factory(uniswapFactory_);
-        uniswapRouter = IUniswapV2Router(uniswapRouter_);
+        uniswapRouter = IUniswapV2Router02(uniswapRouter_);
         erc20Implementation = erc20Implementation_;
 
         // Initialize default pairing config for AMICA
