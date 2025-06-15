@@ -142,23 +142,23 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
   const totalDeposited = activeDeposits.reduce((sum, d) => sum + d.amount, BigInt(0));
 
   return (
-    <div className="bg-white rounded-lg shadow p-6 mt-6">
+    <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold">Agent Token Deposits</h3>
-        <span className="text-sm text-gray-500">
+        <h3 className="text-lg font-light text-white">Agent Token Deposits</h3>
+        <span className="text-sm text-white/50">
           Min Required: {formatEther(minAgentTokens)} tokens
         </span>
       </div>
 
-      <div className="mb-4 p-3 bg-gray-50 rounded">
+      <div className="mb-4 p-3 bg-white/5 rounded-lg">
         <div className="flex justify-between text-sm">
-          <span>Total Deposited (All Users):</span>
-          <span className="font-medium">{formatEther(totalAgentDeposited)} tokens</span>
+          <span className="text-white/60">Total Deposited (All Users):</span>
+          <span className="font-light text-white">{formatEther(totalAgentDeposited)} tokens</span>
         </div>
         {minAgentTokens > BigInt(0) && (
           <div className="flex justify-between text-sm mt-1">
-            <span>Progress to Requirement:</span>
-            <span className="font-medium">
+            <span className="text-white/60">Progress to Requirement:</span>
+            <span className="font-light text-white">
               {((Number(totalAgentDeposited) / Number(minAgentTokens)) * 100).toFixed(1)}%
             </span>
           </div>
@@ -175,18 +175,18 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
                 placeholder="Amount to deposit"
                 value={depositAmount}
                 onChange={(e) => setDepositAmount(e.target.value)}
-                className="flex-1 p-2 border rounded"
+                className="flex-1 p-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/40 focus:border-white/40 focus:outline-none transition-colors"
               />
               <button
                 onClick={handleDeposit}
                 disabled={!address || !depositAmount || isPending}
-                className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 disabled:bg-gray-400"
+                className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-xl hover:from-purple-600 hover:to-pink-600 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transition-all"
               >
                 Deposit
               </button>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              Deposit agent tokens to help this persona graduate. You&apos;ll receive persona tokens after graduation.
+            <p className="text-xs text-white/50 mt-2">
+              Deposit agent tokens to help this persona graduate. You'll receive persona tokens after graduation.
             </p>
           </div>
 
@@ -194,25 +194,25 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
           {address && totalDeposited > BigInt(0) && (
             <div className="mb-4">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium">Your Deposits</span>
+                <span className="text-sm font-light text-white">Your Deposits</span>
                 <button
                   onClick={() => setShowDeposits(!showDeposits)}
-                  className="text-sm text-purple-600 hover:text-purple-700"
+                  className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
                 >
                   {showDeposits ? 'Hide' : 'Show'} Details
                 </button>
               </div>
 
-              <div className="p-3 bg-gray-50 rounded">
+              <div className="p-3 bg-white/5 rounded-lg">
                 <div className="flex justify-between">
-                  <span>Your Total Deposited:</span>
-                  <span className="font-medium">{formatEther(totalDeposited)} tokens</span>
+                  <span className="text-white/60">Your Total Deposited:</span>
+                  <span className="font-light text-white">{formatEther(totalDeposited)} tokens</span>
                 </div>
 
                 {rewardCalculation && rewardCalculation[0] > BigInt(0) && (
                   <div className="flex justify-between mt-1">
-                    <span>Expected Persona Tokens:</span>
-                    <span className="font-medium text-green-600">
+                    <span className="text-white/60">Expected Persona Tokens:</span>
+                    <span className="font-light text-green-400">
                       ~{formatEther(rewardCalculation[0])} tokens
                     </span>
                   </div>
@@ -222,10 +222,10 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
               {showDeposits && activeDeposits.length > 0 && (
                 <div className="mt-3 space-y-2">
                   {activeDeposits.map((deposit, index) => (
-                    <div key={index} className="text-sm p-2 bg-white border rounded">
+                    <div key={index} className="text-sm p-2 bg-white/5 border border-white/10 rounded-lg">
                       <div className="flex justify-between">
-                        <span>{formatEther(deposit.amount)} tokens</span>
-                        <span className="text-gray-500">
+                        <span className="text-white/80">{formatEther(deposit.amount)} tokens</span>
+                        <span className="text-white/50">
                           {new Date(Number(deposit.timestamp) * 1000).toLocaleDateString()}
                         </span>
                       </div>
@@ -237,7 +237,7 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
               <button
                 onClick={handleWithdraw}
                 disabled={isPending}
-                className="mt-3 w-full bg-gray-200 text-gray-700 py-2 rounded hover:bg-gray-300"
+                className="mt-3 w-full bg-white/10 text-white py-2 rounded-xl hover:bg-white/20 transition-colors"
               >
                 Withdraw All Deposits
               </button>
@@ -249,16 +249,16 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
         <div>
           {rewardCalculation && rewardCalculation[0] > BigInt(0) ? (
             <div className="space-y-4">
-              <div className="p-4 bg-green-50 rounded">
-                <p className="text-sm font-medium mb-2">Rewards Available!</p>
+              <div className="p-4 bg-green-500/10 backdrop-blur-sm rounded-xl border border-green-500/20">
+                <p className="text-sm font-light text-white mb-2">Rewards Available!</p>
                 <div className="space-y-1">
                   <div className="flex justify-between text-sm">
-                    <span>Agent Tokens Deposited:</span>
-                    <span>{formatEther(rewardCalculation[1])} tokens</span>
+                    <span className="text-white/60">Agent Tokens Deposited:</span>
+                    <span className="text-white">{formatEther(rewardCalculation[1])} tokens</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>Persona Token Rewards:</span>
-                    <span className="font-medium text-green-600">
+                    <span className="text-white/60">Persona Token Rewards:</span>
+                    <span className="font-light text-green-400">
                       {formatEther(rewardCalculation[0])} tokens
                     </span>
                   </div>
@@ -268,26 +268,26 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
               <button
                 onClick={handleClaimRewards}
                 disabled={isPending}
-                className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
+                className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white py-3 rounded-xl hover:from-green-600 hover:to-emerald-600 transition-all"
               >
                 Claim Rewards
               </button>
             </div>
           ) : (
-            <p className="text-gray-500 text-center">
+            <p className="text-white/50 text-center">
               No rewards to claim. The persona has graduated.
             </p>
           )}
         </div>
       )}
 
-      <div className="mt-4 p-3 bg-blue-50 rounded text-xs">
-        <p className="font-medium mb-1">Agent Token Info:</p>
+      <div className="mt-4 p-3 bg-blue-500/10 backdrop-blur-sm rounded-xl text-xs border border-blue-500/20">
+        <p className="font-light text-white mb-1">Agent Token Info:</p>
         <a
           href={`https://etherscan.io/address/${agentToken}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-600 hover:text-blue-700 font-mono break-all"
+          className="text-blue-400 hover:text-blue-300 font-mono break-all"
         >
           {agentToken}
         </a>

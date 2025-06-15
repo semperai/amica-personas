@@ -141,7 +141,7 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
   return (
     <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
       {/* Header */}
-      <div className="p-6 border-b border-white/10">
+      <div className="p-4 border-b border-white/10">
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-light text-white">Swap</h2>
           <button
@@ -211,7 +211,7 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
       )}
 
       {/* Swap Interface */}
-      <div className="p-6">
+      <div className="p-4">
         {/* From Token */}
         <div className="mb-2">
           <div className="p-4 bg-white/5 rounded-xl border border-white/10">
@@ -230,9 +230,9 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.0"
-                className="flex-1 bg-transparent text-2xl text-white placeholder-white/30 outline-none"
+                className="flex-1 bg-transparent text-2xl text-white placeholder-white/30 outline-none min-w-0"
               />
-              <button className="px-4 py-2 bg-white/10 rounded-lg text-white hover:bg-white/20 transition-colors">
+              <button className="flex-shrink-0 px-4 py-2 bg-white/10 rounded-lg text-white hover:bg-white/20 transition-colors">
                 {isBuying ? 'AMICA' : tokenSymbol}
               </button>
             </div>
@@ -269,9 +269,9 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
                 value={quote ? formatEther(quote) : ''}
                 readOnly
                 placeholder="0.0"
-                className="flex-1 bg-transparent text-2xl text-white placeholder-white/30 outline-none"
+                className="flex-1 bg-transparent text-2xl text-white placeholder-white/30 outline-none min-w-0"
               />
-              <button className="px-4 py-2 bg-white/10 rounded-lg text-white hover:bg-white/20 transition-colors">
+              <button className="flex-shrink-0 px-4 py-2 bg-white/10 rounded-lg text-white hover:bg-white/20 transition-colors">
                 {isBuying ? tokenSymbol : 'AMICA'}
               </button>
             </div>

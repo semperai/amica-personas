@@ -33,7 +33,16 @@ export default function PriceChart({ chainId, tokenId }: PriceChartProps) {
     loadChart();
   }, [chainId, tokenId, days]);
 
-  if (loading) return <div>Loading chart...</div>;
+  if (loading) {
+    return (
+      <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
+        <div className="animate-pulse">
+          <div className="h-6 bg-white/10 rounded w-1/4 mb-4"></div>
+          <div className="h-64 bg-white/10 rounded"></div>
+        </div>
+      </div>
+    );
+  }
 
   const formattedData = chartData.map(item => ({
     date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -42,16 +51,18 @@ export default function PriceChart({ chainId, tokenId }: PriceChartProps) {
   }));
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Volume Chart</h2>
+        <h2 className="text-xl font-light text-white">Volume Chart</h2>
         <div className="flex gap-2">
           {[7, 30, 90].map(d => (
             <button
               key={d}
               onClick={() => setDays(d)}
-              className={`px-3 py-1 rounded ${
-                days === d ? 'bg-blue-500 text-white' : 'bg-gray-200'
+              className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+                days === d
+                  ? 'bg-purple-500/20 text-purple-400 border border-purple-500/50'
+                  : 'bg-white/5 text-white/70 hover:bg-white/10'
               }`}
             >
               {d}D
@@ -62,11 +73,33 @@ export default function PriceChart({ chainId, tokenId }: PriceChartProps) {
 
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={formattedData}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="date" />
-          <YAxis />
-          <Tooltip />
-          <Line type="monotone" dataKey="volume" stroke="#3B82F6" name="Volume (ETH)" />
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+          <XAxis
+            dataKey="date"
+            stroke="rgba(255,255,255,0.5)"
+            style={{ fontSize: '12px' }}
+          />
+          <YAxis
+            stroke="rgba(255,255,255,0.5)"
+            style={{ fontSize: '12px' }}
+          />
+          <Tooltip
+            contentStyle={{
+              backgroundColor: 'rgba(15, 23, 42, 0.9)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '8px'
+            }}
+            labelStyle={{ color: 'rgba(255,255,255,0.7)' }}
+          />
+          <Line
+            type="monotone"
+            dataKey="volume"
+            stroke="#a855f7"
+            strokeWidth={2}
+            name="Volume (ETH)"
+            dot={{ fill: '#a855f7', r: 4 }}
+            activeDot={{ r: 6 }}
+          />
         </LineChart>
       </ResponsiveContainer>
     </div>
