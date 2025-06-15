@@ -4,6 +4,7 @@ import type { EventParams as EParams, FunctionArguments, FunctionReturn } from '
 
 export const events = {
     EmergencyWithdraw: event("0xf24ef89f38eadc1bde50701ad6e4d6d11a2dc24f7cf834a486991f3883328504", "EmergencyWithdraw(address,address,uint256)", {"token": indexed(p.address), "to": indexed(p.address), "amount": p.uint256}),
+    Initialized: event("0xc7f505b2f371ae2175ee4913f4499e1f2633a7b5936321eed1cdaeb6115181d2", "Initialized(uint64)", {"version": p.uint64}),
     OwnershipTransferred: event("0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0", "OwnershipTransferred(address,address)", {"previousOwner": indexed(p.address), "newOwner": indexed(p.address)}),
     Paused: event("0x62e78cea01bee320cd4e420270b5ea74000d11b0c9f74754ebdbfc544b05a258", "Paused(address)", {"account": p.address}),
     TokensUnwrapped: event("0xe91b82eebe716fe0b6197b2a7348d6c44cd9ea2369d8f41fe6c0dea9d914e297", "TokensUnwrapped(address,uint256)", {"user": indexed(p.address), "amount": p.uint256}),
@@ -15,6 +16,7 @@ export const functions = {
     bridgedAmicaToken: viewFun("0xfc794661", "bridgedAmicaToken()", {}, p.address),
     bridgedBalance: viewFun("0xde399f76", "bridgedBalance()", {}, p.uint256),
     emergencyWithdraw: fun("0xe63ea408", "emergencyWithdraw(address,address,uint256)", {"token": p.address, "to": p.address, "amount": p.uint256}, ),
+    initialize: fun("0xc0c53b8b", "initialize(address,address,address)", {"_bridgedAmicaToken": p.address, "_nativeAmicaToken": p.address, "_owner": p.address}, ),
     nativeAmicaToken: viewFun("0xa6e67678", "nativeAmicaToken()", {}, p.address),
     owner: viewFun("0x8da5cb5b", "owner()", {}, p.address),
     pause: fun("0x8456cb59", "pause()", {}, ),
@@ -25,6 +27,7 @@ export const functions = {
     transferOwnership: fun("0xf2fde38b", "transferOwnership(address)", {"newOwner": p.address}, ),
     unpause: fun("0x3f4ba83a", "unpause()", {}, ),
     unwrap: fun("0xde0e9a3e", "unwrap(uint256)", {"amount": p.uint256}, ),
+    updateBridgeTokens: fun("0xec9a29f5", "updateBridgeTokens(address,address)", {"_bridgedAmicaToken": p.address, "_nativeAmicaToken": p.address}, ),
     wrap: fun("0xea598cb0", "wrap(uint256)", {"amount": p.uint256}, ),
 }
 
@@ -61,6 +64,7 @@ export class Contract extends ContractBase {
 
 /// Event types
 export type EmergencyWithdrawEventArgs = EParams<typeof events.EmergencyWithdraw>
+export type InitializedEventArgs = EParams<typeof events.Initialized>
 export type OwnershipTransferredEventArgs = EParams<typeof events.OwnershipTransferred>
 export type PausedEventArgs = EParams<typeof events.Paused>
 export type TokensUnwrappedEventArgs = EParams<typeof events.TokensUnwrapped>
@@ -76,6 +80,9 @@ export type BridgedBalanceReturn = FunctionReturn<typeof functions.bridgedBalanc
 
 export type EmergencyWithdrawParams = FunctionArguments<typeof functions.emergencyWithdraw>
 export type EmergencyWithdrawReturn = FunctionReturn<typeof functions.emergencyWithdraw>
+
+export type InitializeParams = FunctionArguments<typeof functions.initialize>
+export type InitializeReturn = FunctionReturn<typeof functions.initialize>
 
 export type NativeAmicaTokenParams = FunctionArguments<typeof functions.nativeAmicaToken>
 export type NativeAmicaTokenReturn = FunctionReturn<typeof functions.nativeAmicaToken>
@@ -106,6 +113,9 @@ export type UnpauseReturn = FunctionReturn<typeof functions.unpause>
 
 export type UnwrapParams = FunctionArguments<typeof functions.unwrap>
 export type UnwrapReturn = FunctionReturn<typeof functions.unwrap>
+
+export type UpdateBridgeTokensParams = FunctionArguments<typeof functions.updateBridgeTokens>
+export type UpdateBridgeTokensReturn = FunctionReturn<typeof functions.updateBridgeTokens>
 
 export type WrapParams = FunctionArguments<typeof functions.wrap>
 export type WrapReturn = FunctionReturn<typeof functions.wrap>

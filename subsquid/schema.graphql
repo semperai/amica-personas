@@ -1,13 +1,17 @@
+# Chain entity
 type Chain @entity {
   id: ID! # chain ID
   name: String! @index
   amicaToken: String!
   factoryAddress: String!
   bridgeWrapperAddress: String
+  stakingRewardsAddress: String
   totalPersonas: Int!
   totalVolume: BigInt!
+  feeReductionConfig: FeeReductionConfig @derivedFrom(field: "chain")
 }
 
+# Enhanced Persona entity
 type Persona @entity {
   id: ID! # chainId-tokenId
   chain: Chain!
@@ -29,6 +33,7 @@ type Persona @entity {
   totalTradesAllTime: Int!
   uniqueTraders24h: Int!
   uniqueTradersAllTime: Int!
+  averageFeeRate: BigInt! # Average fee rate in basis points
   
   # Bonding curve stats
   totalDeposited: BigInt!
@@ -36,9 +41,16 @@ type Persona @entity {
   graduationThreshold: BigInt!
   isGraduated: Boolean!
   
+  # Agent token fields
+  agentToken: String
+  minAgentTokens: BigInt
+  totalAgentDeposited: BigInt!
+  
   # Relations
   metadata: [Metadata!]! @derivedFrom(field: "persona")
   trades: [Trade!]! @derivedFrom(field: "persona")
+  agentDeposits: [AgentDeposit!]! @derivedFrom(field: "persona")
+  agentRewards: [AgentReward!]! @derivedFrom(field: "persona")
 }
 
 type Metadata @entity {
@@ -50,6 +62,7 @@ type Metadata @entity {
   updatedAtBlock: BigInt!
 }
 
+# Enhanced Trade entity with effective fee
 type Trade @entity {
   id: ID! # chainId-txHash-logIndex
   chain: Chain!
@@ -58,6 +71,7 @@ type Trade @entity {
   amountIn: BigInt!
   amountOut: BigInt!
   feeAmount: BigInt!
+  effectiveFeeRate: Int! # Basis points (actual fee rate paid)
   timestamp: DateTime!
   block: BigInt!
   txHash: String! @index
@@ -72,6 +86,122 @@ type DailyVolume @entity {
   uniqueTraders: Int!
 }
 
+# Agent token deposits
+type AgentDeposit @entity {
+  id: ID! # chainId-personaId-user-index
+  chain: Chain!
+  persona: Persona!
+  user: String! @index
+  amount: BigInt!
+  timestamp: DateTime!
+  withdrawn: Boolean!
+  rewardsClaimed: Boolean!
+  block: BigInt!
+  txHash: String! @index
+}
+
+# Agent rewards claimed
+type AgentReward @entity {
+  id: ID! # chainId-txHash-logIndex
+  chain: Chain!
+  persona: Persona!
+  user: String! @index
+  personaTokensReceived: BigInt!
+  agentTokenAmount: BigInt!
+  timestamp: DateTime!
+  block: BigInt!
+  txHash: String! @index
+}
+
+# Fee reduction configuration
+type FeeReductionConfig @entity {
+  id: ID! # chainId
+  chain: Chain! @unique
+  minAmicaForReduction: BigInt!
+  maxAmicaForReduction: BigInt!
+  minReductionMultiplier: Int!
+  maxReductionMultiplier: Int!
+  baseFeePercentage: Int! # Base fee in basis points
+}
+
+# User fee snapshots
+type FeeSnapshot @entity {
+  id: ID! # chainId-user
+  chain: Chain!
+  user: String! @index
+  currentBalance: BigInt!
+  currentBlock: BigInt!
+  pendingBalance: BigInt
+  pendingBlock: BigInt
+  lastUpdated: DateTime!
+  isActive: Boolean! # Whether snapshot is currently active for fee reduction
+}
+
+# Staking pool
+type StakingPool @entity {
+  id: ID! # chainId-poolId
+  chain: Chain!
+  poolId: Int! @index
+  lpToken: String! @index
+  allocBasisPoints: Int!
+  isAgentPool: Boolean!
+  personaTokenId: BigInt
+  isActive: Boolean!
+  totalStaked: BigInt!
+  weightedTotal: BigInt!
+  accAmicaPerShare: BigInt!
+  lastRewardBlock: BigInt!
+  createdAt: DateTime!
+  createdAtBlock: BigInt!
+  
+  # Relations
+  userStakes: [UserStake!]! @derivedFrom(field: "pool")
+}
+
+# User stake in a pool
+type UserStake @entity {
+  id: ID! # chainId-poolId-user
+  pool: StakingPool!
+  user: String! @index
+  flexibleAmount: BigInt!
+  lockedAmount: BigInt!
+  weightedAmount: BigInt!
+  unclaimedRewards: BigInt!
+  lastClaimBlock: BigInt
+  firstStakeAt: DateTime!
+  lastStakeAt: DateTime!
+  
+  # Relations
+  locks: [StakeLock!]! @derivedFrom(field: "userStake")
+}
+
+# Individual stake lock
+type StakeLock @entity {
+  id: ID! # chainId-poolId-user-lockId
+  userStake: UserStake!
+  lockId: BigInt! @index
+  amount: BigInt!
+  unlockTime: DateTime! @index
+  lockMultiplier: Int!
+  rewardDebt: BigInt!
+  createdAt: DateTime!
+  createdAtBlock: BigInt!
+  isWithdrawn: Boolean!
+}
+
+# Staking rewards claim
+type StakingRewardClaim @entity {
+  id: ID! # chainId-txHash-logIndex
+  chain: Chain!
+  user: String! @index
+  pools: [StakingPool!]! # Pools from which rewards were claimed
+  totalAmount: BigInt!
+  timestamp: DateTime!
+  block: BigInt!
+  txHash: String! @index
+}
+
+# Bridge activity
 type BridgeActivity @entity {
   id: ID! # chainId-txHash-logIndex
   chain: Chain!
@@ -88,6 +218,7 @@ enum BridgeAction {
   UNWRAP
 }
 
+# AMICA token deposits
 type AmicaTokenDeposit @entity {
   id: ID! # chainId-txHash-logIndex
   chain: Chain!
@@ -99,6 +230,7 @@ type AmicaTokenDeposit @entity {
   txHash: String! @index
 }
 
+# Global statistics
 type GlobalStats @entity {
   id: ID! # "global"
   totalPersonas: Int!
@@ -106,5 +238,22 @@ type GlobalStats @entity {
   totalVolumeAllTime: BigInt!
   totalBridgedVolume: BigInt!
   totalChains: Int!
+  totalStakingPools: Int!
+  totalStakedValue: BigInt!
+  totalAgentTokensDeposited: BigInt!
   lastUpdated: DateTime!
+}
+
+# User aggregate stats across chains
+type UserStats @entity {
+  id: ID! # user address
+  user: String! @unique @index
+  totalPersonasCreated: Int!
+  totalTradeVolume: BigInt!
+  totalFeesGenerated: BigInt!
+  totalStaked: BigInt!
+  totalRewardsClaimed: BigInt!
+  chainsActive: [Chain!]!
+  firstActivityAt: DateTime!
+  lastActivityAt: DateTime!
 }

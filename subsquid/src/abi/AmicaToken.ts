@@ -5,6 +5,7 @@ import type { EventParams as EParams, FunctionArguments, FunctionReturn } from '
 export const events = {
     Approval: event("0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925", "Approval(address,address,uint256)", {"owner": indexed(p.address), "spender": indexed(p.address), "value": p.uint256}),
     BridgeWrapperSet: event("0x3968d46c6547074f63e2859ae00dfb2d38e4901f91d2eccbf6ee7f71b7e8eeee", "BridgeWrapperSet(address)", {"wrapper": indexed(p.address)}),
+    Initialized: event("0xc7f505b2f371ae2175ee4913f4499e1f2633a7b5936321eed1cdaeb6115181d2", "Initialized(uint64)", {"version": p.uint64}),
     OwnershipTransferred: event("0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0", "OwnershipTransferred(address,address)", {"previousOwner": indexed(p.address), "newOwner": indexed(p.address)}),
     TokensBurnedAndClaimed: event("0x20b12e46df204b330002c4b46ba4b4b34e2c5c83db88543362339f6efdef1d34", "TokensBurnedAndClaimed(address,uint256,address[],uint256[])", {"user": indexed(p.address), "amountBurned": p.uint256, "tokens": p.array(p.address), "amounts": p.array(p.uint256)}),
     TokensDeposited: event("0xcbc4a4091b012bb1329c38bbbb15455f5cac5aa3673da0a7f38cd61a4f495517", "TokensDeposited(address,address,uint256)", {"depositor": indexed(p.address), "token": indexed(p.address), "amount": p.uint256}),
@@ -27,6 +28,7 @@ export const functions = {
     deposit: fun("0x47e7ef24", "deposit(address,uint256)", {"token": p.address, "amount": p.uint256}, ),
     depositedBalances: viewFun("0x7d995311", "depositedBalances(address)", {"_0": p.address}, p.uint256),
     getDepositedTokens: viewFun("0x5e71430f", "getDepositedTokens()", {}, p.array(p.address)),
+    initialize: fun("0xc4d66de8", "initialize(address)", {"initialOwner": p.address}, ),
     mint: fun("0x40c10f19", "mint(address,uint256)", {"to": p.address, "amount": p.uint256}, ),
     name: viewFun("0x06fdde03", "name()", {}, p.string),
     owner: viewFun("0x8da5cb5b", "owner()", {}, p.address),
@@ -100,6 +102,7 @@ export class Contract extends ContractBase {
 /// Event types
 export type ApprovalEventArgs = EParams<typeof events.Approval>
 export type BridgeWrapperSetEventArgs = EParams<typeof events.BridgeWrapperSet>
+export type InitializedEventArgs = EParams<typeof events.Initialized>
 export type OwnershipTransferredEventArgs = EParams<typeof events.OwnershipTransferred>
 export type TokensBurnedAndClaimedEventArgs = EParams<typeof events.TokensBurnedAndClaimed>
 export type TokensDepositedEventArgs = EParams<typeof events.TokensDeposited>
@@ -146,6 +149,9 @@ export type DepositedBalancesReturn = FunctionReturn<typeof functions.depositedB
 
 export type GetDepositedTokensParams = FunctionArguments<typeof functions.getDepositedTokens>
 export type GetDepositedTokensReturn = FunctionReturn<typeof functions.getDepositedTokens>
+
+export type InitializeParams = FunctionArguments<typeof functions.initialize>
+export type InitializeReturn = FunctionReturn<typeof functions.initialize>
 
 export type MintParams = FunctionArguments<typeof functions.mint>
 export type MintReturn = FunctionReturn<typeof functions.mint>
