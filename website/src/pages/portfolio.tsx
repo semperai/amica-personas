@@ -148,7 +148,7 @@ export default function PortfolioPage() {
             <div className="bg-white/5 backdrop-blur-md rounded-2xl p-12 border border-white/10 text-center">
               <h2 className="text-2xl font-light text-white mb-4">Connect Your Wallet</h2>
               <p className="text-white/60 mb-8">Please connect your wallet to view your portfolio</p>
-              <div className="bg-white/10 backdrop-blur-md rounded-full p-1 inline-block">
+              <div className="p-1 inline-block">
                 <ConnectButton />
               </div>
             </div>
