@@ -1,4 +1,6 @@
 import { task } from "hardhat/config";
+import fs from "fs";
+import path from "path";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeploymentManager } from "./utils/deployment-manager";
 import { formatEther, parseEther } from "ethers";
@@ -64,6 +66,75 @@ task("deployments", "Show all deployments for current network")
       }
     });
   });
+
+task("deploy-token", "Deploy a TestERC20 token")
+  .addOptionalParam("name", "The token name", "Test Token")
+  .addOptionalParam("symbol", "The token symbol", "TEST")
+  .addOptionalParam("supply", "The total supply (without decimals)", "1000000000")
+  .addOptionalParam("decimals", "The number of decimals", "18")
+  .setAction(async ({ name, symbol, supply, decimals }, hre) => {
+    const { ethers } = hre;
+
+    // Get network and signer info
+    const network = await ethers.provider.getNetwork();
+    const [deployer] = await ethers.getSigners();
+
+    console.log(`\n🚀 Deploying TestERC20 Token`);
+    console.log(`Network: ${network.name} (chainId: ${network.chainId})`);
+    console.log(`Deployer: ${deployer.address}`);
+
+    const balance = await ethers.provider.getBalance(deployer.address);
+    console.log(`Deployer balance: ${ethers.formatEther(balance)} ETH`);
+    console.log("");
+
+    // Token parameters
+    console.log(`📋 Token Parameters:`);
+    console.log(`Name: ${name}`);
+    console.log(`Symbol: ${symbol}`);
+    console.log(`Total Supply: ${supply} ${symbol}`);
+    console.log(`Decimals: ${decimals}`);
+    console.log("");
+
+    // Calculate actual supply with decimals
+    const actualSupply = ethers.parseUnits(supply, parseInt(decimals));
+
+    // Deploy the token
+    console.log(`⏳ Deploying ${symbol} token...`);
+    const TestERC20 = await ethers.getContractFactory("TestERC20");
+    const token = await TestERC20.deploy(name, symbol, actualSupply);
+
+    console.log(`✅ ${symbol} token deployed at: ${await token.getAddress()}`);
+
+    // Save deployment info
+    const deploymentInfo = {
+      token: {
+        name: name,
+        symbol: symbol,
+        decimals: parseInt(decimals.toString()),
+        totalSupply: supply.toString(),
+        address: await token.getAddress(),
+      },
+      network: network.name,
+      chainId: network.chainId.toString(),
+      deployer: deployer.address,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Save to file
+    const deploymentsDir = path.join(process.cwd(), 'deployments/tokens');
+    if (!fs.existsSync(deploymentsDir)) {
+      fs.mkdirSync(deploymentsDir, { recursive: true });
+    }
+
+    const filename = `${symbol.toLowerCase()}-${network.name}-${network.chainId}.json`;
+    const filepath = path.join(deploymentsDir, filename);
+
+    fs.writeFileSync(filepath, JSON.stringify(deploymentInfo, null, 2));
+    console.log(`\n💾 Deployment info saved to: deployments/tokens/${filename}`);
+
+    console.log("\n✨ Deployment complete!");
+  });
+
 
 // ============================================================================
 // PERSONA TASKS WITH AGENT TOKEN SUPPORT
