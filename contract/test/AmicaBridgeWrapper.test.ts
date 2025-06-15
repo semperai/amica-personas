@@ -23,12 +23,16 @@ describe("AmicaBridgeWrapper", function () {
             { initializer: "initialize" }
         );
 
-        // Deploy bridge wrapper
+        // Deploy bridge wrapper using upgrades plugin
         const AmicaBridgeWrapper = await ethers.getContractFactory("AmicaBridgeWrapper");
-        const bridgeWrapper = await AmicaBridgeWrapper.deploy(
-            await bridgedAmica.getAddress(),
-            await nativeAmica.getAddress(),
-            owner.address
+        const bridgeWrapper = await upgrades.deployProxy(
+            AmicaBridgeWrapper,
+            [
+                await bridgedAmica.getAddress(),
+                await nativeAmica.getAddress(),
+                owner.address
+            ],
+            { initializer: "initialize" }
         );
 
         // Set bridge wrapper in native AMICA
@@ -67,10 +71,14 @@ describe("AmicaBridgeWrapper", function () {
 
             const AmicaBridgeWrapper = await ethers.getContractFactory("AmicaBridgeWrapper");
             await expect(
-                AmicaBridgeWrapper.deploy(
-                    ethers.ZeroAddress,
-                    await nativeAmica.getAddress(),
-                    owner.address
+                upgrades.deployProxy(
+                    AmicaBridgeWrapper,
+                    [
+                        ethers.ZeroAddress,
+                        await nativeAmica.getAddress(),
+                        owner.address
+                    ],
+                    { initializer: "initialize" }
                 )
             ).to.be.revertedWith("Invalid bridged token");
         });
@@ -82,10 +90,14 @@ describe("AmicaBridgeWrapper", function () {
 
             const AmicaBridgeWrapper = await ethers.getContractFactory("AmicaBridgeWrapper");
             await expect(
-                AmicaBridgeWrapper.deploy(
-                    await bridgedAmica.getAddress(),
-                    ethers.ZeroAddress,
-                    owner.address
+                upgrades.deployProxy(
+                    AmicaBridgeWrapper,
+                    [
+                        await bridgedAmica.getAddress(),
+                        ethers.ZeroAddress,
+                        owner.address
+                    ],
+                    { initializer: "initialize" }
                 )
             ).to.be.revertedWith("Invalid native token");
         });
@@ -97,12 +109,42 @@ describe("AmicaBridgeWrapper", function () {
 
             const AmicaBridgeWrapper = await ethers.getContractFactory("AmicaBridgeWrapper");
             await expect(
-                AmicaBridgeWrapper.deploy(
-                    await token.getAddress(),
-                    await token.getAddress(),
-                    owner.address
+                upgrades.deployProxy(
+                    AmicaBridgeWrapper,
+                    [
+                        await token.getAddress(),
+                        await token.getAddress(),
+                        owner.address
+                    ],
+                    { initializer: "initialize" }
                 )
             ).to.be.revertedWith("Tokens must be different");
+        });
+
+        it("Should fail deployment with zero address for owner", async function () {
+            const [owner] = await ethers.getSigners();
+            const TestERC20 = await ethers.getContractFactory("TestERC20");
+            const bridgedAmica = await TestERC20.deploy("Bridged Amica", "BAMICA", ethers.parseEther("1000000"));
+
+            const AmicaToken = await ethers.getContractFactory("AmicaToken");
+            const nativeAmica = await upgrades.deployProxy(
+                AmicaToken,
+                [owner.address],
+                { initializer: "initialize" }
+            );
+
+            const AmicaBridgeWrapper = await ethers.getContractFactory("AmicaBridgeWrapper");
+            await expect(
+                upgrades.deployProxy(
+                    AmicaBridgeWrapper,
+                    [
+                        await bridgedAmica.getAddress(),
+                        await nativeAmica.getAddress(),
+                        ethers.ZeroAddress
+                    ],
+                    { initializer: "initialize" }
+                )
+            ).to.be.revertedWith("Invalid owner");
         });
     });
 
@@ -597,6 +639,50 @@ describe("AmicaBridgeWrapper", function () {
             // Verify balances
             expect(await l2AmicaToken.balanceOf(user1.address)).to.equal(ethers.parseEther("2500"));
             expect(await bridgedAmica.balanceOf(user1.address)).to.equal(ethers.parseEther("2500"));
+        });
+    });
+
+    describe("Upgrade functionality", function () {
+        it("Should be upgradeable by owner", async function () {
+            const { owner, bridgeWrapper } = await loadFixture(deployBridgeWrapperFixture);
+
+            // Deploy a V2 implementation (for testing, we'll use the same contract)
+            const AmicaBridgeWrapperV2 = await ethers.getContractFactory("AmicaBridgeWrapper");
+
+            // Upgrade the proxy
+            const upgraded = await upgrades.upgradeProxy(
+                await bridgeWrapper.getAddress(),
+                AmicaBridgeWrapperV2
+            );
+
+            // Verify it's still the same proxy address
+            expect(await upgraded.getAddress()).to.equal(await bridgeWrapper.getAddress());
+
+            // Verify state is preserved
+            expect(await upgraded.bridgedAmicaToken()).to.equal(await bridgeWrapper.bridgedAmicaToken());
+            expect(await upgraded.nativeAmicaToken()).to.equal(await bridgeWrapper.nativeAmicaToken());
+        });
+
+        it("Should preserve state after upgrade", async function () {
+            const { user1, bridgedAmica, bridgeWrapper } = await loadFixture(deployBridgeWrapperFixture);
+
+            // Wrap some tokens before upgrade
+            const wrapAmount = ethers.parseEther("1000");
+            await bridgedAmica.connect(user1).approve(await bridgeWrapper.getAddress(), wrapAmount);
+            await bridgeWrapper.connect(user1).wrap(wrapAmount);
+
+            const totalBridgedInBefore = await bridgeWrapper.totalBridgedIn();
+
+            // Upgrade
+            const AmicaBridgeWrapperV2 = await ethers.getContractFactory("AmicaBridgeWrapper");
+            const upgraded = await upgrades.upgradeProxy(
+                await bridgeWrapper.getAddress(),
+                AmicaBridgeWrapperV2
+            );
+
+            // Verify state is preserved
+            expect(await upgraded.totalBridgedIn()).to.equal(totalBridgedInBefore);
+            expect(await upgraded.bridgedBalance()).to.equal(wrapAmount);
         });
     });
 });

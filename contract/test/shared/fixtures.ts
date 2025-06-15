@@ -7,7 +7,8 @@ import {
     ERC20Implementation,
     MockUniswapV2Factory,
     MockUniswapV2Router,
-    TestERC20
+    TestERC20,
+    AmicaBridgeWrapper
 } from "../../typechain-types";
 
 // Constants
@@ -103,9 +104,6 @@ export interface CreatePersonaFixture extends PersonaTokenFactoryFixture {
 
 // Add these to test/shared/fixtures.ts
 
-// Add to existing imports
-import { AmicaBridgeWrapper } from "../../typechain-types";
-
 // Add new fixture interfaces
 export interface AmicaTokenFixture {
     amicaToken: AmicaToken;
@@ -136,19 +134,21 @@ export async function deployAmicaTokenFixture(): Promise<AmicaTokenFixture> {
         { initializer: "initialize" }
     ) as unknown as AmicaToken;
 
-    // Since we're not on mainnet, set up bridge wrapper to mint tokens
-    const AmicaBridgeWrapper = await ethers.getContractFactory("AmicaBridgeWrapper");
-
     // Deploy a mock bridged token
     const TestERC20 = await ethers.getContractFactory("TestERC20");
     const bridgedAmica = await TestERC20.deploy("Bridged Amica", "BAMICA", ethers.parseEther("1000000000"));
 
-    // Deploy bridge wrapper
-    const bridgeWrapper = await AmicaBridgeWrapper.deploy(
-        await bridgedAmica.getAddress(),
-        await amicaToken.getAddress(),
-        owner.address
-    );
+    // Deploy AmicaBridgeWrapper using upgrades plugin
+    const AmicaBridgeWrapper = await ethers.getContractFactory("AmicaBridgeWrapper");
+    const bridgeWrapper = await upgrades.deployProxy(
+        AmicaBridgeWrapper,
+        [
+            await bridgedAmica.getAddress(),
+            await amicaToken.getAddress(),
+            owner.address
+        ],
+        { initializer: "initialize" }
+    ) as unknown as AmicaBridgeWrapper;
 
     // Set bridge wrapper in AmicaToken
     await amicaToken.setBridgeWrapper(await bridgeWrapper.getAddress());
@@ -225,12 +225,17 @@ export async function setupCrossChainScenario() {
     const TestERC20 = await ethers.getContractFactory("TestERC20");
     const bridgedAmica = await TestERC20.deploy("Bridged Amica", "BAMICA", ethers.parseEther("1000000"));
 
+    // Deploy AmicaBridgeWrapper using upgrades plugin
     const AmicaBridgeWrapper = await ethers.getContractFactory("AmicaBridgeWrapper");
-    const bridgeWrapper = await AmicaBridgeWrapper.deploy(
-        await bridgedAmica.getAddress(),
-        await l2AmicaToken.getAddress(),
-        owner.address
-    );
+    const bridgeWrapper = await upgrades.deployProxy(
+        AmicaBridgeWrapper,
+        [
+            await bridgedAmica.getAddress(),
+            await l2AmicaToken.getAddress(),
+            owner.address
+        ],
+        { initializer: "initialize" }
+    ) as unknown as AmicaBridgeWrapper;
 
     await l2AmicaToken.setBridgeWrapper(await bridgeWrapper.getAddress());
 
@@ -268,19 +273,21 @@ export async function deployPersonaTokenFactoryFixture(): Promise<PersonaTokenFa
         { initializer: "initialize" }
     ) as unknown as AmicaToken;
 
-    // Since we're not on mainnet, we need to set up a bridge wrapper to mint tokens
-    const AmicaBridgeWrapper = await ethers.getContractFactory("AmicaBridgeWrapper");
-
     // Deploy a mock bridged token
     const TestERC20 = await ethers.getContractFactory("TestERC20");
     const bridgedAmica = await TestERC20.deploy("Bridged Amica", "BAMICA", ethers.parseEther("100000000"));
 
-    // Deploy bridge wrapper
-    const bridgeWrapper = await AmicaBridgeWrapper.deploy(
-        await bridgedAmica.getAddress(),
-        await amicaToken.getAddress(),
-        owner.address
-    );
+    // Deploy AmicaBridgeWrapper using upgrades plugin
+    const AmicaBridgeWrapper = await ethers.getContractFactory("AmicaBridgeWrapper");
+    const bridgeWrapper = await upgrades.deployProxy(
+        AmicaBridgeWrapper,
+        [
+            await bridgedAmica.getAddress(),
+            await amicaToken.getAddress(),
+            owner.address
+        ],
+        { initializer: "initialize" }
+    ) as unknown as AmicaBridgeWrapper;
 
     // Set bridge wrapper in AmicaToken
     await amicaToken.setBridgeWrapper(await bridgeWrapper.getAddress());
@@ -481,4 +488,39 @@ export async function createPersonaWithAgentFixture(): Promise<CreatePersonaFixt
     const tokenId = parsedEvent!.args.tokenId;
 
     return { ...fixture, tokenId, agentToken };
+}
+
+// Helper function to deploy bridge wrapper with specific configuration
+export async function deployBridgeWrapperWithConfig(
+    bridgedToken: string,
+    nativeToken: string,
+    owner: string,
+    config?: {
+        globalDailyLimit?: bigint;
+        bridgeFee?: number;
+        feeRecipient?: string;
+    }
+): Promise<AmicaBridgeWrapper> {
+    const AmicaBridgeWrapper = await ethers.getContractFactory("AmicaBridgeWrapper");
+    const bridgeWrapper = await upgrades.deployProxy(
+        AmicaBridgeWrapper,
+        [bridgedToken, nativeToken, owner],
+        { initializer: "initialize" }
+    ) as unknown as AmicaBridgeWrapper;
+
+    return bridgeWrapper;
+}
+
+// Helper to test bridge wrapper upgrade
+export async function upgradeBridgeWrapper(
+    proxyAddress: string,
+    newImplementationName: string = "AmicaBridgeWrapperV2"
+): Promise<AmicaBridgeWrapper> {
+    const NewImplementation = await ethers.getContractFactory(newImplementationName);
+    const upgraded = await upgrades.upgradeProxy(
+        proxyAddress,
+        NewImplementation
+    ) as unknown as AmicaBridgeWrapper;
+
+    return upgraded;
 }

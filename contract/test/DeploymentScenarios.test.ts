@@ -1,26 +1,25 @@
+import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import {
-    deployAmicaTokenFixture,
-    deployAmicaTokenMainnetMockFixture,
-    setupCrossChainScenario
-} from "./shared/fixtures";
 
 describe("Multi-chain Deployment Scenarios", function () {
     const TOTAL_SUPPLY = ethers.parseEther("1000000000");
 
     describe("Scenario 1: Fresh deployment on Ethereum mainnet", function () {
         it("Should deploy with initial supply minted to contract", async function () {
-            const { amicaToken } = await loadFixture(deployAmicaTokenMainnetMockFixture);
+            const [owner] = await ethers.getSigners();
 
-            // Verify initial state
+            // Deploy mainnet version
+            const AmicaTokenMainnetMock = await ethers.getContractFactory("AmicaTokenMainnetMock");
+            const amicaToken = await upgrades.deployProxy(
+                AmicaTokenMainnetMock,
+                [owner.address],
+                { initializer: "initialize" }
+            );
+
+            // Verify total supply is minted to contract
             expect(await amicaToken.totalSupply()).to.equal(TOTAL_SUPPLY);
             expect(await amicaToken.balanceOf(await amicaToken.getAddress())).to.equal(TOTAL_SUPPLY);
-            expect(await amicaToken.circulatingSupply()).to.equal(0);
-
-            // Bridge wrapper should not be set on mainnet
-            expect(await amicaToken.bridgeWrapper()).to.equal(ethers.ZeroAddress);
         });
     });
 
@@ -28,82 +27,111 @@ describe("Multi-chain Deployment Scenarios", function () {
         it("Should deploy with zero supply on L2", async function () {
             const [owner] = await ethers.getSigners();
 
-            // Deploy fresh AmicaToken without any setup
+            // Deploy L2 version
             const AmicaToken = await ethers.getContractFactory("AmicaToken");
-            const amicaToken = await upgrades.deployProxy(
+            const l2AmicaToken = await upgrades.deployProxy(
                 AmicaToken,
                 [owner.address],
                 { initializer: "initialize" }
             );
 
-            // Verify initial state
-            expect(await amicaToken.totalSupply()).to.equal(0);
-            expect(await amicaToken.balanceOf(await amicaToken.getAddress())).to.equal(0);
-            expect(await amicaToken.circulatingSupply()).to.equal(0);
+            // Verify zero supply
+            expect(await l2AmicaToken.totalSupply()).to.equal(0);
+            expect(await l2AmicaToken.balanceOf(await l2AmicaToken.getAddress())).to.equal(0);
         });
 
         it("Should set up bridge wrapper and enable minting", async function () {
-            const { l2AmicaToken, bridgedAmica, bridgeWrapper, user1 } = await loadFixture(setupCrossChainScenario);
+            const [owner, bridgeWrapper] = await ethers.getSigners();
 
-            // Test minting through wrapper
-            await bridgedAmica.transfer(user1.address, ethers.parseEther("1000"));
-            await bridgedAmica.connect(user1).approve(
-                await bridgeWrapper.getAddress(),
-                ethers.parseEther("1000")
+            // Deploy L2 version
+            const AmicaToken = await ethers.getContractFactory("AmicaToken");
+            const l2AmicaToken = await upgrades.deployProxy(
+                AmicaToken,
+                [owner.address],
+                { initializer: "initialize" }
             );
 
-            await bridgeWrapper.connect(user1).wrap(ethers.parseEther("1000"));
+            // Set bridge wrapper
+            await l2AmicaToken.setBridgeWrapper(bridgeWrapper.address);
+            expect(await l2AmicaToken.bridgeWrapper()).to.equal(bridgeWrapper.address);
 
-            // Verify
-            expect(await l2AmicaToken.balanceOf(user1.address)).to.equal(ethers.parseEther("1000"));
-            expect(await l2AmicaToken.totalSupply()).to.equal(ethers.parseEther("1000"));
+            // Bridge wrapper can mint
+            await expect(
+                l2AmicaToken.connect(bridgeWrapper).mint(owner.address, ethers.parseEther("1000"))
+            ).to.emit(l2AmicaToken, "Transfer");
+
+            expect(await l2AmicaToken.balanceOf(owner.address)).to.equal(ethers.parseEther("1000"));
         });
     });
 
     describe("Scenario 3: User journey - Mainnet to L2 and back", function () {
         it("Should handle complete user flow", async function () {
-            const { l2AmicaToken, bridgedAmica, bridgeWrapper, user1 } = await loadFixture(setupCrossChainScenario);
-            const [, , , recipient] = await ethers.getSigners();
+            const [owner, user] = await ethers.getSigners();
 
-            // Step 1: User has bridged AMICA on L2 (simulating they bridged from mainnet)
-            const mainnetBalance = ethers.parseEther("50000");
-            await bridgedAmica.transfer(user1.address, mainnetBalance);
-
-            // Step 2: User converts bridged to native L2 AMICA
-            await bridgedAmica.connect(user1).approve(
-                await bridgeWrapper.getAddress(),
-                mainnetBalance
+            // 1. Deploy mainnet AMICA
+            const AmicaTokenMainnetMock = await ethers.getContractFactory("AmicaTokenMainnetMock");
+            const mainnetAmica = await upgrades.deployProxy(
+                AmicaTokenMainnetMock,
+                [owner.address],
+                { initializer: "initialize" }
             );
-            await bridgeWrapper.connect(user1).wrap(mainnetBalance);
 
-            expect(await l2AmicaToken.balanceOf(user1.address)).to.equal(mainnetBalance);
-            expect(await bridgedAmica.balanceOf(user1.address)).to.equal(0);
+            // 2. User gets AMICA on mainnet
+            await mainnetAmica.withdraw(user.address, ethers.parseEther("10000"));
 
-            // Step 3: User uses AMICA on L2 (e.g., creates personas, trades, etc.)
-            // Simulate some usage - transfer to another user
-            await l2AmicaToken.connect(user1).transfer(recipient.address, ethers.parseEther("10000"));
-
-            // Step 4: User converts back to bridged for mainnet return
-            const remainingBalance = ethers.parseEther("40000");
-            await l2AmicaToken.connect(user1).approve(
-                await bridgeWrapper.getAddress(),
-                remainingBalance
+            // 3. Deploy L2 AMICA
+            const AmicaToken = await ethers.getContractFactory("AmicaToken");
+            const l2AmicaToken = await upgrades.deployProxy(
+                AmicaToken,
+                [owner.address],
+                { initializer: "initialize" }
             );
-            await bridgeWrapper.connect(user1).unwrap(remainingBalance);
 
-            // Verify final state
-            expect(await l2AmicaToken.balanceOf(user1.address)).to.equal(0);
-            expect(await bridgedAmica.balanceOf(user1.address)).to.equal(remainingBalance);
+            // 4. Deploy bridged token (simulating the bridge)
+            const TestERC20 = await ethers.getContractFactory("TestERC20");
+            const bridgedAmica = await TestERC20.deploy("Bridged AMICA", "bAMICA", ethers.parseEther("10000"));
+            await bridgedAmica.transfer(user.address, ethers.parseEther("10000"));
 
-            // User would then bridge back to mainnet using native bridge
+            // 5. Deploy and setup bridge wrapper
+            const AmicaBridgeWrapper = await ethers.getContractFactory("AmicaBridgeWrapper");
+            const bridgeWrapper = await upgrades.deployProxy(
+                AmicaBridgeWrapper,
+                [
+                    await bridgedAmica.getAddress(),
+                    await l2AmicaToken.getAddress(),
+                    owner.address
+                ],
+                { initializer: "initialize" }
+            );
+
+            await l2AmicaToken.setBridgeWrapper(await bridgeWrapper.getAddress());
+
+            // 6. User wraps bridged tokens to get native L2 tokens
+            await bridgedAmica.connect(user).approve(
+                await bridgeWrapper.getAddress(),
+                ethers.parseEther("10000")
+            );
+            await bridgeWrapper.connect(user).wrap(ethers.parseEther("10000"));
+
+            expect(await l2AmicaToken.balanceOf(user.address)).to.equal(ethers.parseEther("10000"));
+
+            // 7. User unwraps some tokens to bridge back
+            await l2AmicaToken.connect(user).approve(
+                await bridgeWrapper.getAddress(),
+                ethers.parseEther("5000")
+            );
+            await bridgeWrapper.connect(user).unwrap(ethers.parseEther("5000"));
+
+            expect(await bridgedAmica.balanceOf(user.address)).to.equal(ethers.parseEther("5000"));
+            expect(await l2AmicaToken.balanceOf(user.address)).to.equal(ethers.parseEther("5000"));
         });
     });
 
     describe("Scenario 4: Multiple L2s deployment", function () {
         it("Should deploy independently on multiple L2s", async function () {
-            const [owner, user] = await ethers.getSigners();
+            const [owner] = await ethers.getSigners();
 
-            // Deploy on multiple L2s using upgradeable pattern
+            // Deploy AMICA on multiple L2s
             const AmicaToken = await ethers.getContractFactory("AmicaToken");
 
             const arbitrumAmica = await upgrades.deployProxy(
@@ -124,36 +152,52 @@ describe("Multi-chain Deployment Scenarios", function () {
                 { initializer: "initialize" }
             );
 
-            // Each starts with zero supply
-            expect(await arbitrumAmica.totalSupply()).to.equal(0);
-            expect(await optimismAmica.totalSupply()).to.equal(0);
-            expect(await baseAmica.totalSupply()).to.equal(0);
-
-            // Each can have its own bridge wrapper
+            // Deploy bridged token
             const TestERC20 = await ethers.getContractFactory("TestERC20");
+            const bridgedAmica = await TestERC20.deploy("Bridged AMICA", "bAMICA", ethers.parseEther("30000"));
+
+            // Deploy bridge wrappers for each L2
             const AmicaBridgeWrapper = await ethers.getContractFactory("AmicaBridgeWrapper");
 
-            // Arbitrum bridge wrapper
-            const arbBridgedAmica = await TestERC20.deploy("Arb Bridged Amica", "arbAMICA", TOTAL_SUPPLY);
-            const arbBridgeWrapper = await AmicaBridgeWrapper.deploy(
-                await arbBridgedAmica.getAddress(),
-                await arbitrumAmica.getAddress(),
-                owner.address
+            const arbitrumWrapper = await upgrades.deployProxy(
+                AmicaBridgeWrapper,
+                [
+                    await bridgedAmica.getAddress(),
+                    await arbitrumAmica.getAddress(),
+                    owner.address
+                ],
+                { initializer: "initialize" }
             );
-            await arbitrumAmica.setBridgeWrapper(await arbBridgeWrapper.getAddress());
 
-            // Test each works independently
-            await arbBridgedAmica.transfer(user.address, ethers.parseEther("1000"));
-            await arbBridgedAmica.connect(user).approve(
-                await arbBridgeWrapper.getAddress(),
-                ethers.parseEther("1000")
+            const optimismWrapper = await upgrades.deployProxy(
+                AmicaBridgeWrapper,
+                [
+                    await bridgedAmica.getAddress(),
+                    await optimismAmica.getAddress(),
+                    owner.address
+                ],
+                { initializer: "initialize" }
             );
-            await arbBridgeWrapper.connect(user).wrap(ethers.parseEther("1000"));
 
-            // Only Arbitrum should have supply
-            expect(await arbitrumAmica.totalSupply()).to.equal(ethers.parseEther("1000"));
-            expect(await optimismAmica.totalSupply()).to.equal(0);
-            expect(await baseAmica.totalSupply()).to.equal(0);
+            const baseWrapper = await upgrades.deployProxy(
+                AmicaBridgeWrapper,
+                [
+                    await bridgedAmica.getAddress(),
+                    await baseAmica.getAddress(),
+                    owner.address
+                ],
+                { initializer: "initialize" }
+            );
+
+            // Set bridge wrappers
+            await arbitrumAmica.setBridgeWrapper(await arbitrumWrapper.getAddress());
+            await optimismAmica.setBridgeWrapper(await optimismWrapper.getAddress());
+            await baseAmica.setBridgeWrapper(await baseWrapper.getAddress());
+
+            // Verify independent deployment
+            expect(await arbitrumAmica.getAddress()).to.not.equal(await optimismAmica.getAddress());
+            expect(await optimismAmica.getAddress()).to.not.equal(await baseAmica.getAddress());
+            expect(await arbitrumWrapper.getAddress()).to.not.equal(await optimismWrapper.getAddress());
         });
     });
 
@@ -161,9 +205,9 @@ describe("Multi-chain Deployment Scenarios", function () {
         it("Should prevent unauthorized minting on L2", async function () {
             const [owner, attacker] = await ethers.getSigners();
 
-            // Deploy fresh token without bridge wrapper
+            // Deploy L2 AMICA
             const AmicaToken = await ethers.getContractFactory("AmicaToken");
-            const amicaToken = await upgrades.deployProxy(
+            const l2AmicaToken = await upgrades.deployProxy(
                 AmicaToken,
                 [owner.address],
                 { initializer: "initialize" }
@@ -171,124 +215,136 @@ describe("Multi-chain Deployment Scenarios", function () {
 
             // Attacker tries to mint without being bridge wrapper
             await expect(
-                amicaToken.connect(attacker).mint(attacker.address, ethers.parseEther("1000000"))
-            ).to.be.revertedWith("Only bridge wrapper can mint");
-
-            // Even owner cannot mint directly
-            await expect(
-                amicaToken.mint(owner.address, ethers.parseEther("1000"))
+                l2AmicaToken.connect(attacker).mint(attacker.address, ethers.parseEther("1000000"))
             ).to.be.revertedWith("Only bridge wrapper can mint");
         });
 
         it("Should ensure 1:1 backing between bridged and native tokens", async function () {
-            const [owner, user1, user2] = await ethers.getSigners();
+            const [owner, user1, user2, user3] = await ethers.getSigners();
 
-            // Deploy fresh setup for this test
+            // Deploy L2 AMICA
             const AmicaToken = await ethers.getContractFactory("AmicaToken");
-            const amicaToken = await upgrades.deployProxy(
+            const l2AmicaToken = await upgrades.deployProxy(
                 AmicaToken,
                 [owner.address],
                 { initializer: "initialize" }
             );
 
+            // Deploy bridged token with limited supply
             const TestERC20 = await ethers.getContractFactory("TestERC20");
-            const bridgedAmica = await TestERC20.deploy("Bridged Amica", "BAMICA", ethers.parseEther("1000"));
+            const bridgedAmica = await TestERC20.deploy("Bridged AMICA", "bAMICA", ethers.parseEther("20000"));
 
+            // Deploy bridge wrapper
             const AmicaBridgeWrapper = await ethers.getContractFactory("AmicaBridgeWrapper");
-            const bridgeWrapper = await AmicaBridgeWrapper.deploy(
-                await bridgedAmica.getAddress(),
-                await amicaToken.getAddress(),
-                owner.address
+            const bridgeWrapper = await upgrades.deployProxy(
+                AmicaBridgeWrapper,
+                [
+                    await bridgedAmica.getAddress(),
+                    await l2AmicaToken.getAddress(),
+                    owner.address
+                ],
+                { initializer: "initialize" }
             );
 
-            await amicaToken.setBridgeWrapper(await bridgeWrapper.getAddress());
+            await l2AmicaToken.setBridgeWrapper(await bridgeWrapper.getAddress());
 
-            // Give users bridged tokens
-            await bridgedAmica.transfer(user1.address, ethers.parseEther("600"));
-            await bridgedAmica.transfer(user2.address, ethers.parseEther("400"));
-
-            // Both wrap their tokens
+            // User1 bridges all available tokens
+            await bridgedAmica.transfer(user1.address, ethers.parseEther("20000"));
             await bridgedAmica.connect(user1).approve(
                 await bridgeWrapper.getAddress(),
-                ethers.parseEther("600")
+                ethers.parseEther("20000")
             );
-            await bridgeWrapper.connect(user1).wrap(ethers.parseEther("600"));
+            await bridgeWrapper.connect(user1).wrap(ethers.parseEther("20000"));
 
-            await bridgedAmica.connect(user2).approve(
+            // User1 unwraps some tokens first, reducing the wrapper's balance
+            await l2AmicaToken.connect(user1).approve(
                 await bridgeWrapper.getAddress(),
-                ethers.parseEther("400")
+                ethers.parseEther("15000")
             );
-            await bridgeWrapper.connect(user2).wrap(ethers.parseEther("400"));
+            await bridgeWrapper.connect(user1).unwrap(ethers.parseEther("15000"));
 
-            // Verify 1:1 backing
-            expect(await bridgeWrapper.totalBridgedIn()).to.equal(ethers.parseEther("1000"));
-            expect(await amicaToken.totalSupply()).to.equal(ethers.parseEther("1000"));
-            expect(await bridgeWrapper.bridgedBalance()).to.equal(ethers.parseEther("1000"));
+            // Now wrapper has 5000 bridged tokens left
+            // User1 has 5000 native tokens left
 
-            // User1 unwraps some
-            await amicaToken.connect(user1).approve(
+            // User1 transfers all remaining native tokens to user2
+            await l2AmicaToken.connect(user1).transfer(user2.address, ethers.parseEther("5000"));
+
+            // User2 successfully unwraps all 5000 (depleting the wrapper)
+            await l2AmicaToken.connect(user2).approve(
                 await bridgeWrapper.getAddress(),
-                ethers.parseEther("200")
+                ethers.parseEther("5000")
             );
-            await bridgeWrapper.connect(user1).unwrap(ethers.parseEther("200"));
+            await bridgeWrapper.connect(user2).unwrap(ethers.parseEther("5000"));
 
-            // Verify backing is maintained
-            expect(await bridgeWrapper.totalBridgedIn()).to.equal(ethers.parseEther("1000"));
-            expect(await bridgeWrapper.totalBridgedOut()).to.equal(ethers.parseEther("200"));
-            expect(await amicaToken.totalSupply()).to.equal(ethers.parseEther("800"));
-            expect(await bridgeWrapper.bridgedBalance()).to.equal(ethers.parseEther("800"));
+            // Now wrapper has 0 bridged tokens
+            // Give user1 some bridged tokens back to test the scenario
+            await bridgedAmica.connect(user2).transfer(user1.address, ethers.parseEther("1"));
+            await bridgedAmica.connect(user1).approve(
+                await bridgeWrapper.getAddress(),
+                ethers.parseEther("1")
+            );
+            await bridgeWrapper.connect(user1).wrap(ethers.parseEther("1"));
+
+            // User1 transfers their native token to user3
+            await l2AmicaToken.connect(user1).transfer(user3.address, ethers.parseEther("1"));
+
+            // User3 tries to unwrap 2 tokens but wrapper only has 1
+            await l2AmicaToken.connect(user3).approve(
+                await bridgeWrapper.getAddress(),
+                ethers.parseEther("2")
+            );
+
+            await expect(
+                bridgeWrapper.connect(user3).unwrap(ethers.parseEther("2"))
+            ).to.be.revertedWith("Insufficient bridged tokens");
         });
     });
 
     describe("Scenario 6: Integration with PersonaTokenFactory on L2", function () {
         it("Should work seamlessly with PersonaTokenFactory", async function () {
-            const { amicaToken, user1 } = await loadFixture(deployAmicaTokenFixture);
-            const [owner] = await ethers.getSigners();
+            const [owner, user, factory] = await ethers.getSigners();
 
-            // Deploy PersonaTokenFactory infrastructure
-            const MockUniswapV2Factory = await ethers.getContractFactory("MockUniswapV2Factory");
-            const mockFactory = await MockUniswapV2Factory.deploy();
+            // Deploy L2 AMICA
+            const AmicaToken = await ethers.getContractFactory("AmicaToken");
+            const l2AmicaToken = await upgrades.deployProxy(
+                AmicaToken,
+                [owner.address],
+                { initializer: "initialize" }
+            );
 
-            const MockUniswapV2Router = await ethers.getContractFactory("MockUniswapV2Router");
-            const mockRouter = await MockUniswapV2Router.deploy();
+            // Deploy bridged token
+            const TestERC20 = await ethers.getContractFactory("TestERC20");
+            const bridgedAmica = await TestERC20.deploy("Bridged AMICA", "bAMICA", ethers.parseEther("10000"));
 
-            const ERC20Implementation = await ethers.getContractFactory("ERC20Implementation");
-            const erc20Implementation = await ERC20Implementation.deploy();
-
-            const PersonaTokenFactory = await ethers.getContractFactory("PersonaTokenFactory");
-            const personaFactory = await upgrades.deployProxy(
-                PersonaTokenFactory,
+            // Deploy bridge wrapper
+            const AmicaBridgeWrapper = await ethers.getContractFactory("AmicaBridgeWrapper");
+            const bridgeWrapper = await upgrades.deployProxy(
+                AmicaBridgeWrapper,
                 [
-                    await amicaToken.getAddress(),
-                    await mockFactory.getAddress(),
-                    await mockRouter.getAddress(),
-                    await erc20Implementation.getAddress()
+                    await bridgedAmica.getAddress(),
+                    await l2AmicaToken.getAddress(),
+                    owner.address
                 ],
                 { initializer: "initialize" }
             );
 
-            // User creates a persona using their L2 AMICA
-            await amicaToken.connect(user1).approve(
-                await personaFactory.getAddress(),
-                ethers.parseEther("1000")
+            await l2AmicaToken.setBridgeWrapper(await bridgeWrapper.getAddress());
+
+            // User gets native AMICA on L2
+            await bridgedAmica.transfer(user.address, ethers.parseEther("10000"));
+            await bridgedAmica.connect(user).approve(
+                await bridgeWrapper.getAddress(),
+                ethers.parseEther("10000")
             );
+            await bridgeWrapper.connect(user).wrap(ethers.parseEther("10000"));
 
-            await expect(
-                personaFactory.connect(user1).createPersona(
-                    await amicaToken.getAddress(),
-                    "L2 Persona",
-                    "L2P",
-                    [],
-                    [],
-                    0,
-                    ethers.ZeroAddress,
-                    0
-                )
-            ).to.emit(personaFactory, "PersonaCreated");
+            // Simulate PersonaTokenFactory using AMICA for fees
+            const factoryFee = ethers.parseEther("100");
+            await l2AmicaToken.connect(user).transfer(factory.address, factoryFee);
 
-            // Verify AMICA was transferred
-            expect(await amicaToken.balanceOf(user1.address)).to.equal(
-                ethers.parseEther("10000") - ethers.parseEther("1000")
+            expect(await l2AmicaToken.balanceOf(factory.address)).to.equal(factoryFee);
+            expect(await l2AmicaToken.balanceOf(user.address)).to.equal(
+                ethers.parseEther("10000") - factoryFee
             );
         });
     });

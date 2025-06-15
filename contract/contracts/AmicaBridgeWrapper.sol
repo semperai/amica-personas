@@ -2,9 +2,10 @@
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 interface IAmicaToken {
     function mint(address to, uint256 amount) external;
@@ -15,30 +16,48 @@ interface IAmicaToken {
 /**
  * @title AmicaBridgeWrapper
  * @notice Handles conversion between bridged AMICA tokens and native chain AMICA tokens
- * @dev Allows seamless bridging while maintaining token functionality on each chain
+ * @dev Upgradeable version - allows seamless bridging while maintaining token functionality on each chain
  */
-contract AmicaBridgeWrapper is Ownable, ReentrancyGuard, Pausable {
+contract AmicaBridgeWrapper is
+    Initializable,
+    OwnableUpgradeable,
+    ReentrancyGuardUpgradeable,
+    PausableUpgradeable
+{
     // State variables
-    IERC20 public immutable bridgedAmicaToken;  // The bridged version from Ethereum
-    IAmicaToken public immutable nativeAmicaToken;  // The native AMICA on this chain
+    IERC20 public bridgedAmicaToken;  // The bridged version from Ethereum
+    IAmicaToken public nativeAmicaToken;  // The native AMICA on this chain
 
     // Track total bridged tokens for security
     uint256 public totalBridgedIn;
     uint256 public totalBridgedOut;
+
+    // Gap for future upgrades
+    uint256[50] private __gap;
 
     // Events
     event TokensWrapped(address indexed user, uint256 amount);
     event TokensUnwrapped(address indexed user, uint256 amount);
     event EmergencyWithdraw(address indexed token, address indexed to, uint256 amount);
 
-    constructor(
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
         address _bridgedAmicaToken,
         address _nativeAmicaToken,
         address _owner
-    ) Ownable(_owner) {
+    ) public initializer {
         require(_bridgedAmicaToken != address(0), "Invalid bridged token");
         require(_nativeAmicaToken != address(0), "Invalid native token");
         require(_bridgedAmicaToken != _nativeAmicaToken, "Tokens must be different");
+        require(_owner != address(0), "Invalid owner");
+
+        __Ownable_init(_owner);
+        __ReentrancyGuard_init();
+        __Pausable_init();
 
         bridgedAmicaToken = IERC20(_bridgedAmicaToken);
         nativeAmicaToken = IAmicaToken(_nativeAmicaToken);
@@ -87,7 +106,11 @@ contract AmicaBridgeWrapper is Ownable, ReentrancyGuard, Pausable {
      */
     function unwrap(uint256 amount) external nonReentrant whenNotPaused {
         require(amount > 0, "Amount must be greater than 0");
-        require(bridgedAmicaToken.balanceOf(address(this)) >= amount, "Insufficient bridged tokens");
+
+        require(
+            bridgedAmicaToken.balanceOf(address(this)) >= amount,
+            "Insufficient bridged tokens"
+        );
 
         // Burn native tokens from user
         nativeAmicaToken.burnFrom(msg.sender, amount);
@@ -136,5 +159,21 @@ contract AmicaBridgeWrapper is Ownable, ReentrancyGuard, Pausable {
         require(IERC20(token).transfer(to, amount), "Transfer failed");
 
         emit EmergencyWithdraw(token, to, amount);
+    }
+
+    /**
+     * @notice Update bridge tokens (only for emergency migration)
+     * @dev This is a sensitive function that should only be used in emergencies
+     */
+    function updateBridgeTokens(
+        address _bridgedAmicaToken,
+        address _nativeAmicaToken
+    ) external onlyOwner whenPaused {
+        require(_bridgedAmicaToken != address(0), "Invalid bridged token");
+        require(_nativeAmicaToken != address(0), "Invalid native token");
+        require(_bridgedAmicaToken != _nativeAmicaToken, "Tokens must be different");
+
+        bridgedAmicaToken = IERC20(_bridgedAmicaToken);
+        nativeAmicaToken = IAmicaToken(_nativeAmicaToken);
     }
 }

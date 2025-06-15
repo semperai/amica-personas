@@ -116,22 +116,37 @@ async function deployContracts(options: DeploymentOptions = {}): Promise<Extende
 
   // Deploy bridge wrapper if not mainnet
   let bridgeWrapperAddress: string | undefined;
+  let bridgeWrapperImplAddress: string | undefined;
+  let bridgeProxyAdminAddress: string | undefined;
+
   if (chainId !== 1 && options.bridgedAmicaAddress) {
     console.log("\n4️⃣ Deploying AmicaBridgeWrapper...");
     const AmicaBridgeWrapper = await ethers.getContractFactory("AmicaBridgeWrapper");
-    const bridgeWrapper = await AmicaBridgeWrapper.deploy(
-      options.bridgedAmicaAddress,
-      amicaAddress,
-      deployer.address,
+
+    // Deploy as upgradeable proxy
+    const bridgeWrapper = await upgrades.deployProxy(
+      AmicaBridgeWrapper,
+      [
+        options.bridgedAmicaAddress,
+        amicaAddress,
+        deployer.address
+      ],
       {
-        gasPrice: options.gasPrice,
-        gasLimit: options.gasLimit,
+        initializer: "initialize",
+        ...upgradeOptions
       }
     );
     await bridgeWrapper.waitForDeployment();
     bridgeWrapperAddress = await bridgeWrapper.getAddress();
+
+    // Get implementation and admin addresses for verification
+    bridgeWrapperImplAddress = await upgrades.erc1967.getImplementationAddress(bridgeWrapperAddress);
+    bridgeProxyAdminAddress = await upgrades.erc1967.getAdminAddress(bridgeWrapperAddress);
+
     txHashes.bridgeWrapper = bridgeWrapper.deploymentTransaction()?.hash;
-    console.log(`✅ AmicaBridgeWrapper deployed to: ${bridgeWrapperAddress}`);
+    console.log(`✅ AmicaBridgeWrapper proxy deployed to: ${bridgeWrapperAddress}`);
+    console.log(`   Implementation: ${bridgeWrapperImplAddress}`);
+    console.log(`   ProxyAdmin: ${bridgeProxyAdminAddress}`);
 
     // Set bridge wrapper in AmicaToken
     console.log("\n🔗 Setting bridge wrapper in AmicaToken...");
@@ -196,8 +211,9 @@ async function deployContracts(options: DeploymentOptions = {}): Promise<Extende
     amicaTokenImpl: amicaTokenImplAddress,
     personaFactory: personaFactoryAddress,
     personaFactoryImpl: personaFactoryImplAddress,
-    proxyAdmin: amicaProxyAdminAddress, // Both proxies should use the same admin
+    proxyAdmin: amicaProxyAdminAddress, // All proxies should use the same admin
     bridgeWrapper: bridgeWrapperAddress,
+    bridgeWrapperImpl: bridgeWrapperImplAddress,
     erc20Implementation: erc20ImplAddress,
     bridgedAmicaAddress: options.bridgedAmicaAddress,
     stakingRewards: stakingRewardsAddress,
@@ -268,11 +284,13 @@ async function verifyContracts(
     });
   }
 
-  if (addresses.bridgeWrapper && addresses.bridgedAmicaAddress) {
+  // Add bridge wrapper implementation verification
+  if (addresses.bridgeWrapperImpl) {
     verifications.push({
-      name: "AmicaBridgeWrapper",
-      address: addresses.bridgeWrapper,
-      args: [addresses.bridgedAmicaAddress, addresses.amicaToken!, deployerAddress],
+      name: "AmicaBridgeWrapper Implementation",
+      address: addresses.bridgeWrapperImpl,
+      args: [],
+      contract: "contracts/AmicaBridgeWrapper.sol:AmicaBridgeWrapper"
     });
   }
 
@@ -305,6 +323,14 @@ async function verifyContracts(
     await verifyContract(addresses.personaFactory!, [], "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy");
   } catch (error) {
     console.error("Failed to verify PersonaTokenFactory proxy:", error);
+  }
+
+  if (addresses.bridgeWrapper) {
+    try {
+      await verifyContract(addresses.bridgeWrapper, [], "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy");
+    } catch (error) {
+      console.error("Failed to verify AmicaBridgeWrapper proxy:", error);
+    }
   }
 }
 

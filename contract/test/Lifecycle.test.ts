@@ -18,18 +18,20 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             { initializer: "initialize" }
         );
 
-        // Since we're not on mainnet, we need to set up a bridge wrapper to mint tokens
-        const AmicaBridgeWrapper = await ethers.getContractFactory("AmicaBridgeWrapper");
-
         // Deploy a mock bridged token
         const TestERC20 = await ethers.getContractFactory("TestERC20");
         const bridgedAmica = await TestERC20.deploy("Bridged Amica", "BAMICA", ethers.parseEther("100000000"));
 
-        // Deploy bridge wrapper
-        const bridgeWrapper = await AmicaBridgeWrapper.deploy(
-            await bridgedAmica.getAddress(),
-            await amicaToken.getAddress(),
-            owner.address
+        // Deploy AmicaBridgeWrapper using upgrades plugin
+        const AmicaBridgeWrapper = await ethers.getContractFactory("AmicaBridgeWrapper");
+        const bridgeWrapper = await upgrades.deployProxy(
+            AmicaBridgeWrapper,
+            [
+                await bridgedAmica.getAddress(),
+                await amicaToken.getAddress(),
+                owner.address
+            ],
+            { initializer: "initialize" }
         );
 
         // Set bridge wrapper in AmicaToken
@@ -110,7 +112,9 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             buyer1,
             buyer2,
             buyer3,
-            lpHolder
+            lpHolder,
+            bridgeWrapper,
+            bridgedAmica
         };
     }
 
@@ -778,6 +782,45 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             console.log(`  - Total fees: ${ethers.formatEther(totalFees)} AMICA`);
             console.log(`  - Creator received: ${ethers.formatEther(creatorFees)} AMICA`);
             console.log(`  - AMICA protocol received: ${ethers.formatEther(amicaFees)} AMICA`);
+        });
+    });
+
+    describe("Bridge Wrapper Integration", function () {
+        it("Should verify bridge wrapper functionality in the full system", async function () {
+            const { amicaToken, bridgeWrapper, bridgedAmica, owner } =
+                await loadFixture(deployFullSystemFixture);
+
+            console.log("\n=== Bridge Wrapper Integration ===");
+
+            // Check initial state
+            const nativeSupply = await amicaToken.totalSupply();
+            const bridgedBalance = await bridgeWrapper.bridgedBalance();
+
+            console.log(`✓ Native AMICA supply: ${ethers.formatEther(nativeSupply)}`);
+            console.log(`✓ Bridged tokens in wrapper: ${ethers.formatEther(bridgedBalance)}`);
+
+            // Verify bridge wrapper is set correctly
+            const setBridgeWrapper = await amicaToken.bridgeWrapper();
+            expect(setBridgeWrapper).to.equal(await bridgeWrapper.getAddress());
+            console.log("✓ Bridge wrapper correctly set in AmicaToken");
+
+            // Test unwrapping (burning native to get bridged back)
+            const unwrapAmount = ethers.parseEther("1000");
+            await amicaToken.connect(owner).approve(await bridgeWrapper.getAddress(), unwrapAmount);
+
+            const ownerNativeBefore = await amicaToken.balanceOf(owner.address);
+            const ownerBridgedBefore = await bridgedAmica.balanceOf(owner.address);
+
+            await bridgeWrapper.connect(owner).unwrap(unwrapAmount);
+
+            const ownerNativeAfter = await amicaToken.balanceOf(owner.address);
+            const ownerBridgedAfter = await bridgedAmica.balanceOf(owner.address);
+
+            expect(ownerNativeAfter).to.equal(ownerNativeBefore - unwrapAmount);
+            expect(ownerBridgedAfter).to.equal(ownerBridgedBefore + unwrapAmount);
+
+            console.log(`✓ Successfully unwrapped ${ethers.formatEther(unwrapAmount)} tokens`);
+            console.log("✓ Native tokens burned, bridged tokens received");
         });
     });
 });
