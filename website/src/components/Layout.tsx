@@ -1,8 +1,7 @@
 // src/components/Layout.tsx
 import { Yomogi } from 'next/font/google'
 import clsx from 'clsx';
-
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -21,11 +20,11 @@ const yomogi = Yomogi({
   display: 'swap',
 });
 
-
 const Layout = ({ children }: LayoutProps) => {
   const router = useRouter();
   const { isOnline, isChecking, isMockMode } = useApiStatus();
   const { chainId } = useAccount();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isActive = (path: string) => {
     return router.pathname === path;
@@ -33,6 +32,14 @@ const Layout = ({ children }: LayoutProps) => {
 
   // Check if bridge is available on current chain
   const showBridge = chainId && hasBridgeWrapper(chainId);
+
+  const navItems = [
+    { href: '/', label: 'Explore' },
+    { href: '/create', label: 'Create' },
+    { href: '/portfolio', label: 'Portfolio' },
+    ...(showBridge ? [{ href: '/bridge', label: 'Bridge' }] : []),
+    { href: '/staking', label: 'Staking' },
+  ];
 
   return (
     <div className={clsx("min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900", yomogi.className)}>
@@ -57,74 +64,71 @@ const Layout = ({ children }: LayoutProps) => {
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center space-x-12">
               <Link href="/" className="flex items-center group">
-                <span className="text-2xl font-extralight text-white tracking-wider group-hover:text-white/80 transition-colors">AMICA</span>
+                <span className="text-2xl font-extrabold text-white tracking-wider group-hover:text-white/80 transition-colors">AMICA</span>
               </Link>
 
+              {/* Desktop Navigation */}
               <div className="hidden md:flex items-center">
-                <div className="flex items-center bg-white/10 backdrop-blur-md rounded-full p-1">
-                  <Link
-                    href="/"
-                    className={`px-5 py-2 rounded-full text-sm font-light transition-all duration-300 ${
-                      isActive('/')
-                        ? 'bg-white/20 text-white shadow-lg'
-                        : 'text-white/70 hover:text-white hover:bg-white/10'
-                    }`}
-                  >
-                    Explore
-                  </Link>
-                  <Link
-                    href="/create"
-                    className={`px-5 py-2 rounded-full text-sm font-light transition-all duration-300 ${
-                      isActive('/create')
-                        ? 'bg-white/20 text-white shadow-lg'
-                        : 'text-white/70 hover:text-white hover:bg-white/10'
-                    }`}
-                  >
-                    Create
-                  </Link>
-                  <Link
-                    href="/portfolio"
-                    className={`px-5 py-2 rounded-full text-sm font-light transition-all duration-300 ${
-                      isActive('/portfolio')
-                        ? 'bg-white/20 text-white shadow-lg'
-                        : 'text-white/70 hover:text-white hover:bg-white/10'
-                    }`}
-                  >
-                    Portfolio
-                  </Link>
-                  {showBridge && (
+                <div className="flex items-center bg-white/10 backdrop-blur-md rounded-full p-1 gap-1">
+                  {navItems.map((item) => (
                     <Link
-                      href="/bridge"
+                      key={item.href}
+                      href={item.href}
                       className={`px-5 py-2 rounded-full text-sm font-light transition-all duration-300 ${
-                        isActive('/bridge')
+                        isActive(item.href)
                           ? 'bg-white/20 text-white shadow-lg'
                           : 'text-white/70 hover:text-white hover:bg-white/10'
                       }`}
                     >
-                      Bridge
+                      {item.label}
                     </Link>
-                  )}
-                  <Link
-                    href="/staking"
-                    className={`px-5 py-2 rounded-full text-sm font-light transition-all duration-300 ${
-                      isActive('/staking')
-                        ? 'bg-white/20 text-white shadow-lg'
-                        : 'text-white/70 hover:text-white hover:bg-white/10'
-                    }`}
-                  >
-                    Staking
-                  </Link>
+                  ))}
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center">
-              <div className="bg-white/10 backdrop-blur-md rounded-full p-1">
-                <ConnectButton />
-              </div>
+            <div className="flex items-center gap-4">
+              {/* Mobile Menu Button */}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="md:hidden text-white/70 hover:text-white p-2"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {mobileMenuOpen ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  )}
+                </svg>
+              </button>
+
+              {/* Connect Button - no wrapper div */}
+              <ConnectButton />
             </div>
           </div>
         </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden absolute top-full left-0 right-0 bg-slate-900/95 backdrop-blur-xl border-b border-white/10">
+            <div className="px-6 py-4 space-y-2">
+              {navItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`block px-4 py-3 rounded-lg text-sm font-light transition-all duration-300 ${
+                    isActive(item.href)
+                      ? 'bg-white/20 text-white'
+                      : 'text-white/70 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Main Content */}
