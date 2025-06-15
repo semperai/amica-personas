@@ -1,6 +1,7 @@
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
+import { setupCrossChainScenario } from "./shared/fixtures";
 
 describe("AmicaBridgeWrapper", function () {
     async function deployBridgeWrapperFixture() {
@@ -14,9 +15,13 @@ describe("AmicaBridgeWrapper", function () {
             ethers.parseEther("1000000")
         );
 
-        // Deploy native AMICA token (0 supply initially)
+        // Deploy native AMICA token using upgrades plugin (0 supply initially)
         const AmicaToken = await ethers.getContractFactory("AmicaToken");
-        const nativeAmica = await AmicaToken.deploy(owner.address);
+        const nativeAmica = await upgrades.deployProxy(
+            AmicaToken,
+            [owner.address],
+            { initializer: "initialize" }
+        );
 
         // Deploy bridge wrapper
         const AmicaBridgeWrapper = await ethers.getContractFactory("AmicaBridgeWrapper");
@@ -54,7 +59,11 @@ describe("AmicaBridgeWrapper", function () {
         it("Should fail deployment with zero address for bridged token", async function () {
             const [owner] = await ethers.getSigners();
             const AmicaToken = await ethers.getContractFactory("AmicaToken");
-            const nativeAmica = await AmicaToken.deploy(owner.address);
+            const nativeAmica = await upgrades.deployProxy(
+                AmicaToken,
+                [owner.address],
+                { initializer: "initialize" }
+            );
 
             const AmicaBridgeWrapper = await ethers.getContractFactory("AmicaBridgeWrapper");
             await expect(
@@ -558,6 +567,36 @@ describe("AmicaBridgeWrapper", function () {
             await bridgedAmica.transfer(await bridgeWrapper.getAddress(), extraAmount);
 
             expect(await bridgeWrapper.bridgedBalance()).to.equal(wrapAmount + extraAmount);
+        });
+    });
+
+    describe("Integration with shared fixtures", function () {
+        it("Should work with setupCrossChainScenario fixture", async function () {
+            const { l2AmicaToken, bridgedAmica, bridgeWrapper, user1 } = await loadFixture(setupCrossChainScenario);
+
+            // Give user some bridged tokens
+            await bridgedAmica.transfer(user1.address, ethers.parseEther("5000"));
+
+            // Wrap tokens
+            await bridgedAmica.connect(user1).approve(
+                await bridgeWrapper.getAddress(),
+                ethers.parseEther("5000")
+            );
+            await bridgeWrapper.connect(user1).wrap(ethers.parseEther("5000"));
+
+            // Verify native tokens minted
+            expect(await l2AmicaToken.balanceOf(user1.address)).to.equal(ethers.parseEther("5000"));
+
+            // Unwrap half
+            await l2AmicaToken.connect(user1).approve(
+                await bridgeWrapper.getAddress(),
+                ethers.parseEther("2500")
+            );
+            await bridgeWrapper.connect(user1).unwrap(ethers.parseEther("2500"));
+
+            // Verify balances
+            expect(await l2AmicaToken.balanceOf(user1.address)).to.equal(ethers.parseEther("2500"));
+            expect(await bridgedAmica.balanceOf(user1.address)).to.equal(ethers.parseEther("2500"));
         });
     });
 });

@@ -1,7 +1,8 @@
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import {
+    deployAmicaTokenFixture,
     deployPersonaTokenFactoryFixture,
 } from "./shared/fixtures";
 
@@ -10,44 +11,6 @@ describe("AmicaToken", function () {
     // Constants
     const TOTAL_SUPPLY = ethers.parseEther("1000000000");
     const PRECISION = ethers.parseEther("1");
-
-    // Updated fixture to handle bridge wrapper
-    async function deployAmicaTokenFixture() {
-        const [owner, user1, user2, user3, user4] = await ethers.getSigners();
-
-        const AmicaToken = await ethers.getContractFactory("AmicaToken");
-        const amicaToken = await AmicaToken.deploy(owner.address);
-
-        // Since we're not on mainnet, set up bridge wrapper to mint tokens
-        const AmicaBridgeWrapper = await ethers.getContractFactory("AmicaBridgeWrapper");
-
-        // Deploy a mock bridged token
-        const TestERC20 = await ethers.getContractFactory("TestERC20");
-        const bridgedAmica = await TestERC20.deploy("Bridged Amica", "BAMICA", TOTAL_SUPPLY);
-
-        // Deploy bridge wrapper
-        const bridgeWrapper = await AmicaBridgeWrapper.deploy(
-            await bridgedAmica.getAddress(),
-            await amicaToken.getAddress(),
-            owner.address
-        );
-
-        // Set bridge wrapper in AmicaToken
-        await amicaToken.setBridgeWrapper(await bridgeWrapper.getAddress());
-
-        // Wrap bridged tokens to get native AMICA
-        await bridgedAmica.approve(await bridgeWrapper.getAddress(), TOTAL_SUPPLY);
-        await bridgeWrapper.wrap(TOTAL_SUPPLY);
-
-        // Now amicaToken has the total supply, transfer to users
-        const userAmount = ethers.parseEther("10000");
-        await amicaToken.transfer(user1.address, userAmount);
-        await amicaToken.transfer(user2.address, userAmount);
-        await amicaToken.transfer(user3.address, userAmount);
-        await amicaToken.transfer(user4.address, userAmount);
-
-        return { amicaToken, bridgeWrapper, owner, user1, user2, user3, user4 };
-    }
 
     async function deployWithTokensFixture() {
         const { amicaToken, bridgeWrapper, owner, user1, user2, user3, user4 } = await loadFixture(deployAmicaTokenFixture);

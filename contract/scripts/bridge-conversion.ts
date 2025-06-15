@@ -149,14 +149,15 @@ async function emergencyWithdraw() {
     const bridgeWrapperAddress = process.env.BRIDGE_WRAPPER_ADDRESS;
     const tokenAddress = process.env.EMERGENCY_TOKEN_ADDRESS;
     const recipientAddress = process.env.EMERGENCY_RECIPIENT || signer.address;
-    const amount = process.env.EMERGENCY_AMOUNT || "0";
+    let amount = process.env.EMERGENCY_AMOUNT || "0";
 
     if (!bridgeWrapperAddress || !tokenAddress) {
         throw new Error("Please set BRIDGE_WRAPPER_ADDRESS and EMERGENCY_TOKEN_ADDRESS environment variables");
     }
 
     const bridgeWrapper = await ethers.getContractAt("AmicaBridgeWrapper", bridgeWrapperAddress);
-    const token = await ethers.getContractAt("IERC20", tokenAddress);
+    // Get the token contract with the full ERC20 interface that includes symbol()
+    const token = await ethers.getContractAt("ERC20", tokenAddress);
     const tokenSymbol = await token.symbol();
 
     console.log("\n⚠️  EMERGENCY WITHDRAW");
@@ -172,23 +173,23 @@ async function emergencyWithdraw() {
         const requiredBalance = totalIn - totalOut;
         const currentBalance = await token.balanceOf(bridgeWrapperAddress);
         const excess = currentBalance > requiredBalance ? currentBalance - requiredBalance : 0n;
-        
+
         console.log("\nBridged AMICA Analysis:");
         console.log(`Current balance: ${formatEther(currentBalance)}`);
         console.log(`Required balance: ${formatEther(requiredBalance)}`);
         console.log(`Excess (withdrawable): ${formatEther(excess)}`);
-        
+
         if (amount === "0") {
             amount = excess.toString();
         }
     }
 
     const withdrawAmount = parseEther(amount);
-    
+
     console.log("\nExecuting emergency withdraw...");
     const tx = await bridgeWrapper.emergencyWithdraw(tokenAddress, recipientAddress, withdrawAmount);
     const receipt = await tx.wait();
-    
+
     console.log("✅ Emergency withdraw complete!");
     console.log("Transaction hash:", receipt?.hash);
 }

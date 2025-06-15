@@ -12,29 +12,33 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
 
         // Deploy AmicaToken
         const AmicaToken = await ethers.getContractFactory("AmicaToken");
-        const amicaToken = await AmicaToken.deploy(owner.address);
+        const amicaToken = await upgrades.deployProxy(
+            AmicaToken,
+            [owner.address],
+            { initializer: "initialize" }
+        );
 
         // Since we're not on mainnet, we need to set up a bridge wrapper to mint tokens
         const AmicaBridgeWrapper = await ethers.getContractFactory("AmicaBridgeWrapper");
-        
+
         // Deploy a mock bridged token
         const TestERC20 = await ethers.getContractFactory("TestERC20");
         const bridgedAmica = await TestERC20.deploy("Bridged Amica", "BAMICA", ethers.parseEther("100000000"));
-        
+
         // Deploy bridge wrapper
         const bridgeWrapper = await AmicaBridgeWrapper.deploy(
             await bridgedAmica.getAddress(),
             await amicaToken.getAddress(),
             owner.address
         );
-        
+
         // Set bridge wrapper in AmicaToken
         await amicaToken.setBridgeWrapper(await bridgeWrapper.getAddress());
-        
+
         // Now we can mint native AMICA by wrapping bridged tokens
         // Give owner bridged tokens
         await bridgedAmica.transfer(owner.address, ethers.parseEther("50000000"));
-        
+
         // Wrap bridged tokens to get native AMICA
         await bridgedAmica.approve(await bridgeWrapper.getAddress(), ethers.parseEther("50000000"));
         await bridgeWrapper.wrap(ethers.parseEther("50000000"));

@@ -1,10 +1,10 @@
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import { Contract } from "ethers";
 import { uniswapAddresses } from "../config/uniswap";
 import { networks } from "../config/networks";
 import { DeploymentManager } from "./utils/deployment-manager";
 import { verifyContract } from "./utils/verify-helper";
-import { DeploymentAddresses } from "../types/deployment";
+import { ExtendedDeploymentAddresses } from "../types/deployment";
 
 const deploymentManager = new DeploymentManager();
 
@@ -17,42 +17,62 @@ interface DeploymentOptions {
   stakingRewardsPerBlock?: string;
 }
 
-async function deployContracts(options: DeploymentOptions = {}): Promise<DeploymentAddresses> {
+async function deployContracts(options: DeploymentOptions = {}): Promise<ExtendedDeploymentAddresses> {
   console.log("🚀 Starting deployment...");
-  
+
   const [deployer] = await ethers.getSigners();
   const network = await ethers.provider.getNetwork();
   const chainId = Number(network.chainId);
-  
+
   console.log(`📍 Network: ${networks[getNetworkName(chainId)]?.name || "Unknown"} (Chain ID: ${chainId})`);
   console.log(`👤 Deployer: ${deployer.address}`);
   console.log(`💰 Balance: ${ethers.formatEther(await ethers.provider.getBalance(deployer.address))} ETH`);
-  
+
   // Get Uniswap addresses for this chain
   const uniswap = uniswapAddresses[chainId];
   if (!uniswap) {
     throw new Error(`Uniswap addresses not configured for chain ${chainId}`);
   }
-  
+
   console.log("\n📋 Uniswap Configuration:");
   console.log(`  Factory: ${uniswap.factory}`);
   console.log(`  Router: ${uniswap.router}`);
-  
+
   const startTime = Date.now();
   const txHashes: any = {};
-  
-  // Deploy AmicaToken
+
+  // Deploy AmicaToken with upgradeable proxy
   console.log("\n1️⃣ Deploying AmicaToken...");
   const AmicaToken = await ethers.getContractFactory("AmicaToken");
-  const amicaToken = await AmicaToken.deploy(deployer.address, {
-    gasPrice: options.gasPrice,
-    gasLimit: options.gasLimit,
-  });
+
+  // Set gas options for upgrades plugin
+  const upgradeOptions = options.gasPrice || options.gasLimit ? {
+    txOverrides: {
+      gasPrice: options.gasPrice,
+      gasLimit: options.gasLimit,
+    }
+  } : {};
+
+  const amicaToken = await upgrades.deployProxy(
+    AmicaToken,
+    [deployer.address],
+    {
+      initializer: "initialize",
+      ...upgradeOptions
+    }
+  );
   await amicaToken.waitForDeployment();
   const amicaAddress = await amicaToken.getAddress();
+
+  // Get implementation and admin addresses for verification
+  const amicaTokenImplAddress = await upgrades.erc1967.getImplementationAddress(amicaAddress);
+  const amicaProxyAdminAddress = await upgrades.erc1967.getAdminAddress(amicaAddress);
+
   txHashes.amicaToken = amicaToken.deploymentTransaction()?.hash;
-  console.log(`✅ AmicaToken deployed to: ${amicaAddress}`);
-  
+  console.log(`✅ AmicaToken proxy deployed to: ${amicaAddress}`);
+  console.log(`   Implementation: ${amicaTokenImplAddress}`);
+  console.log(`   ProxyAdmin: ${amicaProxyAdminAddress}`);
+
   // Deploy ERC20Implementation
   console.log("\n2️⃣ Deploying ERC20Implementation...");
   const ERC20Implementation = await ethers.getContractFactory("ERC20Implementation");
@@ -64,44 +84,36 @@ async function deployContracts(options: DeploymentOptions = {}): Promise<Deploym
   const erc20ImplAddress = await erc20Implementation.getAddress();
   txHashes.erc20Implementation = erc20Implementation.deploymentTransaction()?.hash;
   console.log(`✅ ERC20Implementation deployed to: ${erc20ImplAddress}`);
-  
-  // Deploy PersonaTokenFactory
+
+  // Deploy PersonaTokenFactory with upgradeable proxy
   console.log("\n3️⃣ Deploying PersonaTokenFactory...");
   const PersonaTokenFactory = await ethers.getContractFactory("PersonaTokenFactory");
-  const personaFactoryImpl = await PersonaTokenFactory.deploy({
-    gasPrice: options.gasPrice,
-    gasLimit: options.gasLimit,
-  });
-  await personaFactoryImpl.waitForDeployment();
-  
-  // Deploy proxy
-  const ProxyAdmin = await ethers.getContractFactory("ProxyAdmin");
-  const TransparentUpgradeableProxy = await ethers.getContractFactory("TransparentUpgradeableProxy");
-  
-  const proxyAdmin = await ProxyAdmin.deploy(deployer.address);
-  await proxyAdmin.waitForDeployment();
-  
-  const initData = PersonaTokenFactory.interface.encodeFunctionData("initialize", [
-    amicaAddress,
-    uniswap.factory,
-    uniswap.router,
-    erc20ImplAddress,
-  ]);
-  
-  const proxy = await TransparentUpgradeableProxy.deploy(
-    await personaFactoryImpl.getAddress(),
-    await proxyAdmin.getAddress(),
-    initData,
+
+  const personaFactory = await upgrades.deployProxy(
+    PersonaTokenFactory,
+    [
+      amicaAddress,
+      uniswap.factory,
+      uniswap.router,
+      erc20ImplAddress,
+    ],
     {
-      gasPrice: options.gasPrice,
-      gasLimit: options.gasLimit,
+      initializer: "initialize",
+      ...upgradeOptions
     }
   );
-  await proxy.waitForDeployment();
-  const personaFactoryAddress = await proxy.getAddress();
-  txHashes.personaFactory = proxy.deploymentTransaction()?.hash;
-  console.log(`✅ PersonaTokenFactory deployed to: ${personaFactoryAddress}`);
-  
+  await personaFactory.waitForDeployment();
+  const personaFactoryAddress = await personaFactory.getAddress();
+
+  // Get implementation address for verification
+  const personaFactoryImplAddress = await upgrades.erc1967.getImplementationAddress(personaFactoryAddress);
+  const personaProxyAdminAddress = await upgrades.erc1967.getAdminAddress(personaFactoryAddress);
+
+  txHashes.personaFactory = personaFactory.deploymentTransaction()?.hash;
+  console.log(`✅ PersonaTokenFactory proxy deployed to: ${personaFactoryAddress}`);
+  console.log(`   Implementation: ${personaFactoryImplAddress}`);
+  console.log(`   ProxyAdmin: ${personaProxyAdminAddress}`);
+
   // Deploy bridge wrapper if not mainnet
   let bridgeWrapperAddress: string | undefined;
   if (chainId !== 1 && options.bridgedAmicaAddress) {
@@ -120,26 +132,29 @@ async function deployContracts(options: DeploymentOptions = {}): Promise<Deploym
     bridgeWrapperAddress = await bridgeWrapper.getAddress();
     txHashes.bridgeWrapper = bridgeWrapper.deploymentTransaction()?.hash;
     console.log(`✅ AmicaBridgeWrapper deployed to: ${bridgeWrapperAddress}`);
-    
+
     // Set bridge wrapper in AmicaToken
     console.log("\n🔗 Setting bridge wrapper in AmicaToken...");
     const tx = await amicaToken.setBridgeWrapper(bridgeWrapperAddress);
     await tx.wait();
     console.log("✅ Bridge wrapper set");
   }
-  
+
   // Deploy PersonaStakingRewards if requested
   let stakingRewardsAddress: string | undefined;
+  let rewardsPerBlock: bigint | undefined;
+  let startBlock: number | undefined;
+
   if (options.deployStaking) {
     console.log("\n5️⃣ Deploying PersonaStakingRewards...");
     const PersonaStakingRewards = await ethers.getContractFactory("PersonaStakingRewards");
-    const rewardsPerBlock = options.stakingRewardsPerBlock ? 
-      ethers.parseEther(options.stakingRewardsPerBlock) : 
+    rewardsPerBlock = options.stakingRewardsPerBlock ?
+      ethers.parseEther(options.stakingRewardsPerBlock) :
       ethers.parseEther("10"); // Default 10 AMICA per block
-    
+
     const currentBlock = await ethers.provider.getBlockNumber();
-    const startBlock = currentBlock + 100; // Start rewards 100 blocks from now
-    
+    startBlock = currentBlock + 100; // Start rewards 100 blocks from now
+
     const stakingRewards = await PersonaStakingRewards.deploy(
       amicaAddress,
       personaFactoryAddress,
@@ -154,94 +169,142 @@ async function deployContracts(options: DeploymentOptions = {}): Promise<Deploym
     stakingRewardsAddress = await stakingRewards.getAddress();
     txHashes.stakingRewards = stakingRewards.deploymentTransaction()?.hash;
     console.log(`✅ PersonaStakingRewards deployed to: ${stakingRewardsAddress}`);
-    
+
     // Set staking rewards in PersonaTokenFactory
     console.log("\n🔗 Setting staking rewards in PersonaTokenFactory...");
-    const personaFactory = await ethers.getContractAt("PersonaTokenFactory", personaFactoryAddress);
     const tx = await personaFactory.setStakingRewards(stakingRewardsAddress);
     await tx.wait();
     console.log("✅ Staking rewards set");
   }
-  
-  // If mainnet, withdraw initial supply
-  if (chainId === 1) {
+
+  // If mainnet (or mainnet mock), withdraw initial supply
+  const isMainnet = chainId === 1;
+  if (isMainnet) {
     console.log("\n💰 Withdrawing initial AMICA supply to deployer...");
     const totalSupply = await amicaToken.TOTAL_SUPPLY();
     const tx = await amicaToken.withdraw(deployer.address, totalSupply);
     await tx.wait();
     console.log(`✅ ${ethers.formatEther(totalSupply)} AMICA withdrawn to deployer`);
   }
-  
+
   const deploymentTime = (Date.now() - startTime) / 1000;
   console.log(`\n⏱️  Deployment completed in ${deploymentTime.toFixed(2)} seconds`);
-  
+
+  // Create addresses object with proper typing
+  const addresses = {
+    amicaToken: amicaAddress,
+    amicaTokenImpl: amicaTokenImplAddress,
+    personaFactory: personaFactoryAddress,
+    personaFactoryImpl: personaFactoryImplAddress,
+    proxyAdmin: amicaProxyAdminAddress, // Both proxies should use the same admin
+    bridgeWrapper: bridgeWrapperAddress,
+    erc20Implementation: erc20ImplAddress,
+    bridgedAmicaAddress: options.bridgedAmicaAddress,
+    stakingRewards: stakingRewardsAddress,
+  } as ExtendedDeploymentAddresses;
+
   // Save deployment
   const deployment = {
     chainId,
     chainName: getNetworkName(chainId),
-    addresses: {
-      amicaToken: amicaAddress,
-      personaFactory: personaFactoryAddress,
-      bridgeWrapper: bridgeWrapperAddress,
-      erc20Implementation: erc20ImplAddress,
-      bridgedAmicaAddress: options.bridgedAmicaAddress,
-      stakingRewards: stakingRewardsAddress,
-    },
+    addresses,
     blockNumber: await ethers.provider.getBlockNumber(),
     timestamp: new Date().toISOString(),
     deployer: deployer.address,
     transactionHashes: txHashes,
   };
-  
+
   await deploymentManager.saveDeployment(deployment);
-  
+
   // Verify contracts if requested
   if (options.verify) {
     console.log("\n🔍 Starting contract verification...");
-    await verifyContracts(deployment.addresses, deployer.address, rewardsPerBlock, startBlock);
+    await verifyContracts(addresses, deployer.address, rewardsPerBlock, startBlock);
   }
-  
-  return deployment.addresses;
+
+  return addresses;
 }
 
 async function verifyContracts(
-  addresses: DeploymentAddresses, 
+  addresses: ExtendedDeploymentAddresses,
   deployerAddress: string,
   rewardsPerBlock?: bigint,
   startBlock?: number
 ) {
-  const verifications = [
+  interface VerificationItem {
+    name: string;
+    address: string;
+    args: any[];
+    contract?: string;
+  }
+
+  const verifications: VerificationItem[] = [
     {
-      name: "AmicaToken",
-      address: addresses.amicaToken,
-      args: [deployerAddress],
+      name: "AmicaToken Implementation",
+      address: addresses.amicaTokenImpl!,
+      args: [],
+      contract: "contracts/AmicaToken.sol:AmicaToken"
+    },
+    {
+      name: "PersonaTokenFactory Implementation",
+      address: addresses.personaFactoryImpl!,
+      args: [],
+      contract: "contracts/PersonaTokenFactory.sol:PersonaTokenFactory"
     },
     {
       name: "ERC20Implementation",
-      address: addresses.erc20Implementation,
+      address: addresses.erc20Implementation!,
       args: [],
     },
   ];
-  
+
+  // Verify proxy admin if needed
+  if (addresses.proxyAdmin) {
+    verifications.push({
+      name: "ProxyAdmin",
+      address: addresses.proxyAdmin,
+      args: [deployerAddress],
+      contract: "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol:ProxyAdmin"
+    });
+  }
+
   if (addresses.bridgeWrapper && addresses.bridgedAmicaAddress) {
     verifications.push({
       name: "AmicaBridgeWrapper",
       address: addresses.bridgeWrapper,
-      args: [addresses.bridgedAmicaAddress, addresses.amicaToken, deployerAddress],
+      args: [addresses.bridgedAmicaAddress, addresses.amicaToken!, deployerAddress],
     });
   }
-  
+
   if (addresses.stakingRewards && rewardsPerBlock && startBlock) {
     verifications.push({
       name: "PersonaStakingRewards",
       address: addresses.stakingRewards,
-      args: [addresses.amicaToken, addresses.personaFactory, rewardsPerBlock, startBlock],
+      args: [addresses.amicaToken!, addresses.personaFactory!, rewardsPerBlock, startBlock],
     });
   }
-  
-  for (const { name, address, args } of verifications) {
-    console.log(`\nVerifying ${name}...`);
-    await verifyContract(address, args);
+
+  for (const verification of verifications) {
+    console.log(`\nVerifying ${verification.name}...`);
+    try {
+      await verifyContract(verification.address, verification.args, verification.contract);
+    } catch (error) {
+      console.error(`Failed to verify ${verification.name}:`, error);
+    }
+  }
+
+  // Verify proxies separately
+  console.log("\nVerifying proxy contracts...");
+  try {
+    await verifyContract(addresses.amicaToken!, [], "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy");
+  } catch (error) {
+    console.error("Failed to verify AmicaToken proxy:", error);
+  }
+
+  try {
+    await verifyContract(addresses.personaFactory!, [], "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy");
+  } catch (error) {
+    console.error("Failed to verify PersonaTokenFactory proxy:", error);
   }
 }
 
@@ -254,7 +317,7 @@ function getNetworkName(chainId: number): string {
 async function main() {
   const args = process.argv.slice(2);
   const options: DeploymentOptions = {};
-  
+
   // Parse command line arguments
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
@@ -278,7 +341,7 @@ async function main() {
         break;
     }
   }
-  
+
   // Validate bridged AMICA requirement for non-mainnet
   const chainId = Number((await ethers.provider.getNetwork()).chainId);
   if (chainId !== 1 && !options.bridgedAmicaAddress && !process.env.BRIDGED_AMICA_ADDRESS) {
@@ -286,12 +349,12 @@ async function main() {
     console.error("   Use --bridged-amica <address> or set BRIDGED_AMICA_ADDRESS env var");
     process.exit(1);
   }
-  
+
   // Use env var if not provided via CLI
   if (!options.bridgedAmicaAddress && process.env.BRIDGED_AMICA_ADDRESS) {
     options.bridgedAmicaAddress = process.env.BRIDGED_AMICA_ADDRESS;
   }
-  
+
   await deployContracts(options);
 }
 

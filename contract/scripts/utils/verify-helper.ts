@@ -1,31 +1,30 @@
 import { run } from "hardhat";
 
 export async function verifyContract(
-  address: string,
-  constructorArgs: any[],
-  contractPath?: string
-): Promise<boolean> {
+  contractAddress: string,
+  constructorArguments: any[],
+  contract?: string
+): Promise<void> {
+  console.log(`Verifying contract at ${contractAddress}...`);
+
   try {
-    console.log(`Verifying contract at ${address}...`);
-    
     const verifyArgs: any = {
-      address,
-      constructorArguments: constructorArgs,
+      address: contractAddress,
+      constructorArguments: constructorArguments,
     };
-    
-    if (contractPath) {
-      verifyArgs.contract = contractPath;
+
+    if (contract) {
+      verifyArgs.contract = contract;
     }
-    
+
     await run("verify:verify", verifyArgs);
     console.log("✅ Contract verified successfully!");
-    return true;
   } catch (error: any) {
     if (error.message.toLowerCase().includes("already verified")) {
       console.log("✅ Contract is already verified!");
-      return true;
+    } else {
+      console.error("❌ Verification failed:", error.message);
+      throw error;
     }
-    console.error("❌ Verification failed:", error.message);
-    return false;
   }
 }

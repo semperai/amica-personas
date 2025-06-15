@@ -11,12 +11,21 @@
     "moduleResolution": "node",
     "outDir": "./dist",
     "rootDir": "./",
-    "typeRoots": ["./node_modules/@types", "./typechain-types"]
+    "typeRoots": ["./node_modules/@types"],
+    "types": ["node", "mocha", "chai"],
+    "noEmit": true
   },
   "include": [
-    "./scripts",
-    "./test",
-    "./typechain-types"
+    "./scripts/**/*",
+    "./test/**/*",
+    "./typechain-types/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "artifacts",
+    "cache",
+    "coverage",
+    "dist"
   ],
   "files": [
     "./hardhat.config.ts"

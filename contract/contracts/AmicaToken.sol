@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 /**
  * @title AmicaToken
  * @notice Main AMICA token with burn-and-claim mechanism for deposited tokens
  * @dev Implements a fair distribution mechanism where burning AMICA gives proportional share of deposited tokens
  */
-contract AmicaToken is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
+contract AmicaToken is ERC20Upgradeable, ERC20BurnableUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     // State variables
     address[] private _depositedTokens;
     mapping(address => uint256) public tokenIndex;
@@ -25,6 +25,9 @@ contract AmicaToken is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
     uint256 public constant TOTAL_SUPPLY = 1_000_000_000 ether;
     uint256 private constant PRECISION = 1e18;
 
+    // Gap for future upgrades
+    uint256[50] private __gap;
+
     // Events
     event TokensWithdrawn(address indexed to, uint256 amount);
     event TokensRecovered(address indexed to, address indexed token, uint256 amount);
@@ -32,15 +35,21 @@ contract AmicaToken is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
     event TokensBurnedAndClaimed(address indexed user, uint256 amountBurned, address[] tokens, uint256[] amounts);
     event BridgeWrapperSet(address indexed wrapper);
 
-    constructor(address initialOwner)
-        ERC20("Amica", "AMICA")
-        Ownable(initialOwner)
-    {
+    /**
+     * @notice Initialize the contract (called by proxy)
+     * @param initialOwner Address of the initial owner
+     */
+    function initialize(address initialOwner) external initializer virtual {
+        __ERC20_init("Amica", "AMICA");
+        __Ownable_init(initialOwner);
+        __ReentrancyGuard_init();
+
         // Only mint on Ethereum mainnet
         // On other chains, supply starts at 0 and is minted via bridge wrapper
         if (block.chainid == 1) {
             _mint(address(this), TOTAL_SUPPLY);
         }
+
         _depositedTokens.push(address(0)); // Reserve index 0
     }
 

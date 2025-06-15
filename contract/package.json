@@ -9,7 +9,9 @@
     "test:gas": "REPORT_GAS=true hardhat test",
     "clean": "hardhat clean",
     "node": "hardhat node",
-    "deploy:local": "hardhat run scripts/deploy.ts --network localhost"
+    "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
+    "typecheck": "tsc --noEmit --project tsconfig.scripts.json",
+    "typecheck:all": "tsc --noEmit"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",

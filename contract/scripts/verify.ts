@@ -1,4 +1,5 @@
 import { run } from "hardhat";
+import { ethers } from "hardhat";
 import { DeploymentManager } from "./utils/deployment-manager";
 
 async function verify(contractAddress: string, constructorArguments: any[]) {
@@ -24,17 +25,17 @@ async function verifyLatestDeployment() {
   const chainId = Number((await ethers.provider.getNetwork()).chainId);
   const deploymentManager = new DeploymentManager();
   const latest = await deploymentManager.getLatestDeployment(chainId);
-  
+
   if (!latest) {
     console.error("No deployment found for current network");
     return;
   }
-  
+
   console.log(`\n🔍 Verifying contracts from deployment: ${latest.timestamp}`);
   console.log(`Chain: ${latest.chainName} (${chainId})`);
-  
+
   const contracts = [];
-  
+
   // AmicaToken
   if (latest.addresses.amicaToken) {
     contracts.push({
@@ -43,7 +44,7 @@ async function verifyLatestDeployment() {
       args: [latest.deployer],
     });
   }
-  
+
   // ERC20Implementation
   if (latest.addresses.erc20Implementation) {
     contracts.push({
@@ -52,7 +53,7 @@ async function verifyLatestDeployment() {
       args: [],
     });
   }
-  
+
   // AmicaBridgeWrapper
   if (latest.addresses.bridgeWrapper && latest.addresses.bridgedAmicaAddress) {
     contracts.push({
@@ -65,13 +66,13 @@ async function verifyLatestDeployment() {
       ],
     });
   }
-  
+
   // PersonaStakingRewards (need to get constructor args from events or config)
   if (latest.addresses.stakingRewards) {
     console.log("\n⚠️  Note: PersonaStakingRewards verification requires manual constructor args");
     console.log("   Use: npx hardhat verify --network <network> <address> <amicaToken> <personaFactory> <amicaPerBlock> <startBlock>");
   }
-  
+
   // Verify each contract
   for (const contract of contracts) {
     console.log(`\n${contract.name}:`);
@@ -82,13 +83,13 @@ async function verifyLatestDeployment() {
 // Manual verification with specific addresses
 async function main() {
   const args = process.argv.slice(2);
-  
+
   // Check if we should verify latest deployment
   if (args.includes("--latest")) {
     await verifyLatestDeployment();
     return;
   }
-  
+
   // Otherwise, use manual contract list
   // Add your deployed contract addresses here
   const contracts = [
@@ -126,7 +127,7 @@ async function main() {
 
   // Filter out placeholder addresses
   const validContracts = contracts.filter(c => !c.address.includes("..."));
-  
+
   if (validContracts.length === 0) {
     console.log("No valid contract addresses found.");
     console.log("Please update the contract addresses in the script or use --latest flag.");
@@ -139,7 +140,7 @@ async function main() {
   }
 }
 
-// Usage: 
+// Usage:
 // - Verify latest deployment: npx hardhat run scripts/verify.ts --network <network> -- --latest
 // - Manual verification: Update addresses in script, then run: npx hardhat run scripts/verify.ts --network <network>
 main()
