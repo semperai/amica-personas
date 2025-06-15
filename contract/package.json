@@ -10,6 +10,7 @@
     "clean": "hardhat clean",
     "node": "hardhat node",
     "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
+    "size": "hardhat size-contracts",
     "typecheck": "tsc --noEmit --project tsconfig.scripts.json",
     "typecheck:all": "tsc --noEmit"
   },
@@ -29,6 +30,7 @@
     "chai": "^4.2.0",
     "ethers": "^6.4.0",
     "hardhat": "^2.22.18",
+    "hardhat-contract-sizer": "^2.10.0",
     "hardhat-gas-reporter": "^1.0.8",
     "solidity-coverage": "^0.8.1",
     "ts-node": "^10.9.2",

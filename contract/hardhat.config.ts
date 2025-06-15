@@ -1,6 +1,7 @@
 import { HardhatUserConfig } from "hardhat/config";
 import '@openzeppelin/hardhat-upgrades';
 import "@nomicfoundation/hardhat-toolbox";
+import "hardhat-contract-sizer";
 import "./scripts/tasks";
 import * as dotenv from "dotenv";
 
@@ -81,6 +82,12 @@ const config: HardhatUserConfig = {
       base: BASESCAN_KEY,
       baseSepolia: BASESCAN_KEY,
     },
+  },
+  contractSizer: {
+    alphaSort: true,
+    disambiguatePaths: false,
+    runOnCompile: true,
+    strict: true,
   },
   typechain: {
     outDir: "typechain-types",
