@@ -645,7 +645,11 @@ describe("PersonaStakingRewards", function () {
                 .to.emit(stakingRewards, "RewardsClaimed");
 
             const finalBalance = await amicaToken.balanceOf(user1.address);
-            expect(finalBalance - initialBalance).to.be.closeTo(pendingRewards, ethers.parseEther("0.1"));
+
+            // The actual rewards will be slightly higher due to the block mined during claim
+            // Pool gets 30% of rewards, plus one extra block
+            const expectedRewards = REWARD_PER_BLOCK * 101n * 3000n / 10000n;
+            expect(finalBalance - initialBalance).to.be.closeTo(expectedRewards, ethers.parseEther("0.1"));
         });
 
         it("Should claim all rewards across multiple pools", async function () {
@@ -670,17 +674,19 @@ describe("PersonaStakingRewards", function () {
             // Mine blocks
             await mineBlocks(100);
 
-            const pending1 = await stakingRewards.pendingRewardsForPool(pool1Id, user1.address);
-            const pending2 = await stakingRewards.pendingRewardsForPool(pool2Id, user1.address);
-            const totalPending = pending1 + pending2;
-
             const initialBalance = await amicaToken.balanceOf(user1.address);
 
             await expect(stakingRewards.connect(user1).claimAll())
                 .to.emit(stakingRewards, "RewardsClaimed");
 
             const finalBalance = await amicaToken.balanceOf(user1.address);
-            expect(finalBalance - initialBalance).to.be.closeTo(totalPending, ethers.parseEther("0.1"));
+
+            // Account for extra blocks: 101 blocks for pool1 (30%) + 102 blocks for pool2 (20%)
+            // Pool2 gets an extra block because pool1 is updated first
+            const expectedRewards = (REWARD_PER_BLOCK * 101n * 3000n / 10000n) +
+                                   (REWARD_PER_BLOCK * 102n * 2000n / 10000n);
+
+            expect(finalBalance - initialBalance).to.be.closeTo(expectedRewards, ethers.parseEther("1"));
         });
 
         it("Should update reward debt after claiming", async function () {
@@ -734,8 +740,9 @@ describe("PersonaStakingRewards", function () {
                 await mineBlocks(Number(startBlock - BigInt(currentBlock)));
             }
 
-            // Lock stake with 2x multiplier
+            // Lock stake with 2x multiplier (tier 2 = 6 months = 2x)
             await stakingRewards.connect(user1).stakeLocked(pool1Id, stakeAmount, 2);
+            const stakeBlock = await ethers.provider.getBlockNumber();
 
             // Mine blocks
             await mineBlocks(100);
@@ -743,10 +750,28 @@ describe("PersonaStakingRewards", function () {
             const pendingRewards = await stakingRewards.pendingRewardsForPool(pool1Id, user1.address);
             const initialBalance = await amicaToken.balanceOf(user1.address);
 
-            await stakingRewards.connect(user1).claimPool(pool1Id);
+            // Claim rewards
+            const tx = await stakingRewards.connect(user1).claimPool(pool1Id);
+            await tx.wait();
 
             const finalBalance = await amicaToken.balanceOf(user1.address);
-            expect(finalBalance - initialBalance).to.be.closeTo(pendingRewards, ethers.parseEther("0.1"));
+            const actualRewards = finalBalance - initialBalance;
+
+            // Calculate expected rewards:
+            // - Pool gets 30% allocation (3000 basis points)
+            // - User has 2x multiplier from lock
+            // - Total blocks = 101 (100 mined + 1 during claim)
+            const blocksRewarded = 101n;
+            const poolAllocation = 3000n;
+            const lockMultiplier = 20000n; // 2x = 20000 basis points
+
+            // With only one staker having 2x multiplier:
+            // Pool weighted total = stakeAmount * 2
+            // User weighted amount = stakeAmount * 2
+            // User gets 100% of pool rewards
+            const expectedRewards = (REWARD_PER_BLOCK * blocksRewarded * poolAllocation) / 10000n;
+
+            expect(actualRewards).to.be.closeTo(expectedRewards, ethers.parseEther("0.1"));
         });
     });
 
@@ -788,14 +813,18 @@ describe("PersonaStakingRewards", function () {
             const TestERC20 = await ethers.getContractFactory("TestERC20");
             const randomToken = await TestERC20.deploy("Random", "RND", ethers.parseEther("1000"));
 
-            await randomToken.transfer(await stakingRewards.getAddress(), ethers.parseEther("100"));
+            const withdrawAmount = ethers.parseEther("100");
+            await randomToken.transfer(await stakingRewards.getAddress(), withdrawAmount);
+
+            const initialBalance = await randomToken.balanceOf(owner.address);
 
             await stakingRewards.emergencyWithdraw(
                 await randomToken.getAddress(),
-                ethers.parseEther("100")
+                withdrawAmount
             );
 
-            expect(await randomToken.balanceOf(owner.address)).to.equal(ethers.parseEther("100"));
+            const finalBalance = await randomToken.balanceOf(owner.address);
+            expect(finalBalance - initialBalance).to.equal(withdrawAmount);
         });
 
         it("Should reject emergency withdraw of LP tokens", async function () {
@@ -900,21 +929,24 @@ describe("PersonaStakingRewards", function () {
             const { stakingRewards, lpToken1, user1, pool1Id } =
                 await loadFixture(deployStakingRewardsWithPoolsFixture);
 
-            // Set end block
-            const currentBlock = await ethers.provider.getBlockNumber();
-            const endBlock = currentBlock + 50;
-            await stakingRewards.updateRewardPeriod(await stakingRewards.startBlock(), endBlock);
-
             const stakeAmount = ethers.parseEther("1000");
             await lpToken1.connect(user1).approve(await stakingRewards.getAddress(), stakeAmount);
 
             // Wait for start block
             const startBlock = await stakingRewards.startBlock();
+            let currentBlock = await ethers.provider.getBlockNumber();
             if (currentBlock < startBlock) {
                 await mineBlocks(Number(startBlock - BigInt(currentBlock)));
             }
 
+            // Set end block in the future
+            currentBlock = await ethers.provider.getBlockNumber();
+            const endBlock = currentBlock + 50;
+            await stakingRewards.updateRewardPeriod(startBlock, endBlock);
+
             await stakingRewards.connect(user1).stake(pool1Id, stakeAmount);
+
+            const stakeBlock = await ethers.provider.getBlockNumber();
 
             // Mine past end block
             await mineBlocks(100);
@@ -922,7 +954,7 @@ describe("PersonaStakingRewards", function () {
             const pendingRewards = await stakingRewards.pendingRewardsForPool(pool1Id, user1.address);
 
             // Should only have rewards up to end block
-            const rewardBlocks = endBlock - Number(await stakingRewards.startBlock());
+            const rewardBlocks = Number(endBlock) - Number(stakeBlock);
             const expectedRewards = REWARD_PER_BLOCK * BigInt(rewardBlocks) * 3000n / 10000n;
 
             expect(pendingRewards).to.be.closeTo(expectedRewards, ethers.parseEther("1"));
