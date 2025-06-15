@@ -69,7 +69,7 @@ export default function CreatePersonaPage() {
 
   // Get addresses for current chain
   const addresses = chainId ? getAddressesForChain(chainId) : null;
-  
+
   // Define pairing token options
   const pairingTokenOptions: TokenOption[] = [
     {
@@ -102,21 +102,27 @@ export default function CreatePersonaPage() {
     address: formData.agentToken as `0x${string}`,
     abi: ERC20_ABI,
     functionName: 'name',
-    enabled: showAgentConfig && formData.agentToken.length === 42 && formData.agentToken.startsWith('0x'),
+    query: {
+      enabled: showAgentConfig && formData.agentToken.length === 42 && formData.agentToken.startsWith('0x'),
+    },
   });
 
   const { data: agentTokenSymbol } = useReadContract({
     address: formData.agentToken as `0x${string}`,
     abi: ERC20_ABI,
     functionName: 'symbol',
-    enabled: showAgentConfig && formData.agentToken.length === 42 && formData.agentToken.startsWith('0x'),
+    query: {
+      enabled: showAgentConfig && formData.agentToken.length === 42 && formData.agentToken.startsWith('0x'),
+    },
   });
 
   const { data: agentTokenDecimals } = useReadContract({
     address: formData.agentToken as `0x${string}`,
     abi: ERC20_ABI,
     functionName: 'decimals',
-    enabled: showAgentConfig && formData.agentToken.length === 42 && formData.agentToken.startsWith('0x'),
+    query: {
+      enabled: showAgentConfig && formData.agentToken.length === 42 && formData.agentToken.startsWith('0x'),
+    },
   });
 
   // Get initial token preview using getInitialTokensForLiquidity
@@ -124,10 +130,12 @@ export default function CreatePersonaPage() {
     address: addresses?.factory as `0x${string}`,
     abi: FACTORY_ABI,
     functionName: 'getInitialTokensForLiquidity',
-    args: formData.initialBuyAmount && parseFloat(formData.initialBuyAmount) > 0 
-      ? [parseEther(formData.initialBuyAmount)] 
+    args: formData.initialBuyAmount && parseFloat(formData.initialBuyAmount) > 0
+      ? [parseEther(formData.initialBuyAmount)]
       : undefined,
-    enabled: !!addresses && !!formData.initialBuyAmount && parseFloat(formData.initialBuyAmount) > 0,
+    query: {
+      enabled: !!addresses && !!formData.initialBuyAmount && parseFloat(formData.initialBuyAmount) > 0,
+    },
   }) as { data: bigint | undefined };
 
   // Update agent token details when contract data is fetched
@@ -174,7 +182,7 @@ export default function CreatePersonaPage() {
     try {
       const pairingToken = formData.pairingToken || selectedPairingToken?.address || addresses.amica;
       const agentToken = showAgentConfig && formData.agentToken ? formData.agentToken : zeroAddress;
-      
+
       // Use the correct decimals for agent token if available
       const minAgentTokens = showAgentConfig && formData.minAgentTokens && agentTokenDetails
         ? parseUnits(formData.minAgentTokens, agentTokenDetails.decimals)
@@ -341,11 +349,11 @@ export default function CreatePersonaPage() {
                     className="w-full p-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/40 focus:border-white/40 focus:outline-none transition-colors font-mono text-sm"
                     placeholder="0x..."
                   />
-                  
+
                   {isLoadingAgentToken && (
                     <div className="mt-2 text-xs text-white/50">Loading token details...</div>
                   )}
-                  
+
                   {agentTokenDetails && (
                     <div className="mt-3 p-3 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10">
                       <div className="flex items-center gap-2">
@@ -359,7 +367,7 @@ export default function CreatePersonaPage() {
                       </div>
                     </div>
                   )}
-                  
+
                   <p className="text-xs text-white/50 mt-2">
                     Enter the contract address of the agent token
                   </p>

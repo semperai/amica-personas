@@ -9,13 +9,14 @@ import { ExtendedDeploymentAddresses } from "../types/deployment";
 const deploymentManager = new DeploymentManager();
 
 const STAKING_REWARDS_PER_BLOCK = ethers.parseEther("1");
-const GAS_PRICE_DEFAULT = ethers.parseUnits("10", "gwei");
+const GAS_PRICE_DEFAULT = ethers.parseUnits("0.01", "gwei");
 const GAS_LIMIT_DEFAULT = 10_000_000;
-const BRIDGED_AMICA_ADDRESS = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9";
+const BRIDGED_AMICA_ADDRESS = "0x655e9aFf27d9859B01acbC957c9088e2691E3421";
 
 
 async function deployContracts() {
   console.log("🚀 Starting deployment...");
+  console.log(`Using ${BRIDGED_AMICA_ADDRESS} as bridged AMICA address`);
 
   const [deployer] = await ethers.getSigners();
   const network = await ethers.provider.getNetwork();
