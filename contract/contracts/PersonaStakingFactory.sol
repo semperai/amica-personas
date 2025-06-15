@@ -98,7 +98,6 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
 
     // Constants
     uint256 public constant BASIS_POINTS = 10000;         // 100% = 10000 basis points
-    uint256 public constant AGENT_POOL_BOOST = 15000;    // 1.5x = 150% = 15000 basis points
     uint256 public constant PRECISION = 1e18;             // Higher precision for calculations
     uint256 public constant MAX_LOCK_MULTIPLIER = 50000; // Max 5x multiplier
 
@@ -322,10 +321,6 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
             uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
             uint256 amicaReward = (multiplier * amicaPerBlock * pool.allocBasisPoints) / BASIS_POINTS;
 
-            if (pool.isAgentPool) {
-                amicaReward = (amicaReward * AGENT_POOL_BOOST) / BASIS_POINTS;
-            }
-
             accAmicaPerShare += (amicaReward * PRECISION) / poolWeightedTotal[poolId];
         }
 
@@ -369,10 +364,6 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
 
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
         uint256 amicaReward = (multiplier * amicaPerBlock * pool.allocBasisPoints) / BASIS_POINTS;
-
-        if (pool.isAgentPool) {
-            amicaReward = (amicaReward * AGENT_POOL_BOOST) / BASIS_POINTS;
-        }
 
         pool.accAmicaPerShare += (amicaReward * PRECISION) / weightedTotal;
         pool.lastRewardBlock = block.number;

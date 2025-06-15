@@ -526,33 +526,6 @@ describe("PersonaStakingRewards", function () {
             expect(pendingRewards).to.be.closeTo(expectedRewards, ethers.parseEther("0.1"));
         });
 
-        it("Should apply agent pool boost correctly", async function () {
-            const { stakingRewards, agentLpToken, user1, agentPoolId } =
-                await loadFixture(deployStakingRewardsWithPoolsFixture);
-
-            const stakeAmount = ethers.parseEther("1000");
-            await agentLpToken.connect(user1).approve(await stakingRewards.getAddress(), stakeAmount);
-
-            // Wait for start block
-            const startBlock = await stakingRewards.startBlock();
-            const currentBlock = await ethers.provider.getBlockNumber();
-            if (currentBlock < startBlock) {
-                await mineBlocks(Number(startBlock - BigInt(currentBlock)));
-            }
-
-            await stakingRewards.connect(user1).stake(agentPoolId, stakeAmount);
-
-            // Mine 100 blocks
-            await mineBlocks(100);
-
-            // Agent pool gets 50% of rewards with 1.5x boost
-            const baseRewards = REWARD_PER_BLOCK * 100n * 5000n / 10000n;
-            const boostedRewards = baseRewards * AGENT_POOL_BOOST / BASIS_POINTS;
-            const pendingRewards = await stakingRewards.pendingRewardsForPool(agentPoolId, user1.address);
-
-            expect(pendingRewards).to.be.closeTo(boostedRewards, ethers.parseEther("0.1"));
-        });
-
         it("Should calculate rewards with lock multiplier", async function () {
             const { stakingRewards, lpToken1, user1, user2, pool1Id } =
                 await loadFixture(deployStakingRewardsWithPoolsFixture);
