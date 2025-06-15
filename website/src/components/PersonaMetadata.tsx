@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { fetchPersonaDetail } from '@/lib/api';
 import { formatEther } from 'viem';
+import AgentTokenInfo from './AgentTokenInfo';
 
 interface PersonaMetadataProps {
   chainId: string;
@@ -12,7 +13,6 @@ interface MetadataItem {
   value: string;
 }
 
-// Update the interface to match what the API returns
 interface PersonaData {
   id: string;
   name: string;
@@ -39,6 +39,9 @@ interface PersonaData {
   };
   metadata?: MetadataItem[];
   tokenId: string;
+  agentToken?: string;
+  minAgentTokens?: string;
+  totalAgentDeposited?: string;
 }
 
 const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
@@ -183,6 +186,14 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
           </div>
         </div>
       )}
+
+      {/* Agent Token Info */}
+      <AgentTokenInfo
+        agentToken={persona.agentToken}
+        minAgentTokens={persona.minAgentTokens}
+        totalAgentDeposited={persona.totalAgentDeposited}
+        isGraduated={persona.isGraduated}
+      />
     </div>
   );
 };

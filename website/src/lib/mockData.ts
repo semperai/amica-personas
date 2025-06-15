@@ -23,7 +23,7 @@ export const mockPersonas = [
     totalDeposited: "1000000000000000000000", // 1000 ETH
     tokensSold: "750000000000000000000000", // 750k tokens
     graduationThreshold: "1000000000000000000000", // 1000 ETH
-    totalAgentDeposited: "75000000000000000000000", // 75k agent tokens
+    totalAgentDeposited: "75000000000000000000000", // 75k agent tokens (exceeded requirement)
     isGraduated: true,
     createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
     chain: { id: "1", name: "ethereum" },
@@ -82,7 +82,7 @@ export const mockPersonas = [
     totalDeposited: "2000000000000000000000", // 2000 ETH
     tokensSold: "900000000000000000000000", // 900k tokens
     graduationThreshold: "1000000000000000000000", // 1000 ETH
-    totalAgentDeposited: "150000000000000000000000", // 150k agent tokens
+    totalAgentDeposited: "150000000000000000000000", // 150k agent tokens (exceeded requirement)
     isGraduated: true,
     createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
     chain: { id: "42161", name: "arbitrum" },
@@ -139,7 +139,7 @@ export const mockPersonas = [
     totalDeposited: "3000000000000000000000", // 3000 ETH
     tokensSold: "950000000000000000000000", // 950k tokens
     graduationThreshold: "1000000000000000000000", // 1000 ETH
-    totalAgentDeposited: "25000000000000000000000", // 25k agent tokens
+    totalAgentDeposited: "25000000000000000000000", // 25k agent tokens (no requirement, so any amount is ok)
     isGraduated: true,
     createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
     chain: { id: "8453", name: "base" },
@@ -157,6 +157,8 @@ export const mockPersonas = [
     creator: "0xccccddddeeeeffffgggghhhhiiiijjjjkkkkllll",
     erc20Token: "0xcccccccccccccccccccccccccccccccccccccccc",
     pairToken: "0xdddddddddddddddddddddddddddddddddddddddd",
+    agentToken: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", // Has agent token
+    minAgentTokens: "30000000000000000000000", // 30k minimum requirement
     pairCreated: false,
     totalVolume24h: "10000000000000000000", // 10 ETH
     totalVolumeAllTime: "25000000000000000000", // 25 ETH
@@ -167,11 +169,42 @@ export const mockPersonas = [
     totalDeposited: "25000000000000000000", // 25 ETH
     tokensSold: "100000000000000000000000", // 100k tokens
     graduationThreshold: "1000000000000000000000", // 1000 ETH
+    totalAgentDeposited: "10000000000000000000000", // 10k agent tokens (33% of requirement)
     isGraduated: false,
     createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     chain: { id: "42161", name: "arbitrum" },
     growthMultiplier: 0.5,
     metadata: []
+  },
+  {
+    id: "1-6",
+    tokenId: "6",
+    name: "Test Agent Persona",
+    symbol: "TESTAGENT",
+    creator: "0xddddeeeeffffgggghhhhiiiijjjjkkkkllllmmmm",
+    erc20Token: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    pairToken: "0xffffffffffffffffffffffffffffffffffffffff",
+    agentToken: "0xaaaa1111222233334444555566667777888899990", // Has agent token
+    minAgentTokens: "20000000000000000000000", // 20k minimum requirement
+    pairCreated: false,
+    pairAddress: undefined,
+    totalVolume24h: "50000000000000000000", // 50 ETH
+    totalVolumeAllTime: "100000000000000000000", // 100 ETH
+    totalTrades24h: 20,
+    totalTradesAllTime: 40,
+    uniqueTraders24h: 10,
+    uniqueTradersAllTime: 20,
+    totalDeposited: "100000000000000000000", // 100 ETH
+    tokensSold: "200000000000000000000000", // 200k tokens
+    graduationThreshold: "1000000000000000000000", // 1000 ETH
+    totalAgentDeposited: "5000000000000000000000", // 5k agent tokens (25% of requirement)
+    isGraduated: false,
+    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+    chain: { id: "1", name: "ethereum" },
+    growthMultiplier: 1.2,
+    metadata: [
+      { key: "description", value: "Test persona for agent token features" }
+    ]
   }
 ];
 

@@ -95,7 +95,7 @@ function PoolCard({ pool, userLpBalance = "0", userStakedBalance = "0", pendingR
       >
         <div className="flex justify-between items-start">
           <div className="flex-1">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <h3 className="text-xl font-light text-white">{pool.name}</h3>
               {pool.isAgentPool && (
                 <span className="px-3 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-full backdrop-blur-sm">
@@ -114,7 +114,7 @@ function PoolCard({ pool, userLpBalance = "0", userStakedBalance = "0", pendingR
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 mt-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
           <div>
             <p className="text-sm text-white/50">Total Staked</p>
             <p className="font-light text-white">${(Number(formatEther(BigInt(pool.totalStaked))) * 1.5).toFixed(0)}</p>
@@ -206,7 +206,7 @@ function PoolCard({ pool, userLpBalance = "0", userStakedBalance = "0", pendingR
 
                 <div>
                   <label className="block text-sm font-light text-white/80 mb-2">Lock Duration</label>
-                  <div className="grid grid-cols-5 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
                     {lockTiers.map((tier, index) => (
                       <button
                         key={index}
@@ -353,7 +353,7 @@ function PoolCard({ pool, userLpBalance = "0", userStakedBalance = "0", pendingR
           <div className="px-6 pb-6">
             <div className="border-t border-white/10 pt-4">
               <h4 className="text-sm font-light text-white/80 mb-2">Pool Information</h4>
-              <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-white/50">LP Token</span>
                   <a href="#" className="text-purple-400 hover:text-purple-300 font-mono text-xs">
@@ -391,7 +391,7 @@ export default function StakingPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10">
             <p className="text-sm text-white/50 mb-1">Total Value Locked</p>
             <p className="text-2xl font-light text-white">${totalValueLocked}</p>
@@ -413,7 +413,7 @@ export default function StakingPage() {
         {/* Lock Multipliers */}
         <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl shadow-2xl p-8 mb-8 text-white">
           <h2 className="text-2xl font-light mb-6">🔒 Lock Duration Multipliers</h2>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
             {lockTiers.map((tier, index) => (
               <div key={index} className="text-center bg-white/10 backdrop-blur-sm rounded-xl p-4">
                 <p className="text-3xl font-light">{tier.multiplier}x</p>
@@ -438,8 +438,8 @@ export default function StakingPage() {
         ) : (
           <>
             {/* Filter/Sort */}
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+              <div className="flex gap-2 flex-wrap">
                 <button className="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full font-light">
                   All Pools
                 </button>

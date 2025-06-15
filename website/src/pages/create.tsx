@@ -184,6 +184,7 @@ export default function CreatePersonaPage() {
                     <li>Modified token distribution: 1/3 liquidity, 2/9 each for bonding, AMICA deposit, and agent rewards</li>
                     <li>Agent token depositors receive persona tokens proportionally after graduation</li>
                     <li>Creates additional utility and alignment with partner projects</li>
+                    <li>If minimum required is set, graduation is blocked until that amount is deposited</li>
                   </ul>
                 </div>
               </div>
@@ -206,7 +207,7 @@ export default function CreatePersonaPage() {
 
           <div className="mb-8">
             <label className="block text-sm font-light text-white/80 mb-3">Metadata (optional)</label>
-            <div className="flex gap-2 mb-4">
+            <div className="flex flex-col sm:flex-row gap-2 mb-4">
               <input
                 type="text"
                 value={newMetadataKey}
@@ -233,7 +234,7 @@ export default function CreatePersonaPage() {
               <div className="space-y-2">
                 {formData.metadataKeys.map((key, index) => (
                   <div key={index} className="flex justify-between items-center p-4 bg-white/5 backdrop-blur-sm rounded-xl">
-                    <span className="text-sm text-white/80">
+                    <span className="text-sm text-white/80 break-all">
                       <span className="font-medium text-white/90">{key}:</span> {formData.metadataValues[index]}
                     </span>
                     <button
@@ -244,7 +245,7 @@ export default function CreatePersonaPage() {
                         newValues.splice(index, 1);
                         setFormData({ ...formData, metadataKeys: newKeys, metadataValues: newValues });
                       }}
-                      className="text-red-400 hover:text-red-300 text-sm transition-colors"
+                      className="text-red-400 hover:text-red-300 text-sm transition-colors ml-2 flex-shrink-0"
                     >
                       Remove
                     </button>

@@ -9,11 +9,15 @@ interface Persona {
   symbol: string;
   totalVolume24h: string;
   totalVolumeAllTime: string;
+  totalDeposited?: string;
   isGraduated: boolean;
   chain: {
     id: string;
     name: string;
   };
+  agentToken?: string;
+  minAgentTokens?: string;
+  totalAgentDeposited?: string;
 }
 
 export function PersonaList() {
@@ -37,7 +41,7 @@ export function PersonaList() {
           sort: sortMap[sortBy],
           limit: 50
         });
-        
+
         setPersonas(data.personas);
       } catch (error) {
         console.error('Error loading personas:', error);
@@ -76,8 +80,8 @@ export function PersonaList() {
         <h2 className="text-2xl font-bold mb-4">All Personas</h2>
         <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
           <p className="text-red-800 mb-4">Unable to load personas. The API service might be offline.</p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
           >
             Try Again
@@ -130,7 +134,7 @@ export function PersonaList() {
                     </span>
                   )}
                 </div>
-                
+
                 <div className="text-sm text-gray-600">
                   <p>24h Volume: {formatEther(BigInt(persona.totalVolume24h))} ETH</p>
                   <p>All Time: {formatEther(BigInt(persona.totalVolumeAllTime))} ETH</p>
