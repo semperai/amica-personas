@@ -1,4 +1,7 @@
 // src/components/Layout.tsx
+import { Yomogi } from 'next/font/google'
+import clsx from 'clsx';
+
 import { ReactNode } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import Link from 'next/link';
@@ -11,6 +14,13 @@ import { hasBridgeWrapper } from '@/lib/contracts';
 interface LayoutProps {
   children: ReactNode;
 }
+
+const yomogi = Yomogi({
+  weight: '400',
+  subsets: ['latin'],
+  display: 'swap',
+});
+
 
 const Layout = ({ children }: LayoutProps) => {
   const router = useRouter();
@@ -25,7 +35,7 @@ const Layout = ({ children }: LayoutProps) => {
   const showBridge = chainId && hasBridgeWrapper(chainId);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+    <div className={clsx("min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900", yomogi.className)}>
       {/* Mock Mode Banner */}
       {isMockMode && (
         <div className="bg-purple-600/20 backdrop-blur-sm text-white px-4 py-2 text-center text-sm border-b border-purple-500/20">
@@ -41,62 +51,77 @@ const Layout = ({ children }: LayoutProps) => {
       )}
 
       {/* Navigation */}
-      <nav className="relative z-20 border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-8">
-              <Link href="/" className="flex items-center">
-                <span className="text-xl font-light text-white tracking-wider">AMICA</span>
+      <nav className="relative z-20">
+        <div className="absolute inset-0 bg-white/5 backdrop-blur-xl border-b border-white/10" />
+        <div className="relative max-w-7xl mx-auto px-6">
+          <div className="flex justify-between items-center h-20">
+            <div className="flex items-center space-x-12">
+              <Link href="/" className="flex items-center group">
+                <span className="text-2xl font-extralight text-white tracking-wider group-hover:text-white/80 transition-colors">AMICA</span>
               </Link>
 
-              <div className="hidden md:flex items-center space-x-6">
-                <Link
-                  href="/"
-                  className={`text-sm font-light transition-colors ${
-                    isActive('/') ? 'text-white' : 'text-white/60 hover:text-white'
-                  }`}
-                >
-                  Explore
-                </Link>
-                <Link
-                  href="/create"
-                  className={`text-sm font-light transition-colors ${
-                    isActive('/create') ? 'text-white' : 'text-white/60 hover:text-white'
-                  }`}
-                >
-                  Create
-                </Link>
-                <Link
-                  href="/portfolio"
-                  className={`text-sm font-light transition-colors ${
-                    isActive('/portfolio') ? 'text-white' : 'text-white/60 hover:text-white'
-                  }`}
-                >
-                  Portfolio
-                </Link>
-                {showBridge && (
+              <div className="hidden md:flex items-center">
+                <div className="flex items-center bg-white/10 backdrop-blur-md rounded-full p-1">
                   <Link
-                    href="/bridge"
-                    className={`text-sm font-light transition-colors ${
-                      isActive('/bridge') ? 'text-white' : 'text-white/60 hover:text-white'
+                    href="/"
+                    className={`px-5 py-2 rounded-full text-sm font-light transition-all duration-300 ${
+                      isActive('/')
+                        ? 'bg-white/20 text-white shadow-lg'
+                        : 'text-white/70 hover:text-white hover:bg-white/10'
                     }`}
                   >
-                    Bridge
+                    Explore
                   </Link>
-                )}
-                <Link
-                  href="/staking"
-                  className={`text-sm font-light transition-colors ${
-                    isActive('/staking') ? 'text-white' : 'text-white/60 hover:text-white'
-                  }`}
-                >
-                  Staking
-                </Link>
+                  <Link
+                    href="/create"
+                    className={`px-5 py-2 rounded-full text-sm font-light transition-all duration-300 ${
+                      isActive('/create')
+                        ? 'bg-white/20 text-white shadow-lg'
+                        : 'text-white/70 hover:text-white hover:bg-white/10'
+                    }`}
+                  >
+                    Create
+                  </Link>
+                  <Link
+                    href="/portfolio"
+                    className={`px-5 py-2 rounded-full text-sm font-light transition-all duration-300 ${
+                      isActive('/portfolio')
+                        ? 'bg-white/20 text-white shadow-lg'
+                        : 'text-white/70 hover:text-white hover:bg-white/10'
+                    }`}
+                  >
+                    Portfolio
+                  </Link>
+                  {showBridge && (
+                    <Link
+                      href="/bridge"
+                      className={`px-5 py-2 rounded-full text-sm font-light transition-all duration-300 ${
+                        isActive('/bridge')
+                          ? 'bg-white/20 text-white shadow-lg'
+                          : 'text-white/70 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      Bridge
+                    </Link>
+                  )}
+                  <Link
+                    href="/staking"
+                    className={`px-5 py-2 rounded-full text-sm font-light transition-all duration-300 ${
+                      isActive('/staking')
+                        ? 'bg-white/20 text-white shadow-lg'
+                        : 'text-white/70 hover:text-white hover:bg-white/10'
+                    }`}
+                  >
+                    Staking
+                  </Link>
+                </div>
               </div>
             </div>
 
             <div className="flex items-center">
-              <ConnectButton />
+              <div className="bg-white/10 backdrop-blur-md rounded-full p-1">
+                <ConnectButton />
+              </div>
             </div>
           </div>
         </div>
