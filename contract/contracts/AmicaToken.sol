@@ -149,7 +149,7 @@ contract AmicaToken is ERC20Upgradeable, ERC20BurnableUpgradeable, OwnableUpgrad
     /**
      * @notice Burn AMICA and claim proportional share of specified tokens
      * @param amountToBurn Amount of AMICA to burn
-     * @param tokenIndexes Indexes of tokens to claim
+     * @param tokenIndexes Indexes of tokens to claim (must be sorted in ascending order and unique)
      */
     function burnAndClaim(uint256 amountToBurn, uint256[] calldata tokenIndexes)
         external
@@ -157,6 +157,11 @@ contract AmicaToken is ERC20Upgradeable, ERC20BurnableUpgradeable, OwnableUpgrad
     {
         require(amountToBurn > 0, "Invalid burn amount");
         require(tokenIndexes.length > 0, "No tokens selected");
+
+        // Verify tokenIndexes are sorted and unique
+        for (uint256 i = 1; i < tokenIndexes.length; i++) {
+            require(tokenIndexes[i] > tokenIndexes[i - 1], "Token indexes must be sorted and unique");
+        }
 
         uint256 currentCirculating = circulatingSupply();
         require(currentCirculating > 0, "No circulating supply");

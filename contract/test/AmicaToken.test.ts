@@ -723,3 +723,128 @@ describe("AmicaToken", function () {
         ).to.be.revertedWith("No tokens to recover");
     });
 });
+
+describe("AmicaToken Vulnerability Tests", function () {
+    describe("Duplicate Token Index Vulnerability", function () {
+        it("Should prevent claiming same token multiple times", async function () {
+            const { amicaToken, owner, user1: attacker } = await loadFixture(deployPersonaTokenFactoryFixture);
+
+            // Deploy and deposit a test token
+            const TestERC20 = await ethers.getContractFactory("TestERC20");
+            const usdc = await TestERC20.deploy("USD Coin", "USDC", ethers.parseEther("10000000"));
+
+            await usdc.approve(await amicaToken.getAddress(), ethers.parseEther("1000000"));
+            await amicaToken.deposit(await usdc.getAddress(), ethers.parseEther("1000000"));
+
+            const burnAmount = ethers.parseEther("1000");
+
+            // ATTACK: Try to claim the same token (index 1 = USDC) multiple times
+            // This should fail with the fixed contract
+            await expect(
+                amicaToken.connect(attacker).burnAndClaim(burnAmount, [1, 1, 1])
+            ).to.be.revertedWith("Token indexes must be sorted and unique");
+
+            // Also test unsorted indexes
+            await expect(
+                amicaToken.connect(attacker).burnAndClaim(burnAmount, [2, 1])
+            ).to.be.revertedWith("Token indexes must be sorted and unique");
+        });
+
+        it("Should allow claiming with properly sorted unique indexes", async function () {
+            const { amicaToken, owner, user1: attacker } = await loadFixture(deployPersonaTokenFactoryFixture);
+
+            // Deploy and deposit multiple tokens
+            const TestERC20 = await ethers.getContractFactory("TestERC20");
+            const usdc = await TestERC20.deploy("USD Coin", "USDC", ethers.parseEther("10000000"));
+            const dai = await TestERC20.deploy("DAI", "DAI", ethers.parseEther("10000000"));
+
+            await usdc.approve(await amicaToken.getAddress(), ethers.parseEther("1000000"));
+            await amicaToken.deposit(await usdc.getAddress(), ethers.parseEther("1000000"));
+
+            await dai.approve(await amicaToken.getAddress(), ethers.parseEther("500000"));
+            await amicaToken.deposit(await dai.getAddress(), ethers.parseEther("500000"));
+
+            const burnAmount = ethers.parseEther("1000");
+            const initialUsdcBalance = await usdc.balanceOf(attacker.address);
+            const initialDaiBalance = await dai.balanceOf(attacker.address);
+
+            // This should work with sorted, unique indexes
+            await expect(
+                amicaToken.connect(attacker).burnAndClaim(burnAmount, [1, 2])
+            ).to.emit(amicaToken, "TokensBurnedAndClaimed");
+
+            // Verify both tokens were claimed
+            expect(await usdc.balanceOf(attacker.address)).to.be.gt(initialUsdcBalance);
+            expect(await dai.balanceOf(attacker.address)).to.be.gt(initialDaiBalance);
+        });
+
+        it("Should demonstrate the vulnerability impact", async function () {
+            const { amicaToken, owner, user1: attacker } = await loadFixture(deployPersonaTokenFactoryFixture);
+
+            // Deploy and deposit a test token
+            const TestERC20 = await ethers.getContractFactory("TestERC20");
+            const usdc = await TestERC20.deploy("USD Coin", "USDC", ethers.parseEther("10000000"));
+
+            await usdc.approve(await amicaToken.getAddress(), ethers.parseEther("1000000"));
+            await amicaToken.deposit(await usdc.getAddress(), ethers.parseEther("1000000"));
+
+            const burnAmount = ethers.parseEther("1000");
+            const circulatingSupply = await amicaToken.circulatingSupply();
+
+            // Calculate what the attacker SHOULD get
+            const sharePercentage = (burnAmount * ethers.parseEther("1")) / circulatingSupply;
+            const legitimateClaim = (ethers.parseEther("1000000") * sharePercentage) / ethers.parseEther("1");
+
+            console.log("Burning", ethers.formatEther(burnAmount), "AMICA");
+            console.log("Circulating supply:", ethers.formatEther(circulatingSupply), "AMICA");
+            console.log("Legitimate claim amount:", ethers.formatEther(legitimateClaim), "USDC");
+            console.log("With vulnerability, attacker could claim 3x:", ethers.formatEther(legitimateClaim * 3n), "USDC");
+
+            // In vulnerable contract, passing [1, 1, 1] would give 3x rewards
+            // In fixed contract, this correctly reverts
+            await expect(
+                amicaToken.connect(attacker).burnAndClaim(burnAmount, [1, 1, 1])
+            ).to.be.revertedWith("Token indexes must be sorted and unique");
+
+            console.log("✓ Attack prevented with fix!");
+        });
+
+        it("Should handle edge cases correctly", async function () {
+            const { amicaToken, user1: attacker } = await loadFixture(deployPersonaTokenFactoryFixture);
+
+            // Deploy and deposit tokens
+            const TestERC20 = await ethers.getContractFactory("TestERC20");
+            const token1 = await TestERC20.deploy("Token1", "TK1", ethers.parseEther("1000"));
+            const token2 = await TestERC20.deploy("Token2", "TK2", ethers.parseEther("1000"));
+            const token3 = await TestERC20.deploy("Token3", "TK3", ethers.parseEther("1000"));
+
+            await token1.approve(await amicaToken.getAddress(), ethers.parseEther("100"));
+            await token2.approve(await amicaToken.getAddress(), ethers.parseEther("100"));
+            await token3.approve(await amicaToken.getAddress(), ethers.parseEther("100"));
+
+            await amicaToken.deposit(await token1.getAddress(), ethers.parseEther("100"));
+            await amicaToken.deposit(await token2.getAddress(), ethers.parseEther("100"));
+            await amicaToken.deposit(await token3.getAddress(), ethers.parseEther("100"));
+
+            // Empty array should fail
+            await expect(
+                amicaToken.connect(attacker).burnAndClaim(ethers.parseEther("100"), [])
+            ).to.be.revertedWith("No tokens selected");
+
+            // Single index should work
+            await expect(
+                amicaToken.connect(attacker).burnAndClaim(ethers.parseEther("100"), [1])
+            ).to.not.be.reverted;
+
+            // Sequential indexes [1, 2, 3] should work
+            await expect(
+                amicaToken.connect(attacker).burnAndClaim(ethers.parseEther("100"), [1, 2, 3])
+            ).to.not.be.reverted;
+
+            // Non-sequential but sorted [1, 3] should work
+            await expect(
+                amicaToken.connect(attacker).burnAndClaim(ethers.parseEther("100"), [1, 3])
+            ).to.not.be.reverted;
+        });
+    });
+});
