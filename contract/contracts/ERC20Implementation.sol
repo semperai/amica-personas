@@ -54,7 +54,7 @@ contract ERC20Implementation is
     /**
      * @notice Burn tokens and claim proportional share of specified tokens
      * @param amountToBurn Amount of tokens to burn
-     * @param tokens Array of token addresses to claim
+     * @param tokens Array of token addresses to claim (must be sorted in ascending order and unique)
      */
     function burnAndClaim(uint256 amountToBurn, address[] calldata tokens)
         external
@@ -62,6 +62,11 @@ contract ERC20Implementation is
     {
         require(amountToBurn > 0, "Invalid burn amount");
         require(tokens.length > 0, "No tokens selected");
+        
+        // Verify tokens array is sorted and contains no duplicates
+        for (uint256 i = 1; i < tokens.length; i++) {
+            require(uint160(tokens[i]) > uint160(tokens[i - 1]), "Tokens must be sorted and unique");
+        }
 
         uint256 currentSupply = totalSupply();
         require(currentSupply > 0, "No supply");
@@ -102,7 +107,7 @@ contract ERC20Implementation is
     /**
      * @notice Calculate how much of each token a user would receive for burning a specific amount
      * @param amountToBurn Amount of tokens the user wants to burn
-     * @param tokens Array of token addresses to check
+     * @param tokens Array of token addresses to check (should be sorted and unique for consistency)
      * @return amounts Array of amounts the user would receive
      */
     function previewBurnAndClaim(uint256 amountToBurn, address[] calldata tokens)
@@ -114,6 +119,9 @@ contract ERC20Implementation is
         if (currentSupply == 0 || amountToBurn == 0) {
             return new uint256[](tokens.length);
         }
+
+        // Note: We don't enforce sorting/uniqueness in preview since it's view-only
+        // But caller should use sorted unique array for accurate preview
 
         uint256 sharePercentage = (amountToBurn * PRECISION) / currentSupply;
         amounts = new uint256[](tokens.length);
