@@ -2,6 +2,7 @@ import { task } from "hardhat/config";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeploymentManager } from "./utils/deployment-manager";
 import { formatEther, parseEther } from "ethers";
+import { TestERC20 } from "../typechain-types";
 
 // ============================================================================
 // UTILITY TASKS
@@ -296,6 +297,385 @@ task("claim-agent-rewards", "Claim persona token rewards after graduation")
 // STAKING TASKS
 // ============================================================================
 
+// Add these tasks to your existing tasks file
+
+// ============================================================================
+// STAKING REWARDS TASKS - UPDATED FOR NEW CONTRACT
+// ============================================================================
+
+task("staking-pools", "List all staking pools")
+  .addOptionalParam("staking", "StakingRewards address")
+  .setAction(async (taskArgs, hre) => {
+    const stakingAddress = await getStakingAddress(taskArgs.staking, hre);
+    if (!stakingAddress) {
+      console.log("❌ No staking rewards contract deployed");
+      return;
+    }
+
+    const staking = await hre.ethers.getContractAt("PersonaStakingRewards", stakingAddress);
+    const poolLength = await staking.poolLength();
+
+    console.log("\n🌾 Staking Pools:");
+    console.log("=".repeat(60));
+
+    for (let i = 0; i < poolLength; i++) {
+      const poolInfo = await staking.getPoolInfo(i);
+      const lpToken = await hre.ethers.getContractAt("IERC20", poolInfo.lpToken) as TestERC20;
+      const symbol = await lpToken.symbol();
+
+      console.log(`\nPool #${i}:`);
+      console.log(`  LP Token: ${poolInfo.lpToken} (${symbol})`);
+      console.log(`  Allocation: ${Number(poolInfo.allocBasisPoints) / 100}%`);
+      console.log(`  Total Staked: ${formatEther(poolInfo.totalStaked)}`);
+      console.log(`  Weighted Total: ${formatEther(poolInfo.weightedTotal)}`);
+      console.log(`  Active: ${poolInfo.isActive ? "Yes ✅" : "No ❌"}`);
+      console.log(`  Agent Pool: ${poolInfo.isAgentPool ? "Yes" : "No"}`);
+    }
+
+    const remaining = await staking.getRemainingAllocation();
+    console.log(`\n💡 Remaining Allocation: ${Number(remaining) / 100}%`);
+  });
+
+task("stake-locked", "Stake LP tokens with time lock for bonus rewards")
+  .addParam("poolId", "Pool ID")
+  .addParam("amount", "Amount to stake in ether units")
+  .addParam("lockTier", "Lock tier index (0=1month, 1=3months, 2=6months, 3=1year)")
+  .addOptionalParam("staking", "StakingRewards address")
+  .setAction(async (taskArgs, hre) => {
+    const stakingAddress = await getStakingAddress(taskArgs.staking, hre);
+    if (!stakingAddress) {
+      console.log("❌ No staking rewards contract deployed");
+      return;
+    }
+
+    const staking = await hre.ethers.getContractAt("PersonaStakingRewards", stakingAddress);
+    const amount = parseEther(taskArgs.amount);
+
+    // Get pool and lock tier info
+    const poolInfo = await staking.getPoolInfo(taskArgs.poolId);
+    const lockTier = await staking.getLockTier(taskArgs.lockTier);
+
+    console.log("\n🔒 Staking LP Tokens with Lock:");
+    console.log(`  Pool ID: ${taskArgs.poolId}`);
+    console.log(`  Amount: ${taskArgs.amount}`);
+    console.log(`  Lock Duration: ${Number(lockTier.duration) / 86400} days`);
+    console.log(`  Multiplier: ${Number(lockTier.multiplier) / 10000}x`);
+
+    // Approve LP token
+    const lpToken = await hre.ethers.getContractAt("IERC20", poolInfo.lpToken);
+    const approveTx = await lpToken.approve(stakingAddress, amount);
+    await approveTx.wait();
+
+    // Stake with lock
+    const tx = await staking.stakeLocked(taskArgs.poolId, amount, taskArgs.lockTier);
+    const receipt = await tx.wait();
+
+    console.log("\n✅ LP tokens staked with lock!");
+    console.log(`  Transaction: ${receipt?.hash}`);
+  });
+
+task("user-stakes", "Get user's staking positions")
+  .addParam("address", "User address")
+  .addOptionalParam("staking", "StakingRewards address")
+  .setAction(async (taskArgs, hre) => {
+    const stakingAddress = await getStakingAddress(taskArgs.staking, hre);
+    if (!stakingAddress) {
+      console.log("❌ No staking rewards contract deployed");
+      return;
+    }
+
+    const staking = await hre.ethers.getContractAt("PersonaStakingRewards", stakingAddress);
+    const activePools = await staking.getUserActivePools(taskArgs.address);
+
+    console.log(`\n👤 Staking Positions for ${taskArgs.address}:`);
+    console.log("=".repeat(60));
+
+    if (activePools.length === 0) {
+      console.log("  No active positions");
+      return;
+    }
+
+    let totalPendingRewards = 0n;
+
+    for (const poolId of activePools) {
+      const userInfo = await staking.getUserInfo(poolId, taskArgs.address);
+      const poolInfo = await staking.getPoolInfo(poolId);
+      const lpToken = await hre.ethers.getContractAt("IERC20", poolInfo.lpToken) as TestERC20;
+      const symbol = await lpToken.symbol();
+      const pendingRewards = await staking.pendingRewardsForPool(poolId, taskArgs.address);
+
+      console.log(`\nPool #${poolId} (${symbol}):`);
+      console.log(`  Flexible Stake: ${formatEther(userInfo.flexibleAmount)}`);
+      console.log(`  Locked Stake: ${formatEther(userInfo.lockedAmount)}`);
+      console.log(`  Effective Stake: ${formatEther(userInfo.effectiveStake)}`);
+      console.log(`  Number of Locks: ${userInfo.numberOfLocks}`);
+      console.log(`  Unclaimed Rewards: ${formatEther(userInfo.unclaimedRewards)}`);
+      console.log(`  Pending Rewards: ${formatEther(pendingRewards)}`);
+
+      totalPendingRewards += pendingRewards;
+
+      // Show lock details if any
+      if (userInfo.numberOfLocks > 0) {
+        const locks = await staking.getUserLocks(poolId, taskArgs.address);
+        console.log("  Locks:");
+        for (const lock of locks) {
+          const unlockDate = new Date(Number(lock.unlockTime) * 1000);
+          const isUnlocked = Date.now() >= Number(lock.unlockTime) * 1000;
+          console.log(`    - ID: ${lock.lockId}, Amount: ${formatEther(lock.amount)}, Multiplier: ${Number(lock.lockMultiplier) / 10000}x`);
+          console.log(`      Unlock: ${unlockDate.toLocaleString()} ${isUnlocked ? "✅" : "🔒"}`);
+        }
+      }
+    }
+
+    console.log(`\n💰 Total Pending Rewards: ${formatEther(totalPendingRewards)} AMICA`);
+  });
+
+task("withdraw-locked", "Withdraw a locked stake after unlock time")
+  .addParam("poolId", "Pool ID")
+  .addParam("lockId", "Lock ID to withdraw")
+  .addOptionalParam("staking", "StakingRewards address")
+  .setAction(async (taskArgs, hre) => {
+    const stakingAddress = await getStakingAddress(taskArgs.staking, hre);
+    if (!stakingAddress) {
+      console.log("❌ No staking rewards contract deployed");
+      return;
+    }
+
+    const staking = await hre.ethers.getContractAt("PersonaStakingRewards", stakingAddress);
+
+    console.log("\n🔓 Withdrawing Locked Stake:");
+    console.log(`  Pool ID: ${taskArgs.poolId}`);
+    console.log(`  Lock ID: ${taskArgs.lockId}`);
+
+    const tx = await staking.withdrawLocked(taskArgs.poolId, taskArgs.lockId);
+    const receipt = await tx.wait();
+
+    console.log("\n✅ Locked stake withdrawn!");
+    console.log(`  Transaction: ${receipt?.hash}`);
+  });
+
+task("claim-pool", "Claim rewards from a specific pool")
+  .addParam("poolId", "Pool ID")
+  .addOptionalParam("staking", "StakingRewards address")
+  .setAction(async (taskArgs, hre) => {
+    const [signer] = await hre.ethers.getSigners();
+    const stakingAddress = await getStakingAddress(taskArgs.staking, hre);
+    if (!stakingAddress) {
+      console.log("❌ No staking rewards contract deployed");
+      return;
+    }
+
+    const staking = await hre.ethers.getContractAt("PersonaStakingRewards", stakingAddress);
+
+    const pendingRewards = await staking.pendingRewardsForPool(taskArgs.poolId, signer.address);
+
+    console.log("\n🎁 Claiming Pool Rewards:");
+    console.log(`  Pool ID: ${taskArgs.poolId}`);
+    console.log(`  Pending Rewards: ${formatEther(pendingRewards)} AMICA`);
+
+    const tx = await staking.claimPool(taskArgs.poolId);
+    const receipt = await tx.wait();
+
+    console.log("\n✅ Rewards claimed!");
+    console.log(`  Transaction: ${receipt?.hash}`);
+  });
+
+task("claim-all", "Claim all rewards from all pools")
+  .addOptionalParam("staking", "StakingRewards address")
+  .setAction(async (taskArgs, hre) => {
+    const [signer] = await hre.ethers.getSigners();
+    const stakingAddress = await getStakingAddress(taskArgs.staking, hre);
+    if (!stakingAddress) {
+      console.log("❌ No staking rewards contract deployed");
+      return;
+    }
+
+    const staking = await hre.ethers.getContractAt("PersonaStakingRewards", stakingAddress);
+
+    const totalPending = await staking.estimatedTotalPendingRewards(signer.address);
+
+    console.log("\n🎁 Claiming All Rewards:");
+    console.log(`  Total Pending: ${formatEther(totalPending)} AMICA`);
+
+    if (totalPending === 0n) {
+      console.log("  No rewards to claim");
+      return;
+    }
+
+    const tx = await staking.claimAll();
+    const receipt = await tx.wait();
+
+    console.log("\n✅ All rewards claimed!");
+    console.log(`  Transaction: ${receipt?.hash}`);
+  });
+
+task("emergency-exit", "Emergency exit from a pool (forfeit rewards)")
+  .addParam("poolId", "Pool ID")
+  .addOptionalParam("staking", "StakingRewards address")
+  .setAction(async (taskArgs, hre) => {
+    const stakingAddress = await getStakingAddress(taskArgs.staking, hre);
+    if (!stakingAddress) {
+      console.log("❌ No staking rewards contract deployed");
+      return;
+    }
+
+    const staking = await hre.ethers.getContractAt("PersonaStakingRewards", stakingAddress);
+
+    console.log("\n⚠️  EMERGENCY EXIT - This will forfeit all unclaimed rewards!");
+    console.log(`  Pool ID: ${taskArgs.poolId}`);
+    console.log("\n  Type 'CONFIRM' to proceed:");
+
+    const readline = require('readline').createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+
+    const answer = await new Promise<string>(resolve => {
+      readline.question('', resolve);
+    });
+    readline.close();
+
+    if (answer !== 'CONFIRM') {
+      console.log("❌ Emergency exit cancelled");
+      return;
+    }
+
+    const tx = await staking.emergencyExitPool(taskArgs.poolId);
+    const receipt = await tx.wait();
+
+    console.log("\n✅ Emergency exit complete!");
+    console.log(`  Transaction: ${receipt?.hash}`);
+  });
+
+// ============================================================================
+// ADMIN STAKING TASKS
+// ============================================================================
+
+task("update-pool", "Update pool allocation or status")
+  .addParam("poolId", "Pool ID")
+  .addParam("allocBasisPoints", "New allocation in basis points")
+  .addParam("isActive", "Pool active status (true/false)")
+  .addOptionalParam("staking", "StakingRewards address")
+  .setAction(async (taskArgs, hre) => {
+    const stakingAddress = await getStakingAddress(taskArgs.staking, hre);
+    if (!stakingAddress) {
+      console.log("❌ No staking rewards contract deployed");
+      return;
+    }
+
+    const staking = await hre.ethers.getContractAt("PersonaStakingRewards", stakingAddress);
+    const isActive = taskArgs.isActive.toLowerCase() === "true";
+
+    console.log("\n⚙️  Updating Pool:");
+    console.log(`  Pool ID: ${taskArgs.poolId}`);
+    console.log(`  New Allocation: ${Number(taskArgs.allocBasisPoints) / 100}%`);
+    console.log(`  Active: ${isActive ? "Yes" : "No"}`);
+
+    const tx = await staking.updatePool(taskArgs.poolId, taskArgs.allocBasisPoints, isActive);
+    const receipt = await tx.wait();
+
+    console.log("\n✅ Pool updated!");
+    console.log(`  Transaction: ${receipt?.hash}`);
+  });
+
+task("set-lock-tier", "Add or update a lock tier")
+  .addParam("index", "Tier index")
+  .addParam("duration", "Lock duration in days")
+  .addParam("multiplier", "Reward multiplier (e.g., 15000 for 1.5x)")
+  .addOptionalParam("staking", "StakingRewards address")
+  .setAction(async (taskArgs, hre) => {
+    const stakingAddress = await getStakingAddress(taskArgs.staking, hre);
+    if (!stakingAddress) {
+      console.log("❌ No staking rewards contract deployed");
+      return;
+    }
+
+    const staking = await hre.ethers.getContractAt("PersonaStakingRewards", stakingAddress);
+    const durationInSeconds = Number(taskArgs.duration) * 86400;
+
+    console.log("\n🔒 Setting Lock Tier:");
+    console.log(`  Index: ${taskArgs.index}`);
+    console.log(`  Duration: ${taskArgs.duration} days`);
+    console.log(`  Multiplier: ${Number(taskArgs.multiplier) / 10000}x`);
+
+    const tx = await staking.setLockTier(taskArgs.index, durationInSeconds, taskArgs.multiplier);
+    const receipt = await tx.wait();
+
+    console.log("\n✅ Lock tier set!");
+    console.log(`  Transaction: ${receipt?.hash}`);
+  });
+
+task("lock-tiers", "List all lock tiers")
+  .addOptionalParam("staking", "StakingRewards address")
+  .setAction(async (taskArgs, hre) => {
+    const stakingAddress = await getStakingAddress(taskArgs.staking, hre);
+    if (!stakingAddress) {
+      console.log("❌ No staking rewards contract deployed");
+      return;
+    }
+
+    const staking = await hre.ethers.getContractAt("PersonaStakingRewards", stakingAddress);
+    const tierCount = await staking.lockTiersLength();
+
+    console.log("\n🔒 Lock Tiers:");
+    console.log("=".repeat(50));
+
+    for (let i = 0; i < tierCount; i++) {
+      const tier = await staking.getLockTier(i);
+      console.log(`\nTier #${i}:`);
+      console.log(`  Duration: ${Number(tier.duration) / 86400} days`);
+      console.log(`  Multiplier: ${Number(tier.multiplier) / 10000}x`);
+    }
+  });
+
+task("update-reward-rate", "Update AMICA rewards per block")
+  .addParam("amicaPerBlock", "New AMICA per block in ether units")
+  .addOptionalParam("staking", "StakingRewards address")
+  .setAction(async (taskArgs, hre) => {
+    const stakingAddress = await getStakingAddress(taskArgs.staking, hre);
+    if (!stakingAddress) {
+      console.log("❌ No staking rewards contract deployed");
+      return;
+    }
+
+    const staking = await hre.ethers.getContractAt("PersonaStakingRewards", stakingAddress);
+    const amicaPerBlock = parseEther(taskArgs.amicaPerBlock);
+
+    console.log("\n💰 Updating Reward Rate:");
+    console.log(`  New Rate: ${taskArgs.amicaPerBlock} AMICA per block`);
+
+    const tx = await staking.updateRewardRate(amicaPerBlock);
+    const receipt = await tx.wait();
+
+    console.log("\n✅ Reward rate updated!");
+    console.log(`  Transaction: ${receipt?.hash}`);
+  });
+
+task("update-reward-period", "Update reward start and end blocks")
+  .addParam("startBlock", "Start block number")
+  .addParam("endBlock", "End block number (0 for no end)")
+  .addOptionalParam("staking", "StakingRewards address")
+  .setAction(async (taskArgs, hre) => {
+    const stakingAddress = await getStakingAddress(taskArgs.staking, hre);
+    if (!stakingAddress) {
+      console.log("❌ No staking rewards contract deployed");
+      return;
+    }
+
+    const staking = await hre.ethers.getContractAt("PersonaStakingRewards", stakingAddress);
+
+    console.log("\n📅 Updating Reward Period:");
+    console.log(`  Start Block: ${taskArgs.startBlock}`);
+    console.log(`  End Block: ${taskArgs.endBlock === "0" ? "No end" : taskArgs.endBlock}`);
+
+    const tx = await staking.updateRewardPeriod(taskArgs.startBlock, taskArgs.endBlock);
+    const receipt = await tx.wait();
+
+    console.log("\n✅ Reward period updated!");
+    console.log(`  Transaction: ${receipt?.hash}`);
+  });
+
+// Update the existing staking-info task to show the correct information
 task("staking-info", "Get staking rewards contract information")
   .addOptionalParam("staking", "StakingRewards address")
   .setAction(async (taskArgs, hre) => {
@@ -308,7 +688,7 @@ task("staking-info", "Get staking rewards contract information")
     const staking = await hre.ethers.getContractAt("PersonaStakingRewards", stakingAddress);
 
     const amicaPerBlock = await staking.amicaPerBlock();
-    const totalAllocPoint = await staking.totalAllocPoint();
+    const totalAllocBasisPoints = await staking.totalAllocBasisPoints();
     const poolLength = await staking.poolLength();
     const startBlock = await staking.startBlock();
     const endBlock = await staking.endBlock();
@@ -318,7 +698,7 @@ task("staking-info", "Get staking rewards contract information")
     console.log("=".repeat(50));
     console.log(`  Address: ${stakingAddress}`);
     console.log(`  AMICA per Block: ${formatEther(amicaPerBlock)}`);
-    console.log(`  Total Allocation Points: ${totalAllocPoint}`);
+    console.log(`  Total Allocation: ${Number(totalAllocBasisPoints) / 100}%`);
     console.log(`  Number of Pools: ${poolLength}`);
     console.log(`  Start Block: ${startBlock}`);
     console.log(`  End Block: ${endBlock > 0 ? endBlock : "No end"}`);
@@ -326,9 +706,10 @@ task("staking-info", "Get staking rewards contract information")
     console.log(`  Status: ${currentBlock >= startBlock ? "Active ✅" : "Not started yet ⏳"}`);
   });
 
+// Update the add-staking-pool task to use basis points
 task("add-staking-pool", "Add a new staking pool")
   .addParam("lpToken", "LP token address")
-  .addParam("allocPoint", "Allocation points for this pool")
+  .addParam("allocBasisPoints", "Allocation in basis points (100 = 1%)")
   .addParam("isAgentPool", "true if this is a Persona/Agent pool")
   .addParam("personaTokenId", "Associated persona token ID")
   .addOptionalParam("staking", "StakingRewards address")
@@ -344,13 +725,13 @@ task("add-staking-pool", "Add a new staking pool")
 
     console.log("\n🌾 Adding Staking Pool:");
     console.log(`  LP Token: ${taskArgs.lpToken}`);
-    console.log(`  Allocation Points: ${taskArgs.allocPoint}`);
+    console.log(`  Allocation: ${Number(taskArgs.allocBasisPoints) / 100}%`);
     console.log(`  Agent Pool: ${isAgentPool ? "Yes" : "No"}`);
     console.log(`  Persona Token ID: ${taskArgs.personaTokenId}`);
 
     const tx = await staking.addPool(
       taskArgs.lpToken,
-      taskArgs.allocPoint,
+      taskArgs.allocBasisPoints,
       isAgentPool,
       taskArgs.personaTokenId
     );
@@ -391,40 +772,6 @@ task("stake-lp", "Stake LP tokens in a pool")
     const receipt = await tx.wait();
 
     console.log("\n✅ LP tokens staked!");
-    console.log(`  Transaction: ${receipt?.hash}`);
-  });
-
-task("claim-staking-rewards", "Claim staking rewards from pools")
-  .addParam("poolIds", "Comma-separated pool IDs")
-  .addOptionalParam("staking", "StakingRewards address")
-  .setAction(async (taskArgs, hre) => {
-    const [signer] = await hre.ethers.getSigners();
-    const stakingAddress = await getStakingAddress(taskArgs.staking, hre);
-    if (!stakingAddress) {
-      console.log("❌ No staking rewards contract deployed");
-      return;
-    }
-
-    const staking = await hre.ethers.getContractAt("PersonaStakingRewards", stakingAddress);
-    const poolIds = taskArgs.poolIds.split(",").map((id: string) => id.trim());
-
-    console.log("\n🎁 Claiming Staking Rewards:");
-    console.log(`  Pools: ${poolIds.join(", ")}`);
-
-    // Show pending rewards
-    let totalPending = 0;
-    for (const poolId of poolIds) {
-      const pending = await staking.pendingRewards(poolId, signer.address);
-      console.log(`  Pool ${poolId}: ${formatEther(pending)} AMICA`);
-      totalPending += Number(formatEther(pending));
-    }
-    console.log(`  Total: ${totalPending} AMICA`);
-
-    // Claim all
-    const tx = await staking.claimAll(poolIds);
-    const receipt = await tx.wait();
-
-    console.log("\n✅ Rewards claimed!");
     console.log(`  Transaction: ${receipt?.hash}`);
   });
 
