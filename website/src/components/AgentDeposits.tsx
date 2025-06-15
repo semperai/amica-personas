@@ -1,5 +1,5 @@
 // src/components/AgentDeposits.tsx
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAccount, useReadContract, useWriteContract } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
 import { FACTORY_ABI, getAddressesForChain } from '../lib/contracts';
@@ -186,7 +186,7 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
               </button>
             </div>
             <p className="text-xs text-white/50 mt-2">
-              Deposit agent tokens to help this persona graduate. You'll receive persona tokens after graduation.
+              Deposit agent tokens to help this persona graduate. You&apos;ll receive persona tokens after graduation.
             </p>
           </div>
 

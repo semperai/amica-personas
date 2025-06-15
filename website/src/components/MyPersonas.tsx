@@ -13,7 +13,7 @@ interface CreatedPersona {
   symbol: string;
   totalVolume24h: string;
   totalVolumeAllTime: string;
-  totalDeposited: string;
+  totalDeposited?: string;
   isGraduated: boolean;
   chain: {
     id: string;

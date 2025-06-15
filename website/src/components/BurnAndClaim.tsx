@@ -3,10 +3,6 @@ import { useAccount, useReadContract, useWriteContract, useBalance } from 'wagmi
 import { parseEther, formatEther } from 'viem';
 import { FACTORY_ABI, AMICA_ABI, getAddressesForChain } from '../lib/contracts';
 
-interface BurnAndClaimProps {
-  // Add any props if needed
-}
-
 interface ClaimableToken {
   address: string;
   symbol: string;
@@ -15,7 +11,7 @@ interface ClaimableToken {
   valueUSD: number;
 }
 
-export function BurnAndClaim({}: BurnAndClaimProps) {
+export function BurnAndClaim() {
   const { address, chainId } = useAccount();
   const [burnAmount, setBurnAmount] = useState('');
   const [claimableTokens, setClaimableTokens] = useState<ClaimableToken[]>([]);

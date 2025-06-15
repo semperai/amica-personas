@@ -141,7 +141,7 @@ const Layout = ({ children }: LayoutProps) => {
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div className="text-white/40 text-sm">
-              © 2024 Amica Protocol
+              © {(new Date()).getFullYear()} Amica Protocol
             </div>
             <div className="flex space-x-6">
               <a href="#" className="text-white/40 hover:text-white/60 text-sm transition-colors">Docs</a>

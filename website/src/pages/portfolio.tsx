@@ -83,7 +83,7 @@ function PortfolioTokens({ address }: { address: string }) {
       <div>
         <h2 className="text-2xl font-light text-white mb-6">My Tokens</h2>
         <div className="text-center py-12">
-          <p className="text-white/60">You don't own any persona tokens yet.</p>
+          <p className="text-white/60">You don&apos;t own any persona tokens yet.</p>
         </div>
       </div>
     );
