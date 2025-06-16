@@ -19,7 +19,7 @@ export default function BridgePage() {
               Please connect your wallet to use the AMICA bridge
             </p>
             <div className="flex justify-center">
-              <div className="bg-white/10 backdrop-blur-md rounded-full p-1 inline-block">
+              <div className="p-1 inline-block">
                 <ConnectButton />
               </div>
             </div>

@@ -21,7 +21,7 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
 
   // Get persona details
   const { data: personaTuple } = useReadContract({
-    address: addresses?.factory as `0x${string}`,
+    address: addresses?.personaFactory as `0x${string}`,
     abi: FACTORY_ABI,
     functionName: 'getPersona',
     args: [BigInt(tokenId)],
@@ -33,7 +33,7 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
   // Get user balances
   const { data: amicaBalance } = useBalance({
     address: address,
-    token: addresses?.amica as `0x${string}`,
+    token: addresses?.amicaToken as `0x${string}`,
   });
 
   const { data: tokenBalance } = useReadContract({
@@ -53,7 +53,7 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
 
   // Get fee information for the user
   const { data: feeInfo } = useReadContract({
-    address: addresses?.factory as `0x${string}`,
+    address: addresses?.personaFactory as `0x${string}`,
     abi: FACTORY_ABI,
     functionName: 'getUserFeeInfo',
     args: address ? [address] : undefined,
@@ -64,7 +64,7 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
 
   // Get quote with user-specific fees
   const { data: quote } = useReadContract({
-    address: addresses?.factory as `0x${string}`,
+    address: addresses?.personaFactory as `0x${string}`,
     abi: FACTORY_ABI,
     functionName: 'getAmountOutForUser',
     args: address && amount && parseFloat(amount) > 0 ? [BigInt(tokenId), parseEther(amount), address] : undefined,
@@ -75,7 +75,7 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
 
   // Get preview with fee breakdown
   const { data: preview } = useReadContract({
-    address: addresses?.factory as `0x${string}`,
+    address: addresses?.personaFactory as `0x${string}`,
     abi: FACTORY_ABI,
     functionName: 'previewSwapWithFee',
     args: address && amount && parseFloat(amount) > 0 ? [BigInt(tokenId), parseEther(amount), address] : undefined,
@@ -94,7 +94,7 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
 
     if (isBuying) {
       await writeContract({
-        address: addresses.factory as `0x${string}`,
+        address: addresses.personaFactory as `0x${string}`,
         abi: FACTORY_ABI,
         functionName: 'swapExactTokensForTokens',
         args: [
@@ -115,7 +115,7 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
     if (!address || !addresses) return;
 
     await writeContract({
-      address: addresses.factory as `0x${string}`,
+      address: addresses.personaFactory as `0x${string}`,
       abi: FACTORY_ABI,
       functionName: 'updateAmicaSnapshot',
       args: []

@@ -117,7 +117,7 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
 
   // Get persona details - the function returns a tuple
   const { data: personaTuple } = useReadContract({
-    address: addresses?.factory as `0x${string}`,
+    address: addresses?.personaFactory as `0x${string}`,
     abi: FACTORY_ABI,
     functionName: 'getPersona',
     args: [BigInt(tokenId)],
@@ -128,7 +128,7 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
 
   // Get the full persona struct to access agentToken
   const { data: personaStruct } = useReadContract({
-    address: addresses?.factory as `0x${string}`,
+    address: addresses?.personaFactory as `0x${string}`,
     abi: FACTORY_ABI,
     functionName: 'personas',
     args: [BigInt(tokenId)],
@@ -148,7 +148,7 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
 
   // Get user's agent deposits
   const { data: userDeposits } = useReadContract({
-    address: addresses?.factory as `0x${string}`,
+    address: addresses?.personaFactory as `0x${string}`,
     abi: FACTORY_ABI,
     functionName: 'getUserAgentDeposits',
     args: address ? [BigInt(tokenId), address] : undefined,
@@ -159,7 +159,7 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
 
   // Calculate expected rewards
   const { data: rewardCalculation } = useReadContract({
-    address: addresses?.factory as `0x${string}`,
+    address: addresses?.personaFactory as `0x${string}`,
     abi: FACTORY_ABI,
     functionName: 'calculateAgentRewards',
     args: address ? [BigInt(tokenId), address] : undefined,
@@ -203,7 +203,7 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
     address: agentToken as `0x${string}`,
     abi: ERC20_ABI,
     functionName: 'allowance',
-    args: address && addresses ? [address, addresses.factory as `0x${string}`] : undefined,
+    args: address && addresses ? [address, addresses.personaFactory as `0x${string}`] : undefined,
     query: {
       enabled: !!address && !!addresses && !!agentToken && agentToken !== '0x0000000000000000000000000000000000000000' && !isMockMode
     }
@@ -240,7 +240,7 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
         address: agentToken as `0x${string}`,
         abi: ERC20_ABI,
         functionName: 'approve',
-        args: [addresses.factory as `0x${string}`, parseEther(depositAmount)]
+        args: [addresses.personaFactory as `0x${string}`, parseEther(depositAmount)]
       });
     } finally {
       setIsApproving(false);
@@ -256,7 +256,7 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
     }
 
     await writeContract({
-      address: addresses.factory as `0x${string}`,
+      address: addresses.personaFactory as `0x${string}`,
       abi: FACTORY_ABI,
       functionName: 'depositAgentTokens',
       args: [
@@ -275,7 +275,7 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
     }
 
     await writeContract({
-      address: addresses.factory as `0x${string}`,
+      address: addresses.personaFactory as `0x${string}`,
       abi: FACTORY_ABI,
       functionName: 'withdrawAgentTokens',
       args: [BigInt(tokenId)]
@@ -291,7 +291,7 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
     }
 
     await writeContract({
-      address: addresses.factory as `0x${string}`,
+      address: addresses.personaFactory as `0x${string}`,
       abi: FACTORY_ABI,
       functionName: 'claimAgentRewards',
       args: [BigInt(tokenId)]

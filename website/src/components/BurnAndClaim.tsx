@@ -23,12 +23,12 @@ export function BurnAndClaim() {
   // Get AMICA balance
   const { data: amicaBalance } = useBalance({
     address: address,
-    token: addresses?.amica as `0x${string}`,
+    token: addresses?.amicaToken as `0x${string}`,
   });
 
   // Get total AMICA supply for calculations
   const { data: totalSupply } = useReadContract({
-    address: addresses?.amica as `0x${string}`,
+    address: addresses?.amicaToken as `0x${string}`,
     abi: AMICA_ABI,
     functionName: 'totalSupply',
     query: {
@@ -87,7 +87,7 @@ export function BurnAndClaim() {
 
     try {
       await writeContract({
-        address: addresses.factory as `0x${string}`,
+        address: addresses.personaFactory as `0x${string}`,
         abi: FACTORY_ABI,
         functionName: 'burnAndClaim',
         args: [parseEther(burnAmount)]

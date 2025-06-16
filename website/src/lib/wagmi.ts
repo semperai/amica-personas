@@ -7,8 +7,8 @@ import {
 
 export const config = getDefaultConfig({
   appName: 'Amica Personas',
-  projectId: 'YOUR_PROJECT_ID',
-  chains: [mainnet, base, arbitrum],
+  projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || 'YOUR_PROJECT_ID_HERE',
+  chains: [/*mainnet, */ base, /*arbitrum*/],
   ssr: true,
 });
 

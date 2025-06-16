@@ -73,7 +73,7 @@ export default function CreatePersonaPage() {
   // Define pairing token options
   const pairingTokenOptions: TokenOption[] = [
     {
-      address: addresses?.amica || '',
+      address: addresses?.amicaToken || '',
       symbol: 'AMICA',
       name: 'Amica Token',
       icon: '🎭' // You can replace with actual icon URL
@@ -88,7 +88,7 @@ export default function CreatePersonaPage() {
 
   // Set default pairing token on mount or chain change
   useEffect(() => {
-    if (addresses?.amica && !selectedPairingToken) {
+    if (addresses?.amicaToken && !selectedPairingToken) {
       const amicaToken = pairingTokenOptions.find(t => t.symbol === 'AMICA');
       if (amicaToken) {
         setSelectedPairingToken(amicaToken);
@@ -127,7 +127,7 @@ export default function CreatePersonaPage() {
 
   // Get initial token preview using getInitialTokensForLiquidity
   const { data: initialTokensPreview } = useReadContract({
-    address: addresses?.factory as `0x${string}`,
+    address: addresses?.personaFactory as `0x${string}`,
     abi: FACTORY_ABI,
     functionName: 'getInitialTokensForLiquidity',
     args: formData.initialBuyAmount && parseFloat(formData.initialBuyAmount) > 0
@@ -180,7 +180,7 @@ export default function CreatePersonaPage() {
     }
 
     try {
-      const pairingToken = formData.pairingToken || selectedPairingToken?.address || addresses.amica;
+      const pairingToken = formData.pairingToken || selectedPairingToken?.address || addresses.amicaToken;
       const agentToken = showAgentConfig && formData.agentToken ? formData.agentToken : zeroAddress;
 
       // Use the correct decimals for agent token if available
@@ -189,7 +189,7 @@ export default function CreatePersonaPage() {
         : BigInt(0);
 
       await writeContract({
-        address: addresses.factory as `0x${string}`,
+        address: addresses.personaFactory as `0x${string}`,
         abi: FACTORY_ABI,
         functionName: 'createPersona',
         args: [

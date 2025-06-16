@@ -1,0 +1,26 @@
+{
+  "chainId": 8453,
+  "chainName": "base",
+  "addresses": {
+    "amicaToken": "0xC0ba25570F4cB592e83FF5f052cC9DD69D5b3caE",
+    "amicaTokenImpl": "0x766246eB22f975782d6223A2379d0A04149C556d",
+    "personaFactory": "0x62966fd253C2c3507A305f296E54cabD74AEA083",
+    "personaFactoryImpl": "0x5B6aB4aa3139029Aa7D2b5B5E5318422979fD7B6",
+    "proxyAdmin": "0x84f9ed0C4Fffd7973805f165A184F6450fAD56D9",
+    "bridgeWrapper": "0xe17B125b85AbCC0Ff212cf33d06d928d4736aA04",
+    "bridgeWrapperImpl": "0x9f12b81Cec37bdA3D5863376Bd0C99dA51FfCd8A",
+    "erc20Implementation": "0x4b140c2d84c75D50E28b46f4126fF9C1c5e4C3DD",
+    "bridgedAmicaAddress": "0x33c38a54E3A02b1cb7133A157D72DAc4BFadd88f",
+    "stakingRewards": "0xEfc05BA7cca5653a71dA0569D589848dfAb60CdA"
+  },
+  "blockNumber": 31632254,
+  "timestamp": "2025-06-16T06:04:17.191Z",
+  "deployer": "0x8115F3DBb2DF930cC07b8D910C3bb06b5b9bf573",
+  "transactionHashes": {
+    "amicaToken": "0x08ae98cb402fce58eb8a0e82c412a958ab2aaa5a92c5133646a31fcae20e6818",
+    "erc20Implementation": "0x0aefd2dfc13a38af4cc0ecc2d835b8735efd406f568c4c1e4b0c35b3bf221209",
+    "personaFactory": "0x297f819777c15d9ec4c3dc6bead7bd62d27058e9ca44352fb7b3f24b55115764",
+    "bridgeWrapper": "0x2b8bc6c32b145c59f4783a6f6edb5dbc8c085d69f1f2252c03fb58969a791b8d",
+    "stakingRewards": "0xf914a544b7c177499ac7dafd91b52580048ec3f95b4d48fba0cd7474e7144bc4"
+  }
+}

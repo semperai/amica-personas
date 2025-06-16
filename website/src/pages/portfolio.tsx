@@ -131,7 +131,7 @@ export default function PortfolioPage() {
   // Get AMICA balance
   const { data: amicaBalance } = useBalance({
     address: address,
-    token: addresses?.amica as `0x${string}`,
+    token: addresses?.amicaToken as `0x${string}`,
   });
 
   // Mock AMICA price (in real app, fetch from oracle or DEX)
