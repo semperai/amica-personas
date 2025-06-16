@@ -15,53 +15,200 @@ import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 // INTERFACES
 // ============================================================================
 
+/**
+ * @title IAmicaToken
+ * @notice Interface for interacting with the AMICA token contract
+ */
 interface IAmicaToken {
+    /**
+     * @notice Deposit tokens into the AMICA protocol
+     * @param token The token address to deposit
+     * @param amount The amount of tokens to deposit
+     */
     function deposit(address token, uint256 amount) external;
 }
 
+/**
+ * @title IPersonaToken
+ * @notice Interface for persona ERC20 tokens created by this factory
+ */
 interface IPersonaToken {
+    /**
+     * @notice Initialize a new persona token
+     * @param name The token name
+     * @param symbol The token symbol
+     * @param supply The total supply to mint
+     * @param owner The initial owner of all tokens
+     */
     function initialize(string memory name, string memory symbol, uint256 supply, address owner) external;
+    
+    /**
+     * @notice Set the graduation status of the persona token
+     * @param status True if graduated, false otherwise
+     */
     function setGraduationStatus(bool status) external;
 }
 
 // ============================================================================
 // ERRORS
 // ============================================================================
-error InvalidToken();
-error InvalidAmount();
-error InvalidRecipient();
-error InvalidName();
-error InvalidSymbol();
-error InvalidMetadata();
-error TokenNotEnabled();
-error InsufficientPairingToken();
-error TransferFailed();
-error TradingOnUniswap();
-error InsufficientOutput();
-error TransactionExpired();
-error NotTokenOwner();
-error FeeTooHigh();
-error InvalidShare();
-error InvalidFeeRange();
-error InvalidMultiplier();
-error NoAgentToken();
-error AlreadyGraduated();
-error NotGraduated();
-error NoTokensToWithdraw();
-error NoDepositsToWithdraw();
-error NoDepositsToClaim();
-error InsufficientLiquidity();
-error InsufficientAgentTokens();
-error PairAlreadyCreated();
-error InvalidConfiguration();
-error InvalidIndex();
-error PaymentFailed();
-error CannotSetMinWithoutAgent();
 
+/**
+ * @notice Thrown when an invalid token address is provided
+ */
+error InvalidToken();
+
+/**
+ * @notice Thrown when an invalid amount (e.g., zero) is provided
+ */
+error InvalidAmount();
+
+/**
+ * @notice Thrown when an invalid recipient address is provided
+ */
+error InvalidRecipient();
+
+/**
+ * @notice Thrown when persona name is invalid (empty or too long)
+ */
+error InvalidName();
+
+/**
+ * @notice Thrown when persona symbol is invalid (empty or too long)
+ */
+error InvalidSymbol();
+
+/**
+ * @notice Thrown when metadata arrays have mismatched lengths
+ */
+error InvalidMetadata();
+
+/**
+ * @notice Thrown when attempting to use a disabled pairing token
+ */
+error TokenNotEnabled();
+
+/**
+ * @notice Thrown when user has insufficient pairing token balance
+ */
+error InsufficientPairingToken();
+
+/**
+ * @notice Thrown when a token transfer fails
+ */
+error TransferFailed();
+
+/**
+ * @notice Thrown when attempting to trade after Uniswap pair creation
+ */
+error TradingOnUniswap();
+
+/**
+ * @notice Thrown when output amount is less than minimum specified
+ */
+error InsufficientOutput();
+
+/**
+ * @notice Thrown when transaction deadline has passed
+ */
+error TransactionExpired();
+
+/**
+ * @notice Thrown when caller is not the token owner
+ */
+error NotTokenOwner();
+
+/**
+ * @notice Thrown when fee percentage exceeds maximum allowed
+ */
+error FeeTooHigh();
+
+/**
+ * @notice Thrown when share percentage exceeds 100%
+ */
+error InvalidShare();
+
+/**
+ * @notice Thrown when fee range configuration is invalid
+ */
+error InvalidFeeRange();
+
+/**
+ * @notice Thrown when multiplier exceeds maximum allowed value
+ */
+error InvalidMultiplier();
+
+/**
+ * @notice Thrown when persona has no associated agent token
+ */
+error NoAgentToken();
+
+/**
+ * @notice Thrown when persona has already graduated
+ */
+error AlreadyGraduated();
+
+/**
+ * @notice Thrown when persona has not graduated yet
+ */
+error NotGraduated();
+
+/**
+ * @notice Thrown when user has no tokens to withdraw
+ */
+error NoTokensToWithdraw();
+
+/**
+ * @notice Thrown when user has no deposits to withdraw
+ */
+error NoDepositsToWithdraw();
+
+/**
+ * @notice Thrown when user has no deposits to claim rewards for
+ */
+error NoDepositsToClaim();
+
+/**
+ * @notice Thrown when insufficient liquidity for swap
+ */
+error InsufficientLiquidity();
+
+/**
+ * @notice Thrown when insufficient agent tokens deposited for graduation
+ */
+error InsufficientAgentTokens();
+
+/**
+ * @notice Thrown when attempting to create an already existing pair
+ */
+error PairAlreadyCreated();
+
+/**
+ * @notice Thrown when configuration parameters are invalid
+ */
+error InvalidConfiguration();
+
+/**
+ * @notice Thrown when array index is out of bounds
+ */
+error InvalidIndex();
+
+/**
+ * @notice Thrown when payment transfer fails
+ */
+error PaymentFailed();
+
+/**
+ * @notice Thrown when setting minimum agent tokens without agent token
+ */
+error CannotSetMinWithoutAgent();
 
 /**
  * @title PersonaTokenFactory
- * @notice Factory for creating persona NFTs with associated ERC20 tokens and optional agent token integration
+ * @author [Your Name/Organization]
+ * @notice Factory contract for creating persona NFTs with associated ERC20 tokens and optional agent token integration
+ * @dev Implements a bonding curve mechanism for initial token distribution and automatic Uniswap pair creation upon graduation
+ * @custom:security-contact security@example.com
  */
 contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
     using Strings for uint256;
@@ -70,102 +217,238 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     // CONSTANTS
     // ============================================================================
 
-    // Token distribution constants
+    /**
+     * @notice Total supply of each persona token (1 billion)
+     */
     uint256 public constant PERSONA_TOKEN_SUPPLY = 1_000_000_000 ether;
 
-    // Distribution without agent token (33/33/33)
+    /**
+     * @notice Standard liquidity allocation without agent token (1/3)
+     */
     uint256 public constant STANDARD_LIQUIDITY_AMOUNT = 333_333_333 ether;
+    
+    /**
+     * @notice Standard bonding curve allocation without agent token (1/3)
+     */
     uint256 public constant STANDARD_BONDING_AMOUNT = 333_333_333 ether;
+    
+    /**
+     * @notice Standard AMICA deposit allocation without agent token (1/3)
+     */
     uint256 public constant STANDARD_AMICA_AMOUNT = 333_333_334 ether;
 
-    // Distribution with agent token (1/3, 2/9, 2/9, 2/9)
+    /**
+     * @notice Liquidity allocation with agent token (1/3)
+     */
     uint256 public constant AGENT_LIQUIDITY_AMOUNT = 333_333_333 ether;
+    
+    /**
+     * @notice Bonding curve allocation with agent token (2/9)
+     */
     uint256 public constant AGENT_BONDING_AMOUNT = 222_222_222 ether;
+    
+    /**
+     * @notice AMICA deposit allocation with agent token (2/9)
+     */
     uint256 public constant AGENT_AMICA_AMOUNT = 222_222_222 ether;
+    
+    /**
+     * @notice Agent depositor rewards allocation (2/9)
+     */
     uint256 public constant AGENT_REWARDS_AMOUNT = 222_222_223 ether;
 
-    // Other constants
+    /**
+     * @notice Suffix appended to all persona token names
+     */
     string private constant TOKEN_SUFFIX = ".amica";
+    
+    /**
+     * @notice Basis points constant for percentage calculations
+     */
     uint256 private constant BASIS_POINTS = 10000;
-    uint256 public constant SNAPSHOT_DELAY = 100; // 100 blocks delay for AMICA balance snapshot
+    
+    /**
+     * @notice Block delay before AMICA snapshot becomes active
+     * @dev Prevents flash loan exploits for fee reduction
+     */
+    uint256 public constant SNAPSHOT_DELAY = 100;
 
     // ============================================================================
     // STRUCTS
     // ============================================================================
 
+    /**
+     * @notice Stores all data associated with a persona NFT
+     * @param name Display name of the persona
+     * @param symbol Token symbol for the associated ERC20
+     * @param erc20Token Address of the deployed ERC20 token
+     * @param pairToken Address of the pairing token used for trading
+     * @param agentToken Optional agent token address for enhanced rewards
+     * @param pairCreated Whether Uniswap pair has been created (graduated)
+     * @param createdAt Timestamp of persona creation
+     * @param totalAgentDeposited Total amount of agent tokens deposited
+     * @param minAgentTokens Minimum agent tokens required for graduation
+     * @param metadata Key-value pairs of additional metadata
+     */
     struct PersonaData {
         string name;
         string symbol;
         address erc20Token;
         address pairToken;
-        address agentToken;           // Optional associated agent token
+        address agentToken;
         bool pairCreated;
         uint256 createdAt;
-        uint256 totalAgentDeposited;  // Total agent tokens deposited
-        uint256 minAgentTokens;       // Minimum agent tokens required for graduation
+        uint256 totalAgentDeposited;
+        uint256 minAgentTokens;
         mapping(string => string) metadata;
     }
 
+    /**
+     * @notice Configuration for each pairing token
+     * @param enabled Whether this token can be used for new personas
+     * @param mintCost Cost in pairing tokens to create a persona
+     * @param graduationThreshold Amount needed to graduate to Uniswap
+     */
     struct PairingConfig {
         bool enabled;
         uint256 mintCost;
         uint256 graduationThreshold;
     }
 
+    /**
+     * @notice Tracks token purchases during bonding phase
+     * @param totalDeposited Total pairing tokens deposited
+     * @param tokensSold Total persona tokens sold
+     */
     struct TokenPurchase {
         uint256 totalDeposited;
         uint256 tokensSold;
     }
 
+    /**
+     * @notice Trading fee configuration
+     * @param feePercentage Fee percentage in basis points (100 = 1%)
+     * @param creatorShare Creator's share of fees in basis points
+     */
     struct TradingFeeConfig {
-        uint256 feePercentage;    // Fee percentage (basis points, e.g., 100 = 1%)
-        uint256 creatorShare;      // Creator's share of fees (basis points, e.g., 5000 = 50%)
+        uint256 feePercentage;
+        uint256 creatorShare;
     }
 
+    /**
+     * @notice Fee reduction based on AMICA holdings
+     * @param minAmicaForReduction Minimum AMICA for fee reduction eligibility
+     * @param maxAmicaForReduction AMICA amount for maximum fee reduction
+     * @param minReductionMultiplier Fee multiplier at minimum AMICA (e.g., 9000 = 90%)
+     * @param maxReductionMultiplier Fee multiplier at maximum AMICA (e.g., 0 = 0%)
+     */
     struct FeeReductionConfig {
-        uint256 minAmicaForReduction;      // Minimum AMICA to start fee reduction
-        uint256 maxAmicaForReduction;      // AMICA amount for maximum fee reduction
-        uint256 minReductionMultiplier;    // Fee multiplier at minimum AMICA (e.g., 9000 = 0.9 = 90%)
-        uint256 maxReductionMultiplier;    // Fee multiplier at maximum AMICA (e.g., 0 = 0%)
+        uint256 minAmicaForReduction;
+        uint256 maxAmicaForReduction;
+        uint256 minReductionMultiplier;
+        uint256 maxReductionMultiplier;
     }
 
+    /**
+     * @notice Tracks user's AMICA balance snapshots for fee reduction
+     * @param currentBalance Active snapshot balance
+     * @param currentBlock Block number of current snapshot
+     * @param pendingBalance Pending snapshot balance (awaiting delay)
+     * @param pendingBlock Block number of pending snapshot
+     */
     struct UserSnapshot {
-        uint256 currentBalance;      // Currently active snapshot balance
-        uint256 currentBlock;        // Block when current snapshot was taken
-        uint256 pendingBalance;      // Pending snapshot balance (if any)
-        uint256 pendingBlock;        // Block when pending snapshot was taken
+        uint256 currentBalance;
+        uint256 currentBlock;
+        uint256 pendingBalance;
+        uint256 pendingBlock;
     }
 
     // ============================================================================
     // STATE VARIABLES
     // ============================================================================
 
-    // Core protocol contracts
+    /**
+     * @notice AMICA token contract
+     * @dev Used for fee reduction calculations and token deposits
+     */
     IERC20 public amicaToken;
+    
+    /**
+     * @notice Uniswap V2 factory contract
+     * @dev Used to create liquidity pairs upon graduation
+     */
     IUniswapV2Factory public uniswapFactory;
+    
+    /**
+     * @notice Uniswap V2 router contract
+     * @dev Used to add liquidity upon graduation
+     */
     IUniswapV2Router02 public uniswapRouter;
+    
+    /**
+     * @notice Implementation contract for persona ERC20 tokens
+     * @dev Cloned for each new persona token
+     */
     address public erc20Implementation;
 
-    // Token tracking
+    /**
+     * @notice Counter for persona token IDs
+     * @dev Incremented for each new persona
+     */
     uint256 private _currentTokenId;
 
-    // Mappings for persona data
+    /**
+     * @notice Maps token ID to persona data
+     * @dev Primary storage for all persona information
+     */
     mapping(uint256 => PersonaData) public personas;
+    
+    /**
+     * @notice Maps token ID to purchase information
+     * @dev Tracks bonding curve progress
+     */
     mapping(uint256 => TokenPurchase) public purchases;
-    // token -> user -> amount
+    
+    /**
+     * @notice Maps token ID and user to purchase amount
+     * @dev Used for tracking user allocations
+     */
     mapping(uint256 => mapping(address => uint256)) public userPurchases;
-    // Agent token deposits (token -> user -> amount)
+    
+    /**
+     * @notice Maps token ID and user to agent token deposits
+     * @dev Tracks agent token contributions for rewards
+     */
     mapping(uint256 => mapping(address => uint256)) public agentDeposits;
 
-    // Staking rewards contract (deployed separately)
+    /**
+     * @notice Staking rewards contract address
+     * @dev Optional integration for additional rewards
+     */
     address public stakingRewards;
 
-    // Configuration mappings
+    /**
+     * @notice Configuration for each pairing token
+     * @dev Maps token address to its configuration
+     */
     mapping(address => PairingConfig) public pairingConfigs;
+    
+    /**
+     * @notice Global trading fee configuration
+     * @dev Applied to all trades on the bonding curve
+     */
     TradingFeeConfig public tradingFeeConfig;
+    
+    /**
+     * @notice Fee reduction configuration based on AMICA holdings
+     * @dev Exponential curve for fee discounts
+     */
     FeeReductionConfig public feeReductionConfig;
 
-    // User snapshots for AMICA balance
+    /**
+     * @notice User AMICA balance snapshots
+     * @dev Used to prevent flash loan exploits for fee reduction
+     */
     mapping(address => UserSnapshot) public userSnapshots;
 
     // Gap for future upgrades
@@ -175,6 +458,14 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     // EVENTS
     // ============================================================================
 
+    /**
+     * @notice Emitted when a new persona is created
+     * @param tokenId The ID of the newly minted persona NFT
+     * @param creator The address that created the persona
+     * @param erc20Token The address of the associated ERC20 token
+     * @param name The name of the persona
+     * @param symbol The symbol of the persona token
+     */
     event PersonaCreated(
         uint256 indexed tokenId,
         address indexed creator,
@@ -182,24 +473,119 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         string name,
         string symbol
     );
+    
+    /**
+     * @notice Emitted when pairing token configuration is updated
+     * @param token The pairing token address that was updated
+     */
     event PairingConfigUpdated(address indexed token);
+    
+    /**
+     * @notice Emitted when persona metadata is updated
+     * @param tokenId The persona token ID
+     * @param key The metadata key that was updated
+     */
     event MetadataUpdated(uint256 indexed tokenId, string indexed key);
+    
+    /**
+     * @notice Emitted when tokens are purchased on the bonding curve
+     * @param tokenId The persona token ID
+     * @param buyer The address that purchased tokens
+     * @param amountSpent Amount of pairing tokens spent
+     * @param tokensReceived Amount of persona tokens received
+     */
     event TokensPurchased(uint256 indexed tokenId, address indexed buyer, uint256 amountSpent, uint256 tokensReceived);
+    
+    /**
+     * @notice Emitted when Uniswap liquidity pair is created
+     * @param tokenId The persona token ID
+     * @param pair The Uniswap pair address
+     * @param liquidity The amount of LP tokens minted
+     */
     event LiquidityPairCreated(uint256 indexed tokenId, address indexed pair, uint256 liquidity);
+    
+    /**
+     * @notice Emitted when trading fee configuration is updated
+     * @param feePercentage New fee percentage in basis points
+     * @param creatorShare New creator share in basis points
+     */
     event TradingFeeConfigUpdated(uint256 feePercentage, uint256 creatorShare);
+    
+    /**
+     * @notice Emitted when user withdraws purchased tokens
+     * @param tokenId The persona token ID
+     * @param user The user withdrawing tokens
+     * @param amount The amount withdrawn
+     */
     event TokensWithdrawn(uint256 indexed tokenId, address indexed user, uint256 amount);
+    
+    /**
+     * @notice Emitted when trading fees are collected and distributed
+     * @param tokenId The persona token ID
+     * @param totalFees Total fees collected
+     * @param creatorFees Fees sent to creator
+     * @param amicaFees Fees retained for AMICA
+     */
     event TradingFeesCollected(uint256 indexed tokenId, uint256 totalFees, uint256 creatorFees, uint256 amicaFees);
+    
+    /**
+     * @notice Emitted when fee reduction configuration is updated
+     * @param minAmicaForReduction New minimum AMICA for reduction
+     * @param maxAmicaForReduction New maximum AMICA for full reduction
+     * @param minReductionMultiplier New minimum reduction multiplier
+     * @param maxReductionMultiplier New maximum reduction multiplier
+     */
     event FeeReductionConfigUpdated(
         uint256 minAmicaForReduction,
         uint256 maxAmicaForReduction,
         uint256 minReductionMultiplier,
         uint256 maxReductionMultiplier
     );
+    
+    /**
+     * @notice Emitted when user's AMICA balance snapshot is updated
+     * @param user The user whose snapshot was updated
+     * @param snapshotBalance The snapshot balance
+     * @param blockNumber The block number of the snapshot
+     */
     event SnapshotUpdated(address indexed user, uint256 snapshotBalance, uint256 blockNumber);
+    
+    /**
+     * @notice Emitted when agent token is associated with persona
+     * @param tokenId The persona token ID
+     * @param agentToken The associated agent token address
+     */
     event AgentTokenAssociated(uint256 indexed tokenId, address indexed agentToken);
+    
+    /**
+     * @notice Emitted when agent tokens are deposited
+     * @param tokenId The persona token ID
+     * @param depositor The address depositing tokens
+     * @param amount The amount deposited
+     */
     event AgentTokensDeposited(uint256 indexed tokenId, address indexed depositor, uint256 amount);
+    
+    /**
+     * @notice Emitted when agent tokens are withdrawn
+     * @param tokenId The persona token ID
+     * @param depositor The address withdrawing tokens
+     * @param amount The amount withdrawn
+     */
     event AgentTokensWithdrawn(uint256 indexed tokenId, address indexed depositor, uint256 amount);
+    
+    /**
+     * @notice Emitted when agent rewards are distributed
+     * @param tokenId The persona token ID
+     * @param recipient The recipient of rewards
+     * @param personaTokens Amount of persona tokens received
+     * @param agentShare Amount of agent tokens that were deposited
+     */
     event AgentRewardsDistributed(uint256 indexed tokenId, address indexed recipient, uint256 personaTokens, uint256 agentShare);
+    
+    /**
+     * @notice Emitted when staking rewards contract is set
+     * @param stakingRewards The staking rewards contract address
+     */
     event StakingRewardsSet(address indexed stakingRewards);
 
     // ============================================================================
@@ -211,6 +597,16 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         _disableInitializers();
     }
 
+    /**
+     * @notice Initializes the factory contract
+     * @dev Can only be called once during deployment
+     * @param amicaToken_ Address of the AMICA token contract
+     * @param uniswapFactory_ Address of Uniswap V2 factory
+     * @param uniswapRouter_ Address of Uniswap V2 router
+     * @param erc20Implementation_ Address of persona token implementation
+     * @custom:requirement All addresses must be non-zero
+     * @custom:emits Sets up default AMICA pairing configuration
+     */
     function initialize(
         address amicaToken_,
         address uniswapFactory_,
@@ -260,16 +656,32 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     // ADMIN FUNCTIONS
     // ============================================================================
 
+    /**
+     * @notice Pauses all contract operations
+     * @dev Only callable by owner, affects minting and trading
+     * @custom:access Restricted to owner
+     */
     function pause() external onlyOwner {
         _pause();
     }
 
+    /**
+     * @notice Resumes all contract operations
+     * @dev Only callable by owner
+     * @custom:access Restricted to owner
+     */
     function unpause() external onlyOwner {
         _unpause();
     }
 
     /**
-     * @notice Configure pairing token parameters
+     * @notice Configures a pairing token for persona creation
+     * @dev Enables a token and sets its minting cost and graduation threshold
+     * @param token The token address to configure
+     * @param mintCost Cost in tokens to create a persona
+     * @param graduationThreshold Amount needed to graduate to Uniswap
+     * @custom:access Restricted to owner
+     * @custom:emits PairingConfigUpdated
      */
     function configurePairingToken(
         address token,
@@ -288,7 +700,11 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Disable a pairing token
+     * @notice Disables a pairing token
+     * @dev Prevents new personas from being created with this token
+     * @param token The token address to disable
+     * @custom:access Restricted to owner
+     * @custom:emits PairingConfigUpdated
      */
     function disablePairingToken(address token) external onlyOwner {
         pairingConfigs[token].enabled = false;
@@ -296,7 +712,12 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Configure trading fee parameters
+     * @notice Updates trading fee configuration
+     * @dev Sets the fee percentage and creator/protocol split
+     * @param feePercentage Fee in basis points (max 1000 = 10%)
+     * @param creatorShare Creator's share in basis points (max 10000 = 100%)
+     * @custom:access Restricted to owner
+     * @custom:emits TradingFeeConfigUpdated
      */
     function configureTradingFees(
         uint256 feePercentage,
@@ -312,7 +733,14 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Configure fee reduction parameters based on AMICA holdings
+     * @notice Configures AMICA-based fee reduction parameters
+     * @dev Sets up exponential curve for fee discounts based on AMICA holdings
+     * @param minAmicaForReduction Minimum AMICA to start receiving discounts
+     * @param maxAmicaForReduction AMICA amount for maximum discount
+     * @param minReductionMultiplier Multiplier at minimum (e.g., 9000 = 10% discount)
+     * @param maxReductionMultiplier Multiplier at maximum (e.g., 0 = 100% discount)
+     * @custom:access Restricted to owner
+     * @custom:emits FeeReductionConfigUpdated
      */
     function configureFeeReduction(
         uint256 minAmicaForReduction,
@@ -340,7 +768,11 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Set the staking rewards contract
+     * @notice Sets the staking rewards contract address
+     * @dev Optional integration for additional reward mechanisms
+     * @param _stakingRewards Address of the staking rewards contract
+     * @custom:access Restricted to owner
+     * @custom:emits StakingRewardsSet
      */
     function setStakingRewards(address _stakingRewards) external onlyOwner {
         stakingRewards = _stakingRewards;
@@ -352,9 +784,20 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     // ============================================================================
 
     /**
-     * @notice Create a new persona with associated ERC20 token and optional agent token
-     * @param initialBuyAmount Optional amount to buy on the bonding curve at launch
-     * @param agentToken Optional agent token address (can be address(0))
+     * @notice Creates a new persona NFT with associated ERC20 token
+     * @dev Mints NFT, deploys ERC20, and optionally handles initial purchase
+     * @param pairingToken Token to use for payment and pairing
+     * @param name Name of the persona (max 32 chars)
+     * @param symbol Symbol for the ERC20 (max 10 chars)
+     * @param metadataKeys Array of metadata keys
+     * @param metadataValues Array of metadata values
+     * @param initialBuyAmount Amount to buy on bonding curve immediately
+     * @param agentToken Optional agent token for enhanced rewards
+     * @param minAgentTokens Minimum agent tokens required for graduation
+     * @return tokenId The ID of the newly created persona NFT
+     * @custom:emits PersonaCreated
+     * @custom:emits AgentTokenAssociated (if agent token provided)
+     * @custom:emits TokensPurchased (if initial buy)
      */
     function createPersona(
         address pairingToken,
@@ -435,7 +878,17 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     // ============================================================================
 
     /**
-     * @notice Swap exact tokens for persona tokens (similar to Uniswap)
+     * @notice Swaps pairing tokens for persona tokens on bonding curve
+     * @dev Uses Bancor-style bonding curve with automatic fee application
+     * @param tokenId The persona token ID to trade
+     * @param amountIn Amount of pairing tokens to spend
+     * @param amountOutMin Minimum persona tokens to receive
+     * @param to Recipient of the persona tokens
+     * @param deadline Transaction must complete before this timestamp
+     * @return amountOut Amount of persona tokens received
+     * @custom:emits TokensPurchased
+     * @custom:emits TradingFeesCollected (if fees apply)
+     * @custom:emits LiquidityPairCreated (if graduation threshold met)
      */
     function swapExactTokensForTokens(
         uint256 tokenId,
@@ -449,6 +902,14 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
     /**
      * @notice Internal swap implementation
+     * @dev Handles both external swaps and internal initial buys
+     * @param tokenId The persona token ID
+     * @param amountIn Amount of pairing tokens
+     * @param amountOutMin Minimum output amount
+     * @param to Recipient address
+     * @param deadline Transaction deadline
+     * @param isInternal Whether this is an internal call (tokens already in contract)
+     * @return amountOut Amount of persona tokens received
      */
     function _swapExactTokensForTokensInternal(
         uint256 tokenId,
@@ -517,7 +978,10 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Withdraw unlocked tokens
+     * @notice Withdraws purchased persona tokens
+     * @dev Allows users to claim their purchased tokens
+     * @param tokenId The persona token ID
+     * @custom:emits TokensWithdrawn
      */
     function withdrawTokens(uint256 tokenId) external nonReentrant whenNotPaused {
         PersonaData storage persona = personas[tokenId];
@@ -538,8 +1002,11 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     // ============================================================================
 
     /**
-     * @notice Deposit agent tokens during bonding phase
-     * @dev Users can withdraw before graduation, but get persona token rewards after
+     * @notice Deposits agent tokens for a persona
+     * @dev Can only be done before graduation, deposits earn rewards after
+     * @param tokenId The persona token ID
+     * @param amount Amount of agent tokens to deposit
+     * @custom:emits AgentTokensDeposited
      */
     function depositAgentTokens(uint256 tokenId, uint256 amount) external nonReentrant whenNotPaused {
         PersonaData storage persona = personas[tokenId];
@@ -552,14 +1019,17 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
         // Record deposit
         agentDeposits[tokenId][msg.sender] += amount;
-
         persona.totalAgentDeposited += amount;
 
         emit AgentTokensDeposited(tokenId, msg.sender, amount);
     }
 
     /**
-     * @notice Withdraw agent tokens before graduation
+     * @notice Withdraws deposited agent tokens before graduation
+     * @dev Not available after graduation, use claimAgentRewards instead
+     * @param tokenId The persona token ID
+     * @param amount Amount to withdraw
+     * @custom:emits AgentTokensWithdrawn
      */
     function withdrawAgentTokens(uint256 tokenId, uint256 amount) external nonReentrant whenNotPaused {
         PersonaData storage persona = personas[tokenId];
@@ -577,7 +1047,10 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Claim persona token rewards after graduation (for agent depositors)
+     * @notice Claims persona token rewards for agent token deposits
+     * @dev Only available after graduation, distributes pro-rata share
+     * @param tokenId The persona token ID
+     * @custom:emits AgentRewardsDistributed
      */
     function claimAgentRewards(uint256 tokenId) external nonReentrant {
         PersonaData storage persona = personas[tokenId];
@@ -606,7 +1079,13 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     // ============================================================================
 
     /**
-     * @notice Update persona metadata
+     * @notice Updates metadata for a persona
+     * @dev Only callable by the NFT owner
+     * @param tokenId The persona token ID
+     * @param keys Array of metadata keys to update
+     * @param values Array of new values
+     * @custom:access Restricted to NFT owner
+     * @custom:emits MetadataUpdated (for each key)
      */
     function updateMetadata(
         uint256 tokenId,
@@ -627,7 +1106,10 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     // ============================================================================
 
     /**
-     * @notice Update user's AMICA balance snapshot
+     * @notice Updates caller's AMICA balance snapshot for fee reduction
+     * @dev Snapshot becomes active after SNAPSHOT_DELAY blocks
+     * @custom:requirement Must have minimum AMICA balance
+     * @custom:emits SnapshotUpdated
      */
     function updateAmicaSnapshot() external {
         uint256 currentBalance = amicaToken.balanceOf(msg.sender);
@@ -652,7 +1134,10 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Calculate effective fee percentage based on user's AMICA holdings
+     * @notice Calculates effective fee percentage for a user
+     * @dev Applies exponential curve based on AMICA holdings
+     * @param user The user address to check
+     * @return effectiveFeePercentage Fee percentage in basis points
      */
     function getEffectiveFeePercentage(address user) public view returns (uint256) {
         uint256 effectiveBalance = getEffectiveAmicaBalance(user);
@@ -691,7 +1176,10 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     // ============================================================================
 
     /**
-     * @notice Override tokenURI for custom metadata
+     * @notice Returns metadata URI for a persona NFT
+     * @dev Overrides ERC721 tokenURI with custom JSON metadata
+     * @param tokenId The persona token ID
+     * @return uri JSON-encoded metadata string
      */
     function tokenURI(uint256 tokenId)
         public
@@ -717,19 +1205,19 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Check if a persona token has graduated
+     * @notice Checks if a persona has graduated to Uniswap
      * @param tokenId The persona token ID
-     * @return bool Whether the persona has graduated
+     * @return bool True if Uniswap pair has been created
      */
     function hasGraduated(uint256 tokenId) external view returns (bool) {
         return personas[tokenId].pairCreated;
     }
 
     /**
-     * @notice Check if a persona is eligible for graduation
+     * @notice Checks if a persona can graduate
      * @param tokenId The persona token ID
-     * @return eligible Whether the persona can graduate
-     * @return reason If not eligible, the reason why
+     * @return eligible Whether graduation is possible
+     * @return reason If not eligible, explains why
      */
     function canGraduate(uint256 tokenId) external view returns (bool eligible, string memory reason) {
         PersonaData storage persona = personas[tokenId];
@@ -752,9 +1240,16 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         return (true, "");
     }
 
-
     /**
-     * @notice Get persona details
+     * @notice Gets core persona information
+     * @param tokenId The persona token ID
+     * @return name Persona name
+     * @return symbol Token symbol
+     * @return erc20Token Address of ERC20 token
+     * @return pairToken Address of pairing token
+     * @return pairCreated Whether graduated
+     * @return createdAt Creation timestamp
+     * @return minAgentTokens Minimum agent tokens for graduation
      */
     function getPersona(uint256 tokenId)
         external
@@ -782,7 +1277,10 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Get persona metadata
+     * @notice Gets persona metadata values
+     * @param tokenId The persona token ID
+     * @param keys Array of metadata keys to retrieve
+     * @return values Array of metadata values
      */
     function getMetadata(uint256 tokenId, string[] memory keys)
         external
@@ -799,7 +1297,9 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Get available tokens for sale
+     * @notice Gets available tokens for purchase on bonding curve
+     * @param tokenId The persona token ID
+     * @return availableTokens Amount still available for purchase
      */
     function getAvailableTokens(uint256 tokenId) public view returns (uint256) {
         PersonaData storage persona = personas[tokenId];
@@ -818,7 +1318,10 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Get effective AMICA balance for fee calculation
+     * @notice Gets user's effective AMICA balance for fee calculation
+     * @dev Returns minimum of snapshot and current balance
+     * @param user The user address
+     * @return effectiveBalance AMICA balance used for fee reduction
      */
     function getEffectiveAmicaBalance(address user) public view returns (uint256) {
         UserSnapshot storage snapshot = userSnapshots[user];
@@ -846,7 +1349,17 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Get detailed fee information for a user
+     * @notice Gets detailed fee information for a user
+     * @param user The user address
+     * @return currentBalance Current AMICA balance
+     * @return snapshotBalance Snapshot AMICA balance
+     * @return effectiveBalance Effective balance for fees
+     * @return snapshotBlock_ Block of snapshot
+     * @return isEligible Whether eligible for fee reduction
+     * @return blocksUntilEligible Blocks until snapshot active
+     * @return baseFeePercentage Base fee before reduction
+     * @return effectiveFeePercentage Actual fee after reduction
+     * @return discountPercentage Discount percentage (0-10000)
      */
     function getUserFeeInfo(address user) external view returns (
         uint256 currentBalance,
@@ -908,12 +1421,12 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Get token distribution for a persona
+     * @notice Gets token distribution allocations for a persona
      * @param tokenId The persona token ID
-     * @return liquidityAmount Amount allocated for liquidity
-     * @return bondingAmount Amount allocated for bonding curve
-     * @return amicaAmount Amount allocated for AMICA deposit
-     * @return agentRewardsAmount Amount allocated for agent depositors (0 if no agent token)
+     * @return liquidityAmount Tokens for Uniswap liquidity
+     * @return bondingAmount Tokens for bonding curve
+     * @return amicaAmount Tokens for AMICA deposit
+     * @return agentRewardsAmount Tokens for agent depositors
      */
     function getTokenDistribution(uint256 tokenId) external view returns (
         uint256 liquidityAmount,
@@ -939,7 +1452,11 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Calculate expected agent rewards for a user
+     * @notice Calculates expected agent rewards for a user
+     * @param tokenId The persona token ID
+     * @param user The user address
+     * @return personaReward Expected persona tokens
+     * @return agentAmount User's agent token deposit
      */
     function calculateAgentRewards(uint256 tokenId, address user)
         external
@@ -955,6 +1472,11 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         }
     }
 
+    /**
+     * @notice Gets user's AMICA balance snapshot
+     * @param user The user address
+     * @return balance The snapshot balance (pending or current)
+     */
     function amicaBalanceSnapshot(address user) external view returns (uint256) {
         UserSnapshot storage snapshot = userSnapshots[user];
         if (snapshot.pendingBlock > 0) {
@@ -963,6 +1485,11 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         return snapshot.currentBalance;
     }
 
+    /**
+     * @notice Gets user's snapshot block number
+     * @param user The user address
+     * @return blockNumber The snapshot block (pending or current)
+     */
     function snapshotBlock(address user) external view returns (uint256) {
         UserSnapshot storage snapshot = userSnapshots[user];
         if (snapshot.pendingBlock > 0) {
@@ -977,9 +1504,11 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
     /**
      * @notice Internal function to calculate output amount using Bancor-style bonding curve
+     * @dev Uses virtual reserves for price stability
      * @param amountIn Input amount (after fees if applicable)
      * @param reserveSold Amount already sold
      * @param reserveTotal Total reserve amount
+     * @return amountOut Expected output from curve calculation
      */
     function _calculateAmountOut(
         uint256 amountIn,
@@ -1008,10 +1537,11 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Get a quote for swapping tokens
+     * @notice Gets expected output for a token swap
+     * @dev Uses default fee without user-specific reductions
      * @param tokenId The persona token ID
      * @param amountIn Input amount in pairing tokens
-     * @return amountOut Output amount in persona tokens (after fees)
+     * @return amountOut Expected persona tokens (after fees)
      */
     function getAmountOut(uint256 tokenId, uint256 amountIn) external view returns (uint256) {
         TokenPurchase storage purchase = purchases[tokenId];
@@ -1028,11 +1558,12 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Get a quote for swapping tokens with specific user's fee reduction
+     * @notice Gets expected output with user-specific fee reduction
+     * @dev Applies AMICA-based fee discounts
      * @param tokenId The persona token ID
      * @param amountIn Input amount in pairing tokens
-     * @param user The user address to calculate fees for
-     * @return amountOut Output amount in persona tokens (after reduced fees)
+     * @param user The user address for fee calculation
+     * @return amountOut Expected persona tokens (after reduced fees)
      */
     function getAmountOutForUser(
         uint256 tokenId,
@@ -1054,10 +1585,12 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Public wrapper for bonding curve calculation (for testing/UI)
+     * @notice Public bonding curve calculation function
+     * @dev Exposed for testing and UI integration
      * @param amountIn Input amount (no fees applied)
-     * @param reserveSold Amount already sold
+     * @param reserveSold Tokens already sold
      * @param reserveTotal Total reserve amount
+     * @return amountOut Expected output from bonding curve
      */
     function calculateAmountOut(
         uint256 amountIn,
@@ -1067,7 +1600,16 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         return _calculateAmountOut(amountIn, reserveSold, reserveTotal);
     }
 
-    // In previewSwapWithFee, it already uses the user-specific fee calculation correctly:
+    /**
+     * @notice Preview swap including fee calculations
+     * @dev Useful for UI to show fee breakdown
+     * @param tokenId The persona token ID
+     * @param amountIn Input amount
+     * @param user The user address
+     * @return feeAmount Fee to be charged
+     * @return amountInAfterFee Amount after fee deduction
+     * @return expectedOutput Expected persona tokens
+     */
     function previewSwapWithFee(
         uint256 tokenId,
         uint256 amountIn,
@@ -1100,6 +1642,8 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
     /**
      * @notice Check and potentially create snapshot for fee reduction
+     * @dev Creates pending snapshot if user has none and meets minimum balance
+     * @param user The user address to check
      */
     function _checkAndUpdateSnapshot(address user) internal {
         UserSnapshot storage snapshot = userSnapshots[user];
@@ -1125,6 +1669,9 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
     /**
      * @notice Distribute trading fees between creator and AMICA
+     * @dev Splits fees according to configuration, creator portion sent immediately
+     * @param tokenId The persona token ID
+     * @param feeAmount Total fee amount to distribute
      */
     function _distributeTradingFees(uint256 tokenId, uint256 feeAmount) private {
         PersonaData storage persona = personas[tokenId];
@@ -1145,7 +1692,8 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
     /**
      * @notice Create Uniswap pair when graduation threshold is met
-     * @dev Now also sets graduation status on the persona token
+     * @dev Handles token distributions, liquidity creation, and graduation status
+     * @param tokenId The persona token ID
      */
     function _createLiquidityPair(uint256 tokenId) private {
         PersonaData storage persona = personas[tokenId];

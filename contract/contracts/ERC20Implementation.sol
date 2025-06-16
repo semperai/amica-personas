@@ -9,22 +9,44 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 // Custom errors
+/// @notice Thrown when attempting to initialize with zero address as owner
 error InvalidOwner();
+/// @notice Thrown when attempting to initialize with zero initial supply
 error InvalidSupply();
+/// @notice Thrown when attempting to burn zero tokens
 error InvalidBurnAmount();
+/// @notice Thrown when no tokens are selected for claiming
 error NoTokensSelected();
+/// @notice Thrown when token array is not sorted in ascending order or contains duplicates
 error TokensMustBeSortedAndUnique();
+/// @notice Thrown when total supply is zero during burn and claim
 error NoSupply();
+/// @notice Thrown when a token address in the claim array is zero address
 error InvalidTokenAddress();
+/// @notice Thrown when a token transfer fails during claim
 error TransferFailed();
+/// @notice Thrown when there are no tokens to claim after calculation
 error NoTokensToClaim();
+/// @notice Thrown when attempting to burn and claim before token graduation
 error TokenNotGraduated();
+/// @notice Thrown when non-factory address attempts to call factory-only functions
 error OnlyFactory();
 
 /**
  * @title ERC20Implementation
+ * @author Kasumi
  * @notice Implementation contract for cloneable ERC20 tokens with burn-and-claim functionality
- * @dev Burn tokens to receive proportional share of any tokens held by this contract
+ * @dev This contract is designed to be used with a minimal proxy pattern (EIP-1167).
+ * It extends OpenZeppelin's upgradeable contracts to provide:
+ * - Standard ERC20 functionality
+ * - Burnable tokens
+ * - Ownership management
+ * - Burn-and-claim mechanism for distributing held tokens proportionally
+ * - Graduation status management by factory
+ * 
+ * The burn-and-claim mechanism allows token holders to burn their tokens and receive
+ * a proportional share of any tokens held by this contract. This is useful for
+ * distributing rewards, airdrops, or other tokens collected by the contract.
  */
 contract ERC20Implementation is
     Initializable,
@@ -34,17 +56,48 @@ contract ERC20Implementation is
     ReentrancyGuardUpgradeable
 {
     // State variables
+    /// @notice Indicates whether the token has graduated (e.g., from a bonding curve)
+    /// @dev Only graduated tokens can use the burn-and-claim functionality
     bool public hasGraduated;
+    
+    /// @notice Address of the factory contract that deployed this token
+    /// @dev Only the factory can update the graduation status
     address public factory;
 
     // Events
+    /**
+     * @notice Emitted when tokens are burned and other tokens are claimed
+     * @param user Address of the user who burned tokens and received claims
+     * @param amountBurned Amount of tokens burned by the user
+     * @param tokens Array of token addresses that were claimed
+     * @param amounts Array of amounts claimed for each token
+     */
     event TokensBurnedAndClaimed(address indexed user, uint256 amountBurned, address[] tokens, uint256[] amounts);
+    
+    /**
+     * @notice Emitted when graduation status is updated
+     * @param graduated New graduation status
+     */
     event GraduationStatusSet(bool graduated);
 
+    /**
+     * @notice Disables initializers to prevent implementation contract initialization
+     * @dev This is a security measure for upgradeable contracts used as implementations
+     */
     constructor() {
         _disableInitializers();
     }
 
+    /**
+     * @notice Initializes the ERC20 token with given parameters
+     * @dev Can only be called once, typically by the factory during clone deployment
+     * @param name_ Name of the token
+     * @param symbol_ Symbol of the token
+     * @param initialSupply_ Initial supply of tokens to mint to owner (must be > 0)
+     * @param owner_ Address that will own the token contract and receive initial supply
+     * @custom:throws InvalidOwner if owner_ is zero address
+     * @custom:throws InvalidSupply if initialSupply_ is zero
+     */
     function initialize(
         string memory name_,
         string memory symbol_,
@@ -65,8 +118,10 @@ contract ERC20Implementation is
     }
 
     /**
-     * @notice Set graduation status (only callable by factory)
-     * @param _graduated Whether the token has graduated
+     * @notice Updates the graduation status of the token
+     * @dev Only callable by the factory contract that deployed this token
+     * @param _graduated New graduation status to set
+     * @custom:throws OnlyFactory if called by non-factory address
      */
     function setGraduationStatus(bool _graduated) external {
         if (msg.sender != factory) revert OnlyFactory();
@@ -75,17 +130,32 @@ contract ERC20Implementation is
     }
 
     /**
-     * @notice Get circulating supply (just total supply - contract can hold its own tokens)
+     * @notice Returns the circulating supply of tokens
+     * @dev Currently returns total supply as the contract can hold its own tokens
+     * @return The total supply of tokens in circulation
      */
     function circulatingSupply() public view returns (uint256) {
         return totalSupply();
     }
 
     /**
-     * @notice Burn tokens and claim proportional share of specified tokens
-     * @dev Now checks if token has graduated before allowing claims
-     * @param amountToBurn Amount of tokens to burn
-     * @param tokens Array of token addresses to claim (must be sorted in ascending order and unique)
+     * @notice Burns tokens and claims proportional share of specified tokens held by this contract
+     * @dev This function:
+     * - Requires the token to be graduated
+     * - Burns the specified amount from msg.sender
+     * - Calculates proportional share based on burned amount vs total supply
+     * - Transfers the proportional amount of each specified token to msg.sender
+     * - Requires tokens array to be sorted in ascending order with no duplicates
+     * @param amountToBurn Amount of this token to burn
+     * @param tokens Array of token addresses to claim (must be sorted ascending and unique)
+     * @custom:throws TokenNotGraduated if token hasn't graduated yet
+     * @custom:throws InvalidBurnAmount if amountToBurn is zero
+     * @custom:throws NoTokensSelected if tokens array is empty
+     * @custom:throws TokensMustBeSortedAndUnique if tokens array is not properly sorted or contains duplicates
+     * @custom:throws NoSupply if total supply is zero
+     * @custom:throws InvalidTokenAddress if any token address is zero
+     * @custom:throws NoTokensToClaim if no tokens have claimable balances
+     * @custom:throws TransferFailed if any token transfer fails
      */
     function burnAndClaim(uint256 amountToBurn, address[] calldata tokens)
         external
@@ -143,11 +213,12 @@ contract ERC20Implementation is
     }
 
     /**
-     * @notice Calculate how much of each token a user would receive for burning a specific amount
-     * @dev Also checks graduation status
-     * @param amountToBurn Amount of tokens the user wants to burn
-     * @param tokens Array of token addresses to check (should be sorted and unique for consistency)
-     * @return amounts Array of amounts the user would receive
+     * @notice Calculates the amounts of tokens that would be received for burning a specific amount
+     * @dev This is a view function that simulates burnAndClaim without making any state changes.
+     * Returns empty array if token hasn't graduated or if supply/burn amount is zero.
+     * @param amountToBurn Amount of tokens to simulate burning
+     * @param tokens Array of token addresses to check claimable amounts for
+     * @return amounts Array of token amounts that would be received, in same order as tokens parameter
      */
     function previewBurnAndClaim(uint256 amountToBurn, address[] calldata tokens)
         external

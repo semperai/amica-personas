@@ -6,7 +6,23 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
+/**
+ * @title IPersonaTokenFactory
+ * @notice Interface for interacting with the Persona Token Factory
+ */
 interface IPersonaTokenFactory {
+    /**
+     * @notice Get persona information by token ID
+     * @param tokenId The ID of the persona token
+     * @return name The name of the persona
+     * @return symbol The symbol of the persona
+     * @return erc20Token The ERC20 token address
+     * @return pairToken The pair token address
+     * @return agentToken The agent token address
+     * @return pairCreated Whether the pair has been created
+     * @return createdAt The creation timestamp
+     * @return totalAgentDeposited The total amount of agent tokens deposited
+     */
     function personas(uint256 tokenId) external view returns (
         string memory name,
         string memory symbol,
@@ -47,8 +63,11 @@ error PoolNotFound();
 
 /**
  * @title PersonaStakingRewards
- * @notice Gas-optimized staking with time-locked bonus multipliers
- * @dev Lock stakes for higher rewards
+ * @author Kasumi
+ * @notice A gas-optimized staking contract with time-locked bonus multipliers for LP tokens
+ * @dev Implements flexible staking and time-locked staking with configurable multipliers.
+ * Users can stake LP tokens in multiple pools and earn AMICA rewards proportional to their
+ * stake and lock duration. The contract supports both regular LP pools and special Persona/Agent pools.
  */
 contract PersonaStakingRewards is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -57,99 +76,267 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
     // STRUCTS
     // ============================================================================
 
+    /**
+     * @notice Information about a staking pool
+     * @param lpToken The LP token that can be staked in this pool
+     * @param allocBasisPoints Allocation points in basis points (100 = 1%)
+     * @param lastRewardBlock Last block number when rewards were calculated
+     * @param accAmicaPerShare Accumulated AMICA per share, multiplied by 1e18
+     * @param totalStaked Total amount of LP tokens staked in the pool
+     * @param isAgentPool Whether this is a Persona/Agent pool
+     * @param personaTokenId The associated persona token ID (if applicable)
+     * @param isActive Whether the pool is currently active
+     */
     struct PoolInfo {
-        IERC20 lpToken;           // LP token address
-        uint256 allocBasisPoints; // Allocation in basis points (100 = 1%)
-        uint256 lastRewardBlock;  // Last block number that rewards were calculated
-        uint256 accAmicaPerShare; // Accumulated AMICA per share, times 1e18
-        uint256 totalStaked;      // Total LP tokens staked
-        bool isAgentPool;         // True if this is a Persona/Agent pool
-        uint256 personaTokenId;   // Associated persona token ID
-        bool isActive;            // Pool status
+        IERC20 lpToken;           
+        uint256 allocBasisPoints; 
+        uint256 lastRewardBlock;  
+        uint256 accAmicaPerShare; 
+        uint256 totalStaked;      
+        bool isAgentPool;         
+        uint256 personaTokenId;   
+        bool isActive;            
     }
 
+    /**
+     * @notice Information about a user's stake in a pool
+     * @param amount Amount of LP tokens staked (flexible stake)
+     * @param rewardDebt Reward debt for flexible stake
+     * @param unclaimedRewards Accumulated unclaimed rewards
+     * @param lastClaimBlock Last block when user claimed rewards
+     */
     struct UserInfo {
-        uint256 amount;           // LP tokens staked by user
-        uint256 rewardDebt;       // Reward debt
-        uint256 unclaimedRewards; // Unclaimed rewards for this pool
-        uint256 lastClaimBlock;   // Last block user claimed from this pool
+        uint256 amount;           
+        uint256 rewardDebt;       
+        uint256 unclaimedRewards; 
+        uint256 lastClaimBlock;   
     }
 
+    /**
+     * @notice Information about a locked stake
+     * @param amount Amount of tokens locked
+     * @param unlockTime Timestamp when tokens can be withdrawn
+     * @param lockMultiplier Reward multiplier in basis points (10000 = 1x)
+     * @param rewardDebt Reward debt for this specific lock
+     * @param lockId Unique identifier for this lock
+     */
     struct LockInfo {
-        uint256 amount;           // Locked amount
-        uint256 unlockTime;       // When tokens can be withdrawn
-        uint256 lockMultiplier;   // Multiplier in basis points (10000 = 1x)
-        uint256 rewardDebt;       // Reward debt for this lock
-        uint256 lockId;           // Unique lock ID
+        uint256 amount;           
+        uint256 unlockTime;       
+        uint256 lockMultiplier;   
+        uint256 rewardDebt;       
+        uint256 lockId;           
     }
 
+    /**
+     * @notice Lock tier configuration
+     * @param duration Lock duration in seconds
+     * @param multiplier Reward multiplier in basis points
+     */
     struct LockTier {
-        uint256 duration;         // Lock duration in seconds
-        uint256 multiplier;       // Reward multiplier in basis points
+        uint256 duration;         
+        uint256 multiplier;       
     }
 
     // ============================================================================
     // STATE VARIABLES
     // ============================================================================
 
+    /// @notice AMICA token used for rewards
     IERC20 public immutable amicaToken;
+    
+    /// @notice Persona token factory contract
     IPersonaTokenFactory public immutable personaFactory;
 
-    uint256 public amicaPerBlock;        // AMICA tokens distributed per block
-    uint256 public totalAllocBasisPoints; // Total allocation basis points (max 10000)
-    uint256 public startBlock;            // Start block for rewards
-    uint256 public endBlock;              // End block for rewards (0 = no end)
-    uint256 public lastMassUpdateBlock;   // Last block when mass update was called
+    /// @notice Amount of AMICA tokens distributed per block
+    uint256 public amicaPerBlock;
+    
+    /// @notice Sum of all pool allocation basis points (max 10000)
+    uint256 public totalAllocBasisPoints;
+    
+    /// @notice Block number when reward distribution starts
+    uint256 public startBlock;
+    
+    /// @notice Block number when reward distribution ends (0 = no end)
+    uint256 public endBlock;
+    
+    /// @notice Last block when mass update was called
+    uint256 public lastMassUpdateBlock;
 
-    // Pool and user data
+    /// @notice Array of all pools
     PoolInfo[] public poolInfo;
-    mapping(uint256 => mapping(address => UserInfo)) public userInfo;  // poolId => user => info
-    mapping(address => uint256) public lpTokenToPoolId;                // LP token => poolId
+    
+    /// @notice Mapping of pool ID => user address => user info
+    mapping(uint256 => mapping(address => UserInfo)) public userInfo;
+    
+    /// @notice Mapping of LP token address => pool ID + 1 (0 means not found)
+    mapping(address => uint256) public lpTokenToPoolId;
 
-    // Lock data
-    mapping(uint256 => mapping(address => LockInfo[])) public userLocks;  // poolId => user => locks
-    mapping(uint256 => mapping(address => uint256)) public userLockedAmount;  // poolId => user => total locked
-    mapping(uint256 => mapping(address => uint256)) public userWeightedAmount; // poolId => user => amount * multiplier
-    mapping(uint256 => uint256) public poolWeightedTotal;  // poolId => total weighted stake
+    /// @notice Mapping of pool ID => user address => array of locks
+    mapping(uint256 => mapping(address => LockInfo[])) public userLocks;
+    
+    /// @notice Mapping of pool ID => user address => total locked amount
+    mapping(uint256 => mapping(address => uint256)) public userLockedAmount;
+    
+    /// @notice Mapping of pool ID => user address => weighted amount (amount * multiplier)
+    mapping(uint256 => mapping(address => uint256)) public userWeightedAmount;
+    
+    /// @notice Mapping of pool ID => total weighted stake in pool
+    mapping(uint256 => uint256) public poolWeightedTotal;
 
-    // Lock tiers
+    /// @notice Array of available lock tiers
     LockTier[] public lockTiers;
+    
+    /// @notice Counter for generating unique lock IDs
     uint256 public nextLockId = 1;
 
-    // User tracking
-    mapping(address => uint256[]) public userActivePools;              // User => array of pool IDs
-    mapping(address => mapping(uint256 => bool)) public userHasStake;  // User => poolId => has stake
-    mapping(address => uint256) public userTotalPendingRewards;        // Cached total pending rewards
-    mapping(address => uint256) public userLastGlobalUpdate;           // Last block user's global state was updated
+    /// @notice Mapping of user address => array of pool IDs where user has stake
+    mapping(address => uint256[]) public userActivePools;
+    
+    /// @notice Mapping of user address => pool ID => whether user has stake
+    mapping(address => mapping(uint256 => bool)) public userHasStake;
+    
+    /// @notice Mapping of user address => cached total pending rewards
+    mapping(address => uint256) public userTotalPendingRewards;
+    
+    /// @notice Mapping of user address => last block when global state was updated
+    mapping(address => uint256) public userLastGlobalUpdate;
 
-    // Constants
-    uint256 public constant BASIS_POINTS = 10000;         // 100% = 10000 basis points
-    uint256 public constant PRECISION = 1e18;             // Higher precision for calculations
-    uint256 public constant MAX_LOCK_MULTIPLIER = 50000; // Max 5x multiplier
+    /// @notice Basis points denominator (100% = 10000)
+    uint256 public constant BASIS_POINTS = 10000;
+    
+    /// @notice Precision factor for reward calculations
+    uint256 public constant PRECISION = 1e18;
+    
+    /// @notice Maximum allowed lock multiplier (5x = 50000 basis points)
+    uint256 public constant MAX_LOCK_MULTIPLIER = 50000;
 
     // ============================================================================
     // EVENTS
     // ============================================================================
 
+    /**
+     * @notice Emitted when a new pool is added
+     * @param poolId The ID of the new pool
+     * @param lpToken The LP token address
+     * @param allocBasisPoints The allocation in basis points
+     * @param isAgentPool Whether this is a Persona/Agent pool
+     */
     event PoolAdded(uint256 indexed poolId, address indexed lpToken, uint256 allocBasisPoints, bool isAgentPool);
+    
+    /**
+     * @notice Emitted when a pool is updated
+     * @param poolId The ID of the updated pool
+     * @param allocBasisPoints The new allocation in basis points
+     * @param isActive The new active status
+     */
     event PoolUpdated(uint256 indexed poolId, uint256 allocBasisPoints, bool isActive);
+    
+    /**
+     * @notice Emitted when a pool is deactivated
+     * @param poolId The ID of the deactivated pool
+     * @param timestamp The timestamp of deactivation
+     */
     event PoolDeactivated(uint256 indexed poolId, uint256 timestamp);
+    
+    /**
+     * @notice Emitted when a user deposits tokens
+     * @param user The user address
+     * @param poolId The pool ID
+     * @param amount The amount deposited
+     */
     event Deposit(address indexed user, uint256 indexed poolId, uint256 amount);
+    
+    /**
+     * @notice Emitted when a user deposits with lock
+     * @param user The user address
+     * @param poolId The pool ID
+     * @param amount The amount deposited
+     * @param lockId The unique lock ID
+     * @param unlockTime The unlock timestamp
+     * @param multiplier The reward multiplier
+     */
     event DepositLocked(address indexed user, uint256 indexed poolId, uint256 amount, uint256 lockId, uint256 unlockTime, uint256 multiplier);
+    
+    /**
+     * @notice Emitted when a user withdraws tokens
+     * @param user The user address
+     * @param poolId The pool ID
+     * @param amount The amount withdrawn
+     */
     event Withdraw(address indexed user, uint256 indexed poolId, uint256 amount);
+    
+    /**
+     * @notice Emitted when a user withdraws locked tokens
+     * @param user The user address
+     * @param poolId The pool ID
+     * @param lockId The lock ID
+     * @param amount The amount withdrawn
+     */
     event WithdrawLocked(address indexed user, uint256 indexed poolId, uint256 lockId, uint256 amount);
+    
+    /**
+     * @notice Emitted when rewards are claimed
+     * @param user The user address
+     * @param amount The amount of rewards claimed
+     */
     event RewardsClaimed(address indexed user, uint256 amount);
+    
+    /**
+     * @notice Emitted when reward rate is updated
+     * @param amicaPerBlock The new reward rate
+     */
     event RewardRateUpdated(uint256 amicaPerBlock);
+    
+    /**
+     * @notice Emitted when reward period is updated
+     * @param startBlock The new start block
+     * @param endBlock The new end block
+     */
     event RewardPeriodUpdated(uint256 startBlock, uint256 endBlock);
+    
+    /**
+     * @notice Emitted when a lock tier is added
+     * @param duration The lock duration
+     * @param multiplier The reward multiplier
+     */
     event LockTierAdded(uint256 duration, uint256 multiplier);
+    
+    /**
+     * @notice Emitted when a lock tier is updated
+     * @param index The tier index
+     * @param duration The new duration
+     * @param multiplier The new multiplier
+     */
     event LockTierUpdated(uint256 index, uint256 duration, uint256 multiplier);
+    
+    /**
+     * @notice Emitted when a user emergency exits
+     * @param user The user address
+     * @param poolId The pool ID
+     * @param amount The amount withdrawn
+     */
     event EmergencyExit(address indexed user, uint256 indexed poolId, uint256 amount);
+    
+    /**
+     * @notice Emitted when owner withdraws stuck tokens
+     * @param user The recipient address
+     * @param token The token address
+     * @param amount The amount withdrawn
+     */
     event EmergencyWithdrawCompleted(address indexed user, address indexed token, uint256 amount);
 
     // ============================================================================
     // CONSTRUCTOR
     // ============================================================================
 
+    /**
+     * @notice Contract constructor
+     * @param _amicaToken Address of the AMICA token
+     * @param _personaFactory Address of the Persona token factory
+     * @param _amicaPerBlock Initial reward rate per block
+     * @param _startBlock Block number to start reward distribution
+     */
     constructor(
         address _amicaToken,
         address _personaFactory,
@@ -174,7 +361,12 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
     // ============================================================================
 
     /**
-     * @notice Add a new LP pool
+     * @notice Add a new LP pool for staking
+     * @dev Only callable by owner. Reverts if pool already exists or allocation exceeds 100%
+     * @param _lpToken Address of the LP token
+     * @param _allocBasisPoints Allocation points in basis points (100 = 1%)
+     * @param _isAgentPool Whether this is a Persona/Agent pool
+     * @param _personaTokenId Associated persona token ID (if applicable)
      */
     function addPool(
         address _lpToken,
@@ -209,7 +401,11 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Add or update lock tier
+     * @notice Add or update a lock tier
+     * @dev Only callable by owner. Updates existing tier or adds new one
+     * @param index Index of the tier to update (use current length to add new)
+     * @param duration Lock duration in seconds
+     * @param multiplier Reward multiplier in basis points (10000 = 1x)
      */
     function setLockTier(uint256 index, uint256 duration, uint256 multiplier) external onlyOwner {
         if (multiplier < BASIS_POINTS || multiplier > MAX_LOCK_MULTIPLIER) revert InvalidMultiplier();
@@ -226,7 +422,11 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Update pool allocation or status
+     * @notice Update pool allocation or active status
+     * @dev Only callable by owner. Updates rewards before changing allocation
+     * @param _poolId ID of the pool to update
+     * @param _allocBasisPoints New allocation in basis points
+     * @param _isActive New active status
      */
     function updatePool(
         uint256 _poolId,
@@ -251,7 +451,9 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Update reward rate
+     * @notice Update the reward rate
+     * @dev Only callable by owner. Updates all pool rewards before changing rate
+     * @param _amicaPerBlock New reward rate per block
      */
     function updateRewardRate(uint256 _amicaPerBlock) external onlyOwner {
         _updateGlobalRewards();
@@ -260,7 +462,10 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Update reward period
+     * @notice Update the reward distribution period
+     * @dev Only callable by owner. End block must be after start block or 0
+     * @param _startBlock New start block
+     * @param _endBlock New end block (0 = no end)
      */
     function updateRewardPeriod(uint256 _startBlock, uint256 _endBlock) external onlyOwner {
         if (_endBlock != 0 && _endBlock <= _startBlock) revert InvalidPeriod();
@@ -272,6 +477,9 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
 
     /**
      * @notice Emergency withdraw stuck tokens (not LP tokens)
+     * @dev Only callable by owner. Cannot withdraw LP tokens that are staked
+     * @param _token Address of the token to withdraw
+     * @param _amount Amount to withdraw
      */
     function emergencyWithdraw(address _token, uint256 _amount) external onlyOwner {
         if (_token == address(0)) revert InvalidToken();
@@ -290,7 +498,8 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
     // ============================================================================
 
     /**
-     * @notice Update global state checkpoint
+     * @notice Update rewards for all active pools
+     * @dev Called before any operation that changes reward distribution
      */
     function _updateGlobalRewards() internal {
         if (block.number <= lastMassUpdateBlock) return;
@@ -306,7 +515,10 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Track user's pool participation
+     * @notice Track user's participation in a pool
+     * @dev Adds pool to user's active pools list if not already present
+     * @param user User address
+     * @param poolId Pool ID
      */
     function _addUserToPool(address user, uint256 poolId) internal {
         if (!userHasStake[user][poolId]) {
@@ -317,6 +529,9 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
 
     /**
      * @notice Remove user from pool tracking
+     * @dev Removes pool from user's active pools list
+     * @param user User address
+     * @param poolId Pool ID
      */
     function _removeUserFromPool(address user, uint256 poolId) internal {
         if (userHasStake[user][poolId]) {
@@ -335,7 +550,8 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Calculate rewards including lock multipliers (gas optimized)
+     * @notice Calculate user's pending rewards for a pool
+     * @dev Includes rewards from flexible stake and all locks
      * @param poolId The pool ID
      * @param user The user address
      * @return totalRewards Total pending rewards
@@ -380,14 +596,13 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
         return totalRewards;
     }
 
-
-
     // ============================================================================
     // PUBLIC FUNCTIONS
     // ============================================================================
 
     /**
-     * @notice Update rewards for a specific pool (gas optimized)
+     * @notice Update rewards for a specific pool
+     * @dev Can be called by anyone to update pool state
      * @param _poolId The pool ID to update
      */
     function updatePoolRewards(uint256 _poolId) public {
@@ -415,9 +630,11 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
         pool.lastRewardBlock = block.number;
     }
 
-
     /**
-     * @notice Stake LP tokens (flexible, no lock)
+     * @notice Stake LP tokens without lock (flexible staking)
+     * @dev Transfers LP tokens from user and updates their stake
+     * @param _poolId Pool ID to stake in
+     * @param _amount Amount of LP tokens to stake
      */
     function stake(uint256 _poolId, uint256 _amount) external nonReentrant {
         if (_poolId >= poolInfo.length) revert InvalidPool();
@@ -456,6 +673,10 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
 
     /**
      * @notice Stake LP tokens with time lock for bonus rewards
+     * @dev Locks tokens for specified duration with reward multiplier
+     * @param _poolId Pool ID to stake in
+     * @param _amount Amount of LP tokens to stake
+     * @param _lockTierIndex Index of the lock tier to use
      */
     function stakeLocked(uint256 _poolId, uint256 _amount, uint256 _lockTierIndex) external nonReentrant {
         if (_poolId >= poolInfo.length) revert InvalidPool();
@@ -500,6 +721,9 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
 
     /**
      * @notice Withdraw flexible stake
+     * @dev Withdraws unlocked tokens and updates rewards
+     * @param _poolId Pool ID to withdraw from
+     * @param _amount Amount to withdraw
      */
     function withdraw(uint256 _poolId, uint256 _amount) external nonReentrant {
         if (_poolId >= poolInfo.length) revert InvalidPool();
@@ -536,7 +760,8 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Withdraw locked tokens with optimized storage access
+     * @notice Withdraw locked tokens after unlock time
+     * @dev Finds and withdraws specific lock by ID
      * @param _poolId Pool ID
      * @param _lockId Lock ID to withdraw
      */
@@ -595,7 +820,9 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Emergency exit from pool (forfeit rewards)
+     * @notice Emergency exit from pool, forfeiting all rewards
+     * @dev Withdraws all staked tokens (flexible and locked) without rewards
+     * @param _poolId Pool ID to exit from
      */
     function emergencyExitPool(uint256 _poolId) external nonReentrant {
         if (_poolId >= poolInfo.length) revert InvalidPool();
@@ -636,6 +863,8 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
 
     /**
      * @notice Claim rewards from a specific pool
+     * @dev Claims all pending rewards for the caller from specified pool
+     * @param _poolId Pool ID to claim from
      */
     function claimPool(uint256 _poolId) external nonReentrant {
         if (_poolId >= poolInfo.length) revert InvalidPool();
@@ -671,8 +900,8 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Claim all rewards with gas optimization
-     * @dev Batches updates to minimize storage operations
+     * @notice Claim all rewards from all pools
+     * @dev Gas-optimized batch claim across all user's active pools
      */
     function claimAll() external nonReentrant {
         uint256 totalRewards = 0;
@@ -732,13 +961,14 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
         emit RewardsClaimed(msg.sender, totalRewards);
     }
 
-
     // ============================================================================
     // VIEW FUNCTIONS
     // ============================================================================
 
     /**
      * @notice Get pool ID by LP token address
+     * @param _lpToken LP token address
+     * @return Pool ID (reverts if not found)
      */
     function getPoolIdByLpToken(address _lpToken) external view returns (uint256) {
         uint256 poolId = lpTokenToPoolId[_lpToken];
@@ -747,7 +977,9 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Get user's active pools
+     * @notice Get list of pools where user has stake
+     * @param _user User address
+     * @return Array of pool IDs
      */
     function getUserActivePools(address _user) external view returns (uint256[] memory) {
         return userActivePools[_user];
@@ -755,6 +987,8 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
 
     /**
      * @notice Get pool allocation percentage
+     * @param _poolId Pool ID
+     * @return Allocation in basis points
      */
     function getPoolAllocationPercentage(uint256 _poolId) external view returns (uint256) {
         if (_poolId >= poolInfo.length) revert InvalidPool();
@@ -762,14 +996,16 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Get number of pools
+     * @notice Get total number of pools
+     * @return Number of pools
      */
     function poolLength() external view returns (uint256) {
         return poolInfo.length;
     }
 
     /**
-     * @notice Get number of lock tiers
+     * @notice Get total number of lock tiers
+     * @return Number of lock tiers
      */
     function lockTiersLength() external view returns (uint256) {
         return lockTiers.length;
@@ -777,20 +1013,29 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
 
     /**
      * @notice Get user's locks for a pool
+     * @param _poolId Pool ID
+     * @param _user User address
+     * @return Array of lock information
      */
     function getUserLocks(uint256 _poolId, address _user) external view returns (LockInfo[] memory) {
         return userLocks[_poolId][_user];
     }
 
     /**
-     * @notice Get user's total staked (flexible + locked)
+     * @notice Get user's total staked amount (flexible + locked)
+     * @param _poolId Pool ID
+     * @param _user User address
+     * @return Total staked amount
      */
     function getUserTotalStaked(uint256 _poolId, address _user) external view returns (uint256) {
         return userInfo[_poolId][_user].amount + userLockedAmount[_poolId][_user];
     }
 
     /**
-     * @notice Get user's effective stake (with multipliers)
+     * @notice Get user's effective stake (with multipliers applied)
+     * @param _poolId Pool ID
+     * @param _user User address
+     * @return Weighted stake amount
      */
     function getUserEffectiveStake(uint256 _poolId, address _user) external view returns (uint256) {
         return userWeightedAmount[_poolId][_user];
@@ -798,6 +1043,9 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
 
     /**
      * @notice Get pending rewards for a specific pool
+     * @param _poolId Pool ID
+     * @param _user User address
+     * @return Pending reward amount
      */
     function pendingRewardsForPool(uint256 _poolId, address _user) external view returns (uint256) {
         if (_poolId >= poolInfo.length) revert InvalidPool();
@@ -806,6 +1054,8 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
 
     /**
      * @notice Get estimated total pending rewards across all pools
+     * @param _user User address
+     * @return Total pending rewards
      */
     function estimatedTotalPendingRewards(address _user) external view returns (uint256) {
         uint256 totalPending = 0;
@@ -819,7 +1069,14 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Get pool info
+     * @notice Get comprehensive pool information
+     * @param _poolId Pool ID
+     * @return lpToken LP token address
+     * @return allocBasisPoints Allocation basis points
+     * @return totalStaked Total tokens staked
+     * @return weightedTotal Total weighted stake
+     * @return isActive Pool active status
+     * @return isAgentPool Whether it's an agent pool
      */
     function getPoolInfo(uint256 _poolId) external view returns (
         address lpToken,
@@ -843,7 +1100,14 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Get user info for a specific pool
+     * @notice Get comprehensive user information for a pool
+     * @param _poolId Pool ID
+     * @param _user User address
+     * @return flexibleAmount Amount staked without lock
+     * @return lockedAmount Total locked amount
+     * @return effectiveStake Weighted stake amount
+     * @return unclaimedRewards Unclaimed rewards
+     * @return numberOfLocks Number of active locks
      */
     function getUserInfo(uint256 _poolId, address _user) external view returns (
         uint256 flexibleAmount,
@@ -866,6 +1130,9 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
 
     /**
      * @notice Get lock tier details
+     * @param _index Tier index
+     * @return duration Lock duration in seconds
+     * @return multiplier Reward multiplier in basis points
      */
     function getLockTier(uint256 _index) external view returns (uint256 duration, uint256 multiplier) {
         if (_index >= lockTiers.length) revert InvalidIndex();
@@ -874,7 +1141,11 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Get reward multiplier
+     * @notice Calculate reward multiplier for a block range
+     * @dev Takes into account the end block if set
+     * @param _from Start block
+     * @param _to End block
+     * @return Block count multiplier
      */
     function getMultiplier(uint256 _from, uint256 _to) public view returns (uint256) {
         if (endBlock > 0) {
@@ -890,7 +1161,8 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Get remaining allocation
+     * @notice Get remaining allocation available for new pools
+     * @return Available basis points
      */
     function getRemainingAllocation() external view returns (uint256) {
         return BASIS_POINTS - totalAllocBasisPoints;

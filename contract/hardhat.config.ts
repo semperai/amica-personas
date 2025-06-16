@@ -2,6 +2,7 @@ import { HardhatUserConfig } from "hardhat/config";
 import '@openzeppelin/hardhat-upgrades';
 import "@nomicfoundation/hardhat-toolbox";
 import "hardhat-contract-sizer";
+import "hardhat-docgen";
 import "./scripts/tasks";
 import * as dotenv from "dotenv";
 
