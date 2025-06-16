@@ -10,7 +10,6 @@ import {
 } from '../model'
 import { Between, And, MoreThanOrEqual, LessThan } from 'typeorm'
 
-
 export async function updateGlobalStats(ctx: Context) {
   let stats = await ctx.store.get(GlobalStats, 'global')
   
@@ -19,7 +18,11 @@ export async function updateGlobalStats(ctx: Context) {
       id: 'global',
       totalPersonas: 0,
       totalTrades: 0,
+      totalBuyTrades: 0,
+      totalSellTrades: 0,
       totalVolume: 0n,
+      totalBuyVolume: 0n,
+      totalSellVolume: 0n,
       totalStakingPools: 0,
       totalStaked: 0n,
       totalBridgeVolume: 0n,
@@ -34,7 +37,22 @@ export async function updateGlobalStats(ctx: Context) {
   // Count total trades and volume
   const trades = await ctx.store.findBy(Trade, {})
   stats.totalTrades = trades.length
-  stats.totalVolume = trades.reduce((sum, t) => sum + t.amountIn, 0n)
+  
+  // Separate buy and sell trades
+  const buyTrades = trades.filter(t => t.isBuy)
+  const sellTrades = trades.filter(t => !t.isBuy)
+  
+  stats.totalBuyTrades = buyTrades.length
+  stats.totalSellTrades = sellTrades.length
+  
+  // For buy trades: amountIn is pairing tokens spent
+  stats.totalBuyVolume = buyTrades.reduce((sum, t) => sum + t.amountIn, 0n)
+  
+  // For sell trades: amountOut is pairing tokens received
+  stats.totalSellVolume = sellTrades.reduce((sum, t) => sum + t.amountOut, 0n)
+  
+  // Total volume is buy volume + sell volume (all in pairing token terms)
+  stats.totalVolume = stats.totalBuyVolume + stats.totalSellVolume
   
   // Count staking pools and total staked
   const pools = await ctx.store.findBy(StakingPool, {})
@@ -51,7 +69,7 @@ export async function updateGlobalStats(ctx: Context) {
   
   await ctx.store.save(stats)
   
-  ctx.log.info(`Updated global stats: ${stats.totalPersonas} personas, ${stats.totalTrades} trades`)
+  ctx.log.info(`Updated global stats: ${stats.totalPersonas} personas, ${stats.totalTrades} trades (${stats.totalBuyTrades} buys, ${stats.totalSellTrades} sells)`)
 }
 
 export async function updateDailyStats(ctx: Context, dateStr: string) {
@@ -63,7 +81,11 @@ export async function updateDailyStats(ctx: Context, dateStr: string) {
       date: new Date(dateStr),
       newPersonas: 0,
       trades: 0,
+      buyTrades: 0,
+      sellTrades: 0,
       volume: 0n,
+      buyVolume: 0n,
+      sellVolume: 0n,
       uniqueTraders: 0,
       bridgeVolume: 0n,
     })
@@ -73,32 +95,41 @@ export async function updateDailyStats(ctx: Context, dateStr: string) {
   const endOfDay = new Date(dateStr)
   endOfDay.setDate(endOfDay.getDate() + 1)
   
-  // Count new personas
-  const newPersonas = await ctx.store.findBy(Persona, {
-    createdAt: MoreThanOrEqual(startOfDay) && LessThan(endOfDay)
+  // Count new personas - fix the query
+  const newPersonas = await ctx.store.find(Persona, {
+    where: {
+      createdAt: Between(startOfDay, endOfDay)
+    }
   })
   stats.newPersonas = newPersonas.length
   
-  // Count trades
+  // Count trades - fix the query
   const trades = await ctx.store.find(Trade, {
     where: {
-      timestamp: And(
-        MoreThanOrEqual(startOfDay),
-        LessThan(endOfDay)
-      )
+      timestamp: Between(startOfDay, endOfDay)
     }
   })
+  
   stats.trades = trades.length
-  stats.volume = trades.reduce((sum, t) => sum + t.amountIn, 0n)
+  
+  // Separate buy and sell trades
+  const buyTrades = trades.filter(t => t.isBuy)
+  const sellTrades = trades.filter(t => !t.isBuy)
+  
+  stats.buyTrades = buyTrades.length
+  stats.sellTrades = sellTrades.length
+  
+  // Calculate volumes
+  stats.buyVolume = buyTrades.reduce((sum, t) => sum + t.amountIn, 0n)
+  stats.sellVolume = sellTrades.reduce((sum, t) => sum + t.amountOut, 0n)
+  stats.volume = stats.buyVolume + stats.sellVolume
+  
   stats.uniqueTraders = new Set(trades.map(t => t.trader)).size
   
-  // Count bridge volume
+  // Count bridge volume - fix the query
   const bridgeActivities = await ctx.store.find(BridgeActivity, {
     where: {
-      timestamp: And(
-        MoreThanOrEqual(startOfDay),
-        LessThan(endOfDay)
-      ),
+      timestamp: Between(startOfDay, endOfDay),
       action: BridgeAction.WRAP
     }
   })
@@ -106,5 +137,5 @@ export async function updateDailyStats(ctx: Context, dateStr: string) {
   
   await ctx.store.save(stats)
   
-  ctx.log.info(`Updated daily stats for ${dateStr}: ${stats.trades} trades, volume: ${stats.volume}`)
+  ctx.log.info(`Updated daily stats for ${dateStr}: ${stats.trades} trades (${stats.buyTrades} buys, ${stats.sellTrades} sells), volume: ${stats.volume}`)
 }

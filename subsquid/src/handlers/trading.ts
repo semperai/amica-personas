@@ -83,8 +83,21 @@ export async function handleTokensSold(
   await ctx.store.insert(trade)
   
   // Update persona stats - decrease tokens sold, decrease total deposited
-  persona.tokensSold = persona.tokensSold - event.tokensSold
-  persona.totalDeposited = persona.totalDeposited - event.amountReceived
+  // Protect against underflow
+  if (persona.tokensSold >= event.tokensSold) {
+    persona.tokensSold = persona.tokensSold - event.tokensSold
+  } else {
+    ctx.log.warn(`Underflow prevented: persona ${personaId} tokensSold (${persona.tokensSold}) < event.tokensSold (${event.tokensSold})`)
+    persona.tokensSold = 0n
+  }
+  
+  if (persona.totalDeposited >= event.amountReceived) {
+    persona.totalDeposited = persona.totalDeposited - event.amountReceived
+  } else {
+    ctx.log.warn(`Underflow prevented: persona ${personaId} totalDeposited (${persona.totalDeposited}) < event.amountReceived (${event.amountReceived})`)
+    persona.totalDeposited = 0n
+  }
+  
   await ctx.store.save(persona)
   
   ctx.log.info(`Sell trade ${tradeId}: ${event.seller} sold ${event.tokensSold} tokens for ${event.amountReceived}`)
@@ -98,25 +111,60 @@ export async function handleTradingFeesCollected(
 ) {
   const event = factoryAbi.events.TradingFeesCollected.decode(log)
   
-  // Find the most recent trade in this transaction
-  // TradingFeesCollected is emitted right after TokensPurchased/TokensSold in the same transaction
+  // Find the trade that corresponds to this fee event
+  // The TradingFeesCollected event should be emitted in the same transaction
+  // as either TokensPurchased or TokensSold, and should have a lower log index
+  
+  // First, try to find trades in the same transaction
   const trades = await ctx.store.find(Trade, {
-    where: { txHash: log.transactionHash },
-    order: { block: 'DESC' },
-    take: 1
+    where: { 
+      txHash: log.transactionHash,
+      persona: { tokenId: event.tokenId }
+    },
+    order: { id: 'ASC' }
   })
   
-  if (trades.length > 0) {
-    const trade = trades[0]
-    trade.feeAmount = event.totalFees
-    await ctx.store.save(trade)
+  if (trades.length === 0) {
+    ctx.log.warn(`No trades found for fees in tx ${log.transactionHash} for persona ${event.tokenId}`)
+    return
+  }
+  
+  // Find the trade that doesn't have fees set yet
+  // The fee event should come after the trade event in the same transaction
+  let targetTrade: Trade | null = null
+  
+  for (const trade of trades) {
+    // Extract log index from trade ID (format: txHash-logIndex)
+    const tradeLogIndex = parseInt(trade.id.split('-')[1])
     
-    const tradeType = trade.isBuy ? 'Buy' : 'Sell'
-    ctx.log.info(`Updated ${tradeType} trade ${trade.id} with fees: ${event.totalFees}`)
+    // The fee event should have a higher log index than the trade event
+    if (tradeLogIndex < log.logIndex && trade.feeAmount === 0n) {
+      targetTrade = trade
+      break
+    }
+  }
+  
+  if (targetTrade) {
+    targetTrade.feeAmount = event.totalFees
+    await ctx.store.save(targetTrade)
+    
+    const tradeType = targetTrade.isBuy ? 'Buy' : 'Sell'
+    ctx.log.info(`Updated ${tradeType} trade ${targetTrade.id} with fees: ${event.totalFees}`)
     ctx.log.debug(`  - Creator fees: ${event.creatorFees}`)
     ctx.log.debug(`  - Amica fees: ${event.amicaFees}`)
     ctx.log.debug(`  - Total fees: ${event.totalFees}`)
   } else {
-    ctx.log.warn(`No trade found for fees in tx ${log.transactionHash}`)
+    // This might happen if events are processed out of order
+    // or if there are multiple trades in the same transaction
+    ctx.log.warn(`Could not match fee event to a specific trade in tx ${log.transactionHash}`)
+    ctx.log.warn(`Found ${trades.length} trades, but none matched the fee event criteria`)
+    
+    // As a fallback, update the most recent trade without fees
+    const unfeeTrade = trades.find(t => t.feeAmount === 0n)
+    if (unfeeTrade) {
+      unfeeTrade.feeAmount = event.totalFees
+      await ctx.store.save(unfeeTrade)
+      ctx.log.info(`Fallback: Updated trade ${unfeeTrade.id} with fees: ${event.totalFees}`)
+    }
   }
 }

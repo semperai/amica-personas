@@ -1,10 +1,11 @@
+// src/pages/index.tsx - Enhanced with new contract features and improved UX
 import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
-import { fetchPersonas } from '@/lib/api-graphql'; // Updated import
+import { fetchPersonas, fetchGlobalStats, fetchTrending } from '@/lib/api-graphql';
 import { formatEther } from 'viem';
 import Link from 'next/link';
 
-// Add CSS for animations
+// Enhanced animation styles
 const animationStyles = `
   @keyframes fadeIn {
     from {
@@ -39,6 +40,15 @@ const animationStyles = `
     }
   }
 
+  @keyframes glow {
+    0%, 100% {
+      box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+    }
+    50% {
+      box-shadow: 0 0 30px rgba(168, 85, 247, 0.5);
+    }
+  }
+
   .animate-fade-in {
     animation: fadeIn 0.8s ease-out forwards;
   }
@@ -60,6 +70,10 @@ const animationStyles = `
   .text-transition-exit {
     animation: slideDown 0.5s ease-out forwards;
   }
+
+  .animate-glow {
+    animation: glow 2s ease-in-out infinite;
+  }
 `;
 
 interface Persona {
@@ -70,15 +84,30 @@ interface Persona {
   totalVolumeAllTime: string;
   totalDeposited?: string;
   isGraduated: boolean;
+  hasAgentToken: boolean;
+  canGraduate?: boolean;
+  agentTokenProgress?: number;
   chain: {
     id: string;
     name: string;
   };
+  growthMultiplier?: number;
+  createdAt?: string;
+}
+
+interface GlobalStats {
+  totalPersonas: number;
+  totalTrades: number;
+  totalBuyTrades: number;
+  totalSellTrades: number;
+  totalVolume: string;
+  totalBuyVolume: string;
+  totalSellVolume: string;
 }
 
 // Generate a unique gradient background for each persona based on its ID
-const getPersonaGradient = (id: string) => {
-  const gradients = [
+const getPersonaGradient = (id: string, hasAgentToken: boolean = false) => {
+  const baseGradients = [
     'from-purple-600 to-pink-600',
     'from-blue-600 to-cyan-500',
     'from-indigo-600 to-purple-600',
@@ -89,6 +118,14 @@ const getPersonaGradient = (id: string) => {
     'from-blue-500 to-indigo-600',
   ];
 
+  const agentGradients = [
+    'from-purple-600 via-pink-500 to-cyan-400',
+    'from-blue-600 via-purple-500 to-pink-400',
+    'from-indigo-600 via-blue-500 to-cyan-400',
+    'from-pink-500 via-purple-500 to-blue-400',
+  ];
+
+  const gradients = hasAgentToken ? agentGradients : baseGradients;
   const index = parseInt(id.split('-')[1] || '0') % gradients.length;
   return gradients[index];
 };
@@ -96,7 +133,6 @@ const getPersonaGradient = (id: string) => {
 // Generate placeholder persona images/videos
 const getPersonaMedia = (id: string) => {
   const index = parseInt(id.split('-')[1] || '0');
-  // Using placeholder images/videos - replace with actual URLs
   const images = [
     'https://images.unsplash.com/photo-1614680376593-902f74cf0d41?w=400&h=500&fit=crop',
     'https://images.unsplash.com/photo-1635236066330-53dbf96c7208?w=400&h=500&fit=crop',
@@ -105,7 +141,6 @@ const getPersonaMedia = (id: string) => {
     'https://images.unsplash.com/photo-1617791160505-6f00504e3519?w=400&h=500&fit=crop',
   ];
 
-  // For demo, using the same image as video poster
   return {
     image: images[index % images.length],
     video: null // Replace with actual video URLs when available
@@ -123,13 +158,13 @@ function PersonaCard({ persona }: PersonaCardProps) {
 
   return (
     <Link
-      href={`/persona/${persona.chain.id}/${persona.id}`}
+      href={`/persona/${persona.chain.id}/${persona.id.split('-')[1]}`}
       className="group relative aspect-[3/4] rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Background Gradient (shown while image loads) */}
-      <div className={`absolute inset-0 bg-gradient-to-br ${getPersonaGradient(persona.id)} opacity-80`} />
+      <div className={`absolute inset-0 bg-gradient-to-br ${getPersonaGradient(persona.id, persona.hasAgentToken)} opacity-80`} />
 
       {/* Background Image/Video */}
       <div className="absolute inset-0">
@@ -164,10 +199,30 @@ function PersonaCard({ persona }: PersonaCardProps) {
       {/* Content */}
       <div className="relative h-full p-5 flex flex-col justify-between">
         {/* Top Section */}
-        <div>
-          {persona.isGraduated && (
-            <div className="inline-flex items-center px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-sm mb-3">
-              <span className="text-xs font-medium text-white">Graduated</span>
+        <div className="flex justify-between items-start">
+          <div className="flex flex-wrap gap-1">
+            {persona.isGraduated && (
+              <span className="inline-flex items-center px-2 py-1 rounded-full bg-green-500/20 text-green-400 backdrop-blur-sm text-xs font-medium">
+                Graduated
+              </span>
+            )}
+            {persona.hasAgentToken && (
+              <span className="inline-flex items-center px-2 py-1 rounded-full bg-purple-500/20 text-purple-400 backdrop-blur-sm text-xs font-medium">
+                Agent
+              </span>
+            )}
+            {persona.canGraduate && !persona.isGraduated && (
+              <span className="inline-flex items-center px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-400 backdrop-blur-sm text-xs font-medium animate-glow">
+                Ready!
+              </span>
+            )}
+          </div>
+          
+          {/* Growth indicator */}
+          {persona.growthMultiplier && persona.growthMultiplier > 1.5 && (
+            <div className="flex items-center gap-1 px-2 py-1 bg-orange-500/20 rounded-full backdrop-blur-sm">
+              <span className="text-orange-400 text-xs">🔥</span>
+              <span className="text-orange-400 text-xs font-medium">{persona.growthMultiplier.toFixed(1)}x</span>
             </div>
           )}
         </div>
@@ -194,6 +249,14 @@ function PersonaCard({ persona }: PersonaCardProps) {
                 {parseFloat(formatEther(BigInt(persona.totalDeposited || '0'))).toFixed(2)} Ξ
               </span>
             </div>
+            {persona.hasAgentToken && persona.agentTokenProgress !== undefined && (
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-white/60">Agent Progress</span>
+                <span className="text-sm font-medium text-purple-400">
+                  {persona.agentTokenProgress.toFixed(0)}%
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Chain indicator */}
@@ -209,17 +272,19 @@ function PersonaCard({ persona }: PersonaCardProps) {
   );
 }
 
-// Animated text component
+// Enhanced animated text component
 function AnimatedHeroText() {
   const phrases = [
     "autonomous AI agents on the blockchain",
-    "augmented reality internet workers",
+    "augmented reality internet workers", 
     "3D personas of your favorite characters",
     "AI companions with real-world capabilities",
     "virtual assistants powered by decentralized compute",
     "intelligent agents that work on your behalf",
     "AR/VR characters with API superpowers",
-    "digital workers for the acceleration economy"
+    "digital workers for the acceleration economy",
+    "AI agents with token-gated access controls",
+    "decentralized personas with agent token integration"
   ];
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -232,7 +297,7 @@ function AnimatedHeroText() {
         setCurrentIndex((prev) => (prev + 1) % phrases.length);
         setIsAnimating(false);
       }, 500);
-    }, 3500); // Change every 3.5 seconds
+    }, 3500);
 
     return () => clearInterval(interval);
   }, []);
@@ -257,36 +322,72 @@ function AnimatedHeroText() {
 
 export default function HomePage() {
   const [personas, setPersonas] = useState<Persona[]>([]);
+  const [trendingPersonas, setTrendingPersonas] = useState<Persona[]>([]);
+  const [globalStats, setGlobalStats] = useState<GlobalStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState('volume');
+  const [sortBy, setSortBy] = useState('trending');
+  const [filterBy, setFilterBy] = useState('all');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadPersonas = async () => {
+    const loadData = async () => {
       try {
         setError(null);
+        
+        // Load global stats
+        const stats = await fetchGlobalStats();
+        if (stats) {
+          setGlobalStats(stats);
+        }
+
+        // Load trending personas first
+        const trending = await fetchTrending('24h');
+        setTrendingPersonas(trending.slice(0, 5));
+
+        // Load main personas list
         const sortMap: Record<string, string> = {
+          trending: 'totalVolume24h_DESC',
           volume: 'totalVolume24h_DESC',
           tvl: 'totalDeposited_DESC',
-          new: 'createdAt_DESC'
+          new: 'createdAt_DESC',
+          graduated: 'totalVolumeAllTime_DESC'
         };
+
+        // @ts-expect-error typescript-eslint/no-explicit-any
+        const whereParams: any = {};
+        if (filterBy === 'graduated') {
+          whereParams.graduated = 'true';
+        } else if (filterBy === 'not-graduated') {
+          whereParams.graduated = 'false';
+        } else if (filterBy === 'agent-token') {
+          whereParams.hasAgentToken = true;
+        } else if (filterBy === 'ready-to-graduate') {
+          // This would need to be implemented in the API
+          whereParams.graduated = 'false';
+        }
 
         const data = await fetchPersonas({
           sort: sortMap[sortBy],
-          limit: 50
+          limit: 50,
+          ...whereParams
         });
 
         setPersonas(data.personas);
       } catch (error) {
-        console.error('Error loading personas:', error);
-        setError('Failed to load personas. Please try again later.');
+        console.error('Error loading data:', error);
+        setError('Failed to load data. Please try again later.');
       } finally {
         setLoading(false);
       }
     };
 
-    loadPersonas();
-  }, [sortBy]);
+    loadData();
+  }, [sortBy, filterBy]);
+
+  // Calculate buy/sell ratio for display
+  const buyPercentage = globalStats && globalStats.totalBuyVolume && globalStats.totalVolume
+    ? (Number(formatEther(BigInt(globalStats.totalBuyVolume))) / Number(formatEther(BigInt(globalStats.totalVolume)))) * 100
+    : 50;
 
   return (
     <Layout>
@@ -326,23 +427,34 @@ export default function HomePage() {
               </Link>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-3xl mx-auto">
+            {/* Enhanced Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
               <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                <p className="text-3xl font-light text-white">250+</p>
+                <p className="text-3xl font-light text-white">{globalStats?.totalPersonas || '250+'}
+                  <span className="text-sm text-green-400 ml-1">
+                    {globalStats?.totalPersonas ? '' : '+'}
+                  </span>
+                </p>
                 <p className="text-sm text-white/60">Active Personas</p>
               </div>
               <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                <p className="text-3xl font-light text-white">$12M+</p>
+                <p className="text-3xl font-light text-white">
+                  ${globalStats ? (Number(formatEther(BigInt(globalStats.totalVolume))) / 1000000).toFixed(1) : '12'}M
+                  <span className="text-sm text-green-400 ml-1">+</span>
+                </p>
                 <p className="text-sm text-white/60">Total Volume</p>
               </div>
               <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                <p className="text-3xl font-light text-white">5.2K</p>
-                <p className="text-sm text-white/60">Active Traders</p>
+                <p className="text-3xl font-light text-white">{globalStats?.totalTrades ? (globalStats.totalTrades / 1000).toFixed(1) : '5.2'}K
+                  <span className="text-sm text-green-400 ml-1">+</span>
+                </p>
+                <p className="text-sm text-white/60">Total Trades</p>
               </div>
               <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                <p className="text-3xl font-light text-white">3</p>
-                <p className="text-sm text-white/60">Chains Supported</p>
+                <p className="text-3xl font-light text-white">{buyPercentage.toFixed(0)}%
+                  <span className="text-sm text-white/60">/{(100 - buyPercentage).toFixed(0)}%</span>
+                </p>
+                <p className="text-sm text-white/60">Buy/Sell Ratio</p>
               </div>
             </div>
           </div>
@@ -356,19 +468,76 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Trending Section */}
+      {trendingPersonas.length > 0 && (
+        <section className="max-w-7xl mx-auto px-6 py-8">
+          <h2 className="text-3xl font-light text-white mb-6">🔥 Trending Now</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            {trendingPersonas.map((persona) => (
+              <PersonaCard key={persona.id} persona={persona} />
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Main Content */}
       <div id="explore" className="max-w-7xl mx-auto px-6 py-8">
-        {/* Sort Dropdown - positioned at the top right */}
-        <div className="flex justify-end mb-8">
+        {/* Enhanced Filters */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setFilterBy('all')}
+              className={`px-4 py-2 rounded-full font-light transition-all ${
+                filterBy === 'all'
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                  : 'bg-white/10 text-white/70 hover:bg-white/20'
+              }`}
+            >
+              All Personas
+            </button>
+            <button
+              onClick={() => setFilterBy('agent-token')}
+              className={`px-4 py-2 rounded-full font-light transition-all ${
+                filterBy === 'agent-token'
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                  : 'bg-white/10 text-white/70 hover:bg-white/20'
+              }`}
+            >
+              Agent Token
+            </button>
+            <button
+              onClick={() => setFilterBy('graduated')}
+              className={`px-4 py-2 rounded-full font-light transition-all ${
+                filterBy === 'graduated'
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                  : 'bg-white/10 text-white/70 hover:bg-white/20'
+              }`}
+            >
+              Graduated
+            </button>
+            <button
+              onClick={() => setFilterBy('not-graduated')}
+              className={`px-4 py-2 rounded-full font-light transition-all ${
+                filterBy === 'not-graduated'
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                  : 'bg-white/10 text-white/70 hover:bg-white/20'
+              }`}
+            >
+              Trading Active
+            </button>
+          </div>
+          
           <div className="relative">
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               className="appearance-none bg-white/10 backdrop-blur-sm text-white px-6 py-2 pr-10 rounded-lg border border-white/20 focus:outline-none focus:border-white/40 transition-colors cursor-pointer"
             >
-              <option value="volume" className="bg-slate-800">Volume</option>
+              <option value="trending" className="bg-slate-800">Trending</option>
+              <option value="volume" className="bg-slate-800">24h Volume</option>
               <option value="tvl" className="bg-slate-800">TVL</option>
-              <option value="new" className="bg-slate-800">New</option>
+              <option value="new" className="bg-slate-800">Newest</option>
+              <option value="graduated" className="bg-slate-800">All Time Volume</option>
             </select>
             <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
               <svg className="w-4 h-4 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -401,8 +570,17 @@ export default function HomePage() {
         )}
 
         {!loading && personas.length === 0 && !error && (
-          <div className="flex items-center justify-center h-64">
-            <p className="text-white/60 text-lg">No personas found</p>
+          <div className="flex flex-col items-center justify-center h-64">
+            <p className="text-white/60 text-lg mb-4">No personas found for the selected filter</p>
+            <button
+              onClick={() => {
+                setFilterBy('all');
+                setSortBy('trending');
+              }}
+              className="px-6 py-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors"
+            >
+              Show All Personas
+            </button>
           </div>
         )}
       </div>

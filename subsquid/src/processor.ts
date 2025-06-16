@@ -65,16 +65,19 @@ export const processor = new EvmBatchProcessor()
       factoryAbi.events.PersonaCreated.topic,
       factoryAbi.events.Transfer.topic,
       factoryAbi.events.TokensPurchased.topic,
+      factoryAbi.events.TokensSold.topic,  // This was missing
       factoryAbi.events.MetadataUpdated.topic,
       factoryAbi.events.LiquidityPairCreated.topic,
       factoryAbi.events.TradingFeesCollected.topic,
       factoryAbi.events.FeeReductionConfigUpdated.topic,
+      factoryAbi.events.TradingFeeConfigUpdated.topic,
       factoryAbi.events.SnapshotUpdated.topic,
       factoryAbi.events.AgentTokenAssociated.topic,
       factoryAbi.events.AgentTokensDeposited.topic,
       factoryAbi.events.AgentTokensWithdrawn.topic,
       factoryAbi.events.AgentRewardsDistributed.topic,
-      factoryAbi.events.TradingFeeConfigUpdated.topic,
+      factoryAbi.events.PairingConfigUpdated.topic,
+      factoryAbi.events.StakingRewardsSet.topic,
       factoryAbi.events.TokensWithdrawn.topic,
     ]
   })
@@ -104,28 +107,6 @@ export const processor = new EvmBatchProcessor()
     address: [DEPLOYMENT.addresses.amicaToken],
     topic0: [
       amicaAbi.events.TokensDeposited.topic,
-    ]
-  })
-  .addLog({
-    address: [DEPLOYMENT.addresses.personaFactory],
-    topic0: [
-      factoryAbi.events.PersonaCreated.topic,
-      factoryAbi.events.Transfer.topic,
-      factoryAbi.events.TokensPurchased.topic,
-      factoryAbi.events.TokensSold.topic,  // ADD THIS
-      factoryAbi.events.MetadataUpdated.topic,
-      factoryAbi.events.LiquidityPairCreated.topic,
-      factoryAbi.events.TradingFeesCollected.topic,
-      factoryAbi.events.FeeReductionConfigUpdated.topic,
-      factoryAbi.events.TradingFeeConfigUpdated.topic,
-      factoryAbi.events.SnapshotUpdated.topic,
-      factoryAbi.events.AgentTokenAssociated.topic,
-      factoryAbi.events.AgentTokensDeposited.topic,
-      factoryAbi.events.AgentTokensWithdrawn.topic,
-      factoryAbi.events.AgentRewardsDistributed.topic,
-      factoryAbi.events.PairingConfigUpdated.topic,  // ADD THIS
-      factoryAbi.events.StakingRewardsSet.topic,  // ADD THIS
-      factoryAbi.events.TokensWithdrawn.topic,
     ]
   })
 

@@ -361,51 +361,64 @@ function getDateString(date: Date): string {
 
 async function updatePersonaDailyStats(ctx: Context, personaId: string, dates: string[]) {
   ctx.log.debug(`Updating persona daily stats for ${personaId} on ${dates.length} dates`)
-  
+
   const persona = await ctx.store.get(Persona, personaId)
   if (!persona) {
     ctx.log.warn(`Persona ${personaId} not found for daily stats update`)
     return
   }
-  
+
   for (const dateStr of dates) {
     const id = `${personaId}-${dateStr}`
     let stats = await ctx.store.get(PersonaDailyStats, id)
-    
+
     if (!stats) {
       stats = new PersonaDailyStats({
         id,
         persona,
         date: new Date(dateStr),
         trades: 0,
+        buyTrades: 0,
+        sellTrades: 0,
         volume: 0n,
+        buyVolume: 0n,
+        sellVolume: 0n,
         uniqueTraders: 0,
       })
       ctx.log.trace(`Created new PersonaDailyStats for ${id}`)
     }
-    
+
     // Get trades for this persona on this date
     const startOfDay = new Date(dateStr)
     const endOfDay = new Date(dateStr)
     endOfDay.setDate(endOfDay.getDate() + 1)
-    
+
     try {
       const trades = await ctx.store.find(Trade, {
         where: {
           persona: { id: personaId },
-          timestamp: And(
-            MoreThanOrEqual(startOfDay),
-            LessThan(endOfDay)
-          )
+          timestamp: Between(startOfDay, endOfDay)
         }
       })
-      
+
       stats.trades = trades.length
-      stats.volume = trades.reduce((sum, t) => sum + t.amountIn, 0n)
+
+      // Separate buy and sell trades
+      const buyTrades = trades.filter(t => t.isBuy)
+      const sellTrades = trades.filter(t => !t.isBuy)
+
+      stats.buyTrades = buyTrades.length
+      stats.sellTrades = sellTrades.length
+
+      // Calculate volumes
+      stats.buyVolume = buyTrades.reduce((sum, t) => sum + t.amountIn, 0n)
+      stats.sellVolume = sellTrades.reduce((sum, t) => sum + t.amountOut, 0n)
+      stats.volume = stats.buyVolume + stats.sellVolume
+
       stats.uniqueTraders = new Set(trades.map(t => t.trader)).size
-      
+
       await ctx.store.save(stats)
-      ctx.log.trace(`Saved PersonaDailyStats for ${id}: ${stats.trades} trades, ${stats.volume} volume`)
+      ctx.log.trace(`Saved PersonaDailyStats for ${id}: ${stats.trades} trades (${stats.buyTrades} buys, ${stats.sellTrades} sells), ${stats.volume} volume`)
     } catch (error) {
       ctx.log.error(`Failed to query trades for persona ${personaId} on ${dateStr}: ${error}`)
     }
