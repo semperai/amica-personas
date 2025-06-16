@@ -7,6 +7,17 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
+// Custom errors
+error InvalidOwner();
+error InvalidSupply();
+error InvalidBurnAmount();
+error NoTokensSelected();
+error TokensMustBeSortedAndUnique();
+error NoSupply();
+error InvalidTokenAddress();
+error TransferFailed();
+error NoTokensToClaim();
+
 /**
  * @title ERC20Implementation
  * @notice Implementation contract for cloneable ERC20 tokens with burn-and-claim functionality
@@ -18,17 +29,6 @@ contract ERC20Implementation is
     ERC20BurnableUpgradeable,
     ReentrancyGuardUpgradeable
 {
-    // Custom errors
-    error InvalidOwner();
-    error InvalidSupply();
-    error InvalidBurnAmount();
-    error NoTokensSelected();
-    error TokensMustBeSortedAndUnique();
-    error NoSupply();
-    error InvalidTokenAddress();
-    error TransferFailed();
-    error NoTokensToClaim();
-
     // Events
     event TokensBurnedAndClaimed(address indexed user, uint256 amountBurned, address[] tokens, uint256[] amounts);
 
@@ -90,10 +90,6 @@ contract ERC20Implementation is
             uint256 balance = IERC20(token).balanceOf(address(this));
             if (balance == 0) continue;
 
-            // Improved calculation to handle very small amounts
-            // Instead of: claimAmount = (balance * sharePercentage) / PRECISION
-            // We do: claimAmount = (balance * amountToBurn) / currentSupply
-            // This avoids the intermediate sharePercentage calculation that can round to 0
             uint256 claimAmount = (balance * amountToBurn) / currentSupply;
             
             if (claimAmount == 0) continue;

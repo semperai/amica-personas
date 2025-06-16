@@ -19,6 +19,32 @@ interface IPersonaTokenFactory {
     );
 }
 
+// ============================================================================
+// CUSTOM ERRORS
+// ============================================================================
+
+error InvalidLPToken();
+error PoolAlreadyExists();
+error TotalAllocationExceeds100();
+error InvalidPool();
+error InvalidMultiplier();
+error InvalidDuration();
+error InvalidIndex();
+error AmountCannotBeZero();
+error PoolNotActive();
+error InsufficientBalance();
+error InvalidLockTier();
+error StillLocked();
+error LockNotFound();
+error AlreadyWithdrawn();
+error NothingToWithdraw();
+error NoRewardsToClaim();
+error InvalidToken();
+error CannotWithdrawLPTokens();
+error InvalidPeriod();
+error PoolNotFound();
+
+
 /**
  * @title PersonaStakingRewards
  * @notice Gas-optimized staking with time-locked bonus multipliers
@@ -26,31 +52,6 @@ interface IPersonaTokenFactory {
  */
 contract PersonaStakingRewards is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
-
-    // ============================================================================
-    // CUSTOM ERRORS
-    // ============================================================================
-
-    error InvalidLPToken();
-    error PoolAlreadyExists();
-    error TotalAllocationExceeds100();
-    error InvalidPool();
-    error InvalidMultiplier();
-    error InvalidDuration();
-    error InvalidIndex();
-    error AmountCannotBeZero();
-    error PoolNotActive();
-    error InsufficientBalance();
-    error InvalidLockTier();
-    error StillLocked();
-    error LockNotFound();
-    error AlreadyWithdrawn();
-    error NothingToWithdraw();
-    error NoRewardsToClaim();
-    error InvalidToken();
-    error CannotWithdrawLPTokens();
-    error InvalidPeriod();
-    error PoolNotFound();
 
     // ============================================================================
     // STRUCTS
