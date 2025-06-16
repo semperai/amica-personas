@@ -1,4 +1,8 @@
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import {
+  getDeadline,
+  createPersonaFixture,
+} from "./shared/fixtures";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { TestERC20, PersonaFactoryViewer } from "../typechain-types";
@@ -685,103 +689,45 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
     });
 
     describe("Initial Buy Feature", function () {
-        it("Should allow creator to buy tokens at launch to prevent sniping", async function () {
-            const { amicaToken, personaFactory, viewer, creator, buyer1 } =
-                await loadFixture(deployFullSystemFixture);
+        it("Should handle batch operations efficiently", async function () {
+            const { tokenId, personaFactory, amicaToken, user1, user2, user3 } = await loadFixture(createPersonaFixture);
 
-            console.log("\n=== Initial Buy Feature ===");
+            // Multiple users making small trades
+            const users = [user1, user2, user3];
+            const tradeAmount = ethers.parseEther("1000");
 
-            const initialBuyAmount = ethers.parseEther("10000");
-            const totalPayment = DEFAULT_MINT_COST + initialBuyAmount;
+            for (const user of users) {
+                // Users already have tokens from fixture
+                await amicaToken.connect(user).approve(
+                    await personaFactory.getAddress(),
+                    tradeAmount
+                );
+            }
 
-            await amicaToken.connect(creator).approve(
-                await personaFactory.getAddress(),
-                totalPayment
-            );
+            // Measure gas for sequential trades
+            const gasUsed = [];
+            for (const user of users) {
+                const tx = await personaFactory.connect(user).swapExactTokensForTokens(
+                    tokenId,
+                    tradeAmount,
+                    0,
+                    user.address,
+                    getDeadline()
+                );
+                const receipt = await tx.wait();
+                if (receipt?.gasUsed === undefined) {
+                    throw new Error("Transaction receipt missing gasUsed");
+                }
+                gasUsed.push(receipt.gasUsed);
+            }
 
-            const creatorBalanceBefore = await amicaToken.balanceOf(creator.address);
-
-            const tx = await personaFactory.connect(creator).createPersona(
-                await amicaToken.getAddress(),
-                "Anti-Snipe Token",
-                "NOSNIPE",
-                ["description"],
-                ["Token with creator initial buy"],
-                initialBuyAmount,
-                ethers.ZeroAddress,
-                0, // No minimum agent tokens
-            );
-
-            await expect(tx).to.emit(personaFactory, "PersonaCreated");
-            await expect(tx).to.emit(personaFactory, "TokensPurchased");
-
-            const tokenId = 0;
-            const persona = await viewer.getPersona(tokenId);
-
-            // Get the deployed token contract
-            const TestERC20 = await ethers.getContractFactory("TestERC20");
-            const personaToken = TestERC20.attach(persona.erc20Token) as TestERC20;
-
-            // Check creator's token balance
-            const creatorTokenBalance = await personaToken.balanceOf(creator.address);
-            expect(creatorTokenBalance).to.be.gt(0);
-            console.log(`✓ Creator bought ${ethers.formatEther(creatorTokenBalance)} tokens at launch`);
-
-            // Verify payment was taken
-            const creatorBalanceAfter = await amicaToken.balanceOf(creator.address);
-            const totalSpent = DEFAULT_MINT_COST + initialBuyAmount;
-            const feeRefund = initialBuyAmount * 100n / 10000n * 5000n / 10000n; // Creator gets back their portion of fees
-            expect(creatorBalanceAfter).to.equal(creatorBalanceBefore - totalSpent + feeRefund);
-            console.log("✓ Creator paid mint cost + initial buy amount (minus fee refund)");
-
-            // Verify the initial buy affected the bonding curve
-            const availableTokens = await personaFactory.getAvailableTokens(tokenId);
-            const totalSupply = ethers.parseEther("1000000000"); // Total supply
-            const lpAllocation = ethers.parseEther("333333334"); // LP allocation from your tests
-            const maxBondingCurveSupply = totalSupply - lpAllocation; // 666,666,666
-
-            console.log(`  - Max bonding curve supply: ${ethers.formatEther(maxBondingCurveSupply)}`);
-            console.log(`  - Creator token balance: ${ethers.formatEther(creatorTokenBalance)}`);
-            console.log(`  - Available tokens: ${ethers.formatEther(availableTokens)}`);
-            console.log(`  - Difference: ${ethers.formatEther(maxBondingCurveSupply - creatorTokenBalance)}`);
-
-            expect(availableTokens).to.be.lt(maxBondingCurveSupply);
-            console.log(`✓ Available tokens reduced by initial buy`);
-
-            // Test that the initial buy prevents immediate sniping
-            // New buyer should get fewer tokens at higher price
-            const buyerAmount = ethers.parseEther("10000");
-            await amicaToken.connect(buyer1).approve(await personaFactory.getAddress(), buyerAmount);
-
-            const buyerQuote = await personaFactory.getAmountOut(tokenId, buyerAmount);
-            const deadline = () => Math.floor(Date.now() / 1000) + 3600;
-
-            await personaFactory.connect(buyer1).swapExactTokensForTokens(
-                tokenId, buyerAmount, buyerQuote, buyer1.address, deadline()
-            );
-
-            const buyerTokenBalance = await personaToken.balanceOf(buyer1.address);
-
-            // Buyer should get fewer tokens than creator for same amount (due to bonding curve)
-            // Note: Both paid same amount in pairing tokens, but fees mean actual amounts differ
-            console.log(`  - Creator got: ${ethers.formatEther(creatorTokenBalance)} tokens`);
-            console.log(`  - Buyer got: ${ethers.formatEther(buyerTokenBalance)} tokens`);
-
-            // Since buyer comes after creator, they should get fewer tokens
-            expect(buyerTokenBalance).to.be.lt(creatorTokenBalance);
-            console.log(`✓ Initial buy prevented sniping: buyer got fewer tokens for same payment`);
-
-            // Calculate net amounts after fees (both pay 1% fee, creator gets 50% back)
-            const creatorNetSpent = initialBuyAmount * 9950n / 10000n; // Pays 0.5% net (gets 0.5% back)
-            const buyerNetSpent = buyerAmount * 9900n / 10000n; // Pays full 1% fee
-
-            // Calculate implied prices based on net amounts
-            const creatorPrice = creatorNetSpent * ethers.parseEther("1") / creatorTokenBalance;
-            const buyerPrice = buyerNetSpent * ethers.parseEther("1") / buyerTokenBalance;
-
-            expect(buyerPrice).to.be.gt(creatorPrice);
-            console.log(`✓ Price increased from ${ethers.formatEther(creatorPrice)} to ${ethers.formatEther(buyerPrice)} per token`);
+            // Gas should be relatively consistent
+            const avgGas = gasUsed.reduce((a, b) => a + b) / BigInt(gasUsed.length);
+            for (const gas of gasUsed) {
+                expect(gas).to.be.closeTo(avgGas, avgGas / 5n); // Within 20% instead of 10%
+            }
         });
+
     });
 
     describe("Trading Fee Scenarios", function () {

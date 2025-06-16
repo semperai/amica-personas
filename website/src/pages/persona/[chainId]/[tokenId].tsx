@@ -75,19 +75,33 @@ interface Trade {
 // Create TradeHistory component with GraphQL
 const TradeHistory = ({ chainId, tokenId }: { chainId: string; tokenId: string }) => {
   const personaId = `${chainId}-${tokenId}`;
-  
+
   // Convert tokenId to BigInt string for GraphQL
   const tokenIdBigInt = tokenId.replace(/^0+/, '') || '0';
-  
+
   const { data, loading, error } = useQuery(GET_PERSONA_TRADES_BY_TOKEN, {
-    variables: { 
+    variables: {
       tokenId: tokenIdBigInt, // Pass as string representation of BigInt
       chainId: parseInt(chainId),
-      limit: 10 
+      limit: 10
     },
     skip: !chainId || !tokenId,
     fetchPolicy: 'cache-and-network',
   });
+
+  // Get block explorer URL based on chain
+  const getExplorerUrl = (txHash: string) => {
+    switch (chainId) {
+      case '8453':
+        return `https://basescan.org/tx/${txHash}`;
+      case '42161':
+        return `https://arbiscan.io/tx/${txHash}`;
+      case '1':
+        return `https://etherscan.io/tx/${txHash}`;
+      default:
+        return `https://basescan.org/tx/${txHash}`; // Default to Base
+    }
+  };
 
   if (loading) {
     return (
@@ -130,6 +144,19 @@ const TradeHistory = ({ chainId, tokenId }: { chainId: string; tokenId: string }
                   <p className="text-xs text-white/50">
                     {new Date(trade.timestamp).toLocaleString()}
                   </p>
+                  {trade.txHash && (
+                    <a
+                      href={getExplorerUrl(trade.txHash)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1 mt-1"
+                    >
+                      View on Explorer
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  )}
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-white/80">

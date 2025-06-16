@@ -480,13 +480,15 @@ describe("PersonaTokenFactory Graduation", function () {
         );
         await personaFactory.connect(user2).swapExactTokensForTokens(1, ethers.parseEther("2"), 0, user2.address, deadline);
 
-        // Both should have received persona tokens
-        const TestERC20Token = await ethers.getContractFactory("TestERC20");
-        const persona1Token = TestERC20Token.attach(persona1.erc20Token) as TestERC20;
-        const persona2Token = TestERC20Token.attach(persona2.erc20Token) as TestERC20;
+        // Check userPurchases instead of token balances
+        const user1Purchase = await personaFactory.userPurchases(0, user1.address);
+        const user2Purchase = await personaFactory.userPurchases(1, user2.address);
 
-        expect(await persona1Token.balanceOf(user1.address)).to.be.gt(0);
-        expect(await persona2Token.balanceOf(user2.address)).to.be.gt(0);
+        expect(user1Purchase).to.be.gt(0);
+        expect(user2Purchase).to.be.gt(0);
+
+        console.log(`User1 purchased: ${ethers.formatEther(user1Purchase)} USDCP tokens`);
+        console.log(`User2 purchased: ${ethers.formatEther(user2Purchase)} ETHP tokens`);
 
         // Now graduate USDC persona to see AMICA deposit
         await usdc.connect(user1).approve(
@@ -496,8 +498,10 @@ describe("PersonaTokenFactory Graduation", function () {
         await personaFactory.connect(user1).swapExactTokensForTokens(0, ethers.parseEther("10000"), 0, user1.address, deadline);
 
         // NOW check AMICA deposit after graduation
-        expect(await amicaToken.depositedBalances(persona1.erc20Token))
-            .to.equal(ethers.parseEther("333333334"));
+        const amicaDepositAmount = await amicaToken.depositedBalances(persona1.erc20Token);
+        expect(amicaDepositAmount).to.be.gt(0);
+        // Without agent token, AMICA amount should be 1/3 of total supply
+        expect(amicaDepositAmount).to.equal(ethers.parseEther("333333334"));
     });
 
     it("Should handle LP tokens after graduation", async function () {
@@ -543,11 +547,12 @@ describe("PersonaTokenFactory Graduation", function () {
     it("Should handle withdrawal attempts with no purchases", async function () {
         const { tokenId, personaFactory, user2 } = await loadFixture(createPersonaFixture);
 
-        // User2 has no purchases
+        // User2 has no purchases and persona hasn't graduated
+        // The withdrawTokens function checks graduation status first
         await expect(
             personaFactory.connect(user2).withdrawTokens(tokenId)
         ).to.be.revertedWithCustomError(personaFactory, "NotAllowed")
-         .withArgs(9); // NoTokens = 9
+         .withArgs(3); // 3 = NotGraduated (checked before NoTokens)
     });
 
     it("Should handle multiple withdrawal attempts", async function () {
@@ -589,6 +594,6 @@ describe("PersonaTokenFactory Graduation", function () {
         await expect(
             personaFactory.connect(user2).withdrawTokens(tokenId)
         ).to.be.revertedWithCustomError(personaFactory, "NotAllowed")
-         .withArgs(9); // NoTokens = 9
+         .withArgs(9); // 9 = NoTokens
     });
 });

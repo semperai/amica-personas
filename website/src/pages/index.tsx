@@ -17,6 +17,28 @@ const animationStyles = `
     }
   }
 
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(-100%);
+    }
+  }
+
   .animate-fade-in {
     animation: fadeIn 0.8s ease-out forwards;
   }
@@ -29,6 +51,14 @@ const animationStyles = `
   .animate-fade-in-delay-2 {
     opacity: 0;
     animation: fadeIn 0.8s ease-out 0.4s forwards;
+  }
+
+  .text-transition-enter {
+    animation: slideUp 0.5s ease-out forwards;
+  }
+
+  .text-transition-exit {
+    animation: slideDown 0.5s ease-out forwards;
   }
 `;
 
@@ -179,6 +209,52 @@ function PersonaCard({ persona }: PersonaCardProps) {
   );
 }
 
+// Animated text component
+function AnimatedHeroText() {
+  const phrases = [
+    "autonomous AI agents on the blockchain",
+    "augmented reality internet workers",
+    "3D personas of your favorite characters",
+    "AI companions with real-world capabilities",
+    "virtual assistants powered by decentralized compute",
+    "intelligent agents that work on your behalf",
+    "AR/VR characters with API superpowers",
+    "digital workers for the acceleration economy"
+  ];
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsAnimating(true);
+      setTimeout(() => {
+        setCurrentIndex((prev) => (prev + 1) % phrases.length);
+        setIsAnimating(false);
+      }, 500);
+    }, 3500); // Change every 3.5 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <p className="text-xl md:text-2xl text-white/80 mb-8 font-light animate-fade-in-delay">
+      Launch, trade, and monetize{' '}<br />
+      <span className="relative inline-block overflow-hidden align-bottom" style={{ minHeight: '1.5em' }}>
+        <span
+          className={`inline-block transition-all duration-500 ${
+            isAnimating ? 'text-transition-exit' : 'text-transition-enter'
+          }`}
+        >
+          <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-normal">
+            {phrases[currentIndex]}
+          </span>
+        </span>
+      </span>
+    </p>
+  );
+}
+
 export default function HomePage() {
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [loading, setLoading] = useState(true);
@@ -233,9 +309,7 @@ export default function HomePage() {
             <h1 className="text-5xl md:text-7xl font-light text-white mb-6 animate-fade-in">
               Create Your AI Persona
             </h1>
-            <p className="text-xl md:text-2xl text-white/80 mb-8 font-light animate-fade-in-delay">
-              Launch, trade, and monetize autonomous AI agents on the blockchain
-            </p>
+            <AnimatedHeroText />
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 animate-fade-in-delay-2">
               <Link

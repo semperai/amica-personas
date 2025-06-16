@@ -69,7 +69,7 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
   const isMockMode = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true';
 
   // Transaction handling
-  const { writeContract, data: txHash, isPending, error: writeError } = useWriteContract();
+  const { writeContract, data: txHash, isPending, error: writeError, reset: resetWrite } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash });
 
   // Get persona details
@@ -101,11 +101,17 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
     }
   }) as { data: string | undefined };
 
-  // Get user balances
-  const { data: pairingTokenBalance } = useBalance({
-    address: address,
-    token: pairingToken,
-  });
+  // Get user balances - Fixed to get pairing token balance from contract
+  const { data: pairingTokenBalance } = useReadContract({
+    address: pairingToken,
+    abi: ERC20_ABI,
+    functionName: 'balanceOf',
+    args: address ? [address] : undefined,
+    query: {
+      enabled: !!pairingToken && !!address && !isMockMode,
+      refetchInterval: 2000,
+    }
+  }) as { data: bigint | undefined };
 
   const { data: personaTokenBalance } = useReadContract({
     address: personaToken,
@@ -113,13 +119,14 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
     functionName: 'balanceOf',
     args: address ? [address] : undefined,
     query: {
-      enabled: !!personaToken && !!address && !isMockMode
+      enabled: !!personaToken && !!address && !isMockMode,
+      refetchInterval: 2000,
     }
   }) as { data: bigint | undefined };
 
   // Get user's locked tokens (cannot sell these)
   const { data: lockedTokens } = useReadContract({
-    address: addresses?.personaFactoryViewer as `0x${string}`,
+    address: addresses?.personaFactory as `0x${string}`,
     abi: FACTORY_ABI,
     functionName: 'userPurchases',
     args: [BigInt(tokenId), address!],
@@ -156,18 +163,29 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
     }
   }) as { data: readonly [bigint, bigint, bigint, bigint, boolean, bigint, bigint, bigint, bigint] | undefined };
 
-  // Get quote based on buy/sell mode
+  // Fixed: Get quote for selling (amount of pairing tokens out)
   const { data: quote } = useReadContract({
-    address: addresses?.personaFactoryViewer as `0x${string}`,
+    address: addresses?.personaFactory as `0x${string}`,
     abi: FACTORY_ABI,
-    functionName: isBuying ? 'getAmountOutForUser' : 'getAmountInForUser',
-    args: address && amount && parseFloat(amount) > 0 
-      ? isBuying 
-        ? [BigInt(tokenId), parseEther(amount), address] // Buying: input pairing tokens
-        : [BigInt(tokenId), parseEther(amount), address] // Selling: input persona tokens
+    functionName: 'getAmountOut',
+    args: !isBuying && amount && parseFloat(amount) > 0 
+      ? [BigInt(tokenId), parseEther(amount)]
       : undefined,
     query: {
-      enabled: !!amount && !!address && parseFloat(amount) > 0 && !!addresses && !isMockMode
+      enabled: !isBuying && !!amount && parseFloat(amount) > 0 && !!addresses && !isMockMode
+    }
+  }) as { data: bigint | undefined };
+
+  // Get quote for buying from viewer contract
+  const { data: buyQuote } = useReadContract({
+    address: addresses?.personaFactoryViewer as `0x${string}`,
+    abi: FACTORY_ABI,
+    functionName: 'getAmountOutForUser',
+    args: isBuying && address && amount && parseFloat(amount) > 0 
+      ? [BigInt(tokenId), parseEther(amount), address]
+      : undefined,
+    query: {
+      enabled: isBuying && !!amount && !!address && parseFloat(amount) > 0 && !!addresses && !isMockMode
     }
   }) as { data: bigint | undefined };
 
@@ -201,6 +219,11 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
     }
   }, [isSuccess, refetchAllowance]);
 
+  // Reset write error when changing amount or buy/sell mode
+  useEffect(() => {
+    resetWrite();
+  }, [amount, isBuying, resetWrite]);
+
   const handleApprove = async () => {
     if (!address || !addresses || !amount || parseFloat(amount) <= 0) return;
 
@@ -217,7 +240,7 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
         address: tokenToApprove as `0x${string}`,
         abi: ERC20_ABI,
         functionName: 'approve',
-        args: [addresses.personaFactory as `0x${string}`, amountWei]
+        args: [addresses.personaFactory as `0x${string}`, parseEther('1000000000')] // Approve max amount
       });
     } catch (error) {
       console.error('Approval error:', error);
@@ -227,7 +250,7 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
   };
 
   const handleTrade = async () => {
-    if (!address || !amount || !addresses) return;
+    if (!address || !amount || !addresses || parseFloat(amount) <= 0) return;
 
     if (needsApproval) {
       alert('Please approve tokens first');
@@ -244,7 +267,7 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
 
     try {
       if (isBuying) {
-        const minAmountOut = quote ? BigInt(Math.floor(Number(quote) * slippageMultiplier)) : BigInt(0);
+        const minAmountOut = buyQuote ? BigInt(Math.floor(Number(buyQuote) * slippageMultiplier)) : BigInt(0);
         
         await writeContract({
           address: addresses.personaFactory as `0x${string}`,
@@ -259,8 +282,14 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
           ]
         });
       } else {
-        // Selling persona tokens
+        // Fixed: Selling persona tokens - need to calculate pairing tokens out
         const minAmountOut = quote ? BigInt(Math.floor(Number(quote) * slippageMultiplier)) : BigInt(0);
+        
+        // Check if we have tokens to sell
+        if (sellableBalance < parseEther(amount)) {
+          alert('Insufficient sellable balance. You may have locked tokens that need to be withdrawn first.');
+          return;
+        }
         
         await writeContract({
           address: addresses.personaFactory as `0x${string}`,
@@ -282,26 +311,29 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
 
   const handleMaxClick = () => {
     if (isBuying && pairingTokenBalance) {
-      setAmount(formatEther(pairingTokenBalance.value));
-    } else if (!isBuying && sellableBalance) {
+      setAmount(formatEther(pairingTokenBalance));
+    } else if (!isBuying && sellableBalance > BigInt(0)) {
       setAmount(formatEther(sellableBalance));
     }
   };
 
   // Format balances
-  const currentBalance = isBuying ? pairingTokenBalance : { value: sellableBalance };
+  const currentBalance = isBuying ? pairingTokenBalance : sellableBalance;
   const currentBalanceFormatted = currentBalance 
-    ? formatEther(currentBalance.value) 
+    ? formatEther(currentBalance) 
     : '0';
 
-  const currentTokenSymbol = isBuying ? (pairingTokenSymbol || 'PAIRING') : tokenSymbol;
-  const targetTokenSymbol = isBuying ? tokenSymbol : (pairingTokenSymbol || 'PAIRING');
+  const currentTokenSymbol = isBuying ? (pairingTokenSymbol || 'AMICA') : tokenSymbol;
+  const targetTokenSymbol = isBuying ? tokenSymbol : (pairingTokenSymbol || 'AMICA');
+
+  // Use the appropriate quote based on buy/sell
+  const outputAmount = isBuying ? buyQuote : quote;
 
   // Calculate price per token
-  const pricePerToken = amount && quote && parseFloat(amount) > 0
+  const pricePerToken = amount && outputAmount && parseFloat(amount) > 0
     ? isBuying 
-      ? (parseFloat(amount) / parseFloat(formatEther(quote))).toFixed(6)
-      : (parseFloat(formatEther(quote)) / parseFloat(amount)).toFixed(6)
+      ? (parseFloat(amount) / parseFloat(formatEther(outputAmount))).toFixed(6)
+      : (parseFloat(formatEther(outputAmount)) / parseFloat(amount)).toFixed(6)
     : '0';
 
   return (
@@ -364,23 +396,23 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
         {/* To Token */}
         <TokenInput
           label={isBuying ? 'You receive' : 'You get'}
-          value={quote ? formatEther(quote) : ''}
+          value={outputAmount ? formatEther(outputAmount) : ''}
           readOnly
           balance={isBuying
             ? (personaTokenBalance ? formatEther(personaTokenBalance) : '0')
-            : (pairingTokenBalance ? formatEther(pairingTokenBalance.value) : '0')
+            : (pairingTokenBalance ? formatEther(pairingTokenBalance) : '0')
           }
           tokenSymbol={targetTokenSymbol}
           className="mb-6"
         />
 
         {/* Price Info */}
-        {amount && quote && parseFloat(amount) > 0 && (
+        {amount && outputAmount && parseFloat(amount) > 0 && (
           <div className="mb-6 p-4 bg-white/5 rounded-xl space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-white/60">Price</span>
               <span className="text-white">
-                1 {tokenSymbol} = {pricePerToken} {pairingTokenSymbol || 'tokens'}
+                1 {tokenSymbol} = {pricePerToken} {pairingTokenSymbol || 'AMICA'}
               </span>
             </div>
             {preview && isBuying && (
@@ -388,7 +420,7 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
                 <div className="flex justify-between text-sm">
                   <span className="text-white/60">Fee</span>
                   <span className="text-white">
-                    {formatEther(preview[0])} {pairingTokenSymbol || 'tokens'}
+                    {formatEther(preview[0])} {pairingTokenSymbol || 'AMICA'}
                     {feeInfo && feeInfo[8] > 0 && (
                       <span className="text-green-400 ml-1">
                         (-{((Number(feeInfo[8]) / 10000) * 100).toFixed(0)}%)
@@ -399,7 +431,7 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
                 <div className="flex justify-between text-sm">
                   <span className="text-white/60">Minimum received</span>
                   <span className="text-white">
-                    {formatEther(BigInt(Math.floor(Number(quote) * (1 - parseFloat(slippage) / 100))))} {targetTokenSymbol}
+                    {formatEther(BigInt(Math.floor(Number(outputAmount) * (1 - parseFloat(slippage) / 100))))} {targetTokenSymbol}
                   </span>
                 </div>
               </>
@@ -408,7 +440,7 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
               <div className="flex justify-between text-sm">
                 <span className="text-white/60">Minimum received</span>
                 <span className="text-white">
-                  {formatEther(BigInt(Math.floor(Number(quote) * (1 - parseFloat(slippage) / 100))))} {targetTokenSymbol}
+                  {formatEther(BigInt(Math.floor(Number(outputAmount) * (1 - parseFloat(slippage) / 100))))} {targetTokenSymbol}
                 </span>
               </div>
             )}
@@ -472,6 +504,8 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
             <p className="text-sm text-red-400">
               {writeError.message.includes('user rejected') 
                 ? 'Transaction cancelled by user' 
+                : writeError.message.includes('Insufficient sellable balance')
+                ? 'Insufficient sellable balance. You may have locked tokens.'
                 : 'Transaction failed. Please try again.'}
             </p>
           </div>

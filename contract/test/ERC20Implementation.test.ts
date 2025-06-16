@@ -94,8 +94,14 @@ describe("ERC20Implementation Burn and Claim", function () {
         const hasGraduated = await personaToken.hasGraduated();
         expect(hasGraduated).to.be.true;
 
-        // Transfer some tokens to user3 for testing
+        // IMPORTANT: After graduation, users need to withdraw their tokens
+        await personaFactory.connect(user2).withdrawTokens(tokenId);
+        
+        // Now user2 should have their tokens
         const user2Balance = await personaToken.balanceOf(user2.address);
+        expect(user2Balance).to.be.gt(0);
+
+        // Transfer some tokens to user3 for testing
         await personaToken.connect(user2).transfer(user3.address, user2Balance / 4n);
 
         return {
@@ -448,35 +454,25 @@ describe("ERC20Implementation Burn and Claim", function () {
         it("Should handle burning entire balance", async function () {
             const { personaToken, amicaToken, user2, user3, personaFactory, tokenId } = await loadFixture(deployPersonaTokenForTesting);
 
-            // First, let's get the actual token balances to understand the distribution
-            const factoryBalance = await personaToken.balanceOf(await personaFactory.getAddress());
-            const user1Balance = await personaToken.balanceOf(await personaFactory.ownerOf(tokenId));
-            const user2InitialBalance = await personaToken.balanceOf(user2.address);
+            // user3 should have some balance from the test setup
             const user3Balance = await personaToken.balanceOf(user3.address);
-
-            // Transfer all of user3's tokens to user2
-            if (user3Balance > 0) {
-                await personaToken.connect(user3).transfer(user2.address, user3Balance);
-            }
+            expect(user3Balance).to.be.gt(0);
 
             // Send AMICA to the contract
-            await amicaToken.connect(user2).transfer(await personaToken.getAddress(), ethers.parseEther("1000"));
+            await amicaToken.connect(user3).transfer(await personaToken.getAddress(), ethers.parseEther("1000"));
 
-            // Get user2's current balance
-            const balance = await personaToken.balanceOf(user2.address);
-
-            // User2 now has their initial balance plus user3's balance
-            expect(balance).to.equal(user2InitialBalance + user3Balance);
+            // Get user3's current balance
+            const balance = await personaToken.balanceOf(user3.address);
 
             // Burn entire balance
-            const tx = await personaToken.connect(user2).burnAndClaim(balance, [await amicaToken.getAddress()]);
+            const tx = await personaToken.connect(user3).burnAndClaim(balance, [await amicaToken.getAddress()]);
             await expect(tx).to.emit(personaToken, "TokensBurnedAndClaimed");
 
-            // User2 should have no tokens left
-            expect(await personaToken.balanceOf(user2.address)).to.equal(0);
+            // User3 should have no tokens left
+            expect(await personaToken.balanceOf(user3.address)).to.equal(0);
 
-            // User2 should have received some AMICA
-            expect(await amicaToken.balanceOf(user2.address)).to.be.gt(0);
+            // User3 should have received some AMICA
+            expect(await amicaToken.balanceOf(user3.address)).to.be.gt(0);
         });
 
         it("Should handle multiple users burning simultaneously", async function () {
@@ -674,6 +670,10 @@ describe("ERC20Implementation Burn and Claim", function () {
 
             // Verify graduation status on token
             expect(await personaToken.hasGraduated()).to.be.true;
+
+            // IMPORTANT: Withdraw tokens after graduation
+            await personaFactory.connect(user1).withdrawTokens(tokenId);
+            await personaFactory.connect(user2).withdrawTokens(tokenId);
 
             // Now test burn and claim
             await amicaToken.connect(user2).transfer(await personaToken.getAddress(), ethers.parseEther("5000"));
