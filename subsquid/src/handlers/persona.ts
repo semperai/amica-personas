@@ -100,6 +100,7 @@ export async function handlePersonaCreated(
   }
 }
 
+
 async function fetchAndStoreMetadata(
   ctx: Context,
   block: any,
@@ -109,31 +110,34 @@ async function fetchAndStoreMetadata(
   blockNumber: bigint
 ) {
   const contract = new factoryAbi.Contract(ctx, block, DEPLOYMENT.addresses.personaFactory)
-  
+
   // Common metadata keys to fetch
+  // TODO update this list
   const metadataKeys = ['image', 'description', 'twitter', 'telegram', 'website', 'discord']
-  
-  try {
-    const metadataValues = await contract.getMetadata(BigInt(personaId), metadataKeys)
-    
-    for (let i = 0; i < metadataKeys.length; i++) {
-      if (metadataValues[i] && metadataValues[i] !== '') {
-        const metadataId = `${personaId}-${metadataKeys[i]}`
-        
+
+  // We need to fetch each metadata value individually since getMetadata doesn't exist
+  // on the PersonaTokenFactory contract
+  for (const key of metadataKeys) {
+    try {
+      const value = await contract.getMetadataValue(BigInt(personaId), key)
+
+      if (value && value !== '') {
+        const metadataId = `${personaId}-${key}`
+
         const metadata = new PersonaMetadata({
           id: metadataId,
           persona,
-          key: metadataKeys[i],
-          value: metadataValues[i],
+          key: key,
+          value: value,
           updatedAt: timestamp,
           updatedAtBlock: blockNumber,
         })
-        
+
         await ctx.store.insert(metadata)
-        ctx.log.debug(`Stored metadata ${metadataKeys[i]} for persona ${personaId}`)
+        ctx.log.debug(`Stored metadata ${key} for persona ${personaId}: ${value}`)
       }
+    } catch (error) {
+      ctx.log.warn(`Failed to fetch metadata ${key} for persona ${personaId}: ${error}`)
     }
-  } catch (error) {
-    ctx.log.warn(`Failed to fetch metadata for persona ${personaId}: ${error}`)
   }
 }

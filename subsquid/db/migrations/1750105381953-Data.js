@@ -1,8 +1,8 @@
-module.exports = class Data1750076535084 {
-    name = 'Data1750076535084'
+module.exports = class Data1750105381953 {
+    name = 'Data1750105381953'
 
     async up(db) {
-        await db.query(`CREATE TABLE "trade" ("id" character varying NOT NULL, "trader" text NOT NULL, "amount_in" numeric NOT NULL, "amount_out" numeric NOT NULL, "fee_amount" numeric NOT NULL, "timestamp" TIMESTAMP WITH TIME ZONE NOT NULL, "block" numeric NOT NULL, "tx_hash" text NOT NULL, "chain_id" integer NOT NULL, "persona_id" character varying, CONSTRAINT "PK_d4097908741dc408f8274ebdc53" PRIMARY KEY ("id"))`)
+        await db.query(`CREATE TABLE "trade" ("id" character varying NOT NULL, "trader" text NOT NULL, "amount_in" numeric NOT NULL, "amount_out" numeric NOT NULL, "fee_amount" numeric NOT NULL, "is_buy" boolean NOT NULL, "timestamp" TIMESTAMP WITH TIME ZONE NOT NULL, "block" numeric NOT NULL, "tx_hash" text NOT NULL, "chain_id" integer NOT NULL, "persona_id" character varying, CONSTRAINT "PK_d4097908741dc408f8274ebdc53" PRIMARY KEY ("id"))`)
         await db.query(`CREATE INDEX "IDX_71c6c949494655ef4a4f0a5305" ON "trade" ("persona_id") `)
         await db.query(`CREATE INDEX "IDX_8782e523050ad117640677be17" ON "trade" ("trader") `)
         await db.query(`CREATE INDEX "IDX_52bc84a094050a3bb4b7e8d52d" ON "trade" ("tx_hash") `)
@@ -58,12 +58,15 @@ module.exports = class Data1750076535084 {
         await db.query(`CREATE TABLE "fee_config" ("id" character varying NOT NULL, "fee_percentage" integer NOT NULL, "creator_share" integer NOT NULL, "min_amica_for_reduction" numeric NOT NULL, "max_amica_for_reduction" numeric NOT NULL, "min_reduction_multiplier" integer NOT NULL, "max_reduction_multiplier" integer NOT NULL, "last_updated" TIMESTAMP WITH TIME ZONE NOT NULL, CONSTRAINT "PK_e802abded19e05077ed4e812945" PRIMARY KEY ("id"))`)
         await db.query(`CREATE TABLE "user_snapshot" ("id" character varying NOT NULL, "user" text NOT NULL, "current_balance" numeric NOT NULL, "current_block" numeric NOT NULL, "pending_balance" numeric NOT NULL, "pending_block" numeric NOT NULL, "last_updated" TIMESTAMP WITH TIME ZONE NOT NULL, CONSTRAINT "PK_e4b889cceb3e29b899306f693f1" PRIMARY KEY ("id"))`)
         await db.query(`CREATE UNIQUE INDEX "IDX_c890d7934240e6c23169d3b0c9" ON "user_snapshot" ("user") `)
-        await db.query(`CREATE TABLE "global_stats" ("id" character varying NOT NULL, "total_personas" integer NOT NULL, "total_trades" integer NOT NULL, "total_volume" numeric NOT NULL, "total_staking_pools" integer NOT NULL, "total_staked" numeric NOT NULL, "total_bridge_volume" numeric NOT NULL, "last_updated" TIMESTAMP WITH TIME ZONE NOT NULL, CONSTRAINT "PK_7a107cf03d781091d521d8ed21b" PRIMARY KEY ("id"))`)
-        await db.query(`CREATE TABLE "daily_stats" ("id" character varying NOT NULL, "date" TIMESTAMP WITH TIME ZONE NOT NULL, "new_personas" integer NOT NULL, "trades" integer NOT NULL, "volume" numeric NOT NULL, "unique_traders" integer NOT NULL, "bridge_volume" numeric NOT NULL, CONSTRAINT "PK_d1830b57aa5fafc5cb26a09aa73" PRIMARY KEY ("id"))`)
+        await db.query(`CREATE TABLE "pairing_config" ("id" character varying NOT NULL, "token" text NOT NULL, "enabled" boolean NOT NULL, "mint_cost" numeric NOT NULL, "graduation_threshold" numeric NOT NULL, "last_updated" TIMESTAMP WITH TIME ZONE NOT NULL, "last_updated_block" numeric NOT NULL, CONSTRAINT "PK_d8721d2aa8d1e9f3ec291fcd41b" PRIMARY KEY ("id"))`)
+        await db.query(`CREATE UNIQUE INDEX "IDX_1ff90a79ebf0910f6929674f0a" ON "pairing_config" ("token") `)
+        await db.query(`CREATE TABLE "global_stats" ("id" character varying NOT NULL, "total_personas" integer NOT NULL, "total_trades" integer NOT NULL, "total_buy_trades" integer NOT NULL, "total_sell_trades" integer NOT NULL, "total_volume" numeric NOT NULL, "total_buy_volume" numeric NOT NULL, "total_sell_volume" numeric NOT NULL, "total_staking_pools" integer NOT NULL, "total_staked" numeric NOT NULL, "total_bridge_volume" numeric NOT NULL, "last_updated" TIMESTAMP WITH TIME ZONE NOT NULL, CONSTRAINT "PK_7a107cf03d781091d521d8ed21b" PRIMARY KEY ("id"))`)
+        await db.query(`CREATE TABLE "daily_stats" ("id" character varying NOT NULL, "date" TIMESTAMP WITH TIME ZONE NOT NULL, "new_personas" integer NOT NULL, "trades" integer NOT NULL, "buy_trades" integer NOT NULL, "sell_trades" integer NOT NULL, "volume" numeric NOT NULL, "buy_volume" numeric NOT NULL, "sell_volume" numeric NOT NULL, "unique_traders" integer NOT NULL, "bridge_volume" numeric NOT NULL, CONSTRAINT "PK_d1830b57aa5fafc5cb26a09aa73" PRIMARY KEY ("id"))`)
         await db.query(`CREATE INDEX "IDX_b1ac0c4b592aa8dd567515a779" ON "daily_stats" ("date") `)
-        await db.query(`CREATE TABLE "persona_daily_stats" ("id" character varying NOT NULL, "date" TIMESTAMP WITH TIME ZONE NOT NULL, "trades" integer NOT NULL, "volume" numeric NOT NULL, "unique_traders" integer NOT NULL, "persona_id" character varying, CONSTRAINT "PK_7c33c807cc0c201975d304020e5" PRIMARY KEY ("id"))`)
+        await db.query(`CREATE TABLE "persona_daily_stats" ("id" character varying NOT NULL, "date" TIMESTAMP WITH TIME ZONE NOT NULL, "trades" integer NOT NULL, "buy_trades" integer NOT NULL, "sell_trades" integer NOT NULL, "volume" numeric NOT NULL, "buy_volume" numeric NOT NULL, "sell_volume" numeric NOT NULL, "unique_traders" integer NOT NULL, "persona_id" character varying, CONSTRAINT "PK_7c33c807cc0c201975d304020e5" PRIMARY KEY ("id"))`)
         await db.query(`CREATE INDEX "IDX_9c88a8b40a56f95bdfb81fca27" ON "persona_daily_stats" ("persona_id") `)
         await db.query(`CREATE INDEX "IDX_0d3aedf2c6b6b776695c51f7e5" ON "persona_daily_stats" ("date") `)
+        await db.query(`CREATE TABLE "contract_config" ("id" character varying NOT NULL, "persona_factory" text NOT NULL, "staking_rewards" text, "bridge_wrapper" text, "amica_token" text NOT NULL, "last_updated" TIMESTAMP WITH TIME ZONE NOT NULL, "last_updated_block" numeric NOT NULL, CONSTRAINT "PK_4197aac9352c5ed9322f85ed471" PRIMARY KEY ("id"))`)
         await db.query(`ALTER TABLE "trade" ADD CONSTRAINT "FK_71c6c949494655ef4a4f0a53058" FOREIGN KEY ("persona_id") REFERENCES "persona"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`)
         await db.query(`ALTER TABLE "persona_metadata" ADD CONSTRAINT "FK_c340ba5353f347dc23c81ef9f70" FOREIGN KEY ("persona_id") REFERENCES "persona"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`)
         await db.query(`ALTER TABLE "agent_deposit" ADD CONSTRAINT "FK_e289fe78e7e48c963dfd9281467" FOREIGN KEY ("persona_id") REFERENCES "persona"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`)
@@ -132,12 +135,15 @@ module.exports = class Data1750076535084 {
         await db.query(`DROP TABLE "fee_config"`)
         await db.query(`DROP TABLE "user_snapshot"`)
         await db.query(`DROP INDEX "public"."IDX_c890d7934240e6c23169d3b0c9"`)
+        await db.query(`DROP TABLE "pairing_config"`)
+        await db.query(`DROP INDEX "public"."IDX_1ff90a79ebf0910f6929674f0a"`)
         await db.query(`DROP TABLE "global_stats"`)
         await db.query(`DROP TABLE "daily_stats"`)
         await db.query(`DROP INDEX "public"."IDX_b1ac0c4b592aa8dd567515a779"`)
         await db.query(`DROP TABLE "persona_daily_stats"`)
         await db.query(`DROP INDEX "public"."IDX_9c88a8b40a56f95bdfb81fca27"`)
         await db.query(`DROP INDEX "public"."IDX_0d3aedf2c6b6b776695c51f7e5"`)
+        await db.query(`DROP TABLE "contract_config"`)
         await db.query(`ALTER TABLE "trade" DROP CONSTRAINT "FK_71c6c949494655ef4a4f0a53058"`)
         await db.query(`ALTER TABLE "persona_metadata" DROP CONSTRAINT "FK_c340ba5353f347dc23c81ef9f70"`)
         await db.query(`ALTER TABLE "agent_deposit" DROP CONSTRAINT "FK_e289fe78e7e48c963dfd9281467"`)

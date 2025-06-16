@@ -23,8 +23,8 @@ export async function handleMetadataUpdated(
   const contract = new factoryAbi.Contract(ctx, log.block, DEPLOYMENT.addresses.personaFactory)
   
   try {
-    const metadataValues = await contract.getMetadata(event.tokenId, [event.key])
-    const value = metadataValues[0] || ''
+    // Use getMetadataValue to get a single metadata value
+    const value = await contract.getMetadataValue(event.tokenId, event.key)
     
     const metadataId = `${personaId}-${event.key}`
     let metadata = await ctx.store.get(PersonaMetadata, metadataId)
@@ -34,12 +34,12 @@ export async function handleMetadataUpdated(
         id: metadataId,
         persona,
         key: event.key,
-        value,
+        value: value || '',
         updatedAt: timestamp,
         updatedAtBlock: blockNumber,
       })
     } else {
-      metadata.value = value
+      metadata.value = value || ''
       metadata.updatedAt = timestamp
       metadata.updatedAtBlock = blockNumber
     }

@@ -21,8 +21,20 @@ export class PersonaDailyStats {
     @IntColumn_({nullable: false})
     trades!: number
 
+    @IntColumn_({nullable: false})
+    buyTrades!: number
+
+    @IntColumn_({nullable: false})
+    sellTrades!: number
+
     @BigIntColumn_({nullable: false})
     volume!: bigint
+
+    @BigIntColumn_({nullable: false})
+    buyVolume!: bigint
+
+    @BigIntColumn_({nullable: false})
+    sellVolume!: bigint
 
     @IntColumn_({nullable: false})
     uniqueTraders!: number

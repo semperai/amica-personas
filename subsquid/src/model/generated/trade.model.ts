@@ -1,4 +1,4 @@
-import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, ManyToOne as ManyToOne_, Index as Index_, StringColumn as StringColumn_, BigIntColumn as BigIntColumn_, DateTimeColumn as DateTimeColumn_, IntColumn as IntColumn_} from "@subsquid/typeorm-store"
+import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, ManyToOne as ManyToOne_, Index as Index_, StringColumn as StringColumn_, BigIntColumn as BigIntColumn_, BooleanColumn as BooleanColumn_, DateTimeColumn as DateTimeColumn_, IntColumn as IntColumn_} from "@subsquid/typeorm-store"
 import {Persona} from "./persona.model"
 
 @Entity_()
@@ -26,6 +26,9 @@ export class Trade {
 
     @BigIntColumn_({nullable: false})
     feeAmount!: bigint
+
+    @BooleanColumn_({nullable: false})
+    isBuy!: boolean
 
     @DateTimeColumn_({nullable: false})
     timestamp!: Date

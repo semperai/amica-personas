@@ -28,7 +28,7 @@ import { And, In, MoreThanOrEqual, LessThan, Between } from 'typeorm'
 
 // Event handlers
 import { handlePersonaCreated } from './handlers/persona'
-import { handleTokensPurchased, handleTradingFeesCollected } from './handlers/trading'
+import { handleTokensPurchased, handleTradingFeesCollected, handleTokensSold } from './handlers/trading'
 import { handleMetadataUpdated } from './handlers/metadata'
 import { handleLiquidityPairCreated } from './handlers/liquidity'
 import { 
@@ -55,6 +55,8 @@ import { handleTokensWrapped, handleTokensUnwrapped } from './handlers/bridge'
 import { updateGlobalStats, updateDailyStats } from './handlers/stats'
 import { handleTransfer } from './handlers/transfers'
 import { handleTokensWithdrawn } from './handlers/withdrawals'
+import { handlePairingConfigUpdated, handleStakingRewardsSet } from './handlers/config'
+
 
 // Log startup information
 console.log('=== SUBSQUID PROCESSOR STARTING ===')
@@ -134,7 +136,17 @@ processor.run(new TypeormDatabase({ supportHotBlocks: true }), async (ctx) => {
                 ctx.log.debug(`Trade recorded for persona ${trade.persona.id}`)
               }
               break
-              
+
+            case factoryAbi.events.TokensSold.topic:
+              ctx.log.info('Processing TokensSold event')
+              const sellTrade = await handleTokensSold(ctx, log, timestamp, blockNumber)
+              if (sellTrade) {
+                personasToUpdate.add(sellTrade.persona.id)
+                datesToUpdate.add(getDateString(timestamp))
+                ctx.log.debug(`Sell trade recorded for persona ${sellTrade.persona.id}`)
+              }
+              break
+
             case factoryAbi.events.MetadataUpdated.topic:
               ctx.log.info('Processing MetadataUpdated event')
               await handleMetadataUpdated(ctx, log, timestamp, blockNumber)
@@ -190,6 +202,16 @@ processor.run(new TypeormDatabase({ supportHotBlocks: true }), async (ctx) => {
             case factoryAbi.events.TokensWithdrawn.topic:
               ctx.log.info('Processing TokensWithdrawn event')
               await handleTokensWithdrawn(ctx, log, timestamp, blockNumber)
+              break
+
+            case factoryAbi.events.PairingConfigUpdated.topic:
+              ctx.log.info('Processing PairingConfigUpdated event')
+              await handlePairingConfigUpdated(ctx, log, timestamp)
+              break
+
+            case factoryAbi.events.StakingRewardsSet.topic:
+              ctx.log.info('Processing StakingRewardsSet event')
+              await handleStakingRewardsSet(ctx, log)
               break
               
             default:

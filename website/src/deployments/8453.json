@@ -5,7 +5,7 @@
     "amicaToken": "0xC0ba25570F4cB592e83FF5f052cC9DD69D5b3caE",
     "amicaTokenImpl": "0x766246eB22f975782d6223A2379d0A04149C556d",
     "personaFactory": "0x62966fd253C2c3507A305f296E54cabD74AEA083",
-    "personaFactoryImpl": "0x029E4F0e3e6270362Fc03A71a34948fF7bfAA467",
+    "personaFactoryImpl": "0x67e931140527A3747eBfD691C0F752ea9C281f4B",
     "proxyAdmin": "0x84f9ed0C4Fffd7973805f165A184F6450fAD56D9",
     "bridgeWrapper": "0xe17B125b85AbCC0Ff212cf33d06d928d4736aA04",
     "bridgeWrapperImpl": "0x9f12b81Cec37bdA3D5863376Bd0C99dA51FfCd8A",
@@ -30,6 +30,12 @@
       "timestamp": "2025-06-16T18:03:35.526Z",
       "fromImpl": "0x5B6aB4aa3139029Aa7D2b5B5E5318422979fD7B6",
       "toImpl": "0x029E4F0e3e6270362Fc03A71a34948fF7bfAA467",
+      "upgrader": "0x8115F3DBb2DF930cC07b8D910C3bb06b5b9bf573"
+    },
+    {
+      "timestamp": "2025-06-16T20:06:06.935Z",
+      "fromImpl": "0x029E4F0e3e6270362Fc03A71a34948fF7bfAA467",
+      "toImpl": "0x67e931140527A3747eBfD691C0F752ea9C281f4B",
       "upgrader": "0x8115F3DBb2DF930cC07b8D910C3bb06b5b9bf573"
     }
   ]

@@ -53,6 +53,7 @@ type Trade @entity {
   amountIn: BigInt!
   amountOut: BigInt!
   feeAmount: BigInt!
+  isBuy: Boolean! # NEW: true for buy, false for sell
   timestamp: DateTime!
   block: BigInt!
   txHash: String! @index
@@ -202,13 +203,28 @@ type UserSnapshot @entity {
   lastUpdated: DateTime!
 }
 
+# NEW: Pairing Configuration Entity
+type PairingConfig @entity {
+  id: ID! # token address
+  token: String! @unique @index
+  enabled: Boolean!
+  mintCost: BigInt!
+  graduationThreshold: BigInt!
+  lastUpdated: DateTime!
+  lastUpdatedBlock: BigInt!
+}
+
 # Statistics
 
 type GlobalStats @entity {
   id: ID! # "global"
   totalPersonas: Int!
   totalTrades: Int!
+  totalBuyTrades: Int! # NEW
+  totalSellTrades: Int! # NEW
   totalVolume: BigInt!
+  totalBuyVolume: BigInt! # NEW
+  totalSellVolume: BigInt! # NEW
   totalStakingPools: Int!
   totalStaked: BigInt!
   totalBridgeVolume: BigInt!
@@ -220,7 +236,11 @@ type DailyStats @entity {
   date: DateTime! @index
   newPersonas: Int!
   trades: Int!
+  buyTrades: Int! # NEW
+  sellTrades: Int! # NEW
   volume: BigInt!
+  buyVolume: BigInt! # NEW
+  sellVolume: BigInt! # NEW
   uniqueTraders: Int!
   bridgeVolume: BigInt!
 }
@@ -230,6 +250,21 @@ type PersonaDailyStats @entity {
   persona: Persona!
   date: DateTime! @index
   trades: Int!
+  buyTrades: Int! # NEW
+  sellTrades: Int! # NEW
   volume: BigInt!
+  buyVolume: BigInt! # NEW
+  sellVolume: BigInt! # NEW
   uniqueTraders: Int!
+}
+
+# NEW: Contract Configuration Entity
+type ContractConfig @entity {
+  id: ID! # "contract-config"
+  personaFactory: String!
+  stakingRewards: String
+  bridgeWrapper: String
+  amicaToken: String!
+  lastUpdated: DateTime!
+  lastUpdatedBlock: BigInt!
 }

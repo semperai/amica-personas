@@ -15,8 +15,20 @@ export class GlobalStats {
     @IntColumn_({nullable: false})
     totalTrades!: number
 
+    @IntColumn_({nullable: false})
+    totalBuyTrades!: number
+
+    @IntColumn_({nullable: false})
+    totalSellTrades!: number
+
     @BigIntColumn_({nullable: false})
     totalVolume!: bigint
+
+    @BigIntColumn_({nullable: false})
+    totalBuyVolume!: bigint
+
+    @BigIntColumn_({nullable: false})
+    totalSellVolume!: bigint
 
     @IntColumn_({nullable: false})
     totalStakingPools!: number

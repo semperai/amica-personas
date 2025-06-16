@@ -20,6 +20,7 @@ export const events = {
     SnapshotUpdated: event("0x749a895977946fbb427a7c3da0a86bf47a5d5a6046dcea26f5e23321fdb244be", "SnapshotUpdated(address,uint256,uint256)", {"user": indexed(p.address), "snapshotBalance": p.uint256, "blockNumber": p.uint256}),
     StakingRewardsSet: event("0xb63c81227c62f4cb3e2b1120e3afbf3a2ed5dd8b9d99b8bef7275b084e6a98cb", "StakingRewardsSet(address)", {"stakingRewards": indexed(p.address)}),
     TokensPurchased: event("0xe8d7e55108ae7ddb60173461d2950c7a8e22a7ac7f442825564fe84c8c6f9a38", "TokensPurchased(uint256,address,uint256,uint256)", {"tokenId": indexed(p.uint256), "buyer": indexed(p.address), "amountSpent": p.uint256, "tokensReceived": p.uint256}),
+    TokensSold: event("0xb3b5018d26b7b3764106321edeb54ab6d90aee3598f78eae1da7a2ce084e9aa9", "TokensSold(uint256,address,uint256,uint256)", {"tokenId": indexed(p.uint256), "seller": indexed(p.address), "tokensSold": p.uint256, "amountReceived": p.uint256}),
     TokensWithdrawn: event("0x3f5fbaf86658fdadee77f1d46e7f8a72424ad9839eda6a1dc6eb0a4228e4226e", "TokensWithdrawn(uint256,address,uint256)", {"tokenId": indexed(p.uint256), "user": indexed(p.address), "amount": p.uint256}),
     TradingFeeConfigUpdated: event("0xdbb509c9ebd3dc30f12604975cc125e88ea366056597246c0bc2c6775a90ba95", "TradingFeeConfigUpdated(uint256,uint256)", {"feePercentage": p.uint256, "creatorShare": p.uint256}),
     TradingFeesCollected: event("0x7682d218ad02c986ad8f6cb008444fb0206a3ff6017e45caeddecfdba3506e7e", "TradingFeesCollected(uint256,uint256,uint256,uint256)", {"tokenId": indexed(p.uint256), "totalFees": p.uint256, "creatorFees": p.uint256, "amicaFees": p.uint256}),
@@ -44,6 +45,7 @@ export const functions = {
     erc20Implementation: viewFun("0x901be041", "erc20Implementation()", {}, p.address),
     feeReductionConfig: viewFun("0x1910a5e6", "feeReductionConfig()", {}, {"minAmicaForReduction": p.uint256, "maxAmicaForReduction": p.uint256, "minReductionMultiplier": p.uint256, "maxReductionMultiplier": p.uint256}),
     getAmountOut: viewFun("0x7cabb7cf", "getAmountOut(uint256,uint256)", {"tokenId": p.uint256, "amountIn": p.uint256}, p.uint256),
+    getAmountOutForSell: viewFun("0x2acca0d5", "getAmountOutForSell(uint256,uint256)", {"tokenId": p.uint256, "amountIn": p.uint256}, p.uint256),
     getApproved: viewFun("0x081812fc", "getApproved(uint256)", {"tokenId": p.uint256}, p.address),
     getAvailableTokens: viewFun("0x9187cb03", "getAvailableTokens(uint256)", {"tokenId": p.uint256}, p.uint256),
     getEffectiveAmicaBalance: viewFun("0xf829389b", "getEffectiveAmicaBalance(address)", {"user": p.address}, p.uint256),
@@ -66,6 +68,7 @@ export const functions = {
     setStakingRewards: fun("0x6fb83a57", "setStakingRewards(address)", {"_stakingRewards": p.address}, ),
     stakingRewards: viewFun("0x64b87a70", "stakingRewards()", {}, p.address),
     supportsInterface: viewFun("0x01ffc9a7", "supportsInterface(bytes4)", {"interfaceId": p.bytes4}, p.bool),
+    swapExactTokensForPairingTokens: fun("0x717e4742", "swapExactTokensForPairingTokens(uint256,uint256,uint256,address,uint256)", {"tokenId": p.uint256, "amountIn": p.uint256, "amountOutMin": p.uint256, "to": p.address, "deadline": p.uint256}, p.uint256),
     swapExactTokensForTokens: fun("0xa936da68", "swapExactTokensForTokens(uint256,uint256,uint256,address,uint256)", {"tokenId": p.uint256, "amountIn": p.uint256, "amountOutMin": p.uint256, "to": p.address, "deadline": p.uint256}, p.uint256),
     symbol: viewFun("0x95d89b41", "symbol()", {}, p.string),
     tokenURI: viewFun("0xc87b56dd", "tokenURI(uint256)", {"tokenId": p.uint256}, p.string),
@@ -115,6 +118,10 @@ export class Contract extends ContractBase {
 
     getAmountOut(tokenId: GetAmountOutParams["tokenId"], amountIn: GetAmountOutParams["amountIn"]) {
         return this.eth_call(functions.getAmountOut, {tokenId, amountIn})
+    }
+
+    getAmountOutForSell(tokenId: GetAmountOutForSellParams["tokenId"], amountIn: GetAmountOutForSellParams["amountIn"]) {
+        return this.eth_call(functions.getAmountOutForSell, {tokenId, amountIn})
     }
 
     getApproved(tokenId: GetApprovedParams["tokenId"]) {
@@ -224,6 +231,7 @@ export type PersonaCreatedEventArgs = EParams<typeof events.PersonaCreated>
 export type SnapshotUpdatedEventArgs = EParams<typeof events.SnapshotUpdated>
 export type StakingRewardsSetEventArgs = EParams<typeof events.StakingRewardsSet>
 export type TokensPurchasedEventArgs = EParams<typeof events.TokensPurchased>
+export type TokensSoldEventArgs = EParams<typeof events.TokensSold>
 export type TokensWithdrawnEventArgs = EParams<typeof events.TokensWithdrawn>
 export type TradingFeeConfigUpdatedEventArgs = EParams<typeof events.TradingFeeConfigUpdated>
 export type TradingFeesCollectedEventArgs = EParams<typeof events.TradingFeesCollected>
@@ -278,6 +286,9 @@ export type FeeReductionConfigReturn = FunctionReturn<typeof functions.feeReduct
 
 export type GetAmountOutParams = FunctionArguments<typeof functions.getAmountOut>
 export type GetAmountOutReturn = FunctionReturn<typeof functions.getAmountOut>
+
+export type GetAmountOutForSellParams = FunctionArguments<typeof functions.getAmountOutForSell>
+export type GetAmountOutForSellReturn = FunctionReturn<typeof functions.getAmountOutForSell>
 
 export type GetApprovedParams = FunctionArguments<typeof functions.getApproved>
 export type GetApprovedReturn = FunctionReturn<typeof functions.getApproved>
@@ -344,6 +355,9 @@ export type StakingRewardsReturn = FunctionReturn<typeof functions.stakingReward
 
 export type SupportsInterfaceParams = FunctionArguments<typeof functions.supportsInterface>
 export type SupportsInterfaceReturn = FunctionReturn<typeof functions.supportsInterface>
+
+export type SwapExactTokensForPairingTokensParams = FunctionArguments<typeof functions.swapExactTokensForPairingTokens>
+export type SwapExactTokensForPairingTokensReturn = FunctionReturn<typeof functions.swapExactTokensForPairingTokens>
 
 export type SwapExactTokensForTokensParams = FunctionArguments<typeof functions.swapExactTokensForTokens>
 export type SwapExactTokensForTokensReturn = FunctionReturn<typeof functions.swapExactTokensForTokens>

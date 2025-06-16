@@ -1365,7 +1365,7 @@
             "label": "personas",
             "offset": 0,
             "slot": "5",
-            "type": "t_mapping(t_uint256,t_struct(PersonaData)9544_storage)",
+            "type": "t_mapping(t_uint256,t_struct(PersonaData)9688_storage)",
             "contract": "PersonaTokenFactory",
             "src": "contracts/PersonaTokenFactory.sol:141"
           },
@@ -1373,7 +1373,7 @@
             "label": "purchases",
             "offset": 0,
             "slot": "6",
-            "type": "t_mapping(t_uint256,t_struct(TokenPurchase)9556_storage)",
+            "type": "t_mapping(t_uint256,t_struct(TokenPurchase)9700_storage)",
             "contract": "PersonaTokenFactory",
             "src": "contracts/PersonaTokenFactory.sol:142"
           },
@@ -1405,7 +1405,7 @@
             "label": "pairingConfigs",
             "offset": 0,
             "slot": "10",
-            "type": "t_mapping(t_address,t_struct(PairingConfig)9551_storage)",
+            "type": "t_mapping(t_address,t_struct(PairingConfig)9695_storage)",
             "contract": "PersonaTokenFactory",
             "src": "contracts/PersonaTokenFactory.sol:148"
           },
@@ -1413,7 +1413,7 @@
             "label": "tradingFeeConfig",
             "offset": 0,
             "slot": "11",
-            "type": "t_struct(TradingFeeConfig)9561_storage",
+            "type": "t_struct(TradingFeeConfig)9705_storage",
             "contract": "PersonaTokenFactory",
             "src": "contracts/PersonaTokenFactory.sol:149"
           },
@@ -1421,7 +1421,7 @@
             "label": "feeReductionConfig",
             "offset": 0,
             "slot": "13",
-            "type": "t_struct(FeeReductionConfig)9570_storage",
+            "type": "t_struct(FeeReductionConfig)9714_storage",
             "contract": "PersonaTokenFactory",
             "src": "contracts/PersonaTokenFactory.sol:150"
           },
@@ -1429,7 +1429,7 @@
             "label": "userSnapshots",
             "offset": 0,
             "slot": "17",
-            "type": "t_mapping(t_address,t_struct(UserSnapshot)9579_storage)",
+            "type": "t_mapping(t_address,t_struct(UserSnapshot)9723_storage)",
             "contract": "PersonaTokenFactory",
             "src": "contracts/PersonaTokenFactory.sol:151"
           },
@@ -1591,11 +1591,11 @@
             "label": "contract IUniswapV2Router02",
             "numberOfBytes": "20"
           },
-          "t_mapping(t_address,t_struct(PairingConfig)9551_storage)": {
+          "t_mapping(t_address,t_struct(PairingConfig)9695_storage)": {
             "label": "mapping(address => struct PersonaTokenFactory.PairingConfig)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_address,t_struct(UserSnapshot)9579_storage)": {
+          "t_mapping(t_address,t_struct(UserSnapshot)9723_storage)": {
             "label": "mapping(address => struct PersonaTokenFactory.UserSnapshot)",
             "numberOfBytes": "32"
           },
@@ -1607,11 +1607,11 @@
             "label": "mapping(uint256 => mapping(address => uint256))",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_struct(PersonaData)9544_storage)": {
+          "t_mapping(t_uint256,t_struct(PersonaData)9688_storage)": {
             "label": "mapping(uint256 => struct PersonaTokenFactory.PersonaData)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_struct(TokenPurchase)9556_storage)": {
+          "t_mapping(t_uint256,t_struct(TokenPurchase)9700_storage)": {
             "label": "mapping(uint256 => struct PersonaTokenFactory.TokenPurchase)",
             "numberOfBytes": "32"
           },
@@ -1619,7 +1619,7 @@
             "label": "string",
             "numberOfBytes": "32"
           },
-          "t_struct(FeeReductionConfig)9570_storage": {
+          "t_struct(FeeReductionConfig)9714_storage": {
             "label": "struct PersonaTokenFactory.FeeReductionConfig",
             "members": [
               {
@@ -1649,7 +1649,7 @@
             ],
             "numberOfBytes": "128"
           },
-          "t_struct(PairingConfig)9551_storage": {
+          "t_struct(PairingConfig)9695_storage": {
             "label": "struct PersonaTokenFactory.PairingConfig",
             "members": [
               {
@@ -1673,7 +1673,7 @@
             ],
             "numberOfBytes": "96"
           },
-          "t_struct(PersonaData)9544_storage": {
+          "t_struct(PersonaData)9688_storage": {
             "label": "struct PersonaTokenFactory.PersonaData",
             "members": [
               {
@@ -1739,7 +1739,7 @@
             ],
             "numberOfBytes": "288"
           },
-          "t_struct(TokenPurchase)9556_storage": {
+          "t_struct(TokenPurchase)9700_storage": {
             "label": "struct PersonaTokenFactory.TokenPurchase",
             "members": [
               {
@@ -1757,7 +1757,7 @@
             ],
             "numberOfBytes": "64"
           },
-          "t_struct(TradingFeeConfig)9561_storage": {
+          "t_struct(TradingFeeConfig)9705_storage": {
             "label": "struct PersonaTokenFactory.TradingFeeConfig",
             "members": [
               {
@@ -1775,7 +1775,600 @@
             ],
             "numberOfBytes": "64"
           },
-          "t_struct(UserSnapshot)9579_storage": {
+          "t_struct(UserSnapshot)9723_storage": {
+            "label": "struct PersonaTokenFactory.UserSnapshot",
+            "members": [
+              {
+                "label": "currentBalance",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "currentBlock",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "pendingBalance",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "pendingBlock",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              }
+            ],
+            "numberOfBytes": "128"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.Pausable": [
+            {
+              "contract": "PausableUpgradeable",
+              "label": "_paused",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol:21",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol:43",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.ERC721": [
+            {
+              "contract": "ERC721Upgradeable",
+              "label": "_name",
+              "type": "t_string_storage",
+              "src": "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol:27",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "ERC721Upgradeable",
+              "label": "_symbol",
+              "type": "t_string_storage",
+              "src": "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol:30",
+              "offset": 0,
+              "slot": "1"
+            },
+            {
+              "contract": "ERC721Upgradeable",
+              "label": "_owners",
+              "type": "t_mapping(t_uint256,t_address)",
+              "src": "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol:32",
+              "offset": 0,
+              "slot": "2"
+            },
+            {
+              "contract": "ERC721Upgradeable",
+              "label": "_balances",
+              "type": "t_mapping(t_address,t_uint256)",
+              "src": "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol:34",
+              "offset": 0,
+              "slot": "3"
+            },
+            {
+              "contract": "ERC721Upgradeable",
+              "label": "_tokenApprovals",
+              "type": "t_mapping(t_uint256,t_address)",
+              "src": "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol:36",
+              "offset": 0,
+              "slot": "4"
+            },
+            {
+              "contract": "ERC721Upgradeable",
+              "label": "_operatorApprovals",
+              "type": "t_mapping(t_address,t_mapping(t_address,t_bool))",
+              "src": "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol:38",
+              "offset": 0,
+              "slot": "5"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "3b90f8958d37064a12fe9aef616ed9934e2e9d9babeea04e49255e8429009be5": {
+      "address": "0x67e931140527A3747eBfD691C0F752ea9C281f4B",
+      "txHash": "0x86673c4bbe728f105705d1011d3b60c5c8d0b874ee83e947b26798083aa304d0",
+      "layout": {
+        "solcVersion": "0.8.24",
+        "storage": [
+          {
+            "label": "amicaToken",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IERC20)2531",
+            "contract": "PersonaTokenFactory",
+            "src": "contracts/PersonaTokenFactory.sol:190"
+          },
+          {
+            "label": "uniswapFactory",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IUniswapV2Factory)7951",
+            "contract": "PersonaTokenFactory",
+            "src": "contracts/PersonaTokenFactory.sol:193"
+          },
+          {
+            "label": "uniswapRouter",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_contract(IUniswapV2Router02)8347",
+            "contract": "PersonaTokenFactory",
+            "src": "contracts/PersonaTokenFactory.sol:196"
+          },
+          {
+            "label": "erc20Implementation",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "PersonaTokenFactory",
+            "src": "contracts/PersonaTokenFactory.sol:199"
+          },
+          {
+            "label": "_currentTokenId",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_uint256",
+            "contract": "PersonaTokenFactory",
+            "src": "contracts/PersonaTokenFactory.sol:202"
+          },
+          {
+            "label": "personas",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_mapping(t_uint256,t_struct(PersonaData)10097_storage)",
+            "contract": "PersonaTokenFactory",
+            "src": "contracts/PersonaTokenFactory.sol:205"
+          },
+          {
+            "label": "purchases",
+            "offset": 0,
+            "slot": "6",
+            "type": "t_mapping(t_uint256,t_struct(TokenPurchase)10111_storage)",
+            "contract": "PersonaTokenFactory",
+            "src": "contracts/PersonaTokenFactory.sol:208"
+          },
+          {
+            "label": "userPurchases",
+            "offset": 0,
+            "slot": "7",
+            "type": "t_mapping(t_uint256,t_mapping(t_address,t_uint256))",
+            "contract": "PersonaTokenFactory",
+            "src": "contracts/PersonaTokenFactory.sol:211"
+          },
+          {
+            "label": "agentDeposits",
+            "offset": 0,
+            "slot": "8",
+            "type": "t_mapping(t_uint256,t_mapping(t_address,t_uint256))",
+            "contract": "PersonaTokenFactory",
+            "src": "contracts/PersonaTokenFactory.sol:214"
+          },
+          {
+            "label": "stakingRewards",
+            "offset": 0,
+            "slot": "9",
+            "type": "t_address",
+            "contract": "PersonaTokenFactory",
+            "src": "contracts/PersonaTokenFactory.sol:217"
+          },
+          {
+            "label": "pairingConfigs",
+            "offset": 0,
+            "slot": "10",
+            "type": "t_mapping(t_address,t_struct(PairingConfig)10105_storage)",
+            "contract": "PersonaTokenFactory",
+            "src": "contracts/PersonaTokenFactory.sol:220"
+          },
+          {
+            "label": "tradingFeeConfig",
+            "offset": 0,
+            "slot": "11",
+            "type": "t_struct(TradingFeeConfig)10117_storage",
+            "contract": "PersonaTokenFactory",
+            "src": "contracts/PersonaTokenFactory.sol:223"
+          },
+          {
+            "label": "feeReductionConfig",
+            "offset": 0,
+            "slot": "13",
+            "type": "t_struct(FeeReductionConfig)10127_storage",
+            "contract": "PersonaTokenFactory",
+            "src": "contracts/PersonaTokenFactory.sol:226"
+          },
+          {
+            "label": "userSnapshots",
+            "offset": 0,
+            "slot": "17",
+            "type": "t_mapping(t_address,t_struct(UserSnapshot)10137_storage)",
+            "contract": "PersonaTokenFactory",
+            "src": "contracts/PersonaTokenFactory.sol:229"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "18",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "PersonaTokenFactory",
+            "src": "contracts/PersonaTokenFactory.sol:232"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_mapping(t_address,t_bool))": {
+            "label": "mapping(address => mapping(address => bool))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_address)": {
+            "label": "mapping(uint256 => address)",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(ERC721Storage)177_storage": {
+            "label": "struct ERC721Upgradeable.ERC721Storage",
+            "members": [
+              {
+                "label": "_name",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_symbol",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "_owners",
+                "type": "t_mapping(t_uint256,t_address)",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "_balances",
+                "type": "t_mapping(t_address,t_uint256)",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "_tokenApprovals",
+                "type": "t_mapping(t_uint256,t_address)",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "_operatorApprovals",
+                "type": "t_mapping(t_address,t_mapping(t_address,t_bool))",
+                "offset": 0,
+                "slot": "5"
+              }
+            ],
+            "numberOfBytes": "192"
+          },
+          "t_struct(InitializableStorage)73_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)13_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(PausableStorage)496_storage": {
+            "label": "struct PausableUpgradeable.PausableStorage",
+            "members": [
+              {
+                "label": "_paused",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ReentrancyGuardStorage)560_storage": {
+            "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+            "members": [
+              {
+                "label": "_status",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_contract(IERC20)2531": {
+            "label": "contract IERC20",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IUniswapV2Factory)7951": {
+            "label": "contract IUniswapV2Factory",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IUniswapV2Router02)8347": {
+            "label": "contract IUniswapV2Router02",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_struct(PairingConfig)10105_storage)": {
+            "label": "mapping(address => struct PersonaTokenFactory.PairingConfig)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_struct(UserSnapshot)10137_storage)": {
+            "label": "mapping(address => struct PersonaTokenFactory.UserSnapshot)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_string_memory_ptr,t_string_storage)": {
+            "label": "mapping(string => string)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_mapping(t_address,t_uint256))": {
+            "label": "mapping(uint256 => mapping(address => uint256))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_struct(PersonaData)10097_storage)": {
+            "label": "mapping(uint256 => struct PersonaTokenFactory.PersonaData)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_struct(TokenPurchase)10111_storage)": {
+            "label": "mapping(uint256 => struct PersonaTokenFactory.TokenPurchase)",
+            "numberOfBytes": "32"
+          },
+          "t_string_memory_ptr": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(FeeReductionConfig)10127_storage": {
+            "label": "struct PersonaTokenFactory.FeeReductionConfig",
+            "members": [
+              {
+                "label": "minAmicaForReduction",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "maxAmicaForReduction",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "minReductionMultiplier",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "maxReductionMultiplier",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              }
+            ],
+            "numberOfBytes": "128"
+          },
+          "t_struct(PairingConfig)10105_storage": {
+            "label": "struct PersonaTokenFactory.PairingConfig",
+            "members": [
+              {
+                "label": "enabled",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "mintCost",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "graduationThreshold",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              }
+            ],
+            "numberOfBytes": "96"
+          },
+          "t_struct(PersonaData)10097_storage": {
+            "label": "struct PersonaTokenFactory.PersonaData",
+            "members": [
+              {
+                "label": "name",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "symbol",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "erc20Token",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "pairToken",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "agentToken",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "pairCreated",
+                "type": "t_bool",
+                "offset": 20,
+                "slot": "4"
+              },
+              {
+                "label": "createdAt",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "5"
+              },
+              {
+                "label": "totalAgentDeposited",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "6"
+              },
+              {
+                "label": "minAgentTokens",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "7"
+              },
+              {
+                "label": "metadata",
+                "type": "t_mapping(t_string_memory_ptr,t_string_storage)",
+                "offset": 0,
+                "slot": "8"
+              }
+            ],
+            "numberOfBytes": "288"
+          },
+          "t_struct(TokenPurchase)10111_storage": {
+            "label": "struct PersonaTokenFactory.TokenPurchase",
+            "members": [
+              {
+                "label": "totalDeposited",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "tokensSold",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_struct(TradingFeeConfig)10117_storage": {
+            "label": "struct PersonaTokenFactory.TradingFeeConfig",
+            "members": [
+              {
+                "label": "feePercentage",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "creatorShare",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_struct(UserSnapshot)10137_storage": {
             "label": "struct PersonaTokenFactory.UserSnapshot",
             "members": [
               {
