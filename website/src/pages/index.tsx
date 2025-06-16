@@ -353,7 +353,6 @@ export default function HomePage() {
           graduated: 'totalVolumeAllTime_DESC'
         };
 
-        // @ts-expect-error typescript-eslint/no-explicit-any
         const whereParams: any = {};
         if (filterBy === 'graduated') {
           whereParams.graduated = 'true';

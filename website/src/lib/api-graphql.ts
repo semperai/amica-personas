@@ -1,6 +1,7 @@
 // src/lib/api-graphql.ts - Updated with enhanced contract features and proper types
 import { apolloClient, GET_PERSONAS, GET_PERSONA_DETAILS, GET_PERSONA_TRADES, GET_DAILY_STATS, convertOrderBy, PersonasQueryResult, executeQuery } from './graphql/client';
 import { mockPersonas, mockTrades, mockVolumeChart, mockUserPortfolio } from './mockData';
+import { gql } from '@apollo/client';
 
 const USE_MOCK_DATA = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true';
 
@@ -162,8 +163,13 @@ function getChainFromId(chainId: number): PersonaChain {
   };
 }
 
+// Define the structure of a persona from the GraphQL query
+type SubsquidPersona = PersonasQueryResult['personas'][0] & {
+  createdAtBlock?: number | string;
+};
+
 // Enhanced transform function with new contract features
-function transformPersona(subsquidPersona: PersonasQueryResult['personas'][0]): Persona {
+function transformPersona(subsquidPersona: SubsquidPersona): Persona {
   const chain = getChainFromId(subsquidPersona.chainId);
   
   // Calculate agent token progress
@@ -177,7 +183,7 @@ function transformPersona(subsquidPersona: PersonasQueryResult['personas'][0]): 
     ? (Number(subsquidPersona.totalDeposited) / Number(subsquidPersona.graduationThreshold)) * 100
     : 0;
   
-  const canGraduate = tvlProgress >= 100 && (!hasAgentToken || !subsquidPersona.minAgentTokens || (agentTokenProgress && agentTokenProgress >= 100));
+  const canGraduate: boolean = tvlProgress >= 100 && (!hasAgentToken || !subsquidPersona.minAgentTokens || (agentTokenProgress !== undefined && agentTokenProgress >= 100));
   
   return {
     id: subsquidPersona.id,
@@ -225,7 +231,15 @@ function transformPersona(subsquidPersona: PersonasQueryResult['personas'][0]): 
 
 export async function fetchPersonas(params?: FetchPersonasParams): Promise<PersonasResponse> {
   if (USE_MOCK_DATA) {
-    let personas = [...mockPersonas];
+    // Ensure mock personas have all required properties
+    let personas = [...mockPersonas].map(p => ({
+      ...p,
+      hasAgentToken: !!p.agentToken && p.agentToken !== '0x0000000000000000000000000000000000000000',
+      agentTokenProgress: p.agentToken && p.minAgentTokens && p.totalAgentDeposited
+        ? Math.min(100, (Number(p.totalAgentDeposited) / Number(p.minAgentTokens)) * 100)
+        : undefined,
+      canGraduate: false // Will be calculated if needed
+    }));
 
     // Apply filters
     if (params?.chainId) {
@@ -376,7 +390,17 @@ export async function fetchPersonaDetail(chainId: string, tokenId: string): Prom
     const persona = mockPersonas.find(p =>
       p.chain.id === chainId && p.id.split('-')[1] === tokenId
     );
-    return persona || null;
+    if (!persona) return null;
+    
+    // Add required properties for mock data
+    return {
+      ...persona,
+      hasAgentToken: !!persona.agentToken && persona.agentToken !== '0x0000000000000000000000000000000000000000',
+      agentTokenProgress: persona.agentToken && persona.minAgentTokens && persona.totalAgentDeposited
+        ? Math.min(100, (Number(persona.totalAgentDeposited) / Number(persona.minAgentTokens)) * 100)
+        : undefined,
+      canGraduate: false
+    };
   }
 
   try {
@@ -410,7 +434,7 @@ export async function fetchPersonaTransfers(chainId: string, tokenId: string, li
   try {
     const result = await executeQuery(async () => {
       const { data } = await apolloClient.query({
-        query: `
+        query: gql`
           query GetPersonaTransfers($tokenId: BigInt!, $chainId: Int!, $limit: Int!) {
             personaTransfers(
               where: {
@@ -469,7 +493,7 @@ export async function fetchTokenWithdrawals(chainId: string, tokenId: string, us
 
     const result = await executeQuery(async () => {
       const { data } = await apolloClient.query({
-        query: `
+        query: gql`
           query GetTokenWithdrawals($where: TokenWithdrawalWhereInput!, $limit: Int!) {
             tokenWithdrawals(
               where: $where
@@ -514,7 +538,7 @@ export async function fetchVolumeChart(chainId: string, tokenId: string, days = 
     const personaId = `${chainId}-${tokenId}`;
     const result = await executeQuery(async () => {
       const { data } = await apolloClient.query({
-        query: `
+        query: gql`
           query GetPersonaDailyStats($personaId: String!, $days: Int!) {
             personaDailyStats(
               where: {
@@ -570,6 +594,14 @@ export async function fetchVolumeChart(chainId: string, tokenId: string, days = 
 export async function fetchTrending(timeframe: '1h' | '24h' | '7d' = '24h'): Promise<Persona[]> {
   if (USE_MOCK_DATA) {
     return [...mockPersonas]
+      .map(p => ({
+        ...p,
+        hasAgentToken: !!p.agentToken && p.agentToken !== '0x0000000000000000000000000000000000000000',
+        agentTokenProgress: p.agentToken && p.minAgentTokens && p.totalAgentDeposited
+          ? Math.min(100, (Number(p.totalAgentDeposited) / Number(p.minAgentTokens)) * 100)
+          : undefined,
+        canGraduate: false
+      }))
       .sort((a, b) => (b.growthMultiplier || 0) - (a.growthMultiplier || 0))
       .slice(0, 10);
   }
@@ -656,11 +688,13 @@ interface UserTradeResult {
     symbol: string;
     chainId: number;
   };
+  trader: string;
   amountIn: string;
   amountOut: string;
   feeAmount: string;
   isBuy: boolean;
   timestamp: string;
+  block: string;
   txHash: string;
   chainId: number;
 }
@@ -676,11 +710,36 @@ export async function fetchUserPortfolio(address: string): Promise<UserPortfolio
   if (USE_MOCK_DATA) {
     const userPersonas = mockPersonas
       .filter(p => p.creator?.toLowerCase() === address.toLowerCase())
+      .map(p => ({
+        ...p,
+        hasAgentToken: !!p.agentToken && p.agentToken !== '0x0000000000000000000000000000000000000000',
+        agentTokenProgress: p.agentToken && p.minAgentTokens && p.totalAgentDeposited
+          ? Math.min(100, (Number(p.totalAgentDeposited) / Number(p.minAgentTokens)) * 100)
+          : undefined,
+        canGraduate: false
+      }))
       .slice(0, 2);
+
+    // Transform mockUserPortfolio.createdPersonas to ensure they have required properties
+    const transformedMockPersonas = mockUserPortfolio.createdPersonas.map(p => ({
+      ...p,
+      hasAgentToken: !!p.agentToken && p.agentToken !== '0x0000000000000000000000000000000000000000',
+      agentTokenProgress: p.agentToken && p.minAgentTokens && p.totalAgentDeposited
+        ? Math.min(100, (Number(p.totalAgentDeposited) / Number(p.minAgentTokens)) * 100)
+        : undefined,
+      canGraduate: false
+    }));
+
+    // Ensure recentTrades have the isBuy property
+    const transformedRecentTrades = mockUserPortfolio.recentTrades.map(trade => ({
+      ...trade,
+      isBuy: true // Default to buy trades for mock data, or determine based on some logic
+    }));
 
     return {
       ...mockUserPortfolio,
-      createdPersonas: userPersonas.length > 0 ? userPersonas : mockUserPortfolio.createdPersonas,
+      createdPersonas: userPersonas.length > 0 ? userPersonas : transformedMockPersonas,
+      recentTrades: transformedRecentTrades,
       totalBuyVolume: "45000000000000000000", // 45 ETH
       totalSellVolume: "30000000000000000000", // 30 ETH
       agentDeposits: [],
@@ -691,7 +750,7 @@ export async function fetchUserPortfolio(address: string): Promise<UserPortfolio
   try {
     const result = await executeQuery(async () => {
       const { data } = await apolloClient.query<UserPortfolioQueryResult>({
-        query: `
+        query: gql`
           query GetUserPortfolio($creator: String!) {
             createdPersonas: personas(where: { creator_eq: $creator }, orderBy: createdAt_DESC) {
               id
@@ -720,11 +779,13 @@ export async function fetchUserPortfolio(address: string): Promise<UserPortfolio
                 symbol
                 chainId
               }
+              trader
               amountIn
               amountOut
               feeAmount
               isBuy
               timestamp
+              block
               txHash
               chainId
             }
@@ -785,6 +846,12 @@ export async function fetchUserPortfolio(address: string): Promise<UserPortfolio
     const totalSellVolume = sellTrades.reduce((sum: bigint, trade: UserTradeResult) => sum + BigInt(trade.amountOut), BigInt(0));
     const totalTradeVolume = totalBuyVolume + totalSellVolume;
 
+    // Map userTrades to Trade format with proper chain info
+    const recentTrades: Trade[] = result.userTrades.map((trade: UserTradeResult) => ({
+      ...trade,
+      chain: getChainFromId(trade.chainId)
+    }));
+
     return {
       createdPersonas: result.createdPersonas.map(transformPersona),
       tradedPersonasCount: new Set(result.userTrades.map((t: UserTradeResult) => t.persona?.id)).size,
@@ -792,7 +859,7 @@ export async function fetchUserPortfolio(address: string): Promise<UserPortfolio
       totalBuyVolume: totalBuyVolume.toString(),
       totalSellVolume: totalSellVolume.toString(),
       totalBridgedVolume: "0", // TODO: Calculate from bridge activities
-      recentTrades: result.userTrades,
+      recentTrades,
       bridgeActivities: [], // TODO: Fetch bridge activities
       agentDeposits: result.agentDeposits,
       tokenWithdrawals: result.tokenWithdrawals
@@ -850,10 +917,16 @@ interface TradesQueryResult {
 export async function fetchPersonaTrades(chainId: string, tokenId: string, limit = 10): Promise<TradesResponse> {
   if (USE_MOCK_DATA) {
     const personaId = `${chainId}-${tokenId}`;
-    const trades = mockTrades.filter(t =>
-      t.persona?.id === personaId ||
-      (personaId === '1-0' && !t.persona)
-    ).slice(0, limit);
+    const trades = mockTrades
+      .filter(t =>
+        t.persona?.id === personaId ||
+        (personaId === '1-0' && !t.persona)
+      )
+      .map(t => ({
+        ...t,
+        isBuy: true // Default to buy for mock data, or determine based on some logic
+      }))
+      .slice(0, limit);
 
     const buyTrades = trades.filter(t => t.isBuy);
     const sellTrades = trades.filter(t => !t.isBuy);
@@ -870,7 +943,7 @@ export async function fetchPersonaTrades(chainId: string, tokenId: string, limit
     const personaId = `${chainId}-${tokenId}`;
     const result = await executeQuery(async () => {
       const { data } = await apolloClient.query<TradesQueryResult>({
-        query: `
+        query: gql`
           query GetPersonaTrades($personaId: String!, $limit: Int!) {
             trades(
               where: { persona: { id_eq: $personaId } }
@@ -960,7 +1033,7 @@ export async function fetchGlobalStats(): Promise<GlobalStats | null> {
   try {
     const result = await executeQuery(async () => {
       const { data } = await apolloClient.query<GlobalStatsQueryResult>({
-        query: `
+        query: gql`
           query GetGlobalStats {
             globalStats(id: "global") {
               totalPersonas
