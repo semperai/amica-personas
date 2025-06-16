@@ -7,6 +7,7 @@ deploy:
   addons:
     rpc:
       - base.http
+    postgres:
   processor:
     cmd: ["sqd", "process:prod"]
   api:

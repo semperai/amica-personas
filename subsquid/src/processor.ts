@@ -27,15 +27,19 @@ export const DEPLOYMENT = {
   startBlock: 31632211,
 }
 
-export const processor = new EvmBatchProcessor().setRpcEndpoint(
-  assertNotNull(
-    process.env.RPC_BASE_HTTP,
-    'Required env variable RPC_BASE_HTTP is missing'
-  )
-)
+// Log RPC configuration
+const rpcUrl = process.env.RPC_BASE_HTTP || 'https://mainnet.base.org'
+console.log('=== PROCESSOR CONFIGURATION ===')
+console.log(`RPC URL: ${rpcUrl}`)
+console.log(`Archive Gateway: https://v2.archive.subsquid.io/network/base-mainnet`)
+console.log(`Start Block: ${DEPLOYMENT.startBlock}`)
+console.log(`Finality Confirmation: 75 blocks`)
+console.log('==============================')
+
+export const processor = new EvmBatchProcessor()
   .setGateway('https://v2.archive.subsquid.io/network/base-mainnet')
   .setRpcEndpoint({
-    url: process.env.RPC_BASE_HTTP || 'https://mainnet.base.org',
+    url: rpcUrl,
     rateLimit: 10
   })
   .setFinalityConfirmation(75)
@@ -100,6 +104,13 @@ export const processor = new EvmBatchProcessor().setRpcEndpoint(
       amicaAbi.events.TokensDeposited.topic,
     ]
   })
+
+// Log event topic registration
+console.log('Registered event topics:')
+console.log('- PersonaFactory:', Object.keys(factoryAbi.events).length, 'events')
+console.log('- StakingRewards:', Object.keys(stakingAbi.events).length, 'events')
+console.log('- BridgeWrapper:', Object.keys(bridgeAbi.events).length, 'events')
+console.log('- AmicaToken: TokensDeposited event')
 
 export type Fields = EvmBatchProcessorFields<typeof processor>
 export type Context = DataHandlerContext<Store, Fields>
