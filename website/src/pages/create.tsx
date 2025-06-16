@@ -1,4 +1,4 @@
-// src/pages/create.tsx - First part (showing the fix for pairingTokenOptions)
+// src/pages/create.tsx - Updated with separate approval and creation hooks
 import { useState, useEffect, useMemo } from 'react';
 import Layout from '@/components/Layout';
 import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt } from 'wagmi';
@@ -56,7 +56,23 @@ interface TokenOption {
 export default function CreatePersonaPage() {
   const { address, chainId } = useAccount();
   const router = useRouter();
-  const { writeContract, data: createTxHash, isPending, isError, error } = useWriteContract();
+  
+  // Separate hooks for approval and creation
+  const { 
+    writeContract: writeApproval, 
+    data: approvalTxHash,
+    isPending: isApprovePending,
+    isError: isApproveError,
+    error: approveError
+  } = useWriteContract();
+
+  const { 
+    writeContract: writeCreate, 
+    data: createTxHash, 
+    isPending: isCreatePending,
+    isError: isCreateError,
+    error: createError
+  } = useWriteContract();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -80,8 +96,6 @@ export default function CreatePersonaPage() {
     decimals: number;
   } | null>(null);
   const [isLoadingAgentToken, setIsLoadingAgentToken] = useState(false);
-  const [isApproving, setIsApproving] = useState(false);
-  const [approvalHash, setApprovalHash] = useState<`0x${string}` | undefined>();
 
   // Get addresses for current chain
   const addresses = chainId ? getAddressesForChain(chainId) : null;
@@ -146,12 +160,12 @@ export default function CreatePersonaPage() {
 
   // Wait for approval transaction
   const { isLoading: isApprovalPending, isSuccess: isApprovalSuccess } = useWaitForTransactionReceipt({
-    hash: approvalHash,
+    hash: approvalTxHash,
   });
 
   // Wait for create transaction and extract token ID
   const {
-    isLoading: isCreatePending,
+    isLoading: isCreateProcessing,
     isSuccess: isCreateSuccess,
     data: createReceipt
   } = useWaitForTransactionReceipt({
@@ -189,19 +203,13 @@ export default function CreatePersonaPage() {
         ) {
           const tokenId = (decoded.args.tokenId as bigint).toString();
           // Redirect to persona detail page
-          router.push(`/persona/${chainId}/${tokenId}`);
+          setTimeout(() => {
+            router.push(`/persona/${chainId}/${tokenId}`);
+          }, 5000);
         }
       }
     }
   }, [isCreateSuccess, createReceipt, chainId, router]);
-
-  // Reset approval state when approval succeeds
-  useEffect(() => {
-    if (isApprovalSuccess) {
-      setApprovalHash(undefined);
-      setIsApproving(false);
-    }
-  }, [isApprovalSuccess]);
 
   // Read agent token details
   const { data: agentTokenName } = useReadContract({
@@ -291,9 +299,8 @@ export default function CreatePersonaPage() {
   const handleApprove = async () => {
     if (!addresses?.personaFactory || !selectedPairingToken) return;
 
-    setIsApproving(true);
     try {
-      await writeContract({
+      await writeApproval({
         address: selectedPairingToken.address as `0x${string}`,
         abi: ERC20_ABI,
         functionName: 'approve',
@@ -301,7 +308,6 @@ export default function CreatePersonaPage() {
       });
     } catch (error) {
       console.error('Error approving tokens:', error);
-      setIsApproving(false);
     }
   };
 
@@ -329,7 +335,7 @@ export default function CreatePersonaPage() {
         ? parseUnits(formData.minAgentTokens, agentTokenDetails.decimals)
         : BigInt(0);
 
-      await writeContract({
+      await writeCreate({
         address: addresses.personaFactory as `0x${string}`,
         abi: FACTORY_ABI,
         functionName: 'createPersona',
@@ -686,25 +692,25 @@ export default function CreatePersonaPage() {
               {needsApproval && (
                 <button
                   onClick={handleApprove}
-                  disabled={isApproving || isApprovalPending}
+                  disabled={isApprovePending || isApprovalPending}
                   className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-4 rounded-xl hover:from-blue-600 hover:to-purple-600 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transition-all duration-300 font-light text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                 >
-                  {isApproving || isApprovalPending ? 'Approving...' : `Approve ${selectedPairingToken?.symbol || 'tokens'}`}
+                  {isApprovePending || isApprovalPending ? 'Approving...' : `Approve ${selectedPairingToken?.symbol || 'tokens'}`}
                 </button>
               )}
 
               <button
                 onClick={handleCreate}
-                disabled={!address || isPending || isCreatePending || !formData.name || !formData.symbol || needsApproval}
+                disabled={!address || isCreatePending || isCreateProcessing || !formData.name || !formData.symbol || needsApproval}
                 className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-xl hover:from-purple-600 hover:to-pink-600 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transition-all duration-300 font-light text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
               >
-                {isPending || isCreatePending ? 'Creating...' : isCreateSuccess ? 'Created! Redirecting...' : 'Create Persona'}
+                {isCreatePending || isCreateProcessing ? 'Creating...' : isCreateSuccess ? 'Created! Redirecting...' : 'Create Persona'}
               </button>
 
-              {isError && (
+              {(isApproveError || isCreateError) && (
                 <div className="mt-4 p-4 bg-red-500/10 backdrop-blur-sm rounded-xl border border-red-500/20">
                   <p className="text-sm text-red-400">
-                    Error: {error?.message || 'Transaction failed'}
+                    Error: {(approveError || createError)?.message || 'Transaction failed'}
                   </p>
                 </div>
               )}

@@ -50,8 +50,7 @@ const getPersonaImage = (id: string) => {
 };
 
 // Extract chain info from persona ID
-const extractChainFromId = (id: string) => {
-  const [chainId] = id.split('-');
+const extractChainFromId = (chainId: string) => {
   const chainNames: Record<string, string> = {
     '1': 'ethereum',
     '8453': 'base',
@@ -70,11 +69,11 @@ interface PersonaCardProps {
 function PersonaCard({ persona }: PersonaCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
-  const chain = extractChainFromId(persona.id);
+  const chain = extractChainFromId(persona.chainId);
 
   return (
     <Link
-      href={`/persona/${chain.id}/${persona.tokenId}`}
+      href={`/persona/${chain.id}/${persona.id}`}
       className="group relative aspect-[3/4] rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
