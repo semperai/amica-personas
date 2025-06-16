@@ -133,6 +133,7 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
 
     event PoolAdded(uint256 indexed poolId, address indexed lpToken, uint256 allocBasisPoints, bool isAgentPool);
     event PoolUpdated(uint256 indexed poolId, uint256 allocBasisPoints, bool isActive);
+    event PoolDeactivated(uint256 indexed poolId, uint256 timestamp);
     event Deposit(address indexed user, uint256 indexed poolId, uint256 amount);
     event DepositLocked(address indexed user, uint256 indexed poolId, uint256 amount, uint256 lockId, uint256 unlockTime, uint256 multiplier);
     event Withdraw(address indexed user, uint256 indexed poolId, uint256 amount);
@@ -143,7 +144,7 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
     event LockTierAdded(uint256 duration, uint256 multiplier);
     event LockTierUpdated(uint256 index, uint256 duration, uint256 multiplier);
     event EmergencyExit(address indexed user, uint256 indexed poolId, uint256 amount);
-    event EmergencyWithdraw(address indexed token, uint256 amount);
+    event EmergencyWithdrawCompleted(address indexed user, address indexed token, uint256 amount);
 
     // ============================================================================
     // CONSTRUCTOR
@@ -281,7 +282,7 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
         }
 
         IERC20(_token).safeTransfer(msg.sender, _amount);
-        emit EmergencyWithdraw(_token, _amount);
+        emit EmergencyWithdrawCompleted(msg.sender, _token, _amount);
     }
 
     // ============================================================================
@@ -334,51 +335,69 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Calculate rewards including lock multipliers
+     * @notice Calculate rewards including lock multipliers (gas optimized)
+     * @param poolId The pool ID
+     * @param user The user address
+     * @return totalRewards Total pending rewards
      */
     function _calculateUserRewards(uint256 poolId, address user) internal view returns (uint256) {
         PoolInfo storage pool = poolInfo[poolId];
         UserInfo storage userStake = userInfo[poolId][user];
 
+        // Cache storage values
         uint256 accAmicaPerShare = pool.accAmicaPerShare;
+        uint256 userAmount = userStake.amount;
+        uint256 userUnclaimedRewards = userStake.unclaimedRewards;
+        uint256 userRewardDebt = userStake.rewardDebt;
 
         // Calculate updated accAmicaPerShare if needed
         if (block.number > pool.lastRewardBlock && poolWeightedTotal[poolId] > 0 && pool.isActive) {
             uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
             uint256 amicaReward = (multiplier * amicaPerBlock * pool.allocBasisPoints) / BASIS_POINTS;
-
             accAmicaPerShare += (amicaReward * PRECISION) / poolWeightedTotal[poolId];
         }
 
         // Calculate rewards for flexible stake
-        uint256 totalRewards = userStake.unclaimedRewards;
-        if (userStake.amount > 0) {
-            totalRewards += (userStake.amount * accAmicaPerShare) / PRECISION - userStake.rewardDebt;
+        uint256 totalRewards = userUnclaimedRewards;
+        if (userAmount > 0) {
+            totalRewards += (userAmount * accAmicaPerShare) / PRECISION - userRewardDebt;
         }
 
         // Calculate rewards for each lock
         LockInfo[] storage locks = userLocks[poolId][user];
-        for (uint256 i = 0; i < locks.length; i++) {
-            if (locks[i].amount > 0) {
-                uint256 weightedAmount = (locks[i].amount * locks[i].lockMultiplier) / BASIS_POINTS;
-                totalRewards += (weightedAmount * accAmicaPerShare) / PRECISION - locks[i].rewardDebt;
+        uint256 locksLength = locks.length; // Cache array length
+        
+        for (uint256 i = 0; i < locksLength; i++) {
+            LockInfo storage lock = locks[i]; // Cache storage pointer
+            uint256 lockAmount = lock.amount; // Cache storage read
+            
+            if (lockAmount > 0) {
+                uint256 weightedAmount = (lockAmount * lock.lockMultiplier) / BASIS_POINTS;
+                totalRewards += (weightedAmount * accAmicaPerShare) / PRECISION - lock.rewardDebt;
             }
         }
 
         return totalRewards;
     }
 
+
+
     // ============================================================================
     // PUBLIC FUNCTIONS
     // ============================================================================
 
     /**
-     * @notice Update rewards for a specific pool
+     * @notice Update rewards for a specific pool (gas optimized)
+     * @param _poolId The pool ID to update
      */
     function updatePoolRewards(uint256 _poolId) public {
         PoolInfo storage pool = poolInfo[_poolId];
 
-        if (block.number <= pool.lastRewardBlock || !pool.isActive) {
+        // Cache storage values in memory
+        uint256 lastRewardBlock = pool.lastRewardBlock;
+        bool isActive = pool.isActive;
+
+        if (block.number <= lastRewardBlock || !isActive) {
             return;
         }
 
@@ -388,12 +407,14 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
             return;
         }
 
-        uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-        uint256 amicaReward = (multiplier * amicaPerBlock * pool.allocBasisPoints) / BASIS_POINTS;
+        uint256 multiplier = getMultiplier(lastRewardBlock, block.number);
+        uint256 allocBasisPoints = pool.allocBasisPoints; // Cache storage read
+        uint256 amicaReward = (multiplier * amicaPerBlock * allocBasisPoints) / BASIS_POINTS;
 
         pool.accAmicaPerShare += (amicaReward * PRECISION) / weightedTotal;
         pool.lastRewardBlock = block.number;
     }
+
 
     /**
      * @notice Stake LP tokens (flexible, no lock)
@@ -515,7 +536,9 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Withdraw a specific lock after unlock time
+     * @notice Withdraw locked tokens with optimized storage access
+     * @param _poolId Pool ID
+     * @param _lockId Lock ID to withdraw
      */
     function withdrawLocked(uint256 _poolId, uint256 _lockId) external nonReentrant {
         if (_poolId >= poolInfo.length) revert InvalidPool();
@@ -523,37 +546,41 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
         PoolInfo storage pool = poolInfo[_poolId];
         LockInfo[] storage locks = userLocks[_poolId][msg.sender];
 
-        // Find the lock
+        // Find and cache lock data
         uint256 lockIndex = type(uint256).max;
-        for (uint256 i = 0; i < locks.length; i++) {
+        uint256 locksLength = locks.length;
+        LockInfo memory lockData; // Use memory for reads
+        
+        for (uint256 i = 0; i < locksLength; i++) {
             if (locks[i].lockId == _lockId) {
                 lockIndex = i;
+                lockData = locks[i]; // Copy to memory
                 break;
             }
         }
 
         if (lockIndex == type(uint256).max) revert LockNotFound();
-        LockInfo memory lock = locks[lockIndex];
-        if (block.timestamp < lock.unlockTime) revert StillLocked();
-        if (lock.amount == 0) revert AlreadyWithdrawn();
+        if (block.timestamp < lockData.unlockTime) revert StillLocked();
+        if (lockData.amount == 0) revert AlreadyWithdrawn();
 
         updatePoolRewards(_poolId);
 
-        // Calculate rewards for this lock
-        uint256 weightedAmount = (lock.amount * lock.lockMultiplier) / BASIS_POINTS;
-        uint256 pending = (weightedAmount * pool.accAmicaPerShare) / PRECISION - lock.rewardDebt;
+        // Calculate rewards using cached data
+        uint256 accAmicaPerShare = pool.accAmicaPerShare;
+        uint256 weightedAmount = (lockData.amount * lockData.lockMultiplier) / BASIS_POINTS;
+        uint256 pending = (weightedAmount * accAmicaPerShare) / PRECISION - lockData.rewardDebt;
 
-        // Add to unclaimed rewards
+        // Update states
         userInfo[_poolId][msg.sender].unclaimedRewards += pending;
-
-        // Update totals
-        pool.totalStaked -= lock.amount;
+        pool.totalStaked -= lockData.amount;
         poolWeightedTotal[_poolId] -= weightedAmount;
-        userLockedAmount[_poolId][msg.sender] -= lock.amount;
+        userLockedAmount[_poolId][msg.sender] -= lockData.amount;
         userWeightedAmount[_poolId][msg.sender] -= weightedAmount;
 
-        // Remove lock (swap with last and pop)
-        locks[lockIndex] = locks[locks.length - 1];
+        // Efficient array removal
+        if (lockIndex < locksLength - 1) {
+            locks[lockIndex] = locks[locksLength - 1];
+        }
         locks.pop();
 
         // Check if user should be removed from pool
@@ -562,10 +589,9 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
             _removeUserFromPool(msg.sender, _poolId);
         }
 
-        // Transfer LP tokens
-        pool.lpToken.safeTransfer(msg.sender, lock.amount);
-
-        emit WithdrawLocked(msg.sender, _poolId, _lockId, lock.amount);
+        // Transfer tokens
+        pool.lpToken.safeTransfer(msg.sender, lockData.amount);
+        emit WithdrawLocked(msg.sender, _poolId, _lockId, lockData.amount);
     }
 
     /**
@@ -645,45 +671,67 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Claim all rewards (limited to user's active pools)
+     * @notice Claim all rewards with gas optimization
+     * @dev Batches updates to minimize storage operations
      */
     function claimAll() external nonReentrant {
         uint256 totalRewards = 0;
         uint256[] storage activePools = userActivePools[msg.sender];
+        uint256 activePoolsLength = activePools.length; // Cache length
 
-        // Only iterate through user's active pools
-        for (uint256 i = 0; i < activePools.length; i++) {
+        // Temporary storage for batch updates
+        uint256[] memory poolsToUpdate = new uint256[](activePoolsLength);
+        uint256[] memory poolRewards = new uint256[](activePoolsLength);
+        uint256 updateCount = 0;
+
+        // First pass: calculate all rewards
+        for (uint256 i = 0; i < activePoolsLength; i++) {
             uint256 poolId = activePools[i];
             updatePoolRewards(poolId);
 
-            uint256 poolRewards = _calculateUserRewards(poolId, msg.sender);
-            if (poolRewards > 0) {
-                totalRewards += poolRewards;
-
-                // Update state
-                PoolInfo storage pool = poolInfo[poolId];
-                UserInfo storage user = userInfo[poolId][msg.sender];
-
-                user.unclaimedRewards = 0;
-                user.rewardDebt = (user.amount * pool.accAmicaPerShare) / PRECISION;
-                user.lastClaimBlock = block.number;
-
-                // Update lock reward debts
-                LockInfo[] storage locks = userLocks[poolId][msg.sender];
-                for (uint256 j = 0; j < locks.length; j++) {
-                    if (locks[j].amount > 0) {
-                        uint256 weightedAmount = (locks[j].amount * locks[j].lockMultiplier) / BASIS_POINTS;
-                        locks[j].rewardDebt = (weightedAmount * pool.accAmicaPerShare) / PRECISION;
-                    }
-                }
+            uint256 rewards = _calculateUserRewards(poolId, msg.sender);
+            if (rewards > 0) {
+                poolRewards[updateCount] = rewards;
+                poolsToUpdate[updateCount] = poolId;
+                totalRewards += rewards;
+                updateCount++;
             }
         }
 
         if (totalRewards == 0) revert NoRewardsToClaim();
 
+        // Second pass: update all states
+        for (uint256 i = 0; i < updateCount; i++) {
+            uint256 poolId = poolsToUpdate[i];
+            PoolInfo storage pool = poolInfo[poolId];
+            UserInfo storage user = userInfo[poolId][msg.sender];
+
+            // Cache values
+            uint256 accAmicaPerShare = pool.accAmicaPerShare;
+
+            // Update user state
+            user.unclaimedRewards = 0;
+            user.rewardDebt = (user.amount * accAmicaPerShare) / PRECISION;
+            user.lastClaimBlock = block.number;
+
+            // Update lock reward debts
+            LockInfo[] storage locks = userLocks[poolId][msg.sender];
+            uint256 locksLength = locks.length;
+            
+            for (uint256 j = 0; j < locksLength; j++) {
+                LockInfo storage lock = locks[j];
+                if (lock.amount > 0) {
+                    uint256 weightedAmount = (lock.amount * lock.lockMultiplier) / BASIS_POINTS;
+                    lock.rewardDebt = (weightedAmount * accAmicaPerShare) / PRECISION;
+                }
+            }
+        }
+
+        // Single transfer at the end
         amicaToken.safeTransfer(msg.sender, totalRewards);
         emit RewardsClaimed(msg.sender, totalRewards);
     }
+
 
     // ============================================================================
     // VIEW FUNCTIONS

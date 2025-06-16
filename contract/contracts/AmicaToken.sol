@@ -123,6 +123,7 @@ contract AmicaToken is
 
     /**
      * @notice Get circulating supply (total minus contract balance)
+     * @return The circulating supply
      */
     function circulatingSupply() public view returns (uint256) {
         return totalSupply() - balanceOf(address(this));
@@ -130,6 +131,7 @@ contract AmicaToken is
 
     /**
      * @notice Get all deposited token addresses
+     * @return Array of deposited token addresses
      */
     function getDepositedTokens() external view returns (address[] memory) {
         return _depositedTokens;
@@ -192,7 +194,7 @@ contract AmicaToken is
      * @notice Burn AMICA and claim proportional share of specified tokens
      * @param amountToBurn Amount of AMICA to burn
      * @param tokenIndexes Indexes of tokens to claim (must be sorted in ascending order and unique)
-     * @dev Now includes reentrancy protection and processes all state changes before external calls
+     * @dev Fixed reentrancy issue - ALL state changes happen before ANY external calls
      */
     function burnAndClaim(uint256 amountToBurn, uint256[] calldata tokenIndexes)
         external
@@ -213,7 +215,7 @@ contract AmicaToken is
         // Calculate share (with precision scaling)
         uint256 sharePercentage = (amountToBurn * PRECISION) / currentCirculating;
 
-        // First, burn AMICA tokens (state change before any external calls)
+        // First, burn AMICA tokens (state change)
         _burn(msg.sender, amountToBurn);
 
         // Prepare arrays for successful claims
@@ -221,7 +223,7 @@ contract AmicaToken is
         uint256[] memory claimedAmounts = new uint256[](tokenIndexes.length);
         uint256 validClaims = 0;
 
-        // Calculate all claim amounts and update state BEFORE any transfers
+        // Calculate all claim amounts and update ALL state BEFORE any transfers
         for (uint256 i = 0; i < tokenIndexes.length; i++) {
             if (tokenIndexes[i] >= _depositedTokens.length) revert InvalidTokenIndex();
 
@@ -234,7 +236,7 @@ contract AmicaToken is
             uint256 claimAmount = (deposited * sharePercentage) / PRECISION;
             if (claimAmount == 0) continue;
 
-            // Update state BEFORE transfer
+            // Update state BEFORE any transfer will happen
             depositedBalances[tokenAddress] -= claimAmount;
 
             claimedTokens[validClaims] = tokenAddress;
@@ -244,24 +246,28 @@ contract AmicaToken is
 
         if (validClaims == 0) revert NoTokensToClaim();
 
-        // Now perform all external transfers
-        for (uint256 i = 0; i < validClaims; i++) {
-            if (!IERC20(claimedTokens[i]).transfer(msg.sender, claimedAmounts[i])) {
-                revert TransferFailed();
-            }
-        }
-
-        // Emit event with actual claimed tokens
+        // Resize arrays to actual size (for event emission)
         assembly {
             mstore(claimedTokens, validClaims)
             mstore(claimedAmounts, validClaims)
         }
 
+        // Emit event before transfers (all state is already updated)
         emit TokensBurnedAndClaimed(msg.sender, amountToBurn, claimedTokens, claimedAmounts);
+
+        // Now perform all external transfers (state is already fully updated)
+        for (uint256 i = 0; i < validClaims; i++) {
+            if (!IERC20(claimedTokens[i]).transfer(msg.sender, claimedAmounts[i])) {
+                revert TransferFailed();
+            }
+        }
     }
 
     /**
      * @notice Override transfer to add pause functionality
+     * @param to Recipient address
+     * @param amount Amount to transfer
+     * @return Success boolean
      */
     function transfer(address to, uint256 amount) public virtual override whenNotPaused returns (bool) {
         return super.transfer(to, amount);
@@ -269,6 +275,10 @@ contract AmicaToken is
 
     /**
      * @notice Override transferFrom to add pause functionality
+     * @param from Sender address
+     * @param to Recipient address
+     * @param amount Amount to transfer
+     * @return Success boolean
      */
     function transferFrom(address from, address to, uint256 amount) public virtual override whenNotPaused returns (bool) {
         return super.transferFrom(from, to, amount);
@@ -276,6 +286,7 @@ contract AmicaToken is
 
     /**
      * @notice Override burn to respect pause state
+     * @param amount Amount to burn
      */
     function burn(uint256 amount) public virtual override whenNotPaused {
         super.burn(amount);
@@ -283,6 +294,8 @@ contract AmicaToken is
 
     /**
      * @notice Override burnFrom to respect pause state
+     * @param account Account to burn from
+     * @param amount Amount to burn
      */
     function burnFrom(address account, uint256 amount) public virtual override whenNotPaused {
         super.burnFrom(account, amount);

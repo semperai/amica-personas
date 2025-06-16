@@ -51,6 +51,7 @@ contract AmicaBridgeWrapper is
     event TokensWrapped(address indexed user, uint256 amount);
     event TokensUnwrapped(address indexed user, uint256 amount);
     event EmergencyWithdraw(address indexed token, address indexed to, uint256 amount);
+    event BridgeTokensUpdated(address indexed oldBridgedToken, address indexed newBridgedToken, address indexed newNativeToken);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -182,7 +183,11 @@ contract AmicaBridgeWrapper is
         if (_nativeAmicaToken == address(0)) revert InvalidNativeToken();
         if (_bridgedAmicaToken == _nativeAmicaToken) revert TokensMustBeDifferent();
 
+        address oldBridgedToken = address(bridgedAmicaToken);
+
         bridgedAmicaToken = IERC20(_bridgedAmicaToken);
         nativeAmicaToken = IAmicaToken(_nativeAmicaToken);
+
+        emit BridgeTokensUpdated(oldBridgedToken, _bridgedAmicaToken, _nativeAmicaToken);
     }
 }
