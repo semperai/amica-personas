@@ -1,13 +1,14 @@
 // src/pages/create.tsx
 import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
-import { useAccount, useWriteContract, useReadContract } from 'wagmi';
+import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { parseEther, zeroAddress, parseUnits, formatUnits, formatEther } from 'viem';
+import { parseEther, zeroAddress, parseUnits, formatUnits, formatEther, decodeEventLog } from 'viem';
 import { FACTORY_ABI, getAddressesForChain } from '@/lib/contracts';
 import { useRouter } from 'next/router';
+import { usePublicClient } from 'wagmi';
 
-// ERC20 ABI for reading token details
+// ERC20 ABI for reading token details and approval
 const ERC20_ABI = [
   {
     inputs: [],
@@ -30,6 +31,20 @@ const ERC20_ABI = [
     stateMutability: 'view',
     type: 'function',
   },
+  {
+    inputs: [{ name: 'owner', type: 'address' }, { name: 'spender', type: 'address' }],
+    name: 'allowance',
+    outputs: [{ type: 'uint256' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [{ name: 'spender', type: 'address' }, { name: 'amount', type: 'uint256' }],
+    name: 'approve',
+    outputs: [{ type: 'bool' }],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
 ] as const;
 
 interface TokenOption {
@@ -42,7 +57,8 @@ interface TokenOption {
 export default function CreatePersonaPage() {
   const { address, chainId } = useAccount();
   const router = useRouter();
-  const { writeContract, isPending } = useWriteContract();
+  const publicClient = usePublicClient();
+  const { writeContract, data: createTxHash, isPending, isError, error } = useWriteContract();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -66,6 +82,8 @@ export default function CreatePersonaPage() {
     decimals: number;
   } | null>(null);
   const [isLoadingAgentToken, setIsLoadingAgentToken] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
+  const [approvalHash, setApprovalHash] = useState<`0x${string}` | undefined>();
 
   // Get addresses for current chain
   const addresses = chainId ? getAddressesForChain(chainId) : null;
@@ -97,6 +115,92 @@ export default function CreatePersonaPage() {
     }
   }, [addresses, chainId]);
 
+  // Read current allowance
+  const { data: currentAllowance } = useReadContract({
+    address: (selectedPairingToken?.address || formData.pairingToken) as `0x${string}`,
+    abi: ERC20_ABI,
+    functionName: 'allowance',
+    args: address && addresses?.personaFactory ? [address, addresses.personaFactory as `0x${string}`] : undefined,
+    query: {
+      enabled: !!address && !!addresses?.personaFactory && !!selectedPairingToken,
+      refetchInterval: 2000, // Refetch every 2 seconds to catch approval
+    },
+  }) as { data: bigint | undefined };
+
+  // Read mint cost from factory
+  const { data: mintCostData } = useReadContract({
+    address: addresses?.personaFactory as `0x${string}`,
+    abi: FACTORY_ABI,
+    functionName: 'pairingConfigs',
+    args: selectedPairingToken?.address ? [selectedPairingToken.address as `0x${string}`] : undefined,
+    query: {
+      enabled: !!addresses && !!selectedPairingToken,
+    },
+  }) as { data: readonly [boolean, bigint, bigint] | undefined };
+
+  const mintCost = mintCostData?.[1] || BigInt(0);
+
+  // Calculate total required amount
+  const totalRequired = mintCost + parseEther(formData.initialBuyAmount || '0');
+
+  // Check if approval is needed
+  const needsApproval = currentAllowance !== undefined && totalRequired > currentAllowance;
+
+  // Wait for approval transaction
+  const { isLoading: isApprovalPending, isSuccess: isApprovalSuccess } = useWaitForTransactionReceipt({
+    hash: approvalHash,
+  });
+
+  // Wait for create transaction and extract token ID
+  const { 
+    isLoading: isCreatePending, 
+    isSuccess: isCreateSuccess,
+    data: createReceipt 
+  } = useWaitForTransactionReceipt({
+    hash: createTxHash,
+  });
+
+  // Extract token ID from creation receipt and redirect
+  useEffect(() => {
+    if (isCreateSuccess && createReceipt && chainId) {
+      // Find the PersonaCreated event
+      const personaCreatedEvent = createReceipt.logs.find(log => {
+        try {
+          const decoded = decodeEventLog({
+            abi: FACTORY_ABI,
+            data: log.data,
+            topics: log.topics,
+          });
+          return decoded.eventName === 'PersonaCreated';
+        } catch {
+          return false;
+        }
+      });
+
+      if (personaCreatedEvent) {
+        const decoded = decodeEventLog({
+          abi: FACTORY_ABI,
+          data: personaCreatedEvent.data,
+          topics: personaCreatedEvent.topics,
+        });
+        
+        if (decoded.eventName === 'PersonaCreated' && 'tokenId' in decoded.args) {
+          const tokenId = decoded.args.tokenId.toString();
+          // Redirect to persona detail page
+          router.push(`/persona/${chainId}/${tokenId}`);
+        }
+      }
+    }
+  }, [isCreateSuccess, createReceipt, chainId, router]);
+
+  // Reset approval state when approval succeeds
+  useEffect(() => {
+    if (isApprovalSuccess) {
+      setApprovalHash(undefined);
+      setIsApproving(false);
+    }
+  }, [isApprovalSuccess]);
+
   // Read agent token details
   const { data: agentTokenName } = useReadContract({
     address: formData.agentToken as `0x${string}`,
@@ -125,18 +229,30 @@ export default function CreatePersonaPage() {
     },
   });
 
-  // Get initial token preview using getInitialTokensForLiquidity
-  const { data: initialTokensPreview } = useReadContract({
-    address: addresses?.personaFactory as `0x${string}`,
-    abi: FACTORY_ABI,
-    functionName: 'getInitialTokensForLiquidity',
-    args: formData.initialBuyAmount && parseFloat(formData.initialBuyAmount) > 0
-      ? [parseEther(formData.initialBuyAmount)]
-      : undefined,
-    query: {
-      enabled: !!addresses && !!formData.initialBuyAmount && parseFloat(formData.initialBuyAmount) > 0,
-    },
-  }) as { data: bigint | undefined };
+  // Calculate expected output using the bonding curve formula
+  const calculateInitialTokens = (amountIn: string): string => {
+    if (!amountIn || parseFloat(amountIn) === 0) return '0';
+    
+    const amountInWei = parseEther(amountIn);
+    const bondingAmount = showAgentConfig && formData.agentToken ? 
+      parseEther('222222222') : // AGENT_BONDING_AMOUNT
+      parseEther('333333333'); // STANDARD_BONDING_AMOUNT
+    
+    // Initial bonding curve calculation (simplified version)
+    // This is just an approximation - the actual calculation is in the contract
+    const virtualAmicaReserve = parseEther('100000');
+    const virtualTokenReserve = bondingAmount / BigInt(10);
+    
+    const k = virtualTokenReserve * virtualAmicaReserve;
+    const newAmicaReserve = virtualAmicaReserve + amountInWei;
+    const newTokenReserve = k / newAmicaReserve;
+    const amountOut = virtualTokenReserve - newTokenReserve;
+    
+    // Apply 1% fee
+    const amountOutAfterFee = (amountOut * BigInt(99)) / BigInt(100);
+    
+    return formatEther(amountOutAfterFee);
+  };
 
   // Update agent token details when contract data is fetched
   useEffect(() => {
@@ -170,12 +286,36 @@ export default function CreatePersonaPage() {
     setShowPairingDropdown(false);
   };
 
+  const handleApprove = async () => {
+    if (!addresses?.personaFactory || !selectedPairingToken) return;
+
+    setIsApproving(true);
+    try {
+      const result = await writeContract({
+        address: selectedPairingToken.address as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: 'approve',
+        args: [addresses.personaFactory as `0x${string}`, totalRequired]
+      });
+      setApprovalHash(result);
+    } catch (error) {
+      console.error('Error approving tokens:', error);
+      setIsApproving(false);
+    }
+  };
+
   const handleCreate = async () => {
     if (!address || !chainId) return;
 
     const addresses = getAddressesForChain(chainId);
     if (!addresses) {
       alert('This chain is not supported');
+      return;
+    }
+
+    // Check if we need approval first
+    if (needsApproval) {
+      alert('Please approve tokens first');
       return;
     }
 
@@ -203,20 +343,19 @@ export default function CreatePersonaPage() {
           minAgentTokens,
         ]
       });
-
-      // Redirect to explore page after successful creation
-      setTimeout(() => {
-        router.push('/');
-      }, 2000);
     } catch (error) {
       console.error('Error creating persona:', error);
     }
   };
 
   // Calculate price per token for initial buy
-  const pricePerToken = formData.initialBuyAmount && initialTokensPreview && parseFloat(formData.initialBuyAmount) > 0
-    ? (parseFloat(formData.initialBuyAmount) / parseFloat(formatEther(initialTokensPreview))).toFixed(6)
+  const estimatedTokens = calculateInitialTokens(formData.initialBuyAmount);
+  const pricePerToken = formData.initialBuyAmount && parseFloat(estimatedTokens) > 0
+    ? (parseFloat(formData.initialBuyAmount) / parseFloat(estimatedTokens)).toFixed(6)
     : '0';
+
+  // Format mint cost for display
+  const formattedMintCost = mintCost ? formatEther(mintCost) : '0';
 
   return (
     <Layout>
@@ -300,7 +439,7 @@ export default function CreatePersonaPage() {
               )}
             </div>
             <p className="text-xs text-white/50 mt-2">
-              The token used for bonding curve trading
+              The token used for bonding curve trading. Creation cost: {formattedMintCost} {selectedPairingToken?.symbol || 'tokens'}
             </p>
           </div>
 
@@ -426,7 +565,7 @@ export default function CreatePersonaPage() {
             </p>
 
             {/* Initial Buy Preview */}
-            {formData.initialBuyAmount && parseFloat(formData.initialBuyAmount) > 0 && initialTokensPreview && (
+            {formData.initialBuyAmount && parseFloat(formData.initialBuyAmount) > 0 && (
               <div className="mt-4 p-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 backdrop-blur-sm rounded-xl border border-purple-500/20">
                 <h4 className="text-sm font-medium text-white mb-3">Initial Buy Preview</h4>
                 <div className="space-y-2">
@@ -437,15 +576,15 @@ export default function CreatePersonaPage() {
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-white/60">You will receive</span>
+                    <span className="text-white/60">Estimated tokens</span>
                     <span className="text-green-400 font-medium">
-                      {formatEther(initialTokensPreview)} {formData.symbol || 'tokens'}
+                      ~{estimatedTokens} {formData.symbol || 'tokens'}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-white/60">Initial price</span>
                     <span className="text-white">
-                      1 {formData.symbol || 'token'} = {pricePerToken} {selectedPairingToken?.symbol || 'tokens'}
+                      ~1 {formData.symbol || 'token'} = {pricePerToken} {selectedPairingToken?.symbol || 'tokens'}
                     </span>
                   </div>
                 </div>
@@ -506,6 +645,29 @@ export default function CreatePersonaPage() {
             )}
           </div>
 
+          {/* Total Cost Summary */}
+          {address && totalRequired > BigInt(0) && (
+            <div className="mb-8 p-4 bg-blue-500/10 backdrop-blur-sm rounded-xl border border-blue-500/20">
+              <h4 className="text-sm font-medium text-white mb-2">Total Cost Summary</h4>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-white/60">Creation fee:</span>
+                  <span className="text-white">{formattedMintCost} {selectedPairingToken?.symbol}</span>
+                </div>
+                {formData.initialBuyAmount && parseFloat(formData.initialBuyAmount) > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-white/60">Initial buy:</span>
+                    <span className="text-white">{formData.initialBuyAmount} {selectedPairingToken?.symbol}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-medium pt-2 border-t border-white/10">
+                  <span className="text-white/80">Total required:</span>
+                  <span className="text-white">{formatEther(totalRequired)} {selectedPairingToken?.symbol}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {!address ? (
             <div className="bg-white/5 backdrop-blur-md rounded-2xl p-12 border border-white/10 text-center">
               <h2 className="text-2xl font-light text-white mb-4">Connect Your Wallet</h2>
@@ -519,13 +681,33 @@ export default function CreatePersonaPage() {
               </div>
             </div>
           ) : (
-            <button
-              onClick={handleCreate}
-              disabled={!address || isPending || !formData.name || !formData.symbol}
-              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-xl hover:from-purple-600 hover:to-pink-600 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transition-all duration-300 font-light text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-            >
-              {isPending ? 'Creating...' : 'Create Persona'}
-            </button>
+            <div className="space-y-4">
+              {needsApproval && (
+                <button
+                  onClick={handleApprove}
+                  disabled={isApproving || isApprovalPending}
+                  className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-4 rounded-xl hover:from-blue-600 hover:to-purple-600 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transition-all duration-300 font-light text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                >
+                  {isApproving || isApprovalPending ? 'Approving...' : `Approve ${selectedPairingToken?.symbol || 'tokens'}`}
+                </button>
+              )}
+
+              <button
+                onClick={handleCreate}
+                disabled={!address || isPending || isCreatePending || !formData.name || !formData.symbol || needsApproval}
+                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-xl hover:from-purple-600 hover:to-pink-600 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transition-all duration-300 font-light text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              >
+                {isPending || isCreatePending ? 'Creating...' : isCreateSuccess ? 'Created! Redirecting...' : 'Create Persona'}
+              </button>
+
+              {isError && (
+                <div className="mt-4 p-4 bg-red-500/10 backdrop-blur-sm rounded-xl border border-red-500/20">
+                  <p className="text-sm text-red-400">
+                    Error: {error?.message || 'Transaction failed'}
+                  </p>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

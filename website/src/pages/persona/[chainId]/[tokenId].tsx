@@ -9,6 +9,9 @@ import TradingInterface from '@/components/TradingInterface';
 import PriceChart from '@/components/PriceChart';
 import AgentDeposits from '@/components/AgentDeposits';
 import { fetchPersonaTrades } from '@/lib/api';
+import { useReadContract } from 'wagmi';
+import { FACTORY_ABI, getAddressesForChain } from '@/lib/contracts';
+import Link from 'next/link';
 
 // Trade interface
 interface Trade {
@@ -107,9 +110,61 @@ const TradeHistory = ({ chainId, tokenId }: { chainId: string; tokenId: string }
   );
 };
 
+// Persona not found component
+const PersonaNotFound = ({ chainId, tokenId }: { chainId: string; tokenId: string }) => {
+  return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="bg-white/5 backdrop-blur-md rounded-2xl p-12 border border-white/10 text-center max-w-md">
+        <div className="mb-6">
+          <svg className="w-24 h-24 mx-auto text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h2 className="text-2xl font-light text-white mb-4">Persona Not Found</h2>
+        <p className="text-white/60 mb-8">
+          The persona with ID #{tokenId} on chain {chainId} doesn't exist or hasn't been created yet.
+        </p>
+        <div className="space-y-4">
+          <Link href="/" className="block w-full bg-white/10 backdrop-blur-sm text-white py-3 rounded-xl hover:bg-white/20 transition-all duration-300">
+            Browse Personas
+          </Link>
+          <Link href="/create" className="block w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-300">
+            Create New Persona
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const PersonaDetailPage: NextPage = () => {
   const router = useRouter();
   const { chainId, tokenId } = router.query;
+
+  // Ensure we have string values
+  const chainIdStr = Array.isArray(chainId) ? chainId[0] : chainId;
+  const tokenIdStr = Array.isArray(tokenId) ? tokenId[0] : tokenId;
+  const chainIdNum = chainIdStr ? parseInt(chainIdStr) : undefined;
+
+  // Get contract addresses
+  const addresses = chainIdNum ? getAddressesForChain(chainIdNum) : null;
+
+  // Check if persona exists by reading its data
+  const { data: personaData, isLoading: isCheckingPersona } = useReadContract({
+    address: addresses?.personaFactory as `0x${string}`,
+    abi: FACTORY_ABI,
+    functionName: 'getPersona',
+    args: tokenIdStr ? [BigInt(tokenIdStr)] : undefined,
+    query: {
+      enabled: !!addresses && !!tokenIdStr && router.isReady,
+    },
+  }) as { 
+    data: readonly [string, string, `0x${string}`, `0x${string}`, boolean, bigint, bigint] | undefined;
+    isLoading: boolean;
+  };
+
+  // Check if the persona exists (has a non-zero erc20Token address)
+  const personaExists = personaData && personaData[2] !== '0x0000000000000000000000000000000000000000';
 
   // Handle loading state while router params are being resolved
   if (!router.isReady || !chainId || !tokenId) {
@@ -122,10 +177,30 @@ const PersonaDetailPage: NextPage = () => {
     );
   }
 
-  // Ensure we have string values
-  const chainIdStr = Array.isArray(chainId) ? chainId[0] : chainId;
-  const tokenIdStr = Array.isArray(tokenId) ? tokenId[0] : tokenId;
+  // Show loading while checking if persona exists
+  if (isCheckingPersona) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <p className="text-white/60">Loading persona...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
+  // Show not found if persona doesn't exist
+  if (!personaExists) {
+    return (
+      <Layout>
+        <PersonaNotFound chainId={chainIdStr} tokenId={tokenIdStr} />
+      </Layout>
+    );
+  }
+
+  // Show the full persona page if it exists
   return (
     <Layout>
       <div className="max-w-7xl mx-auto px-6 py-8">
