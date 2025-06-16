@@ -11,7 +11,7 @@ const deploymentManager = new DeploymentManager();
 const STAKING_REWARDS_PER_BLOCK = ethers.parseEther("1");
 const GAS_PRICE_DEFAULT = ethers.parseUnits("0.01", "gwei");
 const GAS_LIMIT_DEFAULT = 10_000_000;
-const BRIDGED_AMICA_ADDRESS = "0x655e9aFf27d9859B01acbC957c9088e2691E3421";
+const BRIDGED_AMICA_ADDRESS = "0x33c38a54E3A02b1cb7133A157D72DAc4BFadd88f";
 
 
 async function deployContracts() {
