@@ -152,10 +152,10 @@ export default function CreatePersonaPage() {
   });
 
   // Wait for create transaction and extract token ID
-  const { 
-    isLoading: isCreatePending, 
+  const {
+    isLoading: isCreatePending,
     isSuccess: isCreateSuccess,
-    data: createReceipt 
+    data: createReceipt
   } = useWaitForTransactionReceipt({
     hash: createTxHash,
   });
@@ -183,9 +183,13 @@ export default function CreatePersonaPage() {
           data: personaCreatedEvent.data,
           topics: personaCreatedEvent.topics,
         });
-        
-        if (decoded.eventName === 'PersonaCreated' && 'tokenId' in decoded.args) {
-          const tokenId = decoded.args.tokenId.toString();
+
+        if (
+          decoded.eventName === 'PersonaCreated' &&
+          decoded.args &&
+          'tokenId' in decoded.args
+        ) {
+          const tokenId = (decoded.args.tokenId as bigint).toString();
           // Redirect to persona detail page
           router.push(`/persona/${chainId}/${tokenId}`);
         }
@@ -232,25 +236,25 @@ export default function CreatePersonaPage() {
   // Calculate expected output using the bonding curve formula
   const calculateInitialTokens = (amountIn: string): string => {
     if (!amountIn || parseFloat(amountIn) === 0) return '0';
-    
+
     const amountInWei = parseEther(amountIn);
-    const bondingAmount = showAgentConfig && formData.agentToken ? 
+    const bondingAmount = showAgentConfig && formData.agentToken ?
       parseEther('222222222') : // AGENT_BONDING_AMOUNT
       parseEther('333333333'); // STANDARD_BONDING_AMOUNT
-    
+
     // Initial bonding curve calculation (simplified version)
     // This is just an approximation - the actual calculation is in the contract
     const virtualAmicaReserve = parseEther('100000');
     const virtualTokenReserve = bondingAmount / BigInt(10);
-    
+
     const k = virtualTokenReserve * virtualAmicaReserve;
     const newAmicaReserve = virtualAmicaReserve + amountInWei;
     const newTokenReserve = k / newAmicaReserve;
     const amountOut = virtualTokenReserve - newTokenReserve;
-    
+
     // Apply 1% fee
     const amountOutAfterFee = (amountOut * BigInt(99)) / BigInt(100);
-    
+
     return formatEther(amountOutAfterFee);
   };
 
@@ -291,13 +295,12 @@ export default function CreatePersonaPage() {
 
     setIsApproving(true);
     try {
-      const result = await writeContract({
+      await writeContract({
         address: selectedPairingToken.address as `0x${string}`,
         abi: ERC20_ABI,
         functionName: 'approve',
         args: [addresses.personaFactory as `0x${string}`, totalRequired]
       });
-      setApprovalHash(result);
     } catch (error) {
       console.error('Error approving tokens:', error);
       setIsApproving(false);

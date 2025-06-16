@@ -122,7 +122,7 @@ const PersonaNotFound = ({ chainId, tokenId }: { chainId: string; tokenId: strin
         </div>
         <h2 className="text-2xl font-light text-white mb-4">Persona Not Found</h2>
         <p className="text-white/60 mb-8">
-          The persona with ID #{tokenId} on chain {chainId} doesn't exist or hasn't been created yet.
+          The persona with ID #{tokenId} on chain {chainId} doesn&apos;t exist or hasn&apos;t been created yet.
         </p>
         <div className="space-y-4">
           <Link href="/" className="block w-full bg-white/10 backdrop-blur-sm text-white py-3 rounded-xl hover:bg-white/20 transition-all duration-300">
@@ -195,7 +195,7 @@ const PersonaDetailPage: NextPage = () => {
   if (!personaExists) {
     return (
       <Layout>
-        <PersonaNotFound chainId={chainIdStr} tokenId={tokenIdStr} />
+        <PersonaNotFound chainId={chainIdStr ?? ''} tokenId={tokenIdStr ?? ''} />
       </Layout>
     );
   }
@@ -207,15 +207,15 @@ const PersonaDetailPage: NextPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left column - 2/3 width */}
           <div className="lg:col-span-2 space-y-6">
-            <PersonaMetadata chainId={chainIdStr} tokenId={tokenIdStr} />
-            <PriceChart chainId={chainIdStr} tokenId={tokenIdStr} />
-            <AgentDeposits chainId={chainIdStr} tokenId={tokenIdStr} />
+            <PersonaMetadata chainId={chainIdStr ?? ''} tokenId={tokenIdStr ?? ''} />
+            <PriceChart chainId={chainIdStr ?? ''} tokenId={tokenIdStr ?? ''} />
+            <AgentDeposits chainId={chainIdStr ?? ''} tokenId={tokenIdStr ?? ''} />
           </div>
 
           {/* Right column - 1/3 width */}
           <div className="lg:col-span-1 space-y-6">
-            <TradingInterface chainId={chainIdStr} tokenId={tokenIdStr} />
-            <TradeHistory chainId={chainIdStr} tokenId={tokenIdStr} />
+            <TradingInterface chainId={chainIdStr ?? ''} tokenId={tokenIdStr ?? ''} />
+            <TradeHistory chainId={chainIdStr ?? ''} tokenId={tokenIdStr ?? ''} />
           </div>
         </div>
       </div>
