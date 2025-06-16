@@ -1,7 +1,7 @@
 // src/lib/contracts.ts
-// Updated contract configuration to use deployment files
 
 import PersonaFactoryABI from '@/abi/PersonaTokenFactory.json';
+import PersonaFactoryViewerABI from '@/abi/PersonaFactoryViewer.json';
 import AmicaTokenABI from '@/abi/AmicaToken.json';
 import BridgeWrapperABI from '@/abi/AmicaBridgeWrapper.json';
 import StakingRewardsABI from '@/abi/PersonaStakingRewards.json';
@@ -10,6 +10,7 @@ import { getAddressesForChain as getDeploymentAddresses, getBridgedAmicaAddress 
 
 // Export ABIs
 export const FACTORY_ABI = PersonaFactoryABI;
+export const FACTORY_VIEWER_ABI = PersonaFactoryViewerABI;
 export const AMICA_ABI = AmicaTokenABI;
 export const BRIDGE_WRAPPER_ABI = BridgeWrapperABI;
 export const STAKING_REWARDS_ABI = StakingRewardsABI;
@@ -19,12 +20,13 @@ export const ERC20_IMPLEMENTATION_ABI = ERC20ImplementationABI;
 export { getDeploymentAddresses as getAddressesForChain, getDeploymentBridgedAddress as getBridgedAmicaAddress };
 
 // Helper to get specific contract address with type safety
-export function getContractAddress(chainId: number, contractName: 'factory' | 'amica' | 'bridgeWrapper' | 'stakingRewards' | 'erc20Implementation'): string | undefined {
+export function getContractAddress(chainId: number, contractName: 'factory' | 'factoryViewer' | 'amica' | 'bridgeWrapper' | 'stakingRewards' | 'erc20Implementation'): string | undefined {
   const addresses = getDeploymentAddresses(chainId);
   if (!addresses) return undefined;
 
   const mapping = {
     factory: addresses.personaFactory,
+    factoryViewer: addresses.personaFactoryViewer, // Add this
     amica: addresses.amicaToken,
     bridgeWrapper: addresses.bridgeWrapper,
     stakingRewards: addresses.stakingRewards,

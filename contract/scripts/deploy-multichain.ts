@@ -101,6 +101,7 @@ async function deployContracts() {
     ],
     {
       initializer: "initialize",
+      kind: "transparent", // Explicitly use transparent proxy
       ...upgradeOptions
     }
   );
@@ -116,13 +117,28 @@ async function deployContracts() {
   console.log(`   Implementation: ${personaFactoryImplAddress}`);
   console.log(`   ProxyAdmin: ${personaProxyAdminAddress}`);
 
+  // Deploy PersonaFactoryViewer
+  console.log("\n4️⃣ Deploying PersonaFactoryViewer...");
+  const PersonaFactoryViewer = await ethers.getContractFactory("PersonaFactoryViewer");
+  const personaFactoryViewer = await PersonaFactoryViewer.deploy(
+    personaFactoryAddress,
+    {
+      gasPrice: GAS_PRICE_DEFAULT,
+      gasLimit: GAS_LIMIT_DEFAULT,
+    }
+  );
+  await personaFactoryViewer.waitForDeployment();
+  const personaFactoryViewerAddress = await personaFactoryViewer.getAddress();
+  txHashes.personaFactoryViewer = personaFactoryViewer.deploymentTransaction()?.hash;
+  console.log(`✅ PersonaFactoryViewer deployed to: ${personaFactoryViewerAddress}`);
+
   // Deploy bridge wrapper if not mainnet
   let bridgeWrapperAddress: string | undefined;
   let bridgeWrapperImplAddress: string | undefined;
   let bridgeProxyAdminAddress: string | undefined;
 
   if (chainId !== 1) {
-    console.log("\n4️⃣ Deploying AmicaBridgeWrapper...");
+    console.log("\n5️⃣ Deploying AmicaBridgeWrapper...");
     const AmicaBridgeWrapper = await ethers.getContractFactory("AmicaBridgeWrapper");
 
     // Deploy as upgradeable proxy
@@ -162,7 +178,7 @@ async function deployContracts() {
   let rewardsPerBlock: bigint | undefined;
   let startBlock: number | undefined;
 
-  console.log("\n5️⃣ Deploying PersonaStakingRewards...");
+  console.log("\n6️⃣ Deploying PersonaStakingRewards...");
   const PersonaStakingRewards = await ethers.getContractFactory("PersonaStakingRewards");
   rewardsPerBlock = STAKING_REWARDS_PER_BLOCK;
 
@@ -209,6 +225,7 @@ async function deployContracts() {
     amicaTokenImpl: amicaTokenImplAddress,
     personaFactory: personaFactoryAddress,
     personaFactoryImpl: personaFactoryImplAddress,
+    personaFactoryViewer: personaFactoryViewerAddress,
     proxyAdmin: amicaProxyAdminAddress, // All proxies should use the same admin
     bridgeWrapper: bridgeWrapperAddress,
     bridgeWrapperImpl: bridgeWrapperImplAddress,

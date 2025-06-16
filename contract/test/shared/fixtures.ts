@@ -3,6 +3,7 @@ import { ethers, upgrades } from "hardhat";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import {
     PersonaTokenFactory,
+    PersonaFactoryViewer,
     AmicaToken,
     ERC20Implementation,
     MockUniswapV2Factory,
@@ -71,7 +72,7 @@ export async function getQuote(
 
 // Helper to get token distribution for a specific persona
 export async function getTokenDistribution(
-    personaFactory: PersonaTokenFactory,
+    viewer: PersonaFactoryViewer,
     tokenId: number
 ): Promise<{
     liquidityAmount: bigint;
@@ -79,7 +80,13 @@ export async function getTokenDistribution(
     amicaAmount: bigint;
     agentRewardsAmount: bigint;
 }> {
-    return personaFactory.getTokenDistribution(tokenId);
+    return viewer.getTokenDistribution(tokenId);
+}
+
+// Helper to deploy viewer contract
+export async function deployViewer(factoryAddress: string): Promise<PersonaFactoryViewer> {
+    const PersonaFactoryViewer = await ethers.getContractFactory("PersonaFactoryViewer");
+    return await PersonaFactoryViewer.deploy(factoryAddress) as PersonaFactoryViewer;
 }
 
 // Fixture interfaces
@@ -90,6 +97,7 @@ export interface MocksFixture {
 
 export interface PersonaTokenFactoryFixture extends MocksFixture {
     personaFactory: PersonaTokenFactory;
+    viewer: PersonaFactoryViewer;
     amicaToken: AmicaToken;
     erc20Implementation: ERC20Implementation;
     owner: SignerWithAddress;
@@ -322,8 +330,12 @@ export async function deployPersonaTokenFactoryFixture(): Promise<PersonaTokenFa
         { initializer: "initialize" }
     ) as unknown as PersonaTokenFactory;
 
+    // Deploy viewer contract
+    const viewer = await deployViewer(await personaFactory.getAddress());
+
     return {
         personaFactory,
+        viewer,
         amicaToken,
         erc20Implementation,
         mockFactory,
@@ -374,8 +386,12 @@ export async function deployPersonaTokenFactoryWithMainnetMockFixture(): Promise
         { initializer: "initialize" }
     ) as unknown as PersonaTokenFactory;
 
+    // Deploy viewer contract
+    const viewer = await deployViewer(await personaFactory.getAddress());
+
     return {
         personaFactory,
+        viewer,
         amicaToken,
         erc20Implementation,
         mockFactory,

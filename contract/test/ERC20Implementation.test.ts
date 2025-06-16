@@ -5,15 +5,16 @@ import {
     deployPersonaTokenFactoryFixture,
     DEFAULT_GRADUATION_THRESHOLD,
     swapTokensForPersona,
-    STANDARD_BONDING_AMOUNT
+    STANDARD_BONDING_AMOUNT,
+    deployViewer
 } from "./shared/fixtures";
-import { ERC20Implementation, PersonaTokenFactory, TestERC20 } from "../typechain-types";
+import { ERC20Implementation, PersonaTokenFactory, TestERC20, PersonaFactoryViewer } from "../typechain-types";
 
 describe("ERC20Implementation Burn and Claim", function () {
     // Deploy a persona token directly for testing
     async function deployPersonaTokenForTesting() {
         const fixture = await loadFixture(deployPersonaTokenFactoryFixture);
-        const { personaFactory, amicaToken, user1, user2, user3 } = fixture;
+        const { personaFactory, viewer, amicaToken, user1, user2, user3 } = fixture;
 
         // Create persona
         await amicaToken.connect(user1).approve(
@@ -53,8 +54,8 @@ describe("ERC20Implementation Burn and Claim", function () {
         });
         const tokenId = parsedEvent!.args.tokenId;
 
-        // Get the persona token address
-        const persona = await personaFactory.personas(tokenId);
+        // Get the persona token address using viewer
+        const persona = await viewer.getPersona(tokenId);
         const personaToken = await ethers.getContractAt("ERC20Implementation", persona.erc20Token) as ERC20Implementation;
 
         // Calculate the amount needed including fees
@@ -85,8 +86,12 @@ describe("ERC20Implementation Burn and Claim", function () {
             user2
         );
 
-        // Verify graduation happened
-        const hasGraduated = await personaFactory.hasGraduated(tokenId);
+        // Verify graduation happened by checking if pair was created
+        const personaInfo = await viewer.getPersona(tokenId);
+        expect(personaInfo.pairCreated).to.be.true;
+
+        // Verify graduation status on the token itself
+        const hasGraduated = await personaToken.hasGraduated();
         expect(hasGraduated).to.be.true;
 
         // Transfer some tokens to user3 for testing
@@ -97,14 +102,15 @@ describe("ERC20Implementation Burn and Claim", function () {
             ...fixture,
             personaToken,
             tokenId,
-            personaFactory  // Make sure to return personaFactory
+            personaFactory,
+            viewer
         };
     }
 
     describe("Graduation Check", function () {
         it("Should revert burnAndClaim before graduation", async function () {
             const fixture = await loadFixture(deployPersonaTokenFactoryFixture);
-            const { personaFactory, amicaToken, user1 } = fixture;
+            const { personaFactory, viewer, amicaToken, user1 } = fixture;
 
             // Create persona but don't buy enough to graduate
             await amicaToken.connect(user1).approve(
@@ -144,7 +150,7 @@ describe("ERC20Implementation Burn and Claim", function () {
             });
             const tokenId = parsedEvent!.args.tokenId;
 
-            const persona = await personaFactory.personas(tokenId);
+            const persona = await viewer.getPersona(tokenId);
             const personaToken = await ethers.getContractAt("ERC20Implementation", persona.erc20Token);
 
             // Try to burn and claim before graduation
@@ -264,7 +270,7 @@ describe("ERC20Implementation Burn and Claim", function () {
 
         it("Should return zero preview before graduation", async function () {
             const fixture = await loadFixture(deployPersonaTokenFactoryFixture);
-            const { personaFactory, amicaToken, user1 } = fixture;
+            const { personaFactory, viewer, amicaToken, user1 } = fixture;
 
             // Create persona but don't graduate
             await amicaToken.connect(user1).approve(
@@ -304,7 +310,7 @@ describe("ERC20Implementation Burn and Claim", function () {
             });
             const tokenId = parsedEvent!.args.tokenId;
 
-            const persona = await personaFactory.personas(tokenId);
+            const persona = await viewer.getPersona(tokenId);
             const personaToken = await ethers.getContractAt("ERC20Implementation", persona.erc20Token);
 
             // Send some tokens to the contract
@@ -597,7 +603,7 @@ describe("ERC20Implementation Burn and Claim", function () {
     describe("Integration with PersonaTokenFactory", function () {
         it("Should handle fresh persona token with initial buy after graduation", async function () {
             const fixture = await loadFixture(deployPersonaTokenFactoryFixture);
-            const { personaFactory, amicaToken, user1, user2 } = fixture;
+            const { personaFactory, viewer, amicaToken, user1, user2 } = fixture;
 
             // Create persona with initial buy
             const initialBuy = ethers.parseEther("100000");
@@ -639,7 +645,7 @@ describe("ERC20Implementation Burn and Claim", function () {
             const tokenId = parsedEvent!.args.tokenId;
 
             // Get the persona token
-            const persona = await personaFactory.personas(tokenId);
+            const persona = await viewer.getPersona(tokenId);
             const personaToken = await ethers.getContractAt("ERC20Implementation", persona.erc20Token);
 
             // Buy more to trigger graduation
@@ -662,8 +668,12 @@ describe("ERC20Implementation Burn and Claim", function () {
                 user2
             );
 
-            // Verify graduation
-            expect(await personaFactory.hasGraduated(tokenId)).to.be.true;
+            // Verify graduation using viewer
+            const graduatedPersona = await viewer.getPersona(tokenId);
+            expect(graduatedPersona.pairCreated).to.be.true;
+
+            // Verify graduation status on token
+            expect(await personaToken.hasGraduated()).to.be.true;
 
             // Now test burn and claim
             await amicaToken.connect(user2).transfer(await personaToken.getAddress(), ethers.parseEther("5000"));
@@ -693,10 +703,10 @@ describe("ERC20Implementation Burn and Claim", function () {
 
     describe("Zero Supply Edge Case", function () {
         it("Should handle preview when total supply approaches zero", async function () {
-            const { personaToken, amicaToken, user2, user3, owner, personaFactory, tokenId } = await loadFixture(deployPersonaTokenForTesting);
+            const { personaToken, amicaToken, user2, user3, owner, personaFactory, tokenId, viewer } = await loadFixture(deployPersonaTokenForTesting);
 
-            // Get the token distribution info
-            const distribution = await personaFactory.getTokenDistribution(tokenId);
+            // Get the token distribution info using viewer
+            const distribution = await viewer.getTokenDistribution(tokenId);
             const liquidityAmount = distribution.liquidityAmount;
             const amicaAmount = distribution.amicaAmount;
             const totalAllocated = liquidityAmount + amicaAmount;

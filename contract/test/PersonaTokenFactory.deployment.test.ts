@@ -44,6 +44,7 @@ describe("PersonaTokenFactory Deployment", function () {
 
         const PersonaTokenFactory = await ethers.getContractFactory("PersonaTokenFactory");
 
+        // The contract uses a consolidated error "Invalid(0)" for invalid token addresses
         // Test each zero address
         await expect(
             upgrades.deployProxy(PersonaTokenFactory, [
@@ -52,7 +53,8 @@ describe("PersonaTokenFactory Deployment", function () {
                 await mockRouter.getAddress(),
                 owner.address
             ])
-        ).to.be.revertedWithCustomError(PersonaTokenFactory, "InvalidToken");
+        ).to.be.revertedWithCustomError(PersonaTokenFactory, "Invalid")
+            .withArgs(0); // 0 = Invalid token
 
         await expect(
             upgrades.deployProxy(PersonaTokenFactory, [
@@ -61,7 +63,8 @@ describe("PersonaTokenFactory Deployment", function () {
                 await mockRouter.getAddress(),
                 owner.address
             ])
-        ).to.be.revertedWithCustomError(PersonaTokenFactory, "InvalidToken");
+        ).to.be.revertedWithCustomError(PersonaTokenFactory, "Invalid")
+            .withArgs(0);
 
         await expect(
             upgrades.deployProxy(PersonaTokenFactory, [
@@ -70,7 +73,8 @@ describe("PersonaTokenFactory Deployment", function () {
                 ethers.ZeroAddress,
                 owner.address
             ])
-        ).to.be.revertedWithCustomError(PersonaTokenFactory, "InvalidToken");
+        ).to.be.revertedWithCustomError(PersonaTokenFactory, "Invalid")
+            .withArgs(0);
 
         await expect(
             upgrades.deployProxy(PersonaTokenFactory, [
@@ -79,13 +83,14 @@ describe("PersonaTokenFactory Deployment", function () {
                 await mockRouter.getAddress(),
                 ethers.ZeroAddress
             ])
-        ).to.be.revertedWithCustomError(PersonaTokenFactory, "InvalidToken");
+        ).to.be.revertedWithCustomError(PersonaTokenFactory, "Invalid")
+            .withArgs(0);
     });
 });
 
 describe("PersonaTokenFactory Upgrade", function () {
     it("Should maintain state after upgrade", async function () {
-        const { personaFactory, amicaToken, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
+        const { personaFactory, amicaToken, user1, viewer } = await loadFixture(deployPersonaTokenFactoryFixture);
 
         // Create a persona before upgrade
         await amicaToken.connect(user1).approve(
@@ -114,8 +119,9 @@ describe("PersonaTokenFactory Upgrade", function () {
             PersonaTokenFactoryV2
         );
 
-        // Verify state is maintained
-        const persona = await upgraded.getPersona(0);
+        // Verify state is maintained using the viewer contract
+        // The getPersona function is now in the viewer contract
+        const persona = await viewer.getPersona(0);
         expect(persona.name).to.equal("Pre-Upgrade");
         expect(persona.symbol).to.equal("PREUP");
 
@@ -148,9 +154,8 @@ describe("PersonaTokenFactory Upgrade", function () {
             erc20Implementation,
         } = await loadFixture(deployPersonaTokenFactoryFixture);
 
-
-        // already reverted
-        // TODO this says custom error, how should we get the custom error?
+        // The proxy pattern prevents re-initialization
+        // Expecting the transaction to be reverted without a specific error message
         await expect(
             personaFactory.initialize(
                 await amicaToken.getAddress(),

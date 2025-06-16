@@ -161,6 +161,7 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
             );
 
             // This should fail because the actual output will be less than quoted
+            // Updated error expectation - using Insufficient(1) for insufficient output
             await expect(
                 personaFactory.connect(user1).swapExactTokensForTokens(
                     tokenId,
@@ -169,7 +170,8 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
                     user1.address,
                     getDeadline()
                 )
-            ).to.be.revertedWithCustomError(personaFactory, "InsufficientOutput");
+            ).to.be.revertedWithCustomError(personaFactory, "Insufficient")
+              .withArgs(1); // 1 = Output
         });
 
         it("Should handle sandwich attacks with deadline protection", async function () {
@@ -188,6 +190,7 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
             await new Promise(resolve => setTimeout(resolve, 2000));
 
             // Transaction should expire
+            // Updated error expectation - using NotAllowed(5) for expired deadline
             await expect(
                 personaFactory.connect(user1).swapExactTokensForTokens(
                     tokenId,
@@ -196,7 +199,8 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
                     user1.address,
                     shortDeadline
                 )
-            ).to.be.revertedWithCustomError(personaFactory, "TransactionExpired");
+            ).to.be.revertedWithCustomError(personaFactory, "NotAllowed")
+              .withArgs(5); // 5 = ExpiredDeadline
         });
     });
 
@@ -322,6 +326,7 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
                 ethers.parseEther("1000000000")
             );
 
+            // Updated error expectation - using Insufficient(0) for insufficient pairing token
             await expect(
                 personaFactory.connect(user1).createPersona(
                     await amicaToken.getAddress(),
@@ -333,7 +338,8 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
                     ethers.ZeroAddress,
                     0, // No minimum agent tokens
                 )
-            ).to.be.revertedWithCustomError(personaFactory, "InsufficientPairingToken");
+            ).to.be.revertedWithCustomError(personaFactory, "Insufficient")
+              .withArgs(0); // 0 = PairingToken
         });
 
         it("Should handle fee configuration edge cases", async function () {
@@ -345,9 +351,11 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
             ).to.not.be.reverted;
 
             // Try to set fee above 10%
+            // Updated error expectation - using NotAllowed(8) for fee too high
             await expect(
                 personaFactory.connect(owner).configureTradingFees(1001, 5000)
-            ).to.be.revertedWithCustomError(personaFactory, "FeeTooHigh");
+            ).to.be.revertedWithCustomError(personaFactory, "NotAllowed")
+              .withArgs(8); // 8 = FeeTooHigh
 
             // Set creator share to 0% (all fees to protocol)
             await expect(
@@ -376,6 +384,7 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
                 hugeAmount
             );
 
+            // Updated error expectation - using Insufficient(2) for insufficient liquidity
             await expect(
                 personaFactory.connect(user2).swapExactTokensForTokens(
                     tokenId,
@@ -384,7 +393,8 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
                     user2.address,
                     getDeadline()
                 )
-            ).to.be.revertedWithCustomError(personaFactory, "InsufficientLiquidity");
+            ).to.be.revertedWithCustomError(personaFactory, "Insufficient")
+              .withArgs(2); // 2 = Liquidity
         });
 
         it("Should correctly handle available tokens calculation near limits", async function () {
@@ -484,13 +494,15 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
             ).to.emit(personaFactory, "MetadataUpdated");
 
             // Old owner should not be able to update
+            // Updated error expectation - using NotAllowed(0) for not owner
             await expect(
                 personaFactory.connect(user1).updateMetadata(
                     tokenId,
                     ["description"],
                     ["Should fail"]
                 )
-            ).to.be.revertedWithCustomError(personaFactory, "NotTokenOwner");
+            ).to.be.revertedWithCustomError(personaFactory, "NotAllowed")
+              .withArgs(0); // 0 = NotOwner
         });
     });
 
@@ -541,6 +553,7 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
                 DEFAULT_MINT_COST
             );
 
+            // Updated error expectation - using NotAllowed(1) for not enabled
             await expect(
                 personaFactory.connect(user1).createPersona(
                     await amicaToken.getAddress(),
@@ -552,7 +565,8 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
                     ethers.ZeroAddress,
                     0, // No minimum agent tokens
                 )
-            ).to.be.revertedWithCustomError(personaFactory, "TokenNotEnabled");
+            ).to.be.revertedWithCustomError(personaFactory, "NotAllowed")
+              .withArgs(1); // 1 = NotEnabled
         });
     });
 

@@ -1,0 +1,622 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_factory",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "calculateAgentRewards",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "personaReward",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "agentAmount",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "canGraduate",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "eligible",
+        "type": "bool"
+      },
+      {
+        "internalType": "string",
+        "name": "reason",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "factory",
+    "outputs": [
+      {
+        "internalType": "contract PersonaTokenFactory",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amountIn",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "getAmountOutForUser",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getFeeReductionConfig",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "minAmicaForReduction",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "maxAmicaForReduction",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "minReductionMultiplier",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "maxReductionMultiplier",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getGraduationProgress",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "currentDeposited",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "thresholdRequired",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "percentComplete",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "currentAgentDeposited",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "agentRequired",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "string[]",
+        "name": "keys",
+        "type": "string[]"
+      }
+    ],
+    "name": "getMetadata",
+    "outputs": [
+      {
+        "internalType": "string[]",
+        "name": "",
+        "type": "string[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "getPairingConfig",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "enabled",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "mintCost",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "graduationThreshold",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getPersona",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "symbol",
+        "type": "string"
+      },
+      {
+        "internalType": "address",
+        "name": "erc20Token",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "pairToken",
+        "type": "address"
+      },
+      {
+        "internalType": "bool",
+        "name": "pairCreated",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "createdAt",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "minAgentTokens",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "tokenIds",
+        "type": "uint256[]"
+      }
+    ],
+    "name": "getPersonaBatch",
+    "outputs": [
+      {
+        "internalType": "string[]",
+        "name": "names",
+        "type": "string[]"
+      },
+      {
+        "internalType": "address[]",
+        "name": "erc20Tokens",
+        "type": "address[]"
+      },
+      {
+        "internalType": "bool[]",
+        "name": "graduated",
+        "type": "bool[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getPersonaExtended",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "symbol",
+        "type": "string"
+      },
+      {
+        "internalType": "address",
+        "name": "erc20Token",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "pairToken",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "agentToken",
+        "type": "address"
+      },
+      {
+        "internalType": "bool",
+        "name": "pairCreated",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "createdAt",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalAgentDeposited",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "minAgentTokens",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getPurchaseInfo",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "totalDeposited",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "tokensSold",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "availableTokens",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "tokenIds",
+        "type": "uint256[]"
+      }
+    ],
+    "name": "getPurchaseInfoBatch",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "totalDeposited",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "tokensSold",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "availableTokens",
+        "type": "uint256[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getTokenDistribution",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "liquidityAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "bondingAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amicaAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "agentRewardsAmount",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "getUserAgentDeposit",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "getUserFeeInfo",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "currentBalance",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "snapshotBalance",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "effectiveBalance",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "snapshotBlock",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "isEligible",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "blocksUntilEligible",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "baseFeePercentage",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "effectiveFeePercentage",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "discountPercentage",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "getUserPurchase",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "isPairingTokenEnabled",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amountIn",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "previewSwapWithFee",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "feeAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amountInAfterFee",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "expectedOutput",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]

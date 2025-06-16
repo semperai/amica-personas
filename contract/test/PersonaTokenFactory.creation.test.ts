@@ -9,12 +9,13 @@ import {
     AMICA_DEPOSIT_AMOUNT,
     DEFAULT_GRADUATION_THRESHOLD,
     DEFAULT_MINT_COST,
-    PERSONA_TOKEN_SUPPLY
+    PERSONA_TOKEN_SUPPLY,
+    STANDARD_AMICA_AMOUNT
 } from "./shared/fixtures";
 
 describe("PersonaTokenFactory Creation", function () {
     it("Should create persona with correct parameters", async function () {
-        const { personaFactory, amicaToken, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
+        const { personaFactory, viewer, amicaToken, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
 
         // Approve AMICA
         await amicaToken.connect(user1).approve(
@@ -64,24 +65,24 @@ describe("PersonaTokenFactory Creation", function () {
         const tokenId = parsedEvent!.args.tokenId;
         expect(await personaFactory.ownerOf(tokenId)).to.equal(user1.address);
 
-        // Check persona data
-        const persona = await personaFactory.getPersona(tokenId);
+        // Check persona data using viewer
+        const persona = await viewer.getPersona(tokenId);
         expect(persona.name).to.equal("Cool Persona");
         expect(persona.symbol).to.equal("COOL");
         expect(persona.pairToken).to.equal(await amicaToken.getAddress());
         expect(persona.pairCreated).to.be.false;
         expect(persona.erc20Token).to.not.equal(ethers.ZeroAddress);
 
-        // Check metadata
-        const metadata = await personaFactory.getMetadata(tokenId, ["description", "website"]);
+        // Check metadata using viewer
+        const metadata = await viewer.getMetadata(tokenId, ["description", "website"]);
         expect(metadata[0]).to.equal("A cool AI persona");
         expect(metadata[1]).to.equal("https://coolpersona.ai");
     });
 
     it("Should create ERC20 token with correct supply and name", async function () {
-        const { tokenId, personaFactory } = await loadFixture(createPersonaFixture);
+        const { tokenId, personaFactory, viewer } = await loadFixture(createPersonaFixture);
 
-        const persona = await personaFactory.getPersona(tokenId);
+        const persona = await viewer.getPersona(tokenId);
         const TestERC20 = await ethers.getContractFactory("TestERC20");
         const erc20Token = TestERC20.attach(persona.erc20Token) as TestERC20;
 
@@ -96,9 +97,9 @@ describe("PersonaTokenFactory Creation", function () {
     });
 
     it("Should deposit tokens to AMICA contract", async function () {
-        const { tokenId, personaFactory, amicaToken, user2 } = await loadFixture(createPersonaFixture);
+        const { tokenId, personaFactory, viewer, amicaToken, user2 } = await loadFixture(createPersonaFixture);
 
-        const persona = await personaFactory.getPersona(tokenId);
+        const persona = await viewer.getPersona(tokenId);
         const TestERC20 = await ethers.getContractFactory("TestERC20");
         const erc20Token = TestERC20.attach(persona.erc20Token) as TestERC20;
 
@@ -118,7 +119,7 @@ describe("PersonaTokenFactory Creation", function () {
         );
 
         // Now check deposit happened
-        expect(await amicaToken.depositedBalances(persona.erc20Token)).to.equal(AMICA_DEPOSIT_AMOUNT);
+        expect(await amicaToken.depositedBalances(persona.erc20Token)).to.equal(STANDARD_AMICA_AMOUNT);
     });
 
 
@@ -152,16 +153,17 @@ describe("PersonaTokenFactory Creation", function () {
     });
 
     it("Should reject creation with disabled pairing token", async function () {
-        const { personaFactory, amicaToken, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
+        const { personaFactory, amicaToken, user1, owner } = await loadFixture(deployPersonaTokenFactoryFixture);
 
         // Disable AMICA
-        await personaFactory.disablePairingToken(await amicaToken.getAddress());
+        await personaFactory.connect(owner).disablePairingToken(await amicaToken.getAddress());
 
         await amicaToken.connect(user1).approve(
             await personaFactory.getAddress(),
             DEFAULT_MINT_COST
         );
 
+        // Updated error expectation - using NotAllowed(1) for not enabled
         await expect(
             personaFactory.connect(user1).createPersona(
                 await amicaToken.getAddress(),
@@ -173,7 +175,8 @@ describe("PersonaTokenFactory Creation", function () {
                 ethers.ZeroAddress,
                 0, // No minimum agent tokens
             )
-        ).to.be.revertedWithCustomError(personaFactory, "TokenNotEnabled");
+        ).to.be.revertedWithCustomError(personaFactory, "NotAllowed")
+          .withArgs(1); // 1 = NotEnabled
     });
 
     it("Should reject creation with invalid name length", async function () {
@@ -184,7 +187,7 @@ describe("PersonaTokenFactory Creation", function () {
             DEFAULT_MINT_COST * 2n
         );
 
-        // Empty name
+        // Empty name - using Invalid(3) for invalid name
         await expect(
             personaFactory.connect(user1).createPersona(
                 await amicaToken.getAddress(),
@@ -196,9 +199,10 @@ describe("PersonaTokenFactory Creation", function () {
                 ethers.ZeroAddress,
                 0, // No minimum agent tokens
             )
-        ).to.be.revertedWithCustomError(personaFactory, "InvalidName");
+        ).to.be.revertedWithCustomError(personaFactory, "Invalid")
+          .withArgs(3); // 3 = Name
 
-        // Name too long (33 characters)
+        // Name too long (33 characters) - using Invalid(3)
         await expect(
             personaFactory.connect(user1).createPersona(
                 await amicaToken.getAddress(),
@@ -210,7 +214,8 @@ describe("PersonaTokenFactory Creation", function () {
                 ethers.ZeroAddress,
                 0, // No minimum agent tokens
             )
-        ).to.be.revertedWithCustomError(personaFactory, "InvalidName");
+        ).to.be.revertedWithCustomError(personaFactory, "Invalid")
+          .withArgs(3); // 3 = Name
     });
 
     it("Should reject creation with invalid symbol length", async function () {
@@ -221,7 +226,7 @@ describe("PersonaTokenFactory Creation", function () {
             DEFAULT_MINT_COST * 2n
         );
 
-        // Empty symbol
+        // Empty symbol - using Invalid(4) for invalid symbol
         await expect(
             personaFactory.connect(user1).createPersona(
                 await amicaToken.getAddress(),
@@ -233,9 +238,10 @@ describe("PersonaTokenFactory Creation", function () {
                 ethers.ZeroAddress,
                 0, // No minimum agent tokens
             )
-        ).to.be.revertedWithCustomError(personaFactory, "InvalidSymbol");
+        ).to.be.revertedWithCustomError(personaFactory, "Invalid")
+          .withArgs(4); // 4 = Symbol
 
-        // Symbol too long (11 characters)
+        // Symbol too long (11 characters) - using Invalid(4)
         await expect(
             personaFactory.connect(user1).createPersona(
                 await amicaToken.getAddress(),
@@ -247,7 +253,8 @@ describe("PersonaTokenFactory Creation", function () {
                 ethers.ZeroAddress,
                 0, // No minimum agent tokens
             )
-        ).to.be.revertedWithCustomError(personaFactory, "InvalidSymbol");
+        ).to.be.revertedWithCustomError(personaFactory, "Invalid")
+          .withArgs(4); // 4 = Symbol
     });
 
     it("Should reject creation with mismatched metadata arrays", async function () {
@@ -258,6 +265,7 @@ describe("PersonaTokenFactory Creation", function () {
             DEFAULT_MINT_COST
         );
 
+        // Updated error expectation - using Invalid(5) for invalid metadata
         await expect(
             personaFactory.connect(user1).createPersona(
                 await amicaToken.getAddress(),
@@ -269,7 +277,8 @@ describe("PersonaTokenFactory Creation", function () {
                 ethers.ZeroAddress,
                 0, // No minimum agent tokens
             )
-        ).to.be.revertedWithCustomError(personaFactory, "InvalidMetadata");
+        ).to.be.revertedWithCustomError(personaFactory, "Invalid")
+          .withArgs(5); // 5 = Metadata
     });
 
     it("Should reject creation without payment approval", async function () {
@@ -375,7 +384,7 @@ describe("PersonaTokenFactory Creation", function () {
             DEFAULT_MINT_COST
         );
 
-        // Should fail with proper error
+        // Should fail with proper error - using Insufficient(0) for insufficient pairing token
         await expect(
             personaFactory.connect(user1).createPersona(
                 await amicaToken.getAddress(),
@@ -387,7 +396,8 @@ describe("PersonaTokenFactory Creation", function () {
                 ethers.ZeroAddress,
                 0, // No minimum agent tokens
             )
-        ).to.be.revertedWithCustomError(personaFactory, "InsufficientPairingToken");
+        ).to.be.revertedWithCustomError(personaFactory, "Insufficient")
+          .withArgs(0); // 0 = PairingToken
     });
 
     it("Should handle failed payment transfer gracefully", async function () {
@@ -411,7 +421,7 @@ describe("PersonaTokenFactory Creation", function () {
             DEFAULT_MINT_COST
         );
 
-        // Should fail with proper error
+        // Should fail with proper error - using Insufficient(0)
         await expect(
             personaFactory.connect(user1).createPersona(
                 await amicaToken.getAddress(),
@@ -423,13 +433,14 @@ describe("PersonaTokenFactory Creation", function () {
                 ethers.ZeroAddress,
                 0, // No minimum agent tokens
             )
-        ).to.be.revertedWithCustomError(personaFactory, "InsufficientPairingToken");
+        ).to.be.revertedWithCustomError(personaFactory, "Insufficient")
+          .withArgs(0); // 0 = PairingToken
     });
 
     it("Should verify token suffix is applied correctly", async function () {
-        const { tokenId, personaFactory } = await loadFixture(createPersonaFixture);
+        const { tokenId, personaFactory, viewer } = await loadFixture(createPersonaFixture);
 
-        const persona = await personaFactory.getPersona(tokenId);
+        const persona = await viewer.getPersona(tokenId);
         const TestERC20 = await ethers.getContractFactory("TestERC20");
         const erc20Token = TestERC20.attach(persona.erc20Token) as TestERC20;
 
@@ -439,7 +450,7 @@ describe("PersonaTokenFactory Creation", function () {
     });
 
     it("Should handle multiple personas created by same user", async function () {
-        const { personaFactory, amicaToken, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
+        const { personaFactory, viewer, amicaToken, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
 
         // Approve for multiple creations
         await amicaToken.connect(user1).approve(
@@ -466,10 +477,10 @@ describe("PersonaTokenFactory Creation", function () {
         expect(await personaFactory.ownerOf(1)).to.equal(user1.address);
         expect(await personaFactory.ownerOf(2)).to.equal(user1.address);
 
-        // Check all have different ERC20 tokens
-        const persona0 = await personaFactory.getPersona(0);
-        const persona1 = await personaFactory.getPersona(1);
-        const persona2 = await personaFactory.getPersona(2);
+        // Check all have different ERC20 tokens using viewer
+        const persona0 = await viewer.getPersona(0);
+        const persona1 = await viewer.getPersona(1);
+        const persona2 = await viewer.getPersona(2);
 
         expect(persona0.erc20Token).to.not.equal(persona1.erc20Token);
         expect(persona1.erc20Token).to.not.equal(persona2.erc20Token);
@@ -499,14 +510,14 @@ describe("PersonaTokenFactory Creation", function () {
     });
 
     it("Should handle pairing tokens with different decimals", async function () {
-        const { personaFactory, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
+        const { personaFactory, user1, owner } = await loadFixture(deployPersonaTokenFactoryFixture);
 
         // Deploy a 6-decimal token (like USDC)
         const SixDecimalToken = await ethers.getContractFactory("TestERC20");
         const usdc6 = await SixDecimalToken.deploy("USDC", "USDC", ethers.parseUnits("10000000", 6));
 
         // Configure with appropriate values for 6 decimals
-        await personaFactory.configurePairingToken(
+        await personaFactory.connect(owner).configurePairingToken(
             await usdc6.getAddress(),
             ethers.parseUnits("100", 6),  // 100 USDC mint cost
             ethers.parseUnits("10000", 6), // 10k USDC graduation threshold
@@ -586,7 +597,7 @@ describe("PersonaTokenFactory Creation", function () {
     });
 
     it("Should handle initial buy with maximum metadata", async function () {
-        const { personaFactory, amicaToken, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
+        const { personaFactory, viewer, amicaToken, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
 
         // Create maximum metadata
         const maxKeys = 50; // Reasonable maximum
@@ -614,8 +625,8 @@ describe("PersonaTokenFactory Creation", function () {
         const receipt = await tx.wait();
         expect(receipt?.gasUsed).to.be.gt(0);
 
-        // Verify all metadata was stored
-        const retrievedValues = await personaFactory.getMetadata(0, keys);
+        // Verify all metadata was stored using viewer
+        const retrievedValues = await viewer.getMetadata(0, keys);
         expect(retrievedValues).to.deep.equal(values);
     });
 });

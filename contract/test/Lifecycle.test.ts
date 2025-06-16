@@ -1,7 +1,7 @@
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { TestERC20 } from "../typechain-types";
+import { TestERC20, PersonaFactoryViewer } from "../typechain-types";
 
 describe("PersonaTokenFactory - Complete Lifecycle", function () {
     const DEFAULT_MINT_COST = ethers.parseEther("1000");
@@ -69,6 +69,10 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             { initializer: "initialize" }
         );
 
+        // Deploy viewer contract
+        const PersonaFactoryViewer = await ethers.getContractFactory("PersonaFactoryViewer");
+        const viewer = await PersonaFactoryViewer.deploy(await personaFactory.getAddress()) as PersonaFactoryViewer;
+
         // Deploy additional tokens for pairing
         const usdc = await TestERC20.deploy("USD Coin", "USDC", ethers.parseEther("100000000"));
         const weth = await TestERC20.deploy("Wrapped Ether", "WETH", ethers.parseEther("1000000"));
@@ -103,6 +107,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
         return {
             amicaToken,
             personaFactory,
+            viewer,
             mockFactory,
             mockRouter,
             usdc,
@@ -120,7 +125,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
 
     describe("AMICA Pairing Lifecycle", function () {
         it("Should complete full lifecycle with AMICA pairing", async function () {
-            const { amicaToken, personaFactory, creator, buyer1, buyer2, buyer3 } =
+            const { amicaToken, personaFactory, viewer, creator, buyer1, buyer2, buyer3 } =
                 await loadFixture(deployFullSystemFixture);
 
             console.log("\n=== AMICA Persona Lifecycle ===");
@@ -162,7 +167,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
 
             console.log(`✓ Persona created with tokenId: ${tokenId}`);
 
-            const persona = await personaFactory.getPersona(tokenId);
+            const persona = await viewer.getPersona(tokenId);
             console.log(`✓ ERC20 token deployed at: ${persona.erc20Token}`);
 
             // Verify NO AMICA deposit yet (happens on graduation)
@@ -254,7 +259,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             console.log(`✓ Creator received only trading fees (${ethers.formatEther(graduationFees)} AMICA), no graduation reward`);
 
             // 5. Verify post-graduation state
-            const personaAfter = await personaFactory.getPersona(tokenId);
+            const personaAfter = await viewer.getPersona(tokenId);
             expect(personaAfter.pairCreated).to.be.true;
 
             const availableAfter = await personaFactory.getAvailableTokens(tokenId);
@@ -266,7 +271,9 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 personaFactory.connect(buyer1).swapExactTokensForTokens(
                     tokenId, ethers.parseEther("1000"), 0, buyer1.address, deadline()
                 )
-            ).to.be.revertedWithCustomError(personaFactory, "TradingOnUniswap");
+            ).to.be.revertedWithCustomError(personaFactory, "NotAllowed")
+             .withArgs(4); // TradingOnUniswap = 4
+
             console.log("✓ Further bonding curve purchases blocked");
 
             // 6. Summary
@@ -282,7 +289,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
 
     describe("USDC Pairing Lifecycle", function () {
         it("Should complete full lifecycle with USDC pairing", async function () {
-            const { amicaToken, personaFactory, usdc, creator, buyer1, buyer2 } =
+            const { amicaToken, personaFactory, viewer, usdc, creator, buyer1, buyer2 } =
                 await loadFixture(deployFullSystemFixture);
 
             console.log("\n=== USDC Persona Lifecycle ===");
@@ -308,7 +315,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             );
 
             const tokenId = 0;
-            const persona = await personaFactory.getPersona(tokenId);
+            const persona = await viewer.getPersona(tokenId);
             console.log(`✓ Persona created with USDC pairing`);
 
             // Creator should have spent 100 USDC on mint
@@ -400,7 +407,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
 
     describe("WETH Pairing Lifecycle", function () {
         it("Should complete full lifecycle with WETH pairing", async function () {
-            const { amicaToken, personaFactory, weth, creator, buyer1, buyer2 } =
+            const { amicaToken, personaFactory, viewer, weth, creator, buyer1, buyer2 } =
                 await loadFixture(deployFullSystemFixture);
 
             console.log("\n=== WETH Persona Lifecycle ===");
@@ -426,7 +433,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             );
 
             const tokenId = 0;
-            const persona = await personaFactory.getPersona(tokenId);
+            const persona = await viewer.getPersona(tokenId);
             console.log(`✓ Persona created with WETH pairing`);
 
             // Creator should have spent 0.1 WETH on mint
@@ -512,7 +519,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             console.log(`✓ Creator received ${ethers.formatEther(totalCreatorFees)} WETH in trading fees`);
 
             // 4. Verify post-graduation state
-            const personaAfter = await personaFactory.getPersona(tokenId);
+            const personaAfter = await viewer.getPersona(tokenId);
             expect(personaAfter.pairCreated).to.be.true;
 
             // No tokens available after graduation
@@ -552,7 +559,8 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 personaFactory.connect(buyer2).swapExactTokensForTokens(
                     tokenId, ethers.parseEther("0.1"), 0, buyer2.address, deadline()
                 )
-            ).to.be.revertedWithCustomError(personaFactory, "TradingOnUniswap");
+            ).to.be.revertedWithCustomError(personaFactory, "NotAllowed")
+             .withArgs(4); // TradingOnUniswap = 4
             console.log("✓ Further bonding curve purchases blocked after graduation");
 
             // Summary
@@ -567,7 +575,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
 
     describe("AMICA Burn and Claim Integration", function () {
         it("Should allow AMICA holders to claim persona tokens", async function () {
-            const { amicaToken, personaFactory, usdc, creator, buyer1, owner } =
+            const { amicaToken, personaFactory, viewer, usdc, creator, buyer1, owner } =
                 await loadFixture(deployFullSystemFixture);
 
             // Create multiple personas with different pairings
@@ -598,8 +606,8 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 0, // No minimum agent tokens
             );
 
-            const persona1 = await personaFactory.getPersona(0);
-            const persona2 = await personaFactory.getPersona(1);
+            const persona1 = await viewer.getPersona(0);
+            const persona2 = await viewer.getPersona(1);
 
             // IMPORTANT: Need to graduate both personas first to trigger AMICA deposits
             const deadline = () => Math.floor(Date.now() / 1000) + 3600;
@@ -678,7 +686,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
 
     describe("Initial Buy Feature", function () {
         it("Should allow creator to buy tokens at launch to prevent sniping", async function () {
-            const { amicaToken, personaFactory, creator, buyer1 } =
+            const { amicaToken, personaFactory, viewer, creator, buyer1 } =
                 await loadFixture(deployFullSystemFixture);
 
             console.log("\n=== Initial Buy Feature ===");
@@ -708,7 +716,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             await expect(tx).to.emit(personaFactory, "TokensPurchased");
 
             const tokenId = 0;
-            const persona = await personaFactory.getPersona(tokenId);
+            const persona = await viewer.getPersona(tokenId);
 
             // Get the deployed token contract
             const TestERC20 = await ethers.getContractFactory("TestERC20");

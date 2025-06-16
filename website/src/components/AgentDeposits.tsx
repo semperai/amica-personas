@@ -148,7 +148,7 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
 
   // Calculate expected rewards
   const { data: rewardCalculation } = useReadContract({
-    address: addresses?.personaFactory as `0x${string}`,
+    address: addresses?.personaFactoryViewer as `0x${string}`,
     abi: FACTORY_ABI,
     functionName: 'calculateAgentRewards',
     args: address ? [BigInt(tokenId), address] : undefined,

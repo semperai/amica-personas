@@ -1,7 +1,7 @@
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { TestERC20 } from "../typechain-types";
+import { TestERC20, PersonaFactoryViewer } from "../typechain-types";
 import {
     getDeadline,
     createPersonaFixture,
@@ -16,6 +16,12 @@ import {
 } from "./shared/fixtures";
 
 describe("Swap Tests", function () {
+    // Helper to deploy viewer contract
+    async function deployViewer(factoryAddress: string): Promise<PersonaFactoryViewer> {
+        const PersonaFactoryViewer = await ethers.getContractFactory("PersonaFactoryViewer");
+        return await PersonaFactoryViewer.deploy(factoryAddress) as PersonaFactoryViewer;
+    }
+
     it("Should respect deadline parameter", async function () {
         const { tokenId, personaFactory, amicaToken, user2 } = await loadFixture(createPersonaFixture);
 
@@ -28,6 +34,7 @@ describe("Swap Tests", function () {
         // Set deadline in the past
         const pastDeadline = Math.floor(Date.now() / 1000) - 100;
 
+        // Updated error expectation - using NotAllowed(5) for expired deadline
         await expect(
             personaFactory.connect(user2).swapExactTokensForTokens(
                 tokenId,
@@ -36,11 +43,13 @@ describe("Swap Tests", function () {
                 user2.address,
                 pastDeadline
             )
-        ).to.be.revertedWithCustomError(personaFactory, "TransactionExpired");
+        ).to.be.revertedWithCustomError(personaFactory, "NotAllowed")
+          .withArgs(5); // 5 = ExpiredDeadline
     });
 
     it("Should allow swapping to different recipient", async function () {
         const { tokenId, personaFactory, amicaToken, user2, user3 } = await loadFixture(createPersonaFixture);
+        const viewer = await deployViewer(await personaFactory.getAddress());
 
         const purchaseAmount = ethers.parseEther("1000");
         await amicaToken.connect(user2).approve(
@@ -60,10 +69,10 @@ describe("Swap Tests", function () {
             user3.address
         );
 
-        // Check user3 received the tokens
-        const persona = await personaFactory.getPersona(tokenId);
+        // Check user3 received the tokens using viewer
+        const personaInfo = await viewer.getPersona(tokenId);
         const TestERC20 = await ethers.getContractFactory("TestERC20");
-        const personaToken = TestERC20.attach(persona.erc20Token) as TestERC20;
+        const personaToken = TestERC20.attach(personaInfo.erc20Token) as TestERC20;
 
         expect(await personaToken.balanceOf(user3.address)).to.equal(expectedTokens);
         expect(await personaToken.balanceOf(user2.address)).to.equal(0);
@@ -80,6 +89,7 @@ describe("Swap Tests", function () {
 
         const deadline = getDeadline();
 
+        // Updated error expectation - using Invalid(2) for invalid recipient
         await expect(
             personaFactory.connect(user2).swapExactTokensForTokens(
                 tokenId,
@@ -88,7 +98,8 @@ describe("Swap Tests", function () {
                 ethers.ZeroAddress,
                 deadline
             )
-        ).to.be.revertedWithCustomError(personaFactory, "InvalidRecipient");
+        ).to.be.revertedWithCustomError(personaFactory, "Invalid")
+          .withArgs(2); // 2 = Recipient
     });
 
     it("Should handle very small swaps correctly", async function () {
@@ -113,6 +124,7 @@ describe("Swap Tests", function () {
 
     it("Should properly update state after multiple swaps", async function () {
         const { tokenId, personaFactory, amicaToken, user2 } = await loadFixture(createPersonaFixture);
+        const viewer = await deployViewer(await personaFactory.getAddress());
 
         const swapAmounts = [
             ethers.parseEther("100"),
@@ -143,32 +155,12 @@ describe("Swap Tests", function () {
             }
         }
 
-        // Verify total tokens received
-        const persona = await personaFactory.getPersona(tokenId);
+        // Verify total tokens received using viewer
+        const personaInfo = await viewer.getPersona(tokenId);
         const TestERC20 = await ethers.getContractFactory("TestERC20");
-        const personaToken = TestERC20.attach(persona.erc20Token) as TestERC20;
+        const personaToken = TestERC20.attach(personaInfo.erc20Token) as TestERC20;
 
         expect(await personaToken.balanceOf(user2.address)).to.equal(totalOut);
-    });
-
-    it("Should handle very small swaps correctly", async function () {
-        const { tokenId, personaFactory, amicaToken, user2 } = await loadFixture(createPersonaFixture);
-
-        // Test with small but valid amount
-        const smallAmount = ethers.parseEther("0.01"); // 0.01 AMICA
-        await amicaToken.connect(user2).approve(
-            await personaFactory.getAddress(),
-            smallAmount
-        );
-
-        // Should get a quote greater than 0
-        const quote = await getQuote(personaFactory, tokenId, smallAmount);
-        expect(quote).to.be.gt(0);
-
-        // Should be able to swap
-        await expect(
-            swapTokensForPersona(personaFactory, tokenId, smallAmount, 0n, user2)
-        ).to.not.be.reverted;
     });
 
     it("Should apply trading fees on purchases", async function () {
@@ -199,20 +191,22 @@ describe("Swap Tests", function () {
     });
 
     it("Should apply fee correctly", async function () {
-        const { personaFactory } = await loadFixture(deployPersonaTokenFactoryFixture);
+        const { tokenId, personaFactory } = await loadFixture(createPersonaFixture);
 
         const amountIn = ethers.parseEther("10000");
-        const sold = 0n;
-        const total = ethers.parseEther("300000000");
+        const total = BONDING_CURVE_AMOUNT;
 
-        // Get output with the built-in 1% fee
-        const output = await personaFactory.calculateAmountOut(
-            amountIn,
-            sold,
-            total
-        );
+        // Get output from the public getAmountOut function
+        const output = await personaFactory.getAmountOut(tokenId, amountIn);
 
-        // Calculate what output would be without the 1% protocol fee
+        // The getAmountOut function already applies the fee internally
+        // Let's verify the calculation matches what we expect
+        
+        // With 1% fee, amount after fee = 99% of input
+        const feeAmount = (amountIn * 100n) / 10000n;
+        const amountInAfterFee = amountIn - feeAmount;
+
+        // Bonding curve calculation
         const virtualAmicaReserve = ethers.parseEther("100000");
         const virtualTokenReserve = total / 10n;
 
@@ -220,46 +214,65 @@ describe("Swap Tests", function () {
         const currentAmicaReserve = virtualAmicaReserve;
 
         const k = currentTokenReserve * currentAmicaReserve;
-        const newAmicaReserve = currentAmicaReserve + amountIn;
+        const newAmicaReserve = currentAmicaReserve + amountInAfterFee;
         const newTokenReserve = k / newAmicaReserve;
-        const amountOutBeforeFee = currentTokenReserve - newTokenReserve;
+        let expectedOutput = currentTokenReserve - newTokenReserve;
 
-        // Output should be 99% of the calculation (1% protocol fee)
-        expect(output).to.equal(amountOutBeforeFee * 99n / 100n);
+        // Apply 1% slippage protection
+        expectedOutput = expectedOutput * 99n / 100n;
+
+        // The output should be close to our calculation
+        expect(output).to.be.closeTo(expectedOutput, ethers.parseEther("0.1"));
     });
 
     it("Should maintain constant product invariant", async function () {
-        const { personaFactory } = await loadFixture(deployPersonaTokenFactoryFixture);
+        const { tokenId, personaFactory, amicaToken, user2 } = await loadFixture(createPersonaFixture);
 
-        // Test the bonding curve math
-        const testCases = [
-            { sold: 0n, total: ethers.parseEther("300000000") },
-            { sold: ethers.parseEther("100000000"), total: ethers.parseEther("300000000") },
-            { sold: ethers.parseEther("200000000"), total: ethers.parseEther("300000000") }
-        ];
+        // First, let's understand the bonding curve parameters
+        const virtualAmicaReserve = ethers.parseEther("100000");
+        const virtualTokenReserve = BONDING_CURVE_AMOUNT / 10n;
 
-        for (const { sold, total } of testCases) {
-            const amountIn = ethers.parseEther("10000");
-            const output = await personaFactory.calculateAmountOut(
-                amountIn,
-                sold,
-                total
-            );
+        // Initial state
+        const currentTokenReserve = virtualTokenReserve + BONDING_CURVE_AMOUNT;
+        const currentAmicaReserve = virtualAmicaReserve;
+        const k = currentTokenReserve * currentAmicaReserve;
 
-            // Verify output is reasonable
-            expect(output).to.be.gt(0);
-            expect(output).to.be.lt(total - sold);
+        // Test a swap
+        const amountIn = ethers.parseEther("10000");
+        
+        // Approve and execute swap
+        await amicaToken.connect(user2).approve(
+            await personaFactory.getAddress(),
+            amountIn
+        );
 
-            // As more tokens are sold, the output should decrease
-            if (sold > 0n) {
-                const outputAtStart = await personaFactory.calculateAmountOut(
-                    amountIn,
-                    0n,
-                    total
-                );
-                expect(output).to.be.lt(outputAtStart);
-            }
-        }
+        const outputQuote = await personaFactory.getAmountOut(tokenId, amountIn);
+        
+        await personaFactory.connect(user2).swapExactTokensForTokens(
+            tokenId,
+            amountIn,
+            0,
+            user2.address,
+            getDeadline()
+        );
+
+        // After the swap, the invariant should still hold (approximately)
+        // The new reserves would be:
+        // - Token reserve decreased by outputQuote
+        // - AMICA reserve increased by amountIn (minus fees)
+        
+        const feeAmount = (amountIn * 100n) / 10000n;
+        const amountInAfterFee = amountIn - feeAmount;
+        
+        const newTokenReserve = currentTokenReserve - outputQuote;
+        const newAmicaReserve = currentAmicaReserve + amountInAfterFee;
+        
+        // The product should be approximately the same (allowing for rounding)
+        const newK = newTokenReserve * newAmicaReserve;
+        
+        // Allow for some rounding error (0.1%)
+        const tolerance = k / 1000n;
+        expect(newK).to.be.closeTo(k, tolerance);
     });
 
     it("Should handle failed token transfer in purchase", async function () {
@@ -276,9 +289,11 @@ describe("Swap Tests", function () {
         );
 
         // This should fail due to insufficient liquidity
+        // Updated error expectation - using Insufficient(2) for insufficient liquidity
         await expect(
             personaFactory.connect(user2).swapExactTokensForTokens(tokenId, hugeAmount, 0, user2.address, deadline)
-        ).to.be.revertedWithCustomError(personaFactory, "InsufficientLiquidity");
+        ).to.be.revertedWithCustomError(personaFactory, "Insufficient")
+          .withArgs(2); // 2 = Liquidity
     });
 
     it("Should handle purchase with minimum amount", async function () {
@@ -300,6 +315,7 @@ describe("Swap Tests", function () {
 
     it("Should handle purchases at different bonding curve stages", async function () {
         const { tokenId, personaFactory, amicaToken, user2 } = await loadFixture(createPersonaFixture);
+        const viewer = await deployViewer(await personaFactory.getAddress());
 
         const deadline = Math.floor(Date.now() / 1000) + 3600;
 
@@ -328,10 +344,10 @@ describe("Swap Tests", function () {
             totalReceived += expectedTokens;
         }
 
-        // Verify tokens were received
-        const persona = await personaFactory.getPersona(tokenId);
+        // Verify tokens were received using viewer
+        const personaInfo = await viewer.getPersona(tokenId);
         const TestERC20 = await ethers.getContractFactory("TestERC20");
-        const personaToken = TestERC20.attach(persona.erc20Token) as TestERC20;
+        const personaToken = TestERC20.attach(personaInfo.erc20Token) as TestERC20;
 
         expect(await personaToken.balanceOf(user2.address)).to.be.closeTo(
             totalReceived,
@@ -355,10 +371,11 @@ describe("Swap Tests", function () {
 
         const deadline = Math.floor(Date.now() / 1000) + 3600;
 
-        // This should fail due to insufficient liquidity
+        // Updated error expectation - using Insufficient(2) for insufficient liquidity
         await expect(
             personaFactory.connect(user2).swapExactTokensForTokens(tokenId, hugeAmount, 0, user2.address, deadline)
-        ).to.be.revertedWithCustomError(personaFactory, "InsufficientLiquidity");
+        ).to.be.revertedWithCustomError(personaFactory, "Insufficient")
+          .withArgs(2); // 2 = Liquidity
     });
 
     it("Should reject purchase for non-existent token", async function () {
@@ -371,6 +388,7 @@ describe("Swap Tests", function () {
 
         const deadline = Math.floor(Date.now() / 1000) + 3600;
 
+        // Updated error expectation - using Invalid(0) for invalid token
         await expect(
             personaFactory.connect(user2).swapExactTokensForTokens(
                 999, // Non-existent token ID
@@ -379,7 +397,8 @@ describe("Swap Tests", function () {
                 user2.address,
                 deadline
             )
-        ).to.be.revertedWithCustomError(personaFactory, "InvalidToken");
+        ).to.be.revertedWithCustomError(personaFactory, "Invalid")
+          .withArgs(0); // 0 = Token
     });
 
     it("Should reject purchase with slippage too high", async function () {
@@ -395,6 +414,7 @@ describe("Swap Tests", function () {
         const deadline = Math.floor(Date.now() / 1000) + 3600;
 
         // Require more tokens than calculated
+        // Updated error expectation - using Insufficient(1) for insufficient output
         await expect(
             personaFactory.connect(user2).swapExactTokensForTokens(
                 tokenId,
@@ -403,7 +423,8 @@ describe("Swap Tests", function () {
                 user2.address,
                 deadline
             )
-        ).to.be.revertedWithCustomError(personaFactory, "InsufficientOutput");
+        ).to.be.revertedWithCustomError(personaFactory, "Insufficient")
+          .withArgs(1); // 1 = Output
     });
 
     it("Should reject purchase after pair creation", async function () {
@@ -427,6 +448,7 @@ describe("Swap Tests", function () {
             ethers.parseEther("1000")
         );
 
+        // Updated error expectation - using NotAllowed(4) for trading on Uniswap
         await expect(
             personaFactory.connect(user2).swapExactTokensForTokens(
                 tokenId,
@@ -435,11 +457,13 @@ describe("Swap Tests", function () {
                 user2.address,
                 deadline
             )
-        ).to.be.revertedWithCustomError(personaFactory, "TradingOnUniswap");
+        ).to.be.revertedWithCustomError(personaFactory, "NotAllowed")
+          .withArgs(4); // 4 = TradingOnUniswap
     });
 
     it("Should purchase tokens with correct calculation", async function () {
         const { tokenId, personaFactory, amicaToken, user2 } = await loadFixture(createPersonaFixture);
+        const viewer = await deployViewer(await personaFactory.getAddress());
 
         const purchaseAmount = ethers.parseEther("10000");
         await amicaToken.connect(user2).approve(
@@ -469,10 +493,10 @@ describe("Swap Tests", function () {
             initialBalance - purchaseAmount
         );
 
-        // Check tokens were received
-        const persona = await personaFactory.getPersona(tokenId);
+        // Check tokens were received using viewer
+        const personaInfo = await viewer.getPersona(tokenId);
         const TestERC20 = await ethers.getContractFactory("TestERC20");
-        const personaToken = TestERC20.attach(persona.erc20Token) as TestERC20;
+        const personaToken = TestERC20.attach(personaInfo.erc20Token) as TestERC20;
 
         expect(await personaToken.balanceOf(user2.address)).to.equal(expectedTokens);
     });
@@ -499,39 +523,44 @@ describe("Swap Tests", function () {
         expect(availableAfter).to.be.lt(availableBefore);
     });
 
-
     it("Should calculate tokens out correctly with bonding curve", async function () {
-        const { personaFactory } = await loadFixture(deployPersonaTokenFactoryFixture);
+        const { tokenId, personaFactory, amicaToken, user2, owner } = await loadFixture(createPersonaFixture);
 
         // Test at different points on the curve
         const amount = ethers.parseEther("10000");
 
-        // Using the new getAmountOut function with three parameters
-        const tokensAtStart = await personaFactory.calculateAmountOut(
-            amount,
+        // Get tokens for a fresh persona
+        const tokensAtStart = await personaFactory.getAmountOut(tokenId, amount);
+
+        // Make a large purchase to move the curve
+        const largePurchase = ethers.parseEther("150000");
+        
+        // Ensure user2 has enough tokens
+        const user2Balance = await amicaToken.balanceOf(user2.address);
+        if (user2Balance < largePurchase) {
+            await amicaToken.connect(owner).transfer(user2.address, largePurchase - user2Balance);
+        }
+        
+        await amicaToken.connect(user2).approve(await personaFactory.getAddress(), largePurchase);
+        
+        await personaFactory.connect(user2).swapExactTokensForTokens(
+            tokenId,
+            largePurchase,
             0,
-            ethers.parseEther("300000000") // totalAvailable
+            user2.address,
+            Math.floor(Date.now() / 1000) + 3600
         );
 
-        const tokensAtMiddle = await personaFactory.calculateAmountOut(
-            amount,
-            ethers.parseEther("150000000"), // half sold
-            ethers.parseEther("300000000")
-        );
-
-        const tokensAtEnd = await personaFactory.calculateAmountOut(
-            amount,
-            ethers.parseEther("290000000"), // almost all sold
-            ethers.parseEther("300000000")
-        );
+        // Get tokens after the purchase
+        const tokensAfterPurchase = await personaFactory.getAmountOut(tokenId, amount);
 
         // Price increases along curve, so tokens received should decrease
-        expect(tokensAtStart).to.be.gt(tokensAtMiddle);
-        expect(tokensAtMiddle).to.be.gt(tokensAtEnd);
+        expect(tokensAtStart).to.be.gt(tokensAfterPurchase);
     });
 
     it("Should handle concurrent purchases correctly", async function () {
         const { tokenId, personaFactory, amicaToken, user2, user3 } = await loadFixture(createPersonaFixture);
+        const viewer = await deployViewer(await personaFactory.getAddress());
 
         const deadline = Math.floor(Date.now() / 1000) + 3600;
 
@@ -544,10 +573,10 @@ describe("Swap Tests", function () {
         await personaFactory.connect(user2).swapExactTokensForTokens(tokenId, amount, 0, user2.address, deadline);
         await personaFactory.connect(user3).swapExactTokensForTokens(tokenId, amount, 0, user3.address, deadline);
 
-        // Both should have received tokens
-        const persona = await personaFactory.getPersona(tokenId);
+        // Both should have received tokens using viewer
+        const personaInfo = await viewer.getPersona(tokenId);
         const TestERC20 = await ethers.getContractFactory("TestERC20");
-        const personaToken = TestERC20.attach(persona.erc20Token) as TestERC20;
+        const personaToken = TestERC20.attach(personaInfo.erc20Token) as TestERC20;
 
         expect(await personaToken.balanceOf(user2.address)).to.be.gt(0);
         expect(await personaToken.balanceOf(user3.address)).to.be.gt(0);

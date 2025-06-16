@@ -3,7 +3,9 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import {
     deployPersonaTokenFactoryFixture,
+    deployViewer,
 } from "./shared/fixtures";
+import { PersonaFactoryViewer } from "../typechain-types";
 
 describe("PersonaTokenFactory Pause/Unpause", function () {
     describe("Pause Functionality", function () {
@@ -278,7 +280,7 @@ describe("PersonaTokenFactory Pause/Unpause", function () {
         });
 
         it("Should not affect view functions when paused", async function () {
-            const { personaFactory, amicaToken, owner, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
+            const { personaFactory, viewer, amicaToken, owner, user1 } = await loadFixture(deployPersonaTokenFactoryFixture);
 
             // Create a persona first
             const mintCost = ethers.parseEther("1000");
@@ -316,21 +318,25 @@ describe("PersonaTokenFactory Pause/Unpause", function () {
             await personaFactory.connect(owner).pause();
 
             // View functions should still work
-            const persona = await personaFactory.getPersona(tokenId);
+            // Use viewer for getPersona
+            const persona = await viewer.getPersona(tokenId);
             expect(persona.name).to.equal("Test Persona");
 
-            const metadata = await personaFactory.getMetadata(tokenId, ["key1"]);
+            // Use viewer for getMetadata
+            const metadata = await viewer.getMetadata(tokenId, ["key1"]);
             expect(metadata[0]).to.equal("value1");
 
+            // getAvailableTokens is still on the factory
             const availableTokens = await personaFactory.getAvailableTokens(tokenId);
             expect(availableTokens).to.be.gt(0);
 
+            // pairingConfigs is still on the factory
             const config = await personaFactory.pairingConfigs(await amicaToken.getAddress());
             expect(config.enabled).to.be.true;
         });
 
         it("Should not allow withdrawTokens when paused", async function () {
-            const { personaFactory, amicaToken, owner, user1, user2 } = await loadFixture(deployPersonaTokenFactoryFixture);
+            const { personaFactory, viewer, amicaToken, owner, user1, user2 } = await loadFixture(deployPersonaTokenFactoryFixture);
 
             // Create persona and make a small purchase first
             const mintCost = ethers.parseEther("1000");
@@ -389,8 +395,8 @@ describe("PersonaTokenFactory Pause/Unpause", function () {
                 Math.floor(Date.now() / 1000) + 3600
             );
 
-            // Verify pair was created
-            const persona = await personaFactory.getPersona(tokenId);
+            // Verify pair was created using viewer
+            const persona = await viewer.getPersona(tokenId);
             expect(persona.pairCreated).to.be.true;
 
             // Pause the contract

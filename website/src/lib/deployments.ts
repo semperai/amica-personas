@@ -9,6 +9,7 @@ export interface DeploymentAddresses {
   amicaTokenImpl: string;
   personaFactory: string;
   personaFactoryImpl: string;
+  personaFactoryViewer: string; // Add this
   proxyAdmin: string;
   bridgeWrapper?: string;
   bridgeWrapperImpl?: string;
