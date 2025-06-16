@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+// src/components/MyPersonas.tsx
+import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@apollo/client';
 import { formatEther } from 'viem';
 import { GET_USER_PORTFOLIO } from '@/lib/graphql/client';
+import Image from 'next/image';
 
 interface MyPersonasProps {
   address: string;
@@ -81,13 +83,16 @@ function PersonaCard({ persona }: PersonaCardProps) {
 
       {/* Background Image */}
       <div className="absolute inset-0">
-        <img
+        <Image
           src={getPersonaImage(persona.id)}
           alt={persona.name}
-          className={`w-full h-full object-cover transition-all duration-700 ${
+          fill
+          className={`object-cover transition-all duration-700 ${
             imageLoaded ? 'opacity-100' : 'opacity-0'
           } ${isHovered ? 'scale-110' : 'scale-100'}`}
           onLoad={() => setImageLoaded(true)}
+          sizes="(max-width: 768px) 50vw, 33vw"
+          priority={false}
         />
       </div>
 

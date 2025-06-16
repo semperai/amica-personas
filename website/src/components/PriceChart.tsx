@@ -1,5 +1,5 @@
 // src/components/PriceChart.tsx
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useQuery, gql } from '@apollo/client';
 import { formatEther } from 'viem';
@@ -16,12 +16,11 @@ interface ChartData {
   uniqueTraders?: number;
 }
 
-interface DailyStats {
+interface Trade {
   id: string;
-  date: string;
-  trades: number;
-  volume: string;
-  uniqueTraders: number;
+  timestamp: string;
+  amountIn: string;
+  trader: string;
 }
 
 // GraphQL query for daily stats
@@ -69,7 +68,7 @@ const generateMockChartData = (days: number): ChartData[] => {
 };
 
 // Helper to aggregate trades into daily stats if PersonaDailyStats is empty
-const aggregateTradesIntoDailyStats = (trades: any[], days: number): ChartData[] => {
+const aggregateTradesIntoDailyStats = (trades: Trade[], days: number): ChartData[] => {
   const dailyData: Record<string, { volume: bigint; trades: number; traders: Set<string> }> = {};
   
   // Initialize days
@@ -236,8 +235,8 @@ export default function PriceChart({ chainId, tokenId }: PriceChartProps) {
                 borderRadius: '8px'
               }}
               labelStyle={{ color: 'rgba(255,255,255,0.7)' }}
-              formatter={(value: any, name: string) => {
-                if (name === 'Volume (ETH)') return `${value.toFixed(4)} ETH`;
+              formatter={(value: number | string, name: string) => {
+                if (name === 'Volume (ETH)' && typeof value === 'number') return `${value.toFixed(4)} ETH`;
                 return value;
               }}
             />

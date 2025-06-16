@@ -1,23 +1,13 @@
 // src/components/AgentDeposits.tsx
 import { useState, useEffect } from 'react';
 import { useAccount, useReadContract, useWriteContract, useBalance, useWaitForTransactionReceipt } from 'wagmi';
-import { parseEther, formatEther, parseUnits } from 'viem';
+import { formatEther, formatUnits, parseUnits } from 'viem';
 import { useQuery, gql } from '@apollo/client';
 import { FACTORY_ABI, getAddressesForChain } from '../lib/contracts';
 
 interface AgentDepositsProps {
   chainId: string;
   tokenId: string;
-}
-
-interface PersonaData {
-  name: string;
-  symbol: string;
-  erc20Token: string;
-  pairToken: string;
-  pairCreated: boolean;
-  createdAt: bigint;
-  minAgentTokens: bigint;
 }
 
 interface AgentDeposit {

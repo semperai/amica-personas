@@ -1,7 +1,39 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery } from '@apollo/client';
+import { GET_USER_PORTFOLIO } from '@/lib/graphql/client';
 
-function PortfolioTokens({ address }: { address: string }) {
+interface TokenBalance {
+  symbol: string;
+  name: string;
+  balance: string;
+  valueUSD: number;
+  chainId: string;
+  address: string;
+}
+
+interface CreatedPersona {
+  id: string;
+  name: string;
+  symbol: string;
+  pairCreated: boolean;
+  erc20Token: string;
+}
+
+// Helper function for chain extraction
+const extractChainFromId = (id: string) => {
+  const [chainId] = id.split('-');
+  const chainNames: Record<string, string> = {
+    '1': 'ethereum',
+    '8453': 'base',
+    '42161': 'arbitrum'
+  };
+  return {
+    id: chainId,
+    name: chainNames[chainId] || 'unknown'
+  };
+};
+
+export function PortfolioTokens({ address }: { address: string }) {
   const [tokens, setTokens] = useState<TokenBalance[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -18,9 +50,9 @@ function PortfolioTokens({ address }: { address: string }) {
         // For now, we'll create mock data based on created personas
         if (portfolioData?.createdPersonas) {
           const mockTokens: TokenBalance[] = portfolioData.createdPersonas
-            .filter((p: any) => p.pairCreated)
+            .filter((p: CreatedPersona) => p.pairCreated)
             .slice(0, 3)
-            .map((persona: any, index: number) => {
+            .map((persona: CreatedPersona) => {
               const chain = extractChainFromId(persona.id);
               return {
                 symbol: persona.symbol,
@@ -103,17 +135,3 @@ function PortfolioTokens({ address }: { address: string }) {
     </div>
   );
 }
-
-// Helper function for chain extraction
-const extractChainFromId = (id: string) => {
-  const [chainId] = id.split('-');
-  const chainNames: Record<string, string> = {
-    '1': 'ethereum',
-    '8453': 'base',
-    '42161': 'arbitrum'
-  };
-  return {
-    id: chainId,
-    name: chainNames[chainId] || 'unknown'
-  };
-};

@@ -1,6 +1,5 @@
 // src/pages/persona/[chainId]/[tokenId].tsx
 import { useRouter } from 'next/router';
-import { useState, useEffect } from 'react';
 import { NextPage } from 'next';
 import { formatEther } from 'viem';
 import { useQuery } from '@apollo/client';

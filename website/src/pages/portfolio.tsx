@@ -1,3 +1,4 @@
+// src/pages/portfolio.tsx
 import Layout from '@/components/Layout';
 import { useAccount, useBalance } from 'wagmi';
 import { MyPersonas } from '@/components/MyPersonas';
@@ -7,8 +8,6 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { getAddressesForChain } from '@/lib/contracts';
 import { formatEther } from 'viem';
 import { useState, useEffect } from 'react';
-import { useQuery } from '@apollo/client';
-import { GET_USER_PORTFOLIO } from '@/lib/graphql/client';
 
 interface TokenBalance {
   symbol: string;

@@ -71,7 +71,7 @@ function extractChainFromId(id: string): PersonaChain {
 }
 
 // Transform Subsquid persona to our API format
-function transformPersona(subsquidPersona: any): Persona {
+function transformPersona(subsquidPersona: PersonasQueryResult['personas'][0]): Persona {
   const chain = extractChainFromId(subsquidPersona.id);
   
   return {
@@ -234,7 +234,7 @@ export async function fetchPersonaDetail(chainId: string, tokenId: string): Prom
 }
 
 // Keep other functions as they were (they'll be updated in subsequent steps)
-export async function fetchVolumeChart(chainId: string, tokenId: string, days = 30): Promise<any[]> {
+export async function fetchVolumeChart(chainId: string, tokenId: string, days = 30): Promise<ChartData[]> {
   if (USE_MOCK_DATA) {
     return mockVolumeChart.slice(-days);
   }
@@ -250,7 +250,7 @@ export async function fetchVolumeChart(chainId: string, tokenId: string, days = 
     });
 
     // Transform the data to match expected format
-    return data.personaDailyStats.map((stat: any) => ({
+    return data.personaDailyStats.map((stat: DailyStat) => ({
       date: stat.date,
       volume: stat.volume,
       trades: stat.trades,
@@ -287,7 +287,7 @@ export async function fetchTrending(): Promise<Persona[]> {
   }
 }
 
-export async function fetchUserPortfolio(address: string): Promise<any> {
+export async function fetchUserPortfolio(address: string): Promise<UserPortfolio> {
   if (USE_MOCK_DATA) {
     const userPersonas = mockPersonas
       .filter(p => p.creator?.toLowerCase() === address.toLowerCase())
@@ -310,7 +310,7 @@ export async function fetchUserPortfolio(address: string): Promise<any> {
   };
 }
 
-export async function fetchPersonaTrades(chainId: string, tokenId: string, limit = 10): Promise<any> {
+export async function fetchPersonaTrades(chainId: string, tokenId: string, limit = 10): Promise<TradesResponse> {
   if (USE_MOCK_DATA) {
     const personaId = `${chainId}-${tokenId}`;
     const trades = mockTrades.filter(t =>
@@ -336,7 +336,7 @@ export async function fetchPersonaTrades(chainId: string, tokenId: string, limit
 
     // Add chain info to trades
     const chain = extractChainFromId(personaId);
-    const trades = data.trades.map((trade: any) => ({
+    const trades = data.trades.map((trade: Trade) => ({
       ...trade,
       chain
     }));
@@ -375,3 +375,70 @@ export async function checkApiHealth(): Promise<boolean> {
 export function isApiConfigured(): boolean {
   return true; // GraphQL endpoint is always configured
 }
+
+// Type imports for proper typing
+interface ChartData {
+  date: string;
+  volume: string;
+  trades: number;
+  uniqueTraders?: number;
+}
+
+interface DailyStat {
+  id: string;
+  date: string;
+  trades: number;
+  volume: string;
+  uniqueTraders: number;
+}
+
+interface UserPortfolio {
+  createdPersonas: Persona[];
+  tradedPersonasCount: number;
+  totalTradeVolume: string;
+  totalBridgedVolume: string;
+  recentTrades: Trade[];
+  bridgeActivities: BridgeActivity[];
+}
+
+interface Trade {
+  id: string;
+  trader: string;
+  amountIn: string;
+  amountOut: string;
+  feeAmount: string;
+  timestamp: string;
+  block: string;
+  txHash: string;
+  persona?: {
+    id: string;
+    name: string;
+    symbol: string;
+  };
+  chain?: PersonaChain;
+}
+
+interface BridgeActivity {
+  id: string;
+  action: 'WRAP' | 'UNWRAP';
+  amount: string;
+  timestamp: string;
+  txHash: string;
+  chain: PersonaChain;
+}
+
+interface TradesResponse {
+  trades: Trade[];
+  total: number;
+}
+
+// src/lib/wagmi.ts
+import { getDefaultConfig } from '@rainbow-me/rainbowkit';
+import { base } from 'wagmi/chains';
+
+export const config = getDefaultConfig({
+  appName: 'Amica Personas',
+  projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || 'YOUR_PROJECT_ID_HERE',
+  chains: [base],
+  ssr: true,
+});

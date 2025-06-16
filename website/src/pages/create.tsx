@@ -3,10 +3,9 @@ import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { parseEther, zeroAddress, parseUnits, formatUnits, formatEther, decodeEventLog } from 'viem';
+import { parseEther, zeroAddress, parseUnits, formatEther, decodeEventLog } from 'viem';
 import { FACTORY_ABI, getAddressesForChain } from '@/lib/contracts';
 import { useRouter } from 'next/router';
-import { usePublicClient } from 'wagmi';
 
 // ERC20 ABI for reading token details and approval
 const ERC20_ABI = [
@@ -57,7 +56,6 @@ interface TokenOption {
 export default function CreatePersonaPage() {
   const { address, chainId } = useAccount();
   const router = useRouter();
-  const publicClient = usePublicClient();
   const { writeContract, data: createTxHash, isPending, isError, error } = useWriteContract();
 
   const [formData, setFormData] = useState({
@@ -106,14 +104,14 @@ export default function CreatePersonaPage() {
 
   // Set default pairing token on mount or chain change
   useEffect(() => {
-    if (addresses?.amicaToken && !selectedPairingToken) {
+    if (addresses?.amicaToken && pairingTokenOptions.length > 0) {
       const amicaToken = pairingTokenOptions.find(t => t.symbol === 'AMICA');
-      if (amicaToken) {
+      if (amicaToken && !selectedPairingToken) {
         setSelectedPairingToken(amicaToken);
         setFormData(prev => ({ ...prev, pairingToken: amicaToken.address }));
       }
     }
-  }, [addresses, chainId]);
+  }, [addresses, chainId, pairingTokenOptions, selectedPairingToken]);
 
   // Read current allowance
   const { data: currentAllowance } = useReadContract({
@@ -717,3 +715,4 @@ export default function CreatePersonaPage() {
     </Layout>
   );
 }
+

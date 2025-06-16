@@ -1,10 +1,9 @@
 // src/pages/staking.tsx
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Layout from '@/components/Layout';
-import { useAccount, useReadContract, useWriteContract } from 'wagmi';
+import { useAccount } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { formatEther, parseEther } from 'viem';
-import { getAddressesForChain } from '@/lib/contracts';
+import { formatEther } from 'viem';
 
 // Mock staking pools data (replace with actual contract reads)
 const mockPools = [
@@ -136,7 +135,7 @@ function PoolCard({ pool, userLpBalance = "0", userStakedBalance = "0", pendingR
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7 7" />
           </svg>
         </div>
       </div>
@@ -374,10 +373,10 @@ function PoolCard({ pool, userLpBalance = "0", userStakedBalance = "0", pendingR
 }
 
 export default function StakingPage() {
-  const { address, chainId } = useAccount();
-  const [totalValueLocked, setTotalValueLocked] = useState("12,345,678");
-  const [totalRewardsDistributed, setTotalRewardsDistributed] = useState("2,456,789");
-  const [amicaPerBlock, setAmicaPerBlock] = useState("100");
+  const { address } = useAccount();
+  const totalValueLocked = "12,345,678";
+  const totalRewardsDistributed = "2,456,789";
+  const amicaPerBlock = "100";
 
   return (
     <Layout>

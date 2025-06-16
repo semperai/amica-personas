@@ -1,8 +1,8 @@
 // src/components/TradingInterface.tsx
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAccount, useReadContract, useWriteContract, useBalance } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
-import { FACTORY_ABI, getAddressesForChain, BASIS_POINTS } from '../lib/contracts';
+import { FACTORY_ABI, getAddressesForChain } from '../lib/contracts';
 
 interface TradingInterfaceProps {
   chainId: string;
