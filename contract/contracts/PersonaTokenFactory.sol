@@ -153,7 +153,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     mapping(uint256 => PersonaData) public personas;
     mapping(uint256 => TokenPurchase) public purchases;
     // token -> user -> amount
-    mapping(uint256 => mapping(address => uint256)) public userpurchases;
+    mapping(uint256 => mapping(address => uint256)) public userPurchases;
     // Agent token deposits (token -> user -> amount)
     mapping(uint256 => mapping(address => uint256)) public agentDeposits;
 
@@ -503,7 +503,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         purchase.tokensSold += amountOut;
 
         // Store purchase info for lock
-        userpurchases[tokenId][to] += amountOut;
+        userPurchases[tokenId][to] += amountOut;
 
         // Transfer persona tokens to recipient
         if (!IERC20(persona.erc20Token).transfer(to, amountOut)) revert TransferFailed();
@@ -523,9 +523,9 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         PersonaData storage persona = personas[tokenId];
         if (persona.erc20Token == address(0)) revert InvalidToken();
 
-        uint256 totalToWithdraw = userpurchases[tokenId][msg.sender];
+        uint256 totalToWithdraw = userPurchases[tokenId][msg.sender];
         if (totalToWithdraw == 0) revert NoTokensToWithdraw();
-        userpurchases[tokenId][msg.sender] = 0; // Reset user's purchase
+        userPurchases[tokenId][msg.sender] = 0; // Reset user's purchase
 
         // Transfer tokens
         if (!IERC20(persona.erc20Token).transfer(msg.sender, totalToWithdraw)) revert TransferFailed();
