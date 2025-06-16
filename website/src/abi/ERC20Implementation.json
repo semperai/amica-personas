@@ -5,16 +5,6 @@
     "type": "constructor"
   },
   {
-    "inputs": [],
-    "name": "CannotMintOnMainnet",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "CannotRecoverAmica",
-    "type": "error"
-  },
-  {
     "inputs": [
       {
         "internalType": "address",
@@ -102,26 +92,6 @@
   },
   {
     "inputs": [],
-    "name": "EnforcedPause",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "ExpectedPause",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "InsufficientBalance",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "InvalidAmount",
-    "type": "error"
-  },
-  {
-    "inputs": [],
     "name": "InvalidBurnAmount",
     "type": "error"
   },
@@ -132,27 +102,22 @@
   },
   {
     "inputs": [],
-    "name": "InvalidRecipient",
+    "name": "InvalidOwner",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "InvalidToken",
+    "name": "InvalidSupply",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "InvalidTokenIndex",
+    "name": "InvalidTokenAddress",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "InvalidWrapperAddress",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "NoCirculatingSupply",
+    "name": "NoSupply",
     "type": "error"
   },
   {
@@ -167,17 +132,12 @@
   },
   {
     "inputs": [],
-    "name": "NoTokensToRecover",
-    "type": "error"
-  },
-  {
-    "inputs": [],
     "name": "NotInitializing",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "OnlyBridgeWrapper",
+    "name": "OnlyFactory",
     "type": "error"
   },
   {
@@ -209,7 +169,12 @@
   },
   {
     "inputs": [],
-    "name": "TokenIndexesMustBeSortedAndUnique",
+    "name": "TokenNotGraduated",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "TokensMustBeSortedAndUnique",
     "type": "error"
   },
   {
@@ -246,13 +211,13 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "wrapper",
-        "type": "address"
+        "indexed": false,
+        "internalType": "bool",
+        "name": "graduated",
+        "type": "bool"
       }
     ],
-    "name": "BridgeWrapperSet",
+    "name": "GraduationStatusSet",
     "type": "event"
   },
   {
@@ -285,19 +250,6 @@
       }
     ],
     "name": "OwnershipTransferred",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "account",
-        "type": "address"
-      }
-    ],
-    "name": "Paused",
     "type": "event"
   },
   {
@@ -337,75 +289,6 @@
       {
         "indexed": true,
         "internalType": "address",
-        "name": "depositor",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "token",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "TokensDeposited",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "token",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "TokensRecovered",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "TokensWithdrawn",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
         "name": "from",
         "type": "address"
       },
@@ -424,32 +307,6 @@
     ],
     "name": "Transfer",
     "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "account",
-        "type": "address"
-      }
-    ],
-    "name": "Unpaused",
-    "type": "event"
-  },
-  {
-    "inputs": [],
-    "name": "TOTAL_SUPPLY",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
   },
   {
     "inputs": [
@@ -519,23 +376,10 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "bridgeWrapper",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "amount",
+        "name": "value",
         "type": "uint256"
       }
     ],
@@ -552,9 +396,9 @@
         "type": "uint256"
       },
       {
-        "internalType": "uint256[]",
-        "name": "tokenIndexes",
-        "type": "uint256[]"
+        "internalType": "address[]",
+        "name": "tokens",
+        "type": "address[]"
       }
     ],
     "name": "burnAndClaim",
@@ -571,7 +415,7 @@
       },
       {
         "internalType": "uint256",
-        "name": "amount",
+        "name": "value",
         "type": "uint256"
       }
     ],
@@ -607,37 +451,13 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "token",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "deposit",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "name": "depositedBalances",
+    "inputs": [],
+    "name": "factory",
     "outputs": [
       {
-        "internalType": "uint256",
+        "internalType": "address",
         "name": "",
-        "type": "uint256"
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -645,12 +465,12 @@
   },
   {
     "inputs": [],
-    "name": "getDepositedTokens",
+    "name": "hasGraduated",
     "outputs": [
       {
-        "internalType": "address[]",
+        "internalType": "bool",
         "name": "",
-        "type": "address[]"
+        "type": "bool"
       }
     ],
     "stateMutability": "view",
@@ -659,30 +479,27 @@
   {
     "inputs": [
       {
+        "internalType": "string",
+        "name": "name_",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "symbol_",
+        "type": "string"
+      },
+      {
+        "internalType": "uint256",
+        "name": "initialSupply_",
+        "type": "uint256"
+      },
+      {
         "internalType": "address",
-        "name": "initialOwner",
+        "name": "owner_",
         "type": "address"
       }
     ],
     "name": "initialize",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "mint",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -714,41 +531,27 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "pause",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "paused",
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amountToBurn",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address[]",
+        "name": "tokens",
+        "type": "address[]"
+      }
+    ],
+    "name": "previewBurnAndClaim",
     "outputs": [
       {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
+        "internalType": "uint256[]",
+        "name": "amounts",
+        "type": "uint256[]"
       }
     ],
     "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "token",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
-      }
-    ],
-    "name": "recoverToken",
-    "outputs": [],
-    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -761,12 +564,12 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "_bridgeWrapper",
-        "type": "address"
+        "internalType": "bool",
+        "name": "_graduated",
+        "type": "bool"
       }
     ],
-    "name": "setBridgeWrapper",
+    "name": "setGraduationStatus",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -779,25 +582,6 @@
         "internalType": "string",
         "name": "",
         "type": "string"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "name": "tokenIndex",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -825,7 +609,7 @@
       },
       {
         "internalType": "uint256",
-        "name": "amount",
+        "name": "value",
         "type": "uint256"
       }
     ],
@@ -854,7 +638,7 @@
       },
       {
         "internalType": "uint256",
-        "name": "amount",
+        "name": "value",
         "type": "uint256"
       }
     ],
@@ -878,31 +662,6 @@
       }
     ],
     "name": "transferOwnership",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "unpause",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "withdraw",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
