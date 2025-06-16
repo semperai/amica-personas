@@ -122,7 +122,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
           </div>
           <h3 className="text-lg font-medium text-white mb-2">Persona Not Found</h3>
           <p className="text-white/60 mb-6 max-w-sm mx-auto">
-            This persona (Token ID: {tokenId} on Chain {chainId}) doesn't exist or hasn't been indexed yet.
+            This persona (Token ID: {tokenId} on Chain {chainId}) doesn&apos;t exist or hasn&apos;t been indexed yet.
           </p>
           <div className="flex gap-3 justify-center">
             <button
