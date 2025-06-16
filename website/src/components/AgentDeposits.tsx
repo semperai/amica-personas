@@ -18,10 +18,11 @@ interface AgentDeposit {
   txHash: string;
 }
 
-// GraphQL query for agent deposits
+// GraphQL query for agent deposits - updated to match new schema
+// GraphQL query for agent deposits - updated to match new schema
 const GET_AGENT_DEPOSITS = gql`
   query GetAgentDeposits($personaId: String!, $user: String!) {
-    persona(id: $personaId) {
+    personas(where: { id_eq: $personaId }, limit: 1) {
       id
       name
       symbol
@@ -108,13 +109,14 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
   });
 
   // Query GraphQL for agent deposits
-  const { data: graphqlData, loading: graphqlLoading, refetch: refetchDeposits } = useQuery(GET_AGENT_DEPOSITS, {
+  const { data: graphqlData, loading: graphqlLoading, refetch: refetchDeposits, error: graphqlError } = useQuery(GET_AGENT_DEPOSITS, {
     variables: { 
       personaId,
       user: address?.toLowerCase() || ''
     },
     skip: !address || !chainId || !tokenId,
     fetchPolicy: 'cache-and-network',
+    errorPolicy: 'all', // Continue even if there are errors
   });
 
   // Get the full persona struct to access agentToken
@@ -140,9 +142,9 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
   }) as { data: readonly [bigint, bigint] | undefined };
 
   // Get GraphQL or on-chain data
-  const agentToken = graphqlData?.persona?.agentToken || personaStruct?.agentToken;
-  const totalAgentDeposited = graphqlData?.persona?.totalAgentDeposited 
-    ? BigInt(graphqlData.persona.totalAgentDeposited)
+  const agentToken = graphqlData?.personas?.[0]?.agentToken || personaStruct?.agentToken;
+  const totalAgentDeposited = graphqlData?.personas?.[0]?.totalAgentDeposited 
+    ? BigInt(graphqlData.personas[0].totalAgentDeposited)
     : (personaStruct?.totalAgentDeposited || BigInt(0));
 
   // Get agent token symbol
@@ -271,7 +273,7 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
     return null;
   }
 
-  // Wait for data to load
+  // Wait for data to load (but don't error out if GraphQL fails)
   if (graphqlLoading) {
     return (
       <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
@@ -283,8 +285,19 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
     );
   }
 
-  const persona = graphqlData?.persona;
-  if (!persona) return null;
+  // Handle error gracefully
+  if (graphqlError && !graphqlData) {
+    console.error('GraphQL error in AgentDeposits:', graphqlError);
+    // Still try to show the component with on-chain data
+  }
+
+  const persona = graphqlData?.personas?.[0] || {
+    name: 'Unknown',
+    symbol: 'UNKNOWN',
+    pairCreated: false,
+    minAgentTokens: '0',
+    agentDeposits: []
+  };
 
   const isGraduated = persona.pairCreated;
   const minAgentTokens = BigInt(persona.minAgentTokens || 0);

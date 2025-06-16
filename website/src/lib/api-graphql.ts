@@ -56,23 +56,23 @@ interface PersonasResponse {
   offset?: number;
 }
 
-// Helper function to extract chain from persona ID (format: "chainId-tokenId")
-function extractChainFromId(id: string): PersonaChain {
-  const [chainId] = id.split('-');
+// Helper function to convert numeric chainId to chain object
+function getChainFromId(chainId: number): PersonaChain {
   const chainNames: Record<string, string> = {
     '1': 'ethereum',
     '8453': 'base',
     '42161': 'arbitrum'
   };
   return {
-    id: chainId,
-    name: chainNames[chainId] || 'unknown'
+    id: chainId.toString(),
+    name: chainNames[chainId.toString()] || 'unknown'
   };
 }
 
 // Transform Subsquid persona to our API format
 function transformPersona(subsquidPersona: PersonasQueryResult['personas'][0]): Persona {
-  const chain = extractChainFromId(subsquidPersona.id);
+  // Use chainId from the persona data
+  const chain = getChainFromId(subsquidPersona.chainId);
   
   return {
     id: subsquidPersona.id,
@@ -157,13 +157,17 @@ export async function fetchPersonas(params?: FetchPersonasParams): Promise<Perso
     // Convert sort parameter to GraphQL orderBy
     const orderBy = params?.sort ? convertOrderBy(params.sort) : 'createdAt_DESC';
     
+    // Convert chainId to number for GraphQL query
+    const chainIdNum = params?.chainId ? parseInt(params.chainId) : undefined;
+    
     const result = await executeQuery(async () => {
       const { data } = await apolloClient.query<PersonasQueryResult>({
         query: GET_PERSONAS,
         variables: {
           limit: params?.limit || 50,
           offset: params?.offset || 0,
-          orderBy: [orderBy]
+          orderBy: [orderBy],
+          chainId: chainIdNum // Pass as number to match GraphQL schema
         },
         fetchPolicy: 'network-only' // Always fetch fresh data
       });
@@ -186,10 +190,7 @@ export async function fetchPersonas(params?: FetchPersonasParams): Promise<Perso
     // Transform the data
     let personas = result.personas.map(transformPersona);
 
-    // Apply client-side filters if needed
-    if (params?.chainId) {
-      personas = personas.filter(p => p.chain.id === params.chainId);
-    }
+    // Apply additional client-side filters if needed
     if (params?.search) {
       const search = params.search.toLowerCase();
       personas = personas.filter(p =>
@@ -232,6 +233,7 @@ export async function fetchPersonaDetail(chainId: string, tokenId: string): Prom
   }
 
   try {
+    // For persona details, we use the compound ID format
     const personaId = `${chainId}-${tokenId}`;
     const result = await executeQuery(async () => {
       const { data } = await apolloClient.query({
@@ -244,11 +246,11 @@ export async function fetchPersonaDetail(chainId: string, tokenId: string): Prom
       fallbackData: null
     });
 
-    if (!result?.persona) {
+    if (!result?.personas || result.personas.length === 0) {
       return null;
     }
 
-    return transformPersona(result.persona);
+    return transformPersona(result.personas[0]);
   } catch (error) {
     console.error('Error fetching persona detail:', error);
     return null;
@@ -447,7 +449,7 @@ export async function fetchPersonaTrades(chainId: string, tokenId: string, limit
     }
 
     // Add chain info to trades
-    const chain = extractChainFromId(personaId);
+    const chain = getChainFromId(parseInt(chainId));
     const trades = result.trades.map((trade: Trade) => ({
       ...trade,
       chain

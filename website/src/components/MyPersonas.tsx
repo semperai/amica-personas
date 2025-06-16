@@ -13,6 +13,7 @@ interface MyPersonasProps {
 interface CreatedPersona {
   id: string;
   tokenId: string;
+  chainId: string;
   name: string;
   symbol: string;
   totalDeposited: string;
@@ -73,7 +74,7 @@ function PersonaCard({ persona }: PersonaCardProps) {
 
   return (
     <Link
-      href={`/persona/${chain.id}/${persona.tokenId}`}
+      href={`/persona/${persona.chainId}/${persona.tokenId}`}
       className="group relative aspect-[3/4] rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}

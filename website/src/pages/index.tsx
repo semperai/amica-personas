@@ -93,7 +93,7 @@ function PersonaCard({ persona }: PersonaCardProps) {
 
   return (
     <Link
-      href={`/persona/8453/${persona.id}`}
+      href={`/persona/${persona.chain.id}/${persona.id}`}
       className="group relative aspect-[3/4] rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}

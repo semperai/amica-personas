@@ -112,7 +112,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
   }
 
   // No data found (but no error)
-  if (!data?.persona) {
+  if (!data?.personas || data.personas.length === 0) {
     return (
       <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
         <div className="text-center py-8">
@@ -128,7 +128,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
     );
   }
 
-  const persona = data.persona;
+  const persona = data.personas[0];
   const isGraduated = persona.pairCreated;
   const progress = persona.totalDeposited && persona.graduationThreshold
     ? (Number(persona.totalDeposited) / Number(persona.graduationThreshold)) * 100

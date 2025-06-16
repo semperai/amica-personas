@@ -158,7 +158,8 @@ const PersonaDetailPage: NextPage = () => {
   };
 
   // Check if the persona exists
-  const personaExists = graphqlData?.persona || (personaData && personaData[2] !== '0x0000000000000000000000000000000000000000');
+  // Check if the persona exists
+  const personaExists = (graphqlData?.personas && graphqlData.personas.length > 0) || (personaData && personaData[2] !== '0x0000000000000000000000000000000000000000');
 
   // Handle loading state while router params are being resolved
   if (!router.isReady || !chainId || !tokenId) {
