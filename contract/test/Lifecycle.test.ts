@@ -678,7 +678,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
 
     describe("Initial Buy Feature", function () {
         it("Should allow creator to buy tokens at launch to prevent sniping", async function () {
-            const { amicaToken, personaFactory, creator } =
+            const { amicaToken, personaFactory, creator, buyer1 } =
                 await loadFixture(deployFullSystemFixture);
 
             console.log("\n=== Initial Buy Feature ===");
@@ -708,25 +708,55 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             await expect(tx).to.emit(personaFactory, "TokensPurchased");
 
             const tokenId = 0;
+            const persona = await personaFactory.getPersona(tokenId);
 
-            // Check creator's purchases
-            const purchases = await personaFactory.getUserPurchases(tokenId, creator.address);
-            expect(purchases.length).to.equal(1);
-            expect(purchases[0].amount).to.be.gt(0);
-            console.log(`✓ Creator bought ${ethers.formatEther(purchases[0].amount)} tokens at launch`);
+            // Get the deployed token contract
+            const TestERC20 = await ethers.getContractFactory("TestERC20");
+            const personaToken = TestERC20.attach(persona.erc20Token) as TestERC20;
+
+            // Check creator's token balance
+            const creatorTokenBalance = await personaToken.balanceOf(creator.address);
+            expect(creatorTokenBalance).to.be.gt(0);
+            console.log(`✓ Creator bought ${ethers.formatEther(creatorTokenBalance)} tokens at launch`);
 
             // Verify payment was taken
             const creatorBalanceAfter = await amicaToken.balanceOf(creator.address);
             const totalSpent = DEFAULT_MINT_COST + initialBuyAmount;
             const feeRefund = initialBuyAmount * 100n / 10000n * 5000n / 10000n; // Creator gets back their portion of fees
             expect(creatorBalanceAfter).to.equal(creatorBalanceBefore - totalSpent + feeRefund);
-            console.log("✓ Creator paid mint cost + initial buy amount");
+            console.log("✓ Creator paid mint cost + initial buy amount (minus fee refund)");
 
-            // Verify tokens are locked
-            await expect(
-                personaFactory.connect(creator).withdrawTokens(tokenId)
-            ).to.be.revertedWithCustomError(personaFactory, "NoTokensToWithdraw");
-            console.log("✓ Creator's tokens are locked for 1 week");
+            // Verify the initial buy affected the bonding curve
+            const availableTokens = await personaFactory.getAvailableTokens(tokenId);
+            const maxSupply = ethers.parseEther("666666666"); // From your bonding curve
+            expect(availableTokens).to.be.lt(maxSupply);
+            expect(availableTokens).to.equal(maxSupply - creatorTokenBalance);
+            console.log(`✓ Available tokens reduced by initial buy: ${ethers.formatEther(availableTokens)}`);
+
+            // Test that the initial buy prevents immediate sniping
+            // New buyer should get fewer tokens at higher price
+            const buyerAmount = ethers.parseEther("10000");
+            await amicaToken.connect(buyer1).approve(await personaFactory.getAddress(), buyerAmount);
+            
+            const buyerQuote = await personaFactory.getAmountOut(tokenId, buyerAmount);
+            const deadline = () => Math.floor(Date.now() / 1000) + 3600;
+            
+            await personaFactory.connect(buyer1).swapExactTokensForTokens(
+                tokenId, buyerAmount, buyerQuote, buyer1.address, deadline()
+            );
+
+            const buyerTokenBalance = await personaToken.balanceOf(buyer1.address);
+            
+            // Buyer should get fewer tokens than creator for same amount (due to bonding curve)
+            expect(buyerTokenBalance).to.be.lt(creatorTokenBalance);
+            console.log(`✓ Initial buy prevented sniping: buyer got ${ethers.formatEther(buyerTokenBalance)} tokens for same amount`);
+            
+            // Calculate implied prices
+            const creatorPrice = initialBuyAmount * ethers.parseEther("1") / creatorTokenBalance;
+            const buyerPrice = buyerAmount * ethers.parseEther("1") / buyerTokenBalance;
+            
+            expect(buyerPrice).to.be.gt(creatorPrice);
+            console.log(`✓ Price increased from ${ethers.formatEther(creatorPrice)} to ${ethers.formatEther(buyerPrice)} per token`);
         });
     });
 

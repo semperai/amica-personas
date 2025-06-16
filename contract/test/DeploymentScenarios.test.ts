@@ -216,7 +216,7 @@ describe("Multi-chain Deployment Scenarios", function () {
             // Attacker tries to mint without being bridge wrapper
             await expect(
                 l2AmicaToken.connect(attacker).mint(attacker.address, ethers.parseEther("1000000"))
-            ).to.be.revertedWith("Only bridge wrapper can mint");
+            ).to.be.revertedWithCustomError(l2AmicaToken, "OnlyBridgeWrapper");
         });
 
         it("Should ensure 1:1 backing between bridged and native tokens", async function () {
@@ -296,7 +296,7 @@ describe("Multi-chain Deployment Scenarios", function () {
 
             await expect(
                 bridgeWrapper.connect(user3).unwrap(ethers.parseEther("2"))
-            ).to.be.revertedWith("Insufficient bridged tokens");
+            ).to.be.revertedWithCustomError(bridgeWrapper, "InsufficientBridgedTokens");
         });
     });
 

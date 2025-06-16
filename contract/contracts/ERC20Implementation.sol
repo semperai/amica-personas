@@ -18,6 +18,17 @@ contract ERC20Implementation is
     ERC20BurnableUpgradeable,
     ReentrancyGuardUpgradeable
 {
+    // Custom errors
+    error InvalidOwner();
+    error InvalidSupply();
+    error InvalidBurnAmount();
+    error NoTokensSelected();
+    error TokensMustBeSortedAndUnique();
+    error NoSupply();
+    error InvalidTokenAddress();
+    error TransferFailed();
+    error NoTokensToClaim();
+
     // Constants
     uint256 private constant PRECISION = 1e18;
 
@@ -34,8 +45,8 @@ contract ERC20Implementation is
         uint256 initialSupply_,
         address owner_
     ) external initializer {
-        require(owner_ != address(0), "Invalid owner");
-        require(initialSupply_ > 0, "Invalid supply");
+        if (owner_ == address(0)) revert InvalidOwner();
+        if (initialSupply_ == 0) revert InvalidSupply();
 
         __ERC20_init(name_, symbol_);
         __ERC20Burnable_init();
@@ -60,16 +71,16 @@ contract ERC20Implementation is
         external
         nonReentrant
     {
-        require(amountToBurn > 0, "Invalid burn amount");
-        require(tokens.length > 0, "No tokens selected");
+        if (amountToBurn == 0) revert InvalidBurnAmount();
+        if (tokens.length == 0) revert NoTokensSelected();
         
         // Verify tokens array is sorted and contains no duplicates
         for (uint256 i = 1; i < tokens.length; i++) {
-            require(uint160(tokens[i]) > uint160(tokens[i - 1]), "Tokens must be sorted and unique");
+            if (uint160(tokens[i]) <= uint160(tokens[i - 1])) revert TokensMustBeSortedAndUnique();
         }
 
         uint256 currentSupply = totalSupply();
-        require(currentSupply > 0, "No supply");
+        if (currentSupply == 0) revert NoSupply();
 
         // Calculate share (with precision scaling)
         uint256 sharePercentage = (amountToBurn * PRECISION) / currentSupply;
@@ -80,7 +91,7 @@ contract ERC20Implementation is
         // Process claims
         for (uint256 i = 0; i < tokens.length; i++) {
             address token = tokens[i];
-            require(token != address(0), "Invalid token address");
+            if (token == address(0)) revert InvalidTokenAddress();
             // No restriction on claiming self - contract can hold and distribute its own tokens
 
             uint256 balance = IERC20(token).balanceOf(address(this));
@@ -90,13 +101,13 @@ contract ERC20Implementation is
             if (claimAmount == 0) continue;
 
             // Transfer tokens
-            require(IERC20(token).transfer(msg.sender, claimAmount), "Transfer failed");
+            if (!IERC20(token).transfer(msg.sender, claimAmount)) revert TransferFailed();
 
             amounts[i] = claimAmount;
             validClaims++;
         }
 
-        require(validClaims > 0, "No tokens to claim");
+        if (validClaims == 0) revert NoTokensToClaim();
 
         // Burn tokens
         _burn(msg.sender, amountToBurn);

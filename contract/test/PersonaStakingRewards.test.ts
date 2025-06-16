@@ -224,7 +224,7 @@ describe("PersonaStakingRewards", function () {
 
             await expect(
                 stakingRewards.addPool(await lpToken2.getAddress(), 5000, false, 1)
-            ).to.be.revertedWith("Total allocation exceeds 100%");
+            ).to.be.revertedWithCustomError(stakingRewards, "TotalAllocationExceeds100");
         });
 
         it("Should reject adding duplicate LP token", async function () {
@@ -234,7 +234,7 @@ describe("PersonaStakingRewards", function () {
 
             await expect(
                 stakingRewards.addPool(await lpToken1.getAddress(), 2000, false, 0)
-            ).to.be.revertedWith("Pool already exists");
+            ).to.be.revertedWithCustomError(stakingRewards, "PoolAlreadyExists");
         });
 
         it("Should update pool allocation correctly", async function () {
@@ -311,12 +311,12 @@ describe("PersonaStakingRewards", function () {
             // Too low (< 1x)
             await expect(
                 stakingRewards.setLockTier(0, ONE_MONTH, 5000)
-            ).to.be.revertedWith("Invalid multiplier");
+            ).to.be.revertedWithCustomError(stakingRewards, "InvalidMultiplier");
 
             // Too high (> 5x)
             await expect(
                 stakingRewards.setLockTier(0, ONE_MONTH, 60000)
-            ).to.be.revertedWith("Invalid multiplier");
+            ).to.be.revertedWithCustomError(stakingRewards, "InvalidMultiplier");
         });
     });
 
@@ -380,7 +380,7 @@ describe("PersonaStakingRewards", function () {
 
             await expect(
                 stakingRewards.connect(user1).stake(pool1Id, 0)
-            ).to.be.revertedWith("Cannot stake 0");
+            ).to.be.revertedWithCustomError(stakingRewards, "AmountCannotBeZero");
         });
 
         it("Should reject staking in inactive pool", async function () {
@@ -393,7 +393,7 @@ describe("PersonaStakingRewards", function () {
 
             await expect(
                 stakingRewards.connect(user1).stake(pool1Id, ethers.parseEther("1000"))
-            ).to.be.revertedWith("Pool not active");
+            ).to.be.revertedWithCustomError(stakingRewards, "PoolNotActive");
         });
     });
 
@@ -456,7 +456,7 @@ describe("PersonaStakingRewards", function () {
             // Try to withdraw immediately - should fail
             await expect(
                 stakingRewards.connect(user1).withdrawLocked(pool1Id, 1)
-            ).to.be.revertedWith("Still locked");
+            ).to.be.revertedWithCustomError(stakingRewards, "StillLocked");
 
             // Fast forward 1 month
             await time.increase(ONE_MONTH);
@@ -476,7 +476,7 @@ describe("PersonaStakingRewards", function () {
 
             await expect(
                 stakingRewards.connect(user1).withdrawLocked(pool1Id, 999)
-            ).to.be.revertedWith("Lock not found");
+            ).to.be.revertedWithCustomError(stakingRewards, "LockNotFound");
         });
 
         it("Should handle mixed flexible and locked stakes", async function () {
@@ -696,7 +696,7 @@ describe("PersonaStakingRewards", function () {
 
             await expect(
                 stakingRewards.connect(user1).claimPool(pool1Id)
-            ).to.be.revertedWith("No rewards to claim");
+            ).to.be.revertedWithCustomError(stakingRewards, "NoRewardsToClaim");
         });
 
         it("Should claim rewards from locked stakes", async function () {
@@ -805,7 +805,7 @@ describe("PersonaStakingRewards", function () {
 
             await expect(
                 stakingRewards.emergencyWithdraw(await lpToken1.getAddress(), ethers.parseEther("100"))
-            ).to.be.revertedWith("Cannot withdraw LP tokens");
+            ).to.be.revertedWithCustomError(stakingRewards, "CannotWithdrawLPTokens");
         });
     });
 

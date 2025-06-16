@@ -35,10 +35,10 @@ describe("AmicaToken Mainnet Behavior (Mocked)", function () {
             // Set bridge wrapper
             await amicaToken.setBridgeWrapper(owner.address);
 
-            // Try to mint - should fail
+            // Try to mint - should fail with CannotMintOnMainnet custom error
             await expect(
                 amicaToken.mint(user1.address, ethers.parseEther("1000"))
-            ).to.be.revertedWith("Cannot mint on mainnet");
+            ).to.be.revertedWithCustomError(amicaToken, "CannotMintOnMainnet");
         });
 
         it("Should handle deposits and burn/claim on mainnet", async function () {
@@ -103,10 +103,10 @@ describe("AmicaToken Mainnet Behavior (Mocked)", function () {
             expect(await amicaToken.balanceOf(await amicaToken.getAddress())).to.equal(0);
             expect(await amicaToken.circulatingSupply()).to.equal(TOTAL_SUPPLY);
 
-            // Further withdrawals should fail
+            // Further withdrawals should fail with InsufficientBalance custom error
             await expect(
                 amicaToken.withdraw(owner.address, 1)
-            ).to.be.revertedWith("Insufficient balance");
+            ).to.be.revertedWithCustomError(amicaToken, "InsufficientBalance");
         });
     });
 

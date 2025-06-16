@@ -80,7 +80,7 @@ describe("AmicaBridgeWrapper", function () {
                     ],
                     { initializer: "initialize" }
                 )
-            ).to.be.revertedWith("Invalid bridged token");
+            ).to.be.revertedWithCustomError(AmicaBridgeWrapper, "InvalidBridgedToken");
         });
 
         it("Should fail deployment with zero address for native token", async function () {
@@ -99,7 +99,7 @@ describe("AmicaBridgeWrapper", function () {
                     ],
                     { initializer: "initialize" }
                 )
-            ).to.be.revertedWith("Invalid native token");
+            ).to.be.revertedWithCustomError(AmicaBridgeWrapper, "InvalidNativeToken");
         });
 
         it("Should fail deployment with same token addresses", async function () {
@@ -118,7 +118,7 @@ describe("AmicaBridgeWrapper", function () {
                     ],
                     { initializer: "initialize" }
                 )
-            ).to.be.revertedWith("Tokens must be different");
+            ).to.be.revertedWithCustomError(AmicaBridgeWrapper, "TokensMustBeDifferent");
         });
 
         it("Should fail deployment with zero address for owner", async function () {
@@ -144,7 +144,7 @@ describe("AmicaBridgeWrapper", function () {
                     ],
                     { initializer: "initialize" }
                 )
-            ).to.be.revertedWith("Invalid owner");
+            ).to.be.revertedWithCustomError(AmicaBridgeWrapper, "InvalidOwner");
         });
     });
 
@@ -289,7 +289,7 @@ describe("AmicaBridgeWrapper", function () {
 
             await expect(
                 bridgeWrapper.connect(user1).wrap(0)
-            ).to.be.revertedWith("Amount must be greater than 0");
+            ).to.be.revertedWithCustomError(bridgeWrapper, "InvalidAmount");
         });
 
         it("Should fail to wrap without approval", async function () {
@@ -354,7 +354,7 @@ describe("AmicaBridgeWrapper", function () {
 
             await expect(
                 bridgeWrapper.connect(user1).unwrap(0)
-            ).to.be.revertedWith("Amount must be greater than 0");
+            ).to.be.revertedWithCustomError(bridgeWrapper, "InvalidAmount");
         });
 
         it("Should fail to unwrap without sufficient bridged tokens in wrapper", async function () {
@@ -365,7 +365,7 @@ describe("AmicaBridgeWrapper", function () {
 
             await expect(
                 bridgeWrapper.connect(user1).unwrap(ethers.parseEther("1000"))
-            ).to.be.revertedWith("Insufficient bridged tokens");
+            ).to.be.revertedWithCustomError(bridgeWrapper, "InsufficientBridgedTokens");
         });
 
         it("Should fail to unwrap without approval for burning", async function () {
@@ -490,14 +490,14 @@ describe("AmicaBridgeWrapper", function () {
              .withArgs(await bridgedAmica.getAddress(), owner.address, extraAmount);
 
             // Try to withdraw 1 wei when there's no excess left
-            // This should fail with "No excess tokens" not "Amount exceeds excess"
+            // This should fail with "NoExcessTokens"
             await expect(
                 bridgeWrapper.connect(owner).emergencyWithdraw(
                     await bridgedAmica.getAddress(),
                     owner.address,
                     BigInt(1)
                 )
-            ).to.be.revertedWith("No excess tokens");
+            ).to.be.revertedWithCustomError(bridgeWrapper, "NoExcessTokens");
         });
 
         it("Should not allow withdrawal of required bridged tokens", async function () {
@@ -515,7 +515,7 @@ describe("AmicaBridgeWrapper", function () {
                     owner.address,
                     wrapAmount
                 )
-            ).to.be.revertedWith("No excess tokens");
+            ).to.be.revertedWithCustomError(bridgeWrapper, "NoExcessTokens");
         });
 
         it("Should allow withdrawal of other tokens", async function () {
@@ -556,7 +556,7 @@ describe("AmicaBridgeWrapper", function () {
                     ethers.ZeroAddress,
                     ethers.parseEther("1")
                 )
-            ).to.be.revertedWith("Invalid recipient");
+            ).to.be.revertedWithCustomError(bridgeWrapper, "InvalidRecipient");
         });
 
         it("Should not allow non-owner to call emergency withdraw", async function () {

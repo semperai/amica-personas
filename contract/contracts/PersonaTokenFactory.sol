@@ -116,18 +116,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 tokensSold;
     }
 
-    struct UserPurchase {
-        uint256 amount;
-        uint256 timestamp;
-        bool withdrawn;
-    }
-
-    struct AgentDeposit {
-        uint256 amount;
-        uint256 timestamp;
-        bool withdrawn;
-    }
-
     struct TradingFeeConfig {
         uint256 feePercentage;    // Fee percentage (basis points, e.g., 100 = 1%)
         uint256 creatorShare;      // Creator's share of fees (basis points, e.g., 5000 = 50%)
@@ -163,10 +151,10 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     // Mappings for persona data
     mapping(uint256 => PersonaData) public personas;
     mapping(uint256 => TokenPurchase) public purchases;
-    mapping(uint256 => mapping(address => UserPurchase[])) public userpurchases;
-
-    // Agent token deposits
-    mapping(uint256 => mapping(address => AgentDeposit[])) public agentDeposits;
+    // token -> user -> amount
+    mapping(uint256 => mapping(address => uint256)) public userpurchases;
+    // Agent token deposits (token -> user -> amount)
+    mapping(uint256 => mapping(address => uint256)) public agentDeposits;
 
     // Staking rewards contract (deployed separately)
     address public stakingRewards;
@@ -514,11 +502,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         purchase.tokensSold += amountOut;
 
         // Store purchase info for lock
-        userpurchases[tokenId][to].push(UserPurchase({
-            amount: amountOut,
-            timestamp: block.timestamp,
-            withdrawn: false
-        }));
+        userpurchases[tokenId][to] += amountOut;
 
         // Transfer persona tokens to recipient
         if (!IERC20(persona.erc20Token).transfer(to, amountOut)) revert TransferFailed();
@@ -538,17 +522,9 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         PersonaData storage persona = personas[tokenId];
         if (persona.erc20Token == address(0)) revert InvalidToken();
 
-        UserPurchase[] storage purchasesLocal = userpurchases[tokenId][msg.sender];
-        uint256 totalToWithdraw = 0;
-
-        for (uint256 i = 0; i < purchasesLocal.length; i++) {
-            if (!purchasesLocal[i].withdrawn && persona.pairCreated) {
-                totalToWithdraw += purchasesLocal[i].amount;
-                purchasesLocal[i].withdrawn = true;
-            }
-        }
-
+        uint256 totalToWithdraw = userpurchases[tokenId][msg.sender];
         if (totalToWithdraw == 0) revert NoTokensToWithdraw();
+        userpurchases[tokenId][msg.sender] = 0; // Reset user's purchase
 
         // Transfer tokens
         if (!IERC20(persona.erc20Token).transfer(msg.sender, totalToWithdraw)) revert TransferFailed();
@@ -574,11 +550,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         if (!IERC20(persona.agentToken).transferFrom(msg.sender, address(this), amount)) revert TransferFailed();
 
         // Record deposit
-        agentDeposits[tokenId][msg.sender].push(AgentDeposit({
-            amount: amount,
-            timestamp: block.timestamp,
-            withdrawn: false
-        }));
+        agentDeposits[tokenId][msg.sender] += amount;
 
         persona.totalAgentDeposited += amount;
 
@@ -588,28 +560,19 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     /**
      * @notice Withdraw agent tokens before graduation
      */
-    function withdrawAgentTokens(uint256 tokenId) external nonReentrant whenNotPaused {
+    function withdrawAgentTokens(uint256 tokenId, uint256 amount) external nonReentrant whenNotPaused {
         PersonaData storage persona = personas[tokenId];
         if (persona.pairCreated) revert AlreadyGraduated();
 
-        AgentDeposit[] storage deposits = agentDeposits[tokenId][msg.sender];
-        uint256 totalToWithdraw = 0;
+        if (agentDeposits[tokenId][msg.sender] < amount) revert NoDepositsToWithdraw();
 
-        for (uint256 i = 0; i < deposits.length; i++) {
-            if (!deposits[i].withdrawn) {
-                totalToWithdraw += deposits[i].amount;
-                deposits[i].withdrawn = true;
-            }
-        }
-
-        if (totalToWithdraw == 0) revert NoDepositsToWithdraw();
-
-        persona.totalAgentDeposited -= totalToWithdraw;
+        agentDeposits[tokenId][msg.sender] -= amount;
+        persona.totalAgentDeposited -= amount;
 
         // Return agent tokens
-        if (!IERC20(persona.agentToken).transfer(msg.sender, totalToWithdraw)) revert TransferFailed();
+        if (!IERC20(persona.agentToken).transfer(msg.sender, amount)) revert TransferFailed();
 
-        emit AgentTokensWithdrawn(tokenId, msg.sender, totalToWithdraw);
+        emit AgentTokensWithdrawn(tokenId, msg.sender, amount);
     }
 
     /**
@@ -620,18 +583,9 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         if (!persona.pairCreated) revert NotGraduated();
         if (persona.agentToken == address(0)) revert NoAgentToken();
 
-        AgentDeposit[] storage deposits = agentDeposits[tokenId][msg.sender];
-        uint256 userAgentAmount = 0;
-
-        // Calculate user's total non-withdrawn deposits
-        for (uint256 i = 0; i < deposits.length; i++) {
-            if (!deposits[i].withdrawn) {
-                userAgentAmount += deposits[i].amount;
-                deposits[i].withdrawn = true;  // Mark as claimed
-            }
-        }
-
+        uint256 userAgentAmount = agentDeposits[tokenId][msg.sender];
         if (userAgentAmount == 0) revert NoDepositsToClaim();
+        agentDeposits[tokenId][msg.sender] = 0; // Reset user's agent deposit
 
         // Calculate pro-rata share of persona tokens
         uint256 personaReward = 0;
@@ -835,28 +789,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Get user purchases for a persona
-     */
-    function getUserPurchases(uint256 tokenId, address user)
-        external
-        view
-        returns (UserPurchase[] memory)
-    {
-        return userpurchases[tokenId][user];
-    }
-
-    /**
-     * @notice Get user's agent token deposits
-     */
-    function getUserAgentDeposits(uint256 tokenId, address user)
-        external
-        view
-        returns (AgentDeposit[] memory)
-    {
-        return agentDeposits[tokenId][user];
-    }
-
-    /**
      * @notice Get available tokens for sale
      */
     function getAvailableTokens(uint256 tokenId) public view returns (uint256) {
@@ -1006,12 +938,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     {
         PersonaData storage persona = personas[tokenId];
 
-        AgentDeposit[] storage deposits = agentDeposits[tokenId][user];
-        for (uint256 i = 0; i < deposits.length; i++) {
-            if (!deposits[i].withdrawn) {
-                agentAmount += deposits[i].amount;
-            }
-        }
+        agentAmount = agentDeposits[tokenId][user];
 
         if (persona.totalAgentDeposited > 0 && agentAmount > 0) {
             personaReward = (AGENT_REWARDS_AMOUNT * agentAmount) / persona.totalAgentDeposited;

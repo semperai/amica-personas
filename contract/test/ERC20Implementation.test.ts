@@ -71,7 +71,7 @@ describe("ERC20Implementation Simple Vulnerability Test", function () {
                 ethers.parseEther("10000"),
                 [usdcAddress, usdcAddress] // Duplicate
             )
-        ).to.be.revertedWith("Tokens must be sorted and unique");
+        ).to.be.revertedWithCustomError(token, "TokensMustBeSortedAndUnique");
         console.log("✓ Duplicate token claim prevented!");
 
         // TEST 2: Should prevent unsorted tokens
@@ -90,7 +90,7 @@ describe("ERC20Implementation Simple Vulnerability Test", function () {
                 ethers.parseEther("10000"),
                 addresses // Unsorted
             )
-        ).to.be.revertedWith("Tokens must be sorted and unique");
+        ).to.be.revertedWithCustomError(token, "TokensMustBeSortedAndUnique");
         console.log("✓ Unsorted token array prevented!");
 
         // TEST 3: Should allow legitimate claims with sorted unique tokens
@@ -123,5 +123,72 @@ describe("ERC20Implementation Simple Vulnerability Test", function () {
         console.log("Legitimate USDC claim per burn:", ethers.formatEther(legitimateClaim));
         console.log("With 3x duplicate exploit:", ethers.formatEther(legitimateClaim * 3n));
         console.log("This would drain the contract unfairly!");
+    });
+
+    // Additional test to verify all custom errors work correctly
+    it("Should test all custom error conditions", async function () {
+        const { personaFactory, amicaToken, tokenId, user1, user2 } = await loadFixture(createPersonaFixture);
+
+        // Get token address from events
+        const filter = personaFactory.filters.PersonaCreated();
+        const events = await personaFactory.queryFilter(filter);
+        
+        let tokenAddress;
+        for (const event of events) {
+            const parsedLog = personaFactory.interface.parseLog({
+                topics: event.topics as string[],
+                data: event.data
+            });
+            if (parsedLog && parsedLog.args.tokenId.toString() === tokenId.toString()) {
+                tokenAddress = parsedLog.args.tokenAddress;
+                break;
+            }
+        }
+
+        const ERC20Implementation = await ethers.getContractFactory("ERC20Implementation");
+        const token = ERC20Implementation.attach(tokenAddress) as ERC20Implementation;
+
+        // Buy some tokens for user2
+        await amicaToken.connect(user2).approve(
+            await personaFactory.getAddress(),
+            ethers.parseEther("10000")
+        );
+        
+        await personaFactory.connect(user2).swapExactTokensForTokens(
+            tokenId,
+            ethers.parseEther("10000"),
+            0,
+            user2.address,
+            Math.floor(Date.now() / 1000) + 3600
+        );
+
+        // Test InvalidBurnAmount error
+        await expect(
+            token.connect(user2).burnAndClaim(0, [ethers.ZeroAddress])
+        ).to.be.revertedWithCustomError(token, "InvalidBurnAmount");
+
+        // Test NoTokensSelected error
+        await expect(
+            token.connect(user2).burnAndClaim(ethers.parseEther("100"), [])
+        ).to.be.revertedWithCustomError(token, "NoTokensSelected");
+
+        // Test InvalidTokenAddress error
+        await expect(
+            token.connect(user2).burnAndClaim(
+                ethers.parseEther("100"),
+                [ethers.ZeroAddress]
+            )
+        ).to.be.revertedWithCustomError(token, "InvalidTokenAddress");
+
+        // Test NoTokensToClaim error (when no tokens have balance)
+        const randomAddress = "0x1234567890123456789012345678901234567890";
+        await expect(
+            token.connect(user2).burnAndClaim(
+                ethers.parseEther("100"),
+                [randomAddress]
+            )
+        ).to.be.revertedWithCustomError(token, "NoTokensToClaim");
+
+        console.log("✓ All custom errors working correctly!");
     });
 });

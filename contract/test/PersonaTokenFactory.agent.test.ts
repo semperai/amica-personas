@@ -222,11 +222,9 @@ describe("PersonaTokenFactory Agent Token Integration", function () {
             ).to.emit(personaFactory, "AgentTokensDeposited")
              .withArgs(tokenId, user2.address, ethers.parseEther("1000"));
 
-            // Check deposit was recorded
-            const deposits = await personaFactory.getUserAgentDeposits(tokenId, user2.address);
-            expect(deposits.length).to.equal(1);
-            expect(deposits[0].amount).to.equal(ethers.parseEther("1000"));
-            expect(deposits[0].withdrawn).to.be.false;
+            // Check deposit was recorded using agentDeposits mapping
+            const depositAmount = await personaFactory.agentDeposits(tokenId, user2.address);
+            expect(depositAmount).to.equal(ethers.parseEther("1000"));
         });
 
         it("Should track total agent tokens deposited", async function () {
@@ -298,11 +296,9 @@ describe("PersonaTokenFactory Agent Token Integration", function () {
             await personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("500"));
             await personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("1500"));
 
-            const deposits = await personaFactory.getUserAgentDeposits(tokenId, user2.address);
-            expect(deposits.length).to.equal(3);
-            expect(deposits[0].amount).to.equal(ethers.parseEther("1000"));
-            expect(deposits[1].amount).to.equal(ethers.parseEther("500"));
-            expect(deposits[2].amount).to.equal(ethers.parseEther("1500"));
+            // Check total deposit amount for user
+            const totalDeposited = await personaFactory.agentDeposits(tokenId, user2.address);
+            expect(totalDeposited).to.equal(ethers.parseEther("3000"));
         });
     });
 
@@ -317,18 +313,18 @@ describe("PersonaTokenFactory Agent Token Integration", function () {
 
             const balanceBefore = await agentToken.balanceOf(user2.address);
 
-            // Withdraw
+            // Withdraw all deposited amount
             await expect(
-                personaFactory.connect(user2).withdrawAgentTokens(tokenId)
+                personaFactory.connect(user2).withdrawAgentTokens(tokenId, ethers.parseEther("1000"))
             ).to.emit(personaFactory, "AgentTokensWithdrawn")
              .withArgs(tokenId, user2.address, ethers.parseEther("1000"));
 
             const balanceAfter = await agentToken.balanceOf(user2.address);
             expect(balanceAfter - balanceBefore).to.equal(ethers.parseEther("1000"));
 
-            // Check deposits marked as withdrawn
-            const deposits = await personaFactory.getUserAgentDeposits(tokenId, user2.address);
-            expect(deposits[0].withdrawn).to.be.true;
+            // Check deposits were reduced
+            const remainingDeposit = await personaFactory.agentDeposits(tokenId, user2.address);
+            expect(remainingDeposit).to.equal(0);
         });
 
         it("Should update total deposited on withdrawal", async function () {
@@ -344,7 +340,7 @@ describe("PersonaTokenFactory Agent Token Integration", function () {
             expect(persona.totalAgentDeposited).to.equal(ethers.parseEther("1000"));
 
             // Withdraw
-            await personaFactory.connect(user2).withdrawAgentTokens(tokenId);
+            await personaFactory.connect(user2).withdrawAgentTokens(tokenId, ethers.parseEther("1000"));
 
             // Check total after withdrawal
             persona = await getPersonaData(personaFactory, tokenId);
@@ -373,7 +369,7 @@ describe("PersonaTokenFactory Agent Token Integration", function () {
 
             // Try to withdraw
             await expect(
-                personaFactory.connect(user2).withdrawAgentTokens(tokenId)
+                personaFactory.connect(user2).withdrawAgentTokens(tokenId, ethers.parseEther("1000"))
             ).to.be.revertedWithCustomError(personaFactory, "AlreadyGraduated");
         });
 
@@ -381,7 +377,7 @@ describe("PersonaTokenFactory Agent Token Integration", function () {
             const { personaFactory, tokenId, user2 } = await loadFixture(createPersonaWithAgentToken);
 
             await expect(
-                personaFactory.connect(user2).withdrawAgentTokens(tokenId)
+                personaFactory.connect(user2).withdrawAgentTokens(tokenId, ethers.parseEther("100"))
             ).to.be.revertedWithCustomError(personaFactory, "NoDepositsToWithdraw");
         });
 
@@ -395,13 +391,19 @@ describe("PersonaTokenFactory Agent Token Integration", function () {
             await personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("1000"));
             await personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("2000"));
 
-            // First withdrawal should get all
-            await personaFactory.connect(user2).withdrawAgentTokens(tokenId);
+            // Partial withdrawal
+            await personaFactory.connect(user2).withdrawAgentTokens(tokenId, ethers.parseEther("1500"));
 
-            // Second withdrawal should fail
-            await expect(
-                personaFactory.connect(user2).withdrawAgentTokens(tokenId)
-            ).to.be.revertedWithCustomError(personaFactory, "NoDepositsToWithdraw");
+            // Check remaining deposit
+            const remainingDeposit = await personaFactory.agentDeposits(tokenId, user2.address);
+            expect(remainingDeposit).to.equal(ethers.parseEther("1500"));
+
+            // Withdraw remaining
+            await personaFactory.connect(user2).withdrawAgentTokens(tokenId, ethers.parseEther("1500"));
+
+            // Should have no deposits left
+            const finalDeposit = await personaFactory.agentDeposits(tokenId, user2.address);
+            expect(finalDeposit).to.equal(0);
         });
     });
 
@@ -547,9 +549,9 @@ describe("PersonaTokenFactory Agent Token Integration", function () {
             // Claim rewards
             await personaFactory.connect(user2).claimAgentRewards(tokenId);
 
-            // Check deposits marked as withdrawn
-            const deposits = await personaFactory.getUserAgentDeposits(tokenId, user2.address);
-            expect(deposits[0].withdrawn).to.be.true;
+            // Check deposits were reset to 0
+            const remainingDeposit = await personaFactory.agentDeposits(tokenId, user2.address);
+            expect(remainingDeposit).to.equal(0);
 
             // Second claim should fail
             await expect(
@@ -736,15 +738,14 @@ describe("PersonaTokenFactory Agent Token Integration", function () {
         it("Should handle withdrawing after partial deposits claimed as rewards", async function () {
             const { personaFactory, amicaToken, agentToken, tokenId, user2, user3 } = await createPersonaWithAgentToken(0n);
 
-            // Make multiple deposits
-            await agentToken.transfer(user2.address, ethers.parseEther("3500"));
-            await agentToken.connect(user2).approve(await personaFactory.getAddress(), ethers.parseEther("3500"));
+            // Make initial deposit
+            await agentToken.transfer(user2.address, ethers.parseEther("3000"));
+            await agentToken.connect(user2).approve(await personaFactory.getAddress(), ethers.parseEther("3000"));
 
-            await personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("1000"));
             await personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("2000"));
 
-            // Withdraw first deposit
-            await personaFactory.connect(user2).withdrawAgentTokens(tokenId);
+            // Withdraw some tokens
+            await personaFactory.connect(user2).withdrawAgentTokens(tokenId, ethers.parseEther("1500"));
 
             // Now deposit again
             await personaFactory.connect(user2).depositAgentTokens(tokenId, ethers.parseEther("500"));
@@ -761,10 +762,10 @@ describe("PersonaTokenFactory Agent Token Integration", function () {
                 getDeadline()
             );
 
-            // Should only be able to claim rewards for the non-withdrawn deposit
+            // Should only be able to claim rewards for the remaining deposit (500 + 500 = 1000)
             await personaFactory.connect(user2).claimAgentRewards(tokenId);
 
-            // Verify only got rewards for 500 tokens
+            // Verify got rewards for 1000 tokens total
             const persona = await personaFactory.getPersona(tokenId);
             const TestERC20Contract = await ethers.getContractFactory("TestERC20");
             const personaToken = TestERC20Contract.attach(persona.erc20Token) as TestERC20;

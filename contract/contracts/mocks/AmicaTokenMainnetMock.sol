@@ -30,6 +30,6 @@ contract AmicaTokenMainnetMock is AmicaToken {
      */
     function mint(address to, uint256 amount) external override {
         require(msg.sender == bridgeWrapper, "Only bridge wrapper can mint");
-        revert("Cannot mint on mainnet");
+        revert CannotMintOnMainnet();
     }
 }

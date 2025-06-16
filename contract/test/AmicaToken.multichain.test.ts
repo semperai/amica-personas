@@ -41,7 +41,7 @@ describe("AmicaToken Multi-chain Behavior", function () {
 
             await expect(
                 amicaToken.mint(owner.address, ethers.parseEther("1000"))
-            ).to.be.revertedWith("Cannot mint on mainnet");
+            ).to.be.revertedWithCustomError(amicaToken, "CannotMintOnMainnet");
         });
 
         it("Should handle burn and claim correctly on mainnet", async function () {
@@ -99,7 +99,7 @@ describe("AmicaToken Multi-chain Behavior", function () {
             // Try to mint without bridge wrapper - should fail
             await expect(
                 amicaToken.mint(user1.address, ethers.parseEther("1000"))
-            ).to.be.revertedWith("Only bridge wrapper can mint");
+            ).to.be.revertedWithCustomError(amicaToken, "OnlyBridgeWrapper");
 
             // Set bridge wrapper
             await amicaToken.setBridgeWrapper(owner.address);
@@ -146,7 +146,7 @@ describe("AmicaToken Multi-chain Behavior", function () {
             // Contract has 0 balance on non-mainnet
             await expect(
                 amicaToken.withdraw(user1.address, ethers.parseEther("1000"))
-            ).to.be.revertedWith("Insufficient balance");
+            ).to.be.revertedWithCustomError(amicaToken, "InsufficientBalance");
         });
     });
 
@@ -168,7 +168,7 @@ describe("AmicaToken Multi-chain Behavior", function () {
             // Then try to set to zero (which should be rejected)
             await expect(
                 amicaToken.setBridgeWrapper(ethers.ZeroAddress)
-            ).to.be.revertedWith("Invalid wrapper address");
+            ).to.be.revertedWithCustomError(amicaToken, "InvalidWrapperAddress");
         });
 
         it("Should emit event when bridge wrapper is set", async function () {

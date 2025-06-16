@@ -7,6 +7,24 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
+// Custom errors
+error InvalidWrapperAddress();
+error OnlyBridgeWrapper();
+error CannotMintOnMainnet();
+error InvalidRecipient();
+error InsufficientBalance();
+error CannotRecoverAmica();
+error NoTokensToRecover();
+error InvalidAmount();
+error InvalidToken();
+error TransferFailed();
+error NoTokensSelected();
+error InvalidBurnAmount();
+error TokenIndexesMustBeSortedAndUnique();
+error NoCirculatingSupply();
+error InvalidTokenIndex();
+error NoTokensToClaim();
+
 /**
  * @title AmicaToken
  * @notice Main AMICA token with burn-and-claim mechanism for deposited tokens
@@ -63,7 +81,7 @@ contract AmicaToken is ERC20Upgradeable, ERC20BurnableUpgradeable, OwnableUpgrad
      * @param _bridgeWrapper Address of the bridge wrapper contract
      */
     function setBridgeWrapper(address _bridgeWrapper) external onlyOwner {
-        require(_bridgeWrapper != address(0), "Invalid wrapper address");
+        if (_bridgeWrapper == address(0)) revert InvalidWrapperAddress();
         bridgeWrapper = _bridgeWrapper;
         emit BridgeWrapperSet(_bridgeWrapper);
     }
@@ -74,8 +92,8 @@ contract AmicaToken is ERC20Upgradeable, ERC20BurnableUpgradeable, OwnableUpgrad
      * @param amount Amount to mint
      */
     function mint(address to, uint256 amount) external virtual {
-        require(msg.sender == bridgeWrapper, "Only bridge wrapper can mint");
-        require(block.chainid != 1, "Cannot mint on mainnet");
+        if (msg.sender != bridgeWrapper) revert OnlyBridgeWrapper();
+        if (block.chainid == 1) revert CannotMintOnMainnet();
         _mint(to, amount);
     }
 
@@ -99,8 +117,8 @@ contract AmicaToken is ERC20Upgradeable, ERC20BurnableUpgradeable, OwnableUpgrad
      * @param amount Amount to withdraw
      */
     function withdraw(address to, uint256 amount) external onlyOwner {
-        require(to != address(0), "Invalid recipient");
-        require(amount <= balanceOf(address(this)), "Insufficient balance");
+        if (to == address(0)) revert InvalidRecipient();
+        if (amount > balanceOf(address(this))) revert InsufficientBalance();
 
         _transfer(address(this), to, amount);
         emit TokensWithdrawn(to, amount);
@@ -112,16 +130,16 @@ contract AmicaToken is ERC20Upgradeable, ERC20BurnableUpgradeable, OwnableUpgrad
      * @param to Recipient address
      */
     function recoverToken(address token, address to) external onlyOwner {
-        require(to != address(0), "Invalid recipient");
-        require(token != address(this), "Cannot recover AMICA");
+        if (to == address(0)) revert InvalidRecipient();
+        if (token == address(this)) revert CannotRecoverAmica();
 
         IERC20 tokenContract = IERC20(token);
         uint256 contractBalance = tokenContract.balanceOf(address(this));
         uint256 recoverable = contractBalance - depositedBalances[token];
 
-        require(recoverable > 0, "No tokens to recover");
+        if (recoverable == 0) revert NoTokensToRecover();
 
-        require(tokenContract.transfer(to, recoverable), "Transfer failed");
+        if (!tokenContract.transfer(to, recoverable)) revert TransferFailed();
         emit TokensRecovered(to, token, recoverable);
     }
 
@@ -131,8 +149,8 @@ contract AmicaToken is ERC20Upgradeable, ERC20BurnableUpgradeable, OwnableUpgrad
      * @param amount Amount to deposit
      */
     function deposit(address token, uint256 amount) external nonReentrant {
-        require(amount > 0, "Invalid amount");
-        require(token != address(0), "Invalid token");
+        if (amount == 0) revert InvalidAmount();
+        if (token == address(0)) revert InvalidToken();
 
         IERC20(token).transferFrom(msg.sender, address(this), amount);
 
@@ -155,16 +173,16 @@ contract AmicaToken is ERC20Upgradeable, ERC20BurnableUpgradeable, OwnableUpgrad
         external
         nonReentrant
     {
-        require(amountToBurn > 0, "Invalid burn amount");
-        require(tokenIndexes.length > 0, "No tokens selected");
+        if (amountToBurn == 0) revert InvalidBurnAmount();
+        if (tokenIndexes.length == 0) revert NoTokensSelected();
 
         // Verify tokenIndexes are sorted and unique
         for (uint256 i = 1; i < tokenIndexes.length; i++) {
-            require(tokenIndexes[i] > tokenIndexes[i - 1], "Token indexes must be sorted and unique");
+            if (tokenIndexes[i] <= tokenIndexes[i - 1]) revert TokenIndexesMustBeSortedAndUnique();
         }
 
         uint256 currentCirculating = circulatingSupply();
-        require(currentCirculating > 0, "No circulating supply");
+        if (currentCirculating == 0) revert NoCirculatingSupply();
 
         // Calculate share (with precision scaling)
         uint256 sharePercentage = (amountToBurn * PRECISION) / currentCirculating;
@@ -175,7 +193,7 @@ contract AmicaToken is ERC20Upgradeable, ERC20BurnableUpgradeable, OwnableUpgrad
 
         // Process claims
         for (uint256 i = 0; i < tokenIndexes.length; i++) {
-            require(tokenIndexes[i] < _depositedTokens.length, "Invalid token index");
+            if (tokenIndexes[i] >= _depositedTokens.length) revert InvalidTokenIndex();
 
             address tokenAddress = _depositedTokens[tokenIndexes[i]];
             if (tokenAddress == address(0)) continue;
@@ -190,14 +208,14 @@ contract AmicaToken is ERC20Upgradeable, ERC20BurnableUpgradeable, OwnableUpgrad
             depositedBalances[tokenAddress] -= claimAmount;
 
             // Transfer tokens
-            require(IERC20(tokenAddress).transfer(msg.sender, claimAmount), "Transfer failed");
+            if (!IERC20(tokenAddress).transfer(msg.sender, claimAmount)) revert TransferFailed();
 
             claimedTokens[validClaims] = tokenAddress;
             claimedAmounts[validClaims] = claimAmount;
             validClaims++;
         }
 
-        require(validClaims > 0, "No tokens to claim");
+        if (validClaims == 0) revert NoTokensToClaim();
 
         // Burn AMICA tokens
         _burn(msg.sender, amountToBurn);

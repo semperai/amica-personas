@@ -28,6 +28,31 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     // ============================================================================
+    // CUSTOM ERRORS
+    // ============================================================================
+
+    error InvalidLPToken();
+    error PoolAlreadyExists();
+    error TotalAllocationExceeds100();
+    error InvalidPool();
+    error InvalidMultiplier();
+    error InvalidDuration();
+    error InvalidIndex();
+    error AmountCannotBeZero();
+    error PoolNotActive();
+    error InsufficientBalance();
+    error InvalidLockTier();
+    error StillLocked();
+    error LockNotFound();
+    error AlreadyWithdrawn();
+    error NothingToWithdraw();
+    error NoRewardsToClaim();
+    error InvalidToken();
+    error CannotWithdrawLPTokens();
+    error InvalidPeriod();
+    error PoolNotFound();
+
+    // ============================================================================
     // STRUCTS
     // ============================================================================
 
@@ -155,9 +180,9 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
         bool _isAgentPool,
         uint256 _personaTokenId
     ) external onlyOwner {
-        require(_lpToken != address(0), "Invalid LP token");
-        require(lpTokenToPoolId[_lpToken] == 0, "Pool already exists");
-        require(totalAllocBasisPoints + _allocBasisPoints <= BASIS_POINTS, "Total allocation exceeds 100%");
+        if (_lpToken == address(0)) revert InvalidLPToken();
+        if (lpTokenToPoolId[_lpToken] != 0) revert PoolAlreadyExists();
+        if (totalAllocBasisPoints + _allocBasisPoints > BASIS_POINTS) revert TotalAllocationExceeds100();
 
         _updateGlobalRewards();
 
@@ -185,14 +210,14 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
      * @notice Add or update lock tier
      */
     function setLockTier(uint256 index, uint256 duration, uint256 multiplier) external onlyOwner {
-        require(multiplier >= BASIS_POINTS && multiplier <= MAX_LOCK_MULTIPLIER, "Invalid multiplier");
-        require(duration > 0, "Invalid duration");
+        if (multiplier < BASIS_POINTS || multiplier > MAX_LOCK_MULTIPLIER) revert InvalidMultiplier();
+        if (duration == 0) revert InvalidDuration();
 
         if (index < lockTiers.length) {
             lockTiers[index] = LockTier(duration, multiplier);
             emit LockTierUpdated(index, duration, multiplier);
         } else {
-            require(index == lockTiers.length, "Invalid index");
+            if (index != lockTiers.length) revert InvalidIndex();
             lockTiers.push(LockTier(duration, multiplier));
             emit LockTierAdded(duration, multiplier);
         }
@@ -206,7 +231,7 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
         uint256 _allocBasisPoints,
         bool _isActive
     ) external onlyOwner {
-        require(_poolId < poolInfo.length, "Invalid pool");
+        if (_poolId >= poolInfo.length) revert InvalidPool();
 
         updatePoolRewards(_poolId);
 
@@ -214,7 +239,7 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
 
         // Calculate new total allocation
         uint256 newTotalAlloc = totalAllocBasisPoints - pool.allocBasisPoints + _allocBasisPoints;
-        require(newTotalAlloc <= BASIS_POINTS, "Total allocation exceeds 100%");
+        if (newTotalAlloc > BASIS_POINTS) revert TotalAllocationExceeds100();
 
         totalAllocBasisPoints = newTotalAlloc;
         pool.allocBasisPoints = _allocBasisPoints;
@@ -236,7 +261,7 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
      * @notice Update reward period
      */
     function updateRewardPeriod(uint256 _startBlock, uint256 _endBlock) external onlyOwner {
-        require(_endBlock == 0 || _endBlock > _startBlock, "Invalid period");
+        if (_endBlock != 0 && _endBlock <= _startBlock) revert InvalidPeriod();
         _updateGlobalRewards();
         startBlock = _startBlock;
         endBlock = _endBlock;
@@ -247,11 +272,11 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
      * @notice Emergency withdraw stuck tokens (not LP tokens)
      */
     function emergencyWithdraw(address _token, uint256 _amount) external onlyOwner {
-        require(_token != address(0), "Invalid token");
+        if (_token == address(0)) revert InvalidToken();
 
         // Check if token is an LP token in any pool
         for (uint256 i = 0; i < poolInfo.length; i++) {
-            require(address(poolInfo[i].lpToken) != _token, "Cannot withdraw LP tokens");
+            if (address(poolInfo[i].lpToken) == _token) revert CannotWithdrawLPTokens();
         }
 
         IERC20(_token).safeTransfer(msg.sender, _amount);
@@ -373,11 +398,11 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
      * @notice Stake LP tokens (flexible, no lock)
      */
     function stake(uint256 _poolId, uint256 _amount) external nonReentrant {
-        require(_poolId < poolInfo.length, "Invalid pool");
-        require(_amount > 0, "Cannot stake 0");
+        if (_poolId >= poolInfo.length) revert InvalidPool();
+        if (_amount == 0) revert AmountCannotBeZero();
 
         PoolInfo storage pool = poolInfo[_poolId];
-        require(pool.isActive, "Pool not active");
+        if (!pool.isActive) revert PoolNotActive();
 
         UserInfo storage user = userInfo[_poolId][msg.sender];
 
@@ -411,12 +436,12 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
      * @notice Stake LP tokens with time lock for bonus rewards
      */
     function stakeLocked(uint256 _poolId, uint256 _amount, uint256 _lockTierIndex) external nonReentrant {
-        require(_poolId < poolInfo.length, "Invalid pool");
-        require(_amount > 0, "Cannot stake 0");
-        require(_lockTierIndex < lockTiers.length, "Invalid lock tier");
+        if (_poolId >= poolInfo.length) revert InvalidPool();
+        if (_amount == 0) revert AmountCannotBeZero();
+        if (_lockTierIndex >= lockTiers.length) revert InvalidLockTier();
 
         PoolInfo storage pool = poolInfo[_poolId];
-        require(pool.isActive, "Pool not active");
+        if (!pool.isActive) revert PoolNotActive();
 
         updatePoolRewards(_poolId);
 
@@ -455,12 +480,12 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
      * @notice Withdraw flexible stake
      */
     function withdraw(uint256 _poolId, uint256 _amount) external nonReentrant {
-        require(_poolId < poolInfo.length, "Invalid pool");
+        if (_poolId >= poolInfo.length) revert InvalidPool();
 
         PoolInfo storage pool = poolInfo[_poolId];
         UserInfo storage user = userInfo[_poolId][msg.sender];
 
-        require(user.amount >= _amount, "Insufficient balance");
+        if (user.amount < _amount) revert InsufficientBalance();
 
         updatePoolRewards(_poolId);
 
@@ -492,7 +517,7 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
      * @notice Withdraw a specific lock after unlock time
      */
     function withdrawLocked(uint256 _poolId, uint256 _lockId) external nonReentrant {
-        require(_poolId < poolInfo.length, "Invalid pool");
+        if (_poolId >= poolInfo.length) revert InvalidPool();
 
         PoolInfo storage pool = poolInfo[_poolId];
         LockInfo[] storage locks = userLocks[_poolId][msg.sender];
@@ -506,10 +531,10 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
             }
         }
 
-        require(lockIndex != type(uint256).max, "Lock not found");
+        if (lockIndex == type(uint256).max) revert LockNotFound();
         LockInfo memory lock = locks[lockIndex];
-        require(block.timestamp >= lock.unlockTime, "Still locked");
-        require(lock.amount > 0, "Already withdrawn");
+        if (block.timestamp < lock.unlockTime) revert StillLocked();
+        if (lock.amount == 0) revert AlreadyWithdrawn();
 
         updatePoolRewards(_poolId);
 
@@ -546,7 +571,7 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
      * @notice Emergency exit from pool (forfeit rewards)
      */
     function emergencyExitPool(uint256 _poolId) external nonReentrant {
-        require(_poolId < poolInfo.length, "Invalid pool");
+        if (_poolId >= poolInfo.length) revert InvalidPool();
 
         PoolInfo storage pool = poolInfo[_poolId];
         UserInfo storage user = userInfo[_poolId][msg.sender];
@@ -559,7 +584,7 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
             totalAmount += locks[i].amount;
         }
 
-        require(totalAmount > 0, "Nothing to withdraw");
+        if (totalAmount == 0) revert NothingToWithdraw();
 
         // Update pool totals
         pool.totalStaked -= totalAmount;
@@ -586,7 +611,7 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
      * @notice Claim rewards from a specific pool
      */
     function claimPool(uint256 _poolId) external nonReentrant {
-        require(_poolId < poolInfo.length, "Invalid pool");
+        if (_poolId >= poolInfo.length) revert InvalidPool();
 
         updatePoolRewards(_poolId);
 
@@ -596,7 +621,7 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
         // Calculate total rewards including locks
         uint256 totalRewards = _calculateUserRewards(_poolId, msg.sender);
 
-        require(totalRewards > 0, "No rewards to claim");
+        if (totalRewards == 0) revert NoRewardsToClaim();
 
         // Update reward debts
         user.unclaimedRewards = 0;
@@ -653,7 +678,7 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
             }
         }
 
-        require(totalRewards > 0, "No rewards to claim");
+        if (totalRewards == 0) revert NoRewardsToClaim();
 
         amicaToken.safeTransfer(msg.sender, totalRewards);
         emit RewardsClaimed(msg.sender, totalRewards);
@@ -668,7 +693,7 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
      */
     function getPoolIdByLpToken(address _lpToken) external view returns (uint256) {
         uint256 poolId = lpTokenToPoolId[_lpToken];
-        require(poolId > 0, "Pool not found");
+        if (poolId == 0) revert PoolNotFound();
         return poolId - 1;
     }
 
@@ -683,7 +708,7 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
      * @notice Get pool allocation percentage
      */
     function getPoolAllocationPercentage(uint256 _poolId) external view returns (uint256) {
-        require(_poolId < poolInfo.length, "Invalid pool");
+        if (_poolId >= poolInfo.length) revert InvalidPool();
         return poolInfo[_poolId].allocBasisPoints;
     }
 
@@ -726,7 +751,7 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
      * @notice Get pending rewards for a specific pool
      */
     function pendingRewardsForPool(uint256 _poolId, address _user) external view returns (uint256) {
-        require(_poolId < poolInfo.length, "Invalid pool");
+        if (_poolId >= poolInfo.length) revert InvalidPool();
         return _calculateUserRewards(_poolId, _user);
     }
 
@@ -755,7 +780,7 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
         bool isActive,
         bool isAgentPool
     ) {
-        require(_poolId < poolInfo.length, "Invalid pool");
+        if (_poolId >= poolInfo.length) revert InvalidPool();
         PoolInfo storage pool = poolInfo[_poolId];
 
         return (
@@ -778,7 +803,7 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
         uint256 unclaimedRewards,
         uint256 numberOfLocks
     ) {
-        require(_poolId < poolInfo.length, "Invalid pool");
+        if (_poolId >= poolInfo.length) revert InvalidPool();
         UserInfo storage user = userInfo[_poolId][_user];
 
         return (
@@ -794,7 +819,7 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
      * @notice Get lock tier details
      */
     function getLockTier(uint256 _index) external view returns (uint256 duration, uint256 multiplier) {
-        require(_index < lockTiers.length, "Invalid index");
+        if (_index >= lockTiers.length) revert InvalidIndex();
         LockTier memory tier = lockTiers[_index];
         return (tier.duration, tier.multiplier);
     }

@@ -137,7 +137,7 @@ describe("AmicaToken", function () {
 
             await expect(
                 amicaToken.withdraw(user1.address, excessAmount)
-            ).to.be.revertedWith("Insufficient balance");
+            ).to.be.revertedWithCustomError(amicaToken, "InsufficientBalance");
         });
 
         it("Should reject withdrawal to zero address", async function () {
@@ -145,7 +145,7 @@ describe("AmicaToken", function () {
 
             await expect(
                 amicaToken.withdraw(ethers.ZeroAddress, ethers.parseEther("1000"))
-            ).to.be.revertedWith("Invalid recipient");
+            ).to.be.revertedWithCustomError(amicaToken, "InvalidRecipient");
         });
 
         it("Should reject withdrawal by non-owner", async function () {
@@ -233,7 +233,7 @@ describe("AmicaToken", function () {
 
             await expect(
                 amicaToken.deposit(await usdc.getAddress(), 0)
-            ).to.be.revertedWith("Invalid amount");
+            ).to.be.revertedWithCustomError(amicaToken, "InvalidAmount");
         });
 
         it("Should reject deposits of zero address", async function () {
@@ -241,7 +241,7 @@ describe("AmicaToken", function () {
 
             await expect(
                 amicaToken.deposit(ethers.ZeroAddress, ethers.parseEther("1000"))
-            ).to.be.revertedWith("Invalid token");
+            ).to.be.revertedWithCustomError(amicaToken, "InvalidToken");
         });
 
         it("Should reject deposits without approval", async function () {
@@ -399,7 +399,7 @@ describe("AmicaToken", function () {
 
             await expect(
                 amicaToken.connect(user1).burnAndClaim(ethers.parseEther("1000"), [])
-            ).to.be.revertedWith("No tokens selected");
+            ).to.be.revertedWithCustomError(amicaToken, "NoTokensSelected");
         });
 
         it("Should reject burn with zero amount", async function () {
@@ -407,7 +407,7 @@ describe("AmicaToken", function () {
 
             await expect(
                 amicaToken.connect(user1).burnAndClaim(0, [1])
-            ).to.be.revertedWith("Invalid burn amount");
+            ).to.be.revertedWithCustomError(amicaToken, "InvalidBurnAmount");
         });
 
         it("Should reject burn exceeding user balance", async function () {
@@ -425,7 +425,7 @@ describe("AmicaToken", function () {
 
             await expect(
                 amicaToken.connect(user1).burnAndClaim(ethers.parseEther("1000"), [999])
-            ).to.be.revertedWith("Invalid token index");
+            ).to.be.revertedWithCustomError(amicaToken, "InvalidTokenIndex");
         });
 
         it("Should handle claiming when circulating supply is very low", async function () {
@@ -590,7 +590,7 @@ describe("AmicaToken", function () {
 
             await expect(
                 amicaToken.recoverToken(await usdc.getAddress(), owner.address)
-            ).to.be.revertedWith("No tokens to recover");
+            ).to.be.revertedWithCustomError(amicaToken, "NoTokensToRecover");
         });
 
         it("Should reject recovery of AMICA tokens", async function () {
@@ -598,7 +598,7 @@ describe("AmicaToken", function () {
 
             await expect(
                 amicaToken.recoverToken(await amicaToken.getAddress(), owner.address)
-            ).to.be.revertedWith("Cannot recover AMICA");
+            ).to.be.revertedWithCustomError(amicaToken, "CannotRecoverAmica");
         });
 
         it("Should reject recovery to zero address", async function () {
@@ -608,7 +608,7 @@ describe("AmicaToken", function () {
 
             await expect(
                 amicaToken.recoverToken(await usdc.getAddress(), ethers.ZeroAddress)
-            ).to.be.revertedWith("Invalid recipient");
+            ).to.be.revertedWithCustomError(amicaToken, "InvalidRecipient");
         });
 
         it("Should reject recovery by non-owner", async function () {
@@ -673,7 +673,7 @@ describe("AmicaToken", function () {
         // This should fail with "No circulating supply" since no tokens are in circulation
         await expect(
             amicaToken.burnAndClaim(ethers.parseEther("100"), [tokenIndex])
-        ).to.be.revertedWith("No circulating supply");
+        ).to.be.revertedWithCustomError(amicaToken, "NoCirculatingSupply");
     });
 
     it("Should handle concurrent deposits of same token", async function () {
@@ -720,7 +720,7 @@ describe("AmicaToken", function () {
         // No excess to recover
         await expect(
             amicaToken.recoverToken(await testToken.getAddress(), owner.address)
-        ).to.be.revertedWith("No tokens to recover");
+        ).to.be.revertedWithCustomError(amicaToken, "NoTokensToRecover");
     });
 });
 
@@ -742,12 +742,12 @@ describe("AmicaToken Vulnerability Tests", function () {
             // This should fail with the fixed contract
             await expect(
                 amicaToken.connect(attacker).burnAndClaim(burnAmount, [1, 1, 1])
-            ).to.be.revertedWith("Token indexes must be sorted and unique");
+            ).to.be.revertedWithCustomError(amicaToken, "TokenIndexesMustBeSortedAndUnique");
 
             // Also test unsorted indexes
             await expect(
                 amicaToken.connect(attacker).burnAndClaim(burnAmount, [2, 1])
-            ).to.be.revertedWith("Token indexes must be sorted and unique");
+            ).to.be.revertedWithCustomError(amicaToken, "TokenIndexesMustBeSortedAndUnique");
         });
 
         it("Should allow claiming with properly sorted unique indexes", async function () {
@@ -804,7 +804,7 @@ describe("AmicaToken Vulnerability Tests", function () {
             // In fixed contract, this correctly reverts
             await expect(
                 amicaToken.connect(attacker).burnAndClaim(burnAmount, [1, 1, 1])
-            ).to.be.revertedWith("Token indexes must be sorted and unique");
+            ).to.be.revertedWithCustomError(amicaToken, "TokenIndexesMustBeSortedAndUnique");
 
             console.log("✓ Attack prevented with fix!");
         });
@@ -829,7 +829,7 @@ describe("AmicaToken Vulnerability Tests", function () {
             // Empty array should fail
             await expect(
                 amicaToken.connect(attacker).burnAndClaim(ethers.parseEther("100"), [])
-            ).to.be.revertedWith("No tokens selected");
+            ).to.be.revertedWithCustomError(amicaToken, "NoTokensSelected");
 
             // Single index should work
             await expect(

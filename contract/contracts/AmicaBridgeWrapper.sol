@@ -13,6 +13,18 @@ interface IAmicaToken {
     function burnFrom(address account, uint256 amount) external;
 }
 
+// Custom errors
+error InvalidBridgedToken();
+error InvalidNativeToken();
+error TokensMustBeDifferent();
+error InvalidOwner();
+error InvalidAmount();
+error TransferFailed();
+error InsufficientBridgedTokens();
+error InvalidRecipient();
+error NoExcessTokens();
+error AmountExceedsExcess();
+
 /**
  * @title AmicaBridgeWrapper
  * @notice Handles conversion between bridged AMICA tokens and native chain AMICA tokens
@@ -50,10 +62,10 @@ contract AmicaBridgeWrapper is
         address _nativeAmicaToken,
         address _owner
     ) public initializer {
-        require(_bridgedAmicaToken != address(0), "Invalid bridged token");
-        require(_nativeAmicaToken != address(0), "Invalid native token");
-        require(_bridgedAmicaToken != _nativeAmicaToken, "Tokens must be different");
-        require(_owner != address(0), "Invalid owner");
+        if (_bridgedAmicaToken == address(0)) revert InvalidBridgedToken();
+        if (_nativeAmicaToken == address(0)) revert InvalidNativeToken();
+        if (_bridgedAmicaToken == _nativeAmicaToken) revert TokensMustBeDifferent();
+        if (_owner == address(0)) revert InvalidOwner();
 
         __Ownable_init(_owner);
         __ReentrancyGuard_init();
@@ -84,13 +96,12 @@ contract AmicaBridgeWrapper is
      * @param amount Amount of bridged tokens to wrap
      */
     function wrap(uint256 amount) external nonReentrant whenNotPaused {
-        require(amount > 0, "Amount must be greater than 0");
+        if (amount == 0) revert InvalidAmount();
 
         // Transfer bridged tokens from user to this contract
-        require(
-            bridgedAmicaToken.transferFrom(msg.sender, address(this), amount),
-            "Transfer failed"
-        );
+        if (!bridgedAmicaToken.transferFrom(msg.sender, address(this), amount)) {
+            revert TransferFailed();
+        }
 
         // Mint native tokens to user
         nativeAmicaToken.mint(msg.sender, amount);
@@ -105,21 +116,19 @@ contract AmicaBridgeWrapper is
      * @param amount Amount of native tokens to unwrap
      */
     function unwrap(uint256 amount) external nonReentrant whenNotPaused {
-        require(amount > 0, "Amount must be greater than 0");
+        if (amount == 0) revert InvalidAmount();
 
-        require(
-            bridgedAmicaToken.balanceOf(address(this)) >= amount,
-            "Insufficient bridged tokens"
-        );
+        if (bridgedAmicaToken.balanceOf(address(this)) < amount) {
+            revert InsufficientBridgedTokens();
+        }
 
         // Burn native tokens from user
         nativeAmicaToken.burnFrom(msg.sender, amount);
 
         // Transfer bridged tokens back to user
-        require(
-            bridgedAmicaToken.transfer(msg.sender, amount),
-            "Transfer failed"
-        );
+        if (!bridgedAmicaToken.transfer(msg.sender, amount)) {
+            revert TransferFailed();
+        }
 
         totalBridgedOut += amount;
 
@@ -145,18 +154,18 @@ contract AmicaBridgeWrapper is
         address to,
         uint256 amount
     ) external onlyOwner {
-        require(to != address(0), "Invalid recipient");
+        if (to == address(0)) revert InvalidRecipient();
 
         if (token == address(bridgedAmicaToken)) {
             // For bridged AMICA, only allow withdrawal of excess
             uint256 requiredBalance = totalBridgedIn - totalBridgedOut;
             uint256 currentBalance = bridgedAmicaToken.balanceOf(address(this));
-            require(currentBalance > requiredBalance, "No excess tokens");
+            if (currentBalance <= requiredBalance) revert NoExcessTokens();
             uint256 excess = currentBalance - requiredBalance;
-            require(amount <= excess, "Amount exceeds excess");
+            if (amount > excess) revert AmountExceedsExcess();
         }
 
-        require(IERC20(token).transfer(to, amount), "Transfer failed");
+        if (!IERC20(token).transfer(to, amount)) revert TransferFailed();
 
         emit EmergencyWithdraw(token, to, amount);
     }
@@ -169,9 +178,9 @@ contract AmicaBridgeWrapper is
         address _bridgedAmicaToken,
         address _nativeAmicaToken
     ) external onlyOwner whenPaused {
-        require(_bridgedAmicaToken != address(0), "Invalid bridged token");
-        require(_nativeAmicaToken != address(0), "Invalid native token");
-        require(_bridgedAmicaToken != _nativeAmicaToken, "Tokens must be different");
+        if (_bridgedAmicaToken == address(0)) revert InvalidBridgedToken();
+        if (_nativeAmicaToken == address(0)) revert InvalidNativeToken();
+        if (_bridgedAmicaToken == _nativeAmicaToken) revert TokensMustBeDifferent();
 
         bridgedAmicaToken = IERC20(_bridgedAmicaToken);
         nativeAmicaToken = IAmicaToken(_nativeAmicaToken);
