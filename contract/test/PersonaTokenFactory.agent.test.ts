@@ -1373,7 +1373,7 @@ describe("PersonaTokenFactory Agent Token Additional Tests", function () {
 
     describe("Edge Cases - Agent Token Rewards Distribution", function () {
         it("Should handle rewards distribution when total deposits exceed rewards amount", async function () {
-            const { personaFactory, amicaToken, agentToken, tokenId, user1, user2, user3 } = 
+            const { personaFactory, amicaToken, agentToken, tokenId, user1, user2, user3 } =
                 await createPersonaWithAgentToken(0n);
 
             // Users deposit massive amounts
@@ -1416,7 +1416,7 @@ describe("PersonaTokenFactory Agent Token Additional Tests", function () {
         });
 
         it("Should handle single depositor receiving all rewards", async function () {
-            const { personaFactory, amicaToken, agentToken, tokenId, user1, user2 } = 
+            const { personaFactory, amicaToken, agentToken, tokenId, user1, user2 } =
                 await createPersonaWithAgentToken(0n);
 
             // Only one user deposits
@@ -1449,7 +1449,7 @@ describe("PersonaTokenFactory Agent Token Additional Tests", function () {
         });
 
         it("Should handle tiny deposits correctly", async function () {
-            const { personaFactory, amicaToken, agentToken, tokenId, user1, user2, user3 } = 
+            const { personaFactory, amicaToken, agentToken, tokenId, user1, user2, user3 } =
                 await createPersonaWithAgentToken(0n);
 
             // Users make tiny deposits
@@ -1486,7 +1486,7 @@ describe("PersonaTokenFactory Agent Token Additional Tests", function () {
 
     describe("Complex Withdrawal Scenarios", function () {
         it("Should handle multiple users withdrawing and depositing in sequence", async function () {
-            const { personaFactory, agentToken, tokenId, user1, user2, user3 } = 
+            const { personaFactory, agentToken, tokenId, user1, user2, user3 } =
                 await createPersonaWithAgentToken(0n);
 
             // Give users tokens
@@ -1519,7 +1519,7 @@ describe("PersonaTokenFactory Agent Token Additional Tests", function () {
         });
 
         it("Should prevent withdrawing more than deposited", async function () {
-            const { personaFactory, agentToken, tokenId, user2 } = 
+            const { personaFactory, agentToken, tokenId, user2 } =
                 await createPersonaWithAgentToken(0n);
 
             // Deposit some tokens
@@ -1537,7 +1537,7 @@ describe("PersonaTokenFactory Agent Token Additional Tests", function () {
     describe("Minimum Agent Token Edge Cases", function () {
         it("Should handle exactly meeting minimum requirement", async function () {
             const minRequired = ethers.parseEther("10000");
-            const { personaFactory, amicaToken, agentToken, tokenId, user2, user3 } = 
+            const { personaFactory, amicaToken, agentToken, tokenId, user2, user3 } =
                 await createPersonaWithAgentToken(minRequired);
 
             // Deposit exactly the minimum
@@ -1562,7 +1562,7 @@ describe("PersonaTokenFactory Agent Token Additional Tests", function () {
 
         it("Should handle withdrawals affecting minimum requirement", async function () {
             const minRequired = ethers.parseEther("10000");
-            const { personaFactory, amicaToken, agentToken, tokenId, user2, user3 } = 
+            const { personaFactory, amicaToken, agentToken, tokenId, user2, user3 } =
                 await createPersonaWithAgentToken(minRequired);
 
             // Deposit more than minimum
@@ -1604,7 +1604,7 @@ describe("PersonaTokenFactory Agent Token Additional Tests", function () {
         });
 
         it("Should allow zero minimum agent tokens", async function () {
-            const { personaFactory, amicaToken, tokenId, user3 } = 
+            const { personaFactory, amicaToken, tokenId, user3 } =
                 await createPersonaWithAgentToken(0n);
 
             // Should be able to graduate without any agent deposits
@@ -1690,7 +1690,7 @@ describe("PersonaTokenFactory Agent Token Additional Tests", function () {
 
     describe("Attack Vector Prevention", function () {
         it("Should prevent deposit/withdrawal spam attacks", async function () {
-            const { personaFactory, agentToken, tokenId, user2 } = 
+            const { personaFactory, agentToken, tokenId, user2 } =
                 await createPersonaWithAgentToken(0n);
 
             await agentToken.transfer(user2.address, ethers.parseEther("1000"));
@@ -1709,7 +1709,7 @@ describe("PersonaTokenFactory Agent Token Additional Tests", function () {
         });
 
         it("Should prevent frontrunning graduation to steal rewards", async function () {
-            const { personaFactory, amicaToken, agentToken, tokenId, user1, user2, user3 } = 
+            const { personaFactory, amicaToken, agentToken, tokenId, user1, user2, user3 } =
                 await createPersonaWithAgentToken(0n);
 
             // User2 deposits early
@@ -1766,7 +1766,7 @@ describe("PersonaTokenFactory Agent Token Additional Tests", function () {
 
     describe("Integration with Trading", function () {
         it("Should allow buying persona tokens while agent deposits are active", async function () {
-            const { personaFactory, amicaToken, agentToken, tokenId, user2, user3 } = 
+            const { personaFactory, amicaToken, agentToken, tokenId, user2, user3 } =
                 await createPersonaWithAgentToken(ethers.parseEther("5000"));
 
             // User2 deposits agent tokens
@@ -1797,7 +1797,7 @@ describe("PersonaTokenFactory Agent Token Additional Tests", function () {
         });
 
         it("Should handle graduation with both traders and agent depositors", async function () {
-            const { personaFactory, amicaToken, agentToken, tokenId, user1, user2, user3 } = 
+            const { personaFactory, amicaToken, agentToken, tokenId, user1, user2, user3 } =
                 await createPersonaWithAgentToken(0n);
 
             // User2 deposits agent tokens

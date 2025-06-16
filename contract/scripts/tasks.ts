@@ -274,26 +274,6 @@ task("persona-info", "Get detailed information about a persona")
 // AGENT TOKEN TASKS
 // ============================================================================
 
-task("approve-agent-token", "Approve an agent token for use in the system")
-  .addParam("token", "Agent token address")
-  .addParam("approved", "true or false")
-  .addOptionalParam("factory", "PersonaTokenFactory address")
-  .setAction(async (taskArgs, hre) => {
-    const factoryAddress = await getFactoryAddress(taskArgs.factory, hre);
-    const factory = await hre.ethers.getContractAt("PersonaTokenFactory", factoryAddress);
-
-    const approved = taskArgs.approved.toLowerCase() === "true";
-
-    console.log(`\n🔐 ${approved ? "Approving" : "Revoking"} Agent Token:`);
-    console.log(`  Token: ${taskArgs.token}`);
-
-    const tx = await factory.approveAgentToken(taskArgs.token, approved);
-    const receipt = await tx.wait();
-
-    console.log(`\n✅ Agent token ${approved ? "approved" : "revoked"}!`);
-    console.log(`  Transaction: ${receipt?.hash}`);
-  });
-
 task("deposit-agent-tokens", "Deposit agent tokens for a persona")
   .addParam("tokenId", "The persona token ID")
   .addParam("amount", "Amount to deposit in ether units")
@@ -326,6 +306,7 @@ task("deposit-agent-tokens", "Deposit agent tokens for a persona")
 
 task("withdraw-agent-tokens", "Withdraw agent tokens before graduation")
   .addParam("tokenId", "The persona token ID")
+  .addParam("amount", "Amount to withdraw in ether units")
   .addOptionalParam("factory", "PersonaTokenFactory address")
   .setAction(async (taskArgs, hre) => {
     const factoryAddress = await getFactoryAddress(taskArgs.factory, hre);
@@ -334,7 +315,7 @@ task("withdraw-agent-tokens", "Withdraw agent tokens before graduation")
     console.log("\n💎 Withdrawing Agent Tokens...");
     console.log(`  Token ID: ${taskArgs.tokenId}`);
 
-    const tx = await factory.withdrawAgentTokens(taskArgs.tokenId);
+    const tx = await factory.withdrawAgentTokens(taskArgs.tokenId, parseEther(taskArgs.amount));
     const receipt = await tx.wait();
 
     console.log("\n✅ Agent tokens withdrawn!");

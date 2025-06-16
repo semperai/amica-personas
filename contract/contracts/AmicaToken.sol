@@ -32,25 +32,25 @@ error NoTokensToClaim();
  * @notice Main AMICA token contract with a unique burn-and-claim mechanism for fair distribution of deposited tokens
  * @dev This upgradeable ERC20 token implements a fair distribution mechanism where users can burn AMICA tokens
  * to claim a proportional share of various tokens that have been deposited into the contract.
- * 
+ *
  * Key features:
  * - Upgradeable proxy pattern for future improvements
  * - Cross-chain compatibility with bridge wrapper support
  * - Pausable functionality for emergency situations
  * - Reentrancy protection on all state-changing functions
  * - Custom error messages for gas efficiency
- * 
+ *
  * The contract maintains a list of deposited tokens and their balances, allowing users to burn their AMICA
  * tokens to receive a proportional share of any deposited tokens based on the circulating supply.
- * 
+ *
  * @custom:security-contact kasumi-null@yandex.com
  */
-contract AmicaToken is 
-    ERC20Upgradeable, 
-    ERC20BurnableUpgradeable, 
-    OwnableUpgradeable, 
+contract AmicaToken is
+    ERC20Upgradeable,
+    ERC20BurnableUpgradeable,
+    OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
-    PausableUpgradeable 
+    PausableUpgradeable
 {
     /// @notice Array storing addresses of all tokens that have been deposited
     /// @dev Index 0 is reserved (set to address(0)) to distinguish between unindexed tokens
@@ -277,13 +277,13 @@ contract AmicaToken is
      * @notice Burns AMICA tokens and claims a proportional share of selected deposited tokens
      * @dev This is the core distribution mechanism. Users burn AMICA to receive a proportional
      * share of deposited tokens based on the circulating supply.
-     * 
+     *
      * The function implements a secure pattern where all state changes occur before any external calls
      * to prevent reentrancy attacks.
-     * 
+     *
      * @param amountToBurn Amount of AMICA tokens to burn from the caller's balance
      * @param tokenIndexes Array of token indexes to claim (must be sorted ascending and unique)
-     * 
+     *
      * @custom:requirement Contract must not be paused
      * @custom:requirement amountToBurn must be greater than 0
      * @custom:requirement tokenIndexes array must not be empty
@@ -291,10 +291,10 @@ contract AmicaToken is
      * @custom:requirement Each token index must be valid (< _depositedTokens.length)
      * @custom:requirement There must be circulating supply to calculate shares
      * @custom:requirement At least one token must have a claimable balance
-     * 
+     *
      * @custom:security All state updates complete before any external token transfers
      * @custom:security Protected by nonReentrant modifier
-     * 
+     *
      * @custom:emits TokensBurnedAndClaimed with the burned amount and claimed tokens/amounts
      */
     function burnAndClaim(uint256 amountToBurn, uint256[] calldata tokenIndexes)

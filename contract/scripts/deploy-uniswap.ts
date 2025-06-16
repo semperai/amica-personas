@@ -27,10 +27,10 @@ async function main(): Promise<void> {
   const [deployer] = await ethers.getSigners();
   const network = await ethers.provider.getNetwork();
   const chainId = Number(network.chainId);
-  
+
   console.log(`📍 Network: ${network.name} (chainId: ${chainId})`);
   console.log(`👤 Deployer: ${deployer.address}`);
-  
+
   const balance = await ethers.provider.getBalance(deployer.address);
   console.log(`💰 Balance: ${ethers.formatEther(balance)} ETH\n`);
 
@@ -99,7 +99,7 @@ async function main(): Promise<void> {
 
   const filename = `uniswap-v2-${network.name}-${chainId}.json`;
   const filepath = path.join(deploymentsDir, filename);
-  
+
   fs.writeFileSync(filepath, JSON.stringify(deployment, null, 2));
   console.log(`\n💾 Deployment info saved to: deployments/uniswap/${filename}`);
 

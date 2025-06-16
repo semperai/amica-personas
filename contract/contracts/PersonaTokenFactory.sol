@@ -41,7 +41,7 @@ interface IPersonaToken {
      * @param owner The initial owner of all tokens
      */
     function initialize(string memory name, string memory symbol, uint256 supply, address owner) external;
-    
+
     /**
      * @notice Set the graduation status of the persona token
      * @param status True if graduated, false otherwise
@@ -226,12 +226,12 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @notice Standard liquidity allocation without agent token (1/3)
      */
     uint256 public constant STANDARD_LIQUIDITY_AMOUNT = 333_333_333 ether;
-    
+
     /**
      * @notice Standard bonding curve allocation without agent token (1/3)
      */
     uint256 public constant STANDARD_BONDING_AMOUNT = 333_333_333 ether;
-    
+
     /**
      * @notice Standard AMICA deposit allocation without agent token (1/3)
      */
@@ -241,17 +241,17 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @notice Liquidity allocation with agent token (1/3)
      */
     uint256 public constant AGENT_LIQUIDITY_AMOUNT = 333_333_333 ether;
-    
+
     /**
      * @notice Bonding curve allocation with agent token (2/9)
      */
     uint256 public constant AGENT_BONDING_AMOUNT = 222_222_222 ether;
-    
+
     /**
      * @notice AMICA deposit allocation with agent token (2/9)
      */
     uint256 public constant AGENT_AMICA_AMOUNT = 222_222_222 ether;
-    
+
     /**
      * @notice Agent depositor rewards allocation (2/9)
      */
@@ -261,12 +261,12 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @notice Suffix appended to all persona token names
      */
     string private constant TOKEN_SUFFIX = ".amica";
-    
+
     /**
      * @notice Basis points constant for percentage calculations
      */
     uint256 private constant BASIS_POINTS = 10000;
-    
+
     /**
      * @notice Block delay before AMICA snapshot becomes active
      * @dev Prevents flash loan exploits for fee reduction
@@ -372,19 +372,19 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @dev Used for fee reduction calculations and token deposits
      */
     IERC20 public amicaToken;
-    
+
     /**
      * @notice Uniswap V2 factory contract
      * @dev Used to create liquidity pairs upon graduation
      */
     IUniswapV2Factory public uniswapFactory;
-    
+
     /**
      * @notice Uniswap V2 router contract
      * @dev Used to add liquidity upon graduation
      */
     IUniswapV2Router02 public uniswapRouter;
-    
+
     /**
      * @notice Implementation contract for persona ERC20 tokens
      * @dev Cloned for each new persona token
@@ -402,19 +402,19 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @dev Primary storage for all persona information
      */
     mapping(uint256 => PersonaData) public personas;
-    
+
     /**
      * @notice Maps token ID to purchase information
      * @dev Tracks bonding curve progress
      */
     mapping(uint256 => TokenPurchase) public purchases;
-    
+
     /**
      * @notice Maps token ID and user to purchase amount
      * @dev Used for tracking user allocations
      */
     mapping(uint256 => mapping(address => uint256)) public userPurchases;
-    
+
     /**
      * @notice Maps token ID and user to agent token deposits
      * @dev Tracks agent token contributions for rewards
@@ -432,13 +432,13 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @dev Maps token address to its configuration
      */
     mapping(address => PairingConfig) public pairingConfigs;
-    
+
     /**
      * @notice Global trading fee configuration
      * @dev Applied to all trades on the bonding curve
      */
     TradingFeeConfig public tradingFeeConfig;
-    
+
     /**
      * @notice Fee reduction configuration based on AMICA holdings
      * @dev Exponential curve for fee discounts
@@ -473,20 +473,20 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         string name,
         string symbol
     );
-    
+
     /**
      * @notice Emitted when pairing token configuration is updated
      * @param token The pairing token address that was updated
      */
     event PairingConfigUpdated(address indexed token);
-    
+
     /**
      * @notice Emitted when persona metadata is updated
      * @param tokenId The persona token ID
      * @param key The metadata key that was updated
      */
     event MetadataUpdated(uint256 indexed tokenId, string indexed key);
-    
+
     /**
      * @notice Emitted when tokens are purchased on the bonding curve
      * @param tokenId The persona token ID
@@ -495,7 +495,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @param tokensReceived Amount of persona tokens received
      */
     event TokensPurchased(uint256 indexed tokenId, address indexed buyer, uint256 amountSpent, uint256 tokensReceived);
-    
+
     /**
      * @notice Emitted when Uniswap liquidity pair is created
      * @param tokenId The persona token ID
@@ -503,14 +503,14 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @param liquidity The amount of LP tokens minted
      */
     event LiquidityPairCreated(uint256 indexed tokenId, address indexed pair, uint256 liquidity);
-    
+
     /**
      * @notice Emitted when trading fee configuration is updated
      * @param feePercentage New fee percentage in basis points
      * @param creatorShare New creator share in basis points
      */
     event TradingFeeConfigUpdated(uint256 feePercentage, uint256 creatorShare);
-    
+
     /**
      * @notice Emitted when user withdraws purchased tokens
      * @param tokenId The persona token ID
@@ -518,7 +518,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @param amount The amount withdrawn
      */
     event TokensWithdrawn(uint256 indexed tokenId, address indexed user, uint256 amount);
-    
+
     /**
      * @notice Emitted when trading fees are collected and distributed
      * @param tokenId The persona token ID
@@ -527,7 +527,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @param amicaFees Fees retained for AMICA
      */
     event TradingFeesCollected(uint256 indexed tokenId, uint256 totalFees, uint256 creatorFees, uint256 amicaFees);
-    
+
     /**
      * @notice Emitted when fee reduction configuration is updated
      * @param minAmicaForReduction New minimum AMICA for reduction
@@ -541,7 +541,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 minReductionMultiplier,
         uint256 maxReductionMultiplier
     );
-    
+
     /**
      * @notice Emitted when user's AMICA balance snapshot is updated
      * @param user The user whose snapshot was updated
@@ -549,14 +549,14 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @param blockNumber The block number of the snapshot
      */
     event SnapshotUpdated(address indexed user, uint256 snapshotBalance, uint256 blockNumber);
-    
+
     /**
      * @notice Emitted when agent token is associated with persona
      * @param tokenId The persona token ID
      * @param agentToken The associated agent token address
      */
     event AgentTokenAssociated(uint256 indexed tokenId, address indexed agentToken);
-    
+
     /**
      * @notice Emitted when agent tokens are deposited
      * @param tokenId The persona token ID
@@ -564,7 +564,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @param amount The amount deposited
      */
     event AgentTokensDeposited(uint256 indexed tokenId, address indexed depositor, uint256 amount);
-    
+
     /**
      * @notice Emitted when agent tokens are withdrawn
      * @param tokenId The persona token ID
@@ -572,7 +572,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @param amount The amount withdrawn
      */
     event AgentTokensWithdrawn(uint256 indexed tokenId, address indexed depositor, uint256 amount);
-    
+
     /**
      * @notice Emitted when agent rewards are distributed
      * @param tokenId The persona token ID
@@ -581,7 +581,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @param agentShare Amount of agent tokens that were deposited
      */
     event AgentRewardsDistributed(uint256 indexed tokenId, address indexed recipient, uint256 personaTokens, uint256 agentShare);
-    
+
     /**
      * @notice Emitted when staking rewards contract is set
      * @param stakingRewards The staking rewards contract address

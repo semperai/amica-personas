@@ -43,7 +43,7 @@ error OnlyFactory();
  * - Ownership management
  * - Burn-and-claim mechanism for distributing held tokens proportionally
  * - Graduation status management by factory
- * 
+ *
  * The burn-and-claim mechanism allows token holders to burn their tokens and receive
  * a proportional share of any tokens held by this contract. This is useful for
  * distributing rewards, airdrops, or other tokens collected by the contract.
@@ -59,7 +59,7 @@ contract ERC20Implementation is
     /// @notice Indicates whether the token has graduated (e.g., from a bonding curve)
     /// @dev Only graduated tokens can use the burn-and-claim functionality
     bool public hasGraduated;
-    
+
     /// @notice Address of the factory contract that deployed this token
     /// @dev Only the factory can update the graduation status
     address public factory;
@@ -73,7 +73,7 @@ contract ERC20Implementation is
      * @param amounts Array of amounts claimed for each token
      */
     event TokensBurnedAndClaimed(address indexed user, uint256 amountBurned, address[] tokens, uint256[] amounts);
-    
+
     /**
      * @notice Emitted when graduation status is updated
      * @param graduated New graduation status
@@ -163,10 +163,10 @@ contract ERC20Implementation is
     {
         // Check if token has graduated
         if (!hasGraduated) revert TokenNotGraduated();
-        
+
         if (amountToBurn == 0) revert InvalidBurnAmount();
         if (tokens.length == 0) revert NoTokensSelected();
-        
+
         // Verify tokens array is sorted and contains no duplicates
         for (uint256 i = 1; i < tokens.length; i++) {
             if (uint160(tokens[i]) <= uint160(tokens[i - 1])) revert TokensMustBeSortedAndUnique();
@@ -191,7 +191,7 @@ contract ERC20Implementation is
 
             // Calculate with higher precision to minimize rounding errors
             uint256 claimAmount = (balance * amountToBurn) / currentSupply;
-            
+
             if (claimAmount == 0) continue;
 
             amounts[i] = claimAmount;

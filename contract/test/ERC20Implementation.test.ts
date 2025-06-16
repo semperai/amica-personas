@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import { 
+import {
     deployPersonaTokenFactoryFixture,
     DEFAULT_GRADUATION_THRESHOLD,
     swapTokensForPersona,
@@ -62,12 +62,12 @@ describe("ERC20Implementation Burn and Claim", function () {
         const tradingFeeConfig = await personaFactory.tradingFeeConfig();
         const feePercentage = tradingFeeConfig.feePercentage; // 100 = 1%
         const BASIS_POINTS = 10000n;
-        
+
         // To get DEFAULT_GRADUATION_THRESHOLD after fees, we need to buy more
         // amountAfterFee = amountIn * (1 - feePercentage/10000)
         // So: amountIn = amountAfterFee / (1 - feePercentage/10000)
         const amountNeeded = (DEFAULT_GRADUATION_THRESHOLD * BASIS_POINTS) / (BASIS_POINTS - feePercentage);
-        
+
         // Add a small buffer to ensure we exceed the threshold
         const purchaseAmount = amountNeeded + ethers.parseEther("1000");
 
@@ -205,7 +205,7 @@ describe("ERC20Implementation Burn and Claim", function () {
             await token3.transfer(await personaToken.getAddress(), ethers.parseEther("250"));
 
             const burnAmount = ethers.parseEther("100");
-            
+
             // Sort token addresses for the call
             const tokens = [
                 await amicaToken.getAddress(),
@@ -312,7 +312,7 @@ describe("ERC20Implementation Burn and Claim", function () {
 
             // Preview should return zero before graduation
             const preview = await personaToken.previewBurnAndClaim(
-                ethers.parseEther("100"), 
+                ethers.parseEther("100"),
                 [await amicaToken.getAddress()]
             );
             expect(preview[0]).to.equal(0);
@@ -413,7 +413,7 @@ describe("ERC20Implementation Burn and Claim", function () {
 
             // Get total supply for calculation
             const totalSupply = await personaToken.totalSupply();
-            
+
             // Calculate a burn amount that will result in at least 1 wei claim
             // claimAmount = (balance * burnAmount) / totalSupply
             // We need: claimAmount >= 1
@@ -422,7 +422,7 @@ describe("ERC20Implementation Burn and Claim", function () {
 
             // Burn enough to get at least 1 wei
             const tx = await personaToken.connect(user2).burnAndClaim(minBurnForClaim, [await amicaToken.getAddress()]);
-            
+
             // Should succeed
             await expect(tx).to.emit(personaToken, "TokensBurnedAndClaimed");
         });
@@ -458,7 +458,7 @@ describe("ERC20Implementation Burn and Claim", function () {
 
             // Get user2's current balance
             const balance = await personaToken.balanceOf(user2.address);
-            
+
             // User2 now has their initial balance plus user3's balance
             expect(balance).to.equal(user2InitialBalance + user3Balance);
 
@@ -468,7 +468,7 @@ describe("ERC20Implementation Burn and Claim", function () {
 
             // User2 should have no tokens left
             expect(await personaToken.balanceOf(user2.address)).to.equal(0);
-            
+
             // User2 should have received some AMICA
             expect(await amicaToken.balanceOf(user2.address)).to.be.gt(0);
         });
@@ -526,7 +526,7 @@ describe("ERC20Implementation Burn and Claim", function () {
                 const token = await TestERC20.deploy(`Token${i}`, `TK${i}`, ethers.parseEther("1000000"));
                 tokens.push(token);
                 tokenAddresses.push(await token.getAddress());
-                
+
                 // Send tokens to persona contract
                 await token.transfer(await personaToken.getAddress(), ethers.parseEther(`${100 * (i + 1)}`));
             }
@@ -571,13 +571,13 @@ describe("ERC20Implementation Burn and Claim", function () {
             for (let i = 0; i < 5; i++) {
                 const user = i % 2 === 0 ? user2 : user3;
                 const userBalance = await personaToken.balanceOf(user.address);
-                
+
                 if (userBalance > 0) {
                     const burnAmount = userBalance / 10n; // Burn 10% each time
                     const amicaBefore = await amicaToken.balanceOf(user.address);
-                    
+
                     await personaToken.connect(user).burnAndClaim(burnAmount, [await amicaToken.getAddress()]);
-                    
+
                     const amicaAfter = await amicaToken.balanceOf(user.address);
                     totalClaimed += (amicaAfter - amicaBefore);
                 }
@@ -588,7 +588,7 @@ describe("ERC20Implementation Burn and Claim", function () {
 
             // Supply should have decreased
             expect(finalSupply).to.be.lt(initialSupply);
-            
+
             // Total AMICA should be conserved
             expect(finalContractBalance + totalClaimed).to.equal(initialDeposit);
         });

@@ -88,14 +88,14 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
      * @param isActive Whether the pool is currently active
      */
     struct PoolInfo {
-        IERC20 lpToken;           
-        uint256 allocBasisPoints; 
-        uint256 lastRewardBlock;  
-        uint256 accAmicaPerShare; 
-        uint256 totalStaked;      
-        bool isAgentPool;         
-        uint256 personaTokenId;   
-        bool isActive;            
+        IERC20 lpToken;
+        uint256 allocBasisPoints;
+        uint256 lastRewardBlock;
+        uint256 accAmicaPerShare;
+        uint256 totalStaked;
+        bool isAgentPool;
+        uint256 personaTokenId;
+        bool isActive;
     }
 
     /**
@@ -106,10 +106,10 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
      * @param lastClaimBlock Last block when user claimed rewards
      */
     struct UserInfo {
-        uint256 amount;           
-        uint256 rewardDebt;       
-        uint256 unclaimedRewards; 
-        uint256 lastClaimBlock;   
+        uint256 amount;
+        uint256 rewardDebt;
+        uint256 unclaimedRewards;
+        uint256 lastClaimBlock;
     }
 
     /**
@@ -121,11 +121,11 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
      * @param lockId Unique identifier for this lock
      */
     struct LockInfo {
-        uint256 amount;           
-        uint256 unlockTime;       
-        uint256 lockMultiplier;   
-        uint256 rewardDebt;       
-        uint256 lockId;           
+        uint256 amount;
+        uint256 unlockTime;
+        uint256 lockMultiplier;
+        uint256 rewardDebt;
+        uint256 lockId;
     }
 
     /**
@@ -134,8 +134,8 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
      * @param multiplier Reward multiplier in basis points
      */
     struct LockTier {
-        uint256 duration;         
-        uint256 multiplier;       
+        uint256 duration;
+        uint256 multiplier;
     }
 
     // ============================================================================
@@ -144,70 +144,70 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
 
     /// @notice AMICA token used for rewards
     IERC20 public immutable amicaToken;
-    
+
     /// @notice Persona token factory contract
     IPersonaTokenFactory public immutable personaFactory;
 
     /// @notice Amount of AMICA tokens distributed per block
     uint256 public amicaPerBlock;
-    
+
     /// @notice Sum of all pool allocation basis points (max 10000)
     uint256 public totalAllocBasisPoints;
-    
+
     /// @notice Block number when reward distribution starts
     uint256 public startBlock;
-    
+
     /// @notice Block number when reward distribution ends (0 = no end)
     uint256 public endBlock;
-    
+
     /// @notice Last block when mass update was called
     uint256 public lastMassUpdateBlock;
 
     /// @notice Array of all pools
     PoolInfo[] public poolInfo;
-    
+
     /// @notice Mapping of pool ID => user address => user info
     mapping(uint256 => mapping(address => UserInfo)) public userInfo;
-    
+
     /// @notice Mapping of LP token address => pool ID + 1 (0 means not found)
     mapping(address => uint256) public lpTokenToPoolId;
 
     /// @notice Mapping of pool ID => user address => array of locks
     mapping(uint256 => mapping(address => LockInfo[])) public userLocks;
-    
+
     /// @notice Mapping of pool ID => user address => total locked amount
     mapping(uint256 => mapping(address => uint256)) public userLockedAmount;
-    
+
     /// @notice Mapping of pool ID => user address => weighted amount (amount * multiplier)
     mapping(uint256 => mapping(address => uint256)) public userWeightedAmount;
-    
+
     /// @notice Mapping of pool ID => total weighted stake in pool
     mapping(uint256 => uint256) public poolWeightedTotal;
 
     /// @notice Array of available lock tiers
     LockTier[] public lockTiers;
-    
+
     /// @notice Counter for generating unique lock IDs
     uint256 public nextLockId = 1;
 
     /// @notice Mapping of user address => array of pool IDs where user has stake
     mapping(address => uint256[]) public userActivePools;
-    
+
     /// @notice Mapping of user address => pool ID => whether user has stake
     mapping(address => mapping(uint256 => bool)) public userHasStake;
-    
+
     /// @notice Mapping of user address => cached total pending rewards
     mapping(address => uint256) public userTotalPendingRewards;
-    
+
     /// @notice Mapping of user address => last block when global state was updated
     mapping(address => uint256) public userLastGlobalUpdate;
 
     /// @notice Basis points denominator (100% = 10000)
     uint256 public constant BASIS_POINTS = 10000;
-    
+
     /// @notice Precision factor for reward calculations
     uint256 public constant PRECISION = 1e18;
-    
+
     /// @notice Maximum allowed lock multiplier (5x = 50000 basis points)
     uint256 public constant MAX_LOCK_MULTIPLIER = 50000;
 
@@ -223,7 +223,7 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
      * @param isAgentPool Whether this is a Persona/Agent pool
      */
     event PoolAdded(uint256 indexed poolId, address indexed lpToken, uint256 allocBasisPoints, bool isAgentPool);
-    
+
     /**
      * @notice Emitted when a pool is updated
      * @param poolId The ID of the updated pool
@@ -231,14 +231,14 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
      * @param isActive The new active status
      */
     event PoolUpdated(uint256 indexed poolId, uint256 allocBasisPoints, bool isActive);
-    
+
     /**
      * @notice Emitted when a pool is deactivated
      * @param poolId The ID of the deactivated pool
      * @param timestamp The timestamp of deactivation
      */
     event PoolDeactivated(uint256 indexed poolId, uint256 timestamp);
-    
+
     /**
      * @notice Emitted when a user deposits tokens
      * @param user The user address
@@ -246,7 +246,7 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
      * @param amount The amount deposited
      */
     event Deposit(address indexed user, uint256 indexed poolId, uint256 amount);
-    
+
     /**
      * @notice Emitted when a user deposits with lock
      * @param user The user address
@@ -257,7 +257,7 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
      * @param multiplier The reward multiplier
      */
     event DepositLocked(address indexed user, uint256 indexed poolId, uint256 amount, uint256 lockId, uint256 unlockTime, uint256 multiplier);
-    
+
     /**
      * @notice Emitted when a user withdraws tokens
      * @param user The user address
@@ -265,7 +265,7 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
      * @param amount The amount withdrawn
      */
     event Withdraw(address indexed user, uint256 indexed poolId, uint256 amount);
-    
+
     /**
      * @notice Emitted when a user withdraws locked tokens
      * @param user The user address
@@ -274,34 +274,34 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
      * @param amount The amount withdrawn
      */
     event WithdrawLocked(address indexed user, uint256 indexed poolId, uint256 lockId, uint256 amount);
-    
+
     /**
      * @notice Emitted when rewards are claimed
      * @param user The user address
      * @param amount The amount of rewards claimed
      */
     event RewardsClaimed(address indexed user, uint256 amount);
-    
+
     /**
      * @notice Emitted when reward rate is updated
      * @param amicaPerBlock The new reward rate
      */
     event RewardRateUpdated(uint256 amicaPerBlock);
-    
+
     /**
      * @notice Emitted when reward period is updated
      * @param startBlock The new start block
      * @param endBlock The new end block
      */
     event RewardPeriodUpdated(uint256 startBlock, uint256 endBlock);
-    
+
     /**
      * @notice Emitted when a lock tier is added
      * @param duration The lock duration
      * @param multiplier The reward multiplier
      */
     event LockTierAdded(uint256 duration, uint256 multiplier);
-    
+
     /**
      * @notice Emitted when a lock tier is updated
      * @param index The tier index
@@ -309,7 +309,7 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
      * @param multiplier The new multiplier
      */
     event LockTierUpdated(uint256 index, uint256 duration, uint256 multiplier);
-    
+
     /**
      * @notice Emitted when a user emergency exits
      * @param user The user address
@@ -317,7 +317,7 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
      * @param amount The amount withdrawn
      */
     event EmergencyExit(address indexed user, uint256 indexed poolId, uint256 amount);
-    
+
     /**
      * @notice Emitted when owner withdraws stuck tokens
      * @param user The recipient address
@@ -582,11 +582,11 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
         // Calculate rewards for each lock
         LockInfo[] storage locks = userLocks[poolId][user];
         uint256 locksLength = locks.length; // Cache array length
-        
+
         for (uint256 i = 0; i < locksLength; i++) {
             LockInfo storage lock = locks[i]; // Cache storage pointer
             uint256 lockAmount = lock.amount; // Cache storage read
-            
+
             if (lockAmount > 0) {
                 uint256 weightedAmount = (lockAmount * lock.lockMultiplier) / BASIS_POINTS;
                 totalRewards += (weightedAmount * accAmicaPerShare) / PRECISION - lock.rewardDebt;
@@ -775,7 +775,7 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
         uint256 lockIndex = type(uint256).max;
         uint256 locksLength = locks.length;
         LockInfo memory lockData; // Use memory for reads
-        
+
         for (uint256 i = 0; i < locksLength; i++) {
             if (locks[i].lockId == _lockId) {
                 lockIndex = i;
@@ -946,7 +946,7 @@ contract PersonaStakingRewards is Ownable, ReentrancyGuard {
             // Update lock reward debts
             LockInfo[] storage locks = userLocks[poolId][msg.sender];
             uint256 locksLength = locks.length;
-            
+
             for (uint256 j = 0; j < locksLength; j++) {
                 LockInfo storage lock = locks[j];
                 if (lock.amount > 0) {

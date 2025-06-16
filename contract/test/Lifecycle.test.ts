@@ -731,12 +731,12 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             const totalSupply = ethers.parseEther("1000000000"); // Total supply
             const lpAllocation = ethers.parseEther("333333334"); // LP allocation from your tests
             const maxBondingCurveSupply = totalSupply - lpAllocation; // 666,666,666
-            
+
             console.log(`  - Max bonding curve supply: ${ethers.formatEther(maxBondingCurveSupply)}`);
             console.log(`  - Creator token balance: ${ethers.formatEther(creatorTokenBalance)}`);
             console.log(`  - Available tokens: ${ethers.formatEther(availableTokens)}`);
             console.log(`  - Difference: ${ethers.formatEther(maxBondingCurveSupply - creatorTokenBalance)}`);
-            
+
             expect(availableTokens).to.be.lt(maxBondingCurveSupply);
             console.log(`✓ Available tokens reduced by initial buy`);
 
@@ -744,33 +744,33 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             // New buyer should get fewer tokens at higher price
             const buyerAmount = ethers.parseEther("10000");
             await amicaToken.connect(buyer1).approve(await personaFactory.getAddress(), buyerAmount);
-            
+
             const buyerQuote = await personaFactory.getAmountOut(tokenId, buyerAmount);
             const deadline = () => Math.floor(Date.now() / 1000) + 3600;
-            
+
             await personaFactory.connect(buyer1).swapExactTokensForTokens(
                 tokenId, buyerAmount, buyerQuote, buyer1.address, deadline()
             );
 
             const buyerTokenBalance = await personaToken.balanceOf(buyer1.address);
-            
+
             // Buyer should get fewer tokens than creator for same amount (due to bonding curve)
             // Note: Both paid same amount in pairing tokens, but fees mean actual amounts differ
             console.log(`  - Creator got: ${ethers.formatEther(creatorTokenBalance)} tokens`);
             console.log(`  - Buyer got: ${ethers.formatEther(buyerTokenBalance)} tokens`);
-            
+
             // Since buyer comes after creator, they should get fewer tokens
             expect(buyerTokenBalance).to.be.lt(creatorTokenBalance);
             console.log(`✓ Initial buy prevented sniping: buyer got fewer tokens for same payment`);
-            
+
             // Calculate net amounts after fees (both pay 1% fee, creator gets 50% back)
             const creatorNetSpent = initialBuyAmount * 9950n / 10000n; // Pays 0.5% net (gets 0.5% back)
             const buyerNetSpent = buyerAmount * 9900n / 10000n; // Pays full 1% fee
-            
+
             // Calculate implied prices based on net amounts
             const creatorPrice = creatorNetSpent * ethers.parseEther("1") / creatorTokenBalance;
             const buyerPrice = buyerNetSpent * ethers.parseEther("1") / buyerTokenBalance;
-            
+
             expect(buyerPrice).to.be.gt(creatorPrice);
             console.log(`✓ Price increased from ${ethers.formatEther(creatorPrice)} to ${ethers.formatEther(buyerPrice)} per token`);
         });
