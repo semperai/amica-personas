@@ -1625,7 +1625,7 @@ describe("PersonaTokenFactory Agent Token Additional Tests", function () {
 
     describe("Gas Optimization Scenarios", function () {
         it("Should handle many small depositors efficiently", async function () {
-            const { personaFactory, amicaToken, agentToken, tokenId, owner } = 
+            const { personaFactory, amicaToken, agentToken, tokenId, owner } =
                 await createPersonaWithAgentToken(0n);
 
             // Create many depositors
@@ -1647,8 +1647,19 @@ describe("PersonaTokenFactory Agent Token Additional Tests", function () {
                 await personaFactory.connect(depositor).depositAgentTokens(tokenId, depositAmount);
             }
 
-            // Graduate - owner needs to approve AMICA first
+            // Graduate - First, give owner enough AMICA tokens for graduation
             const graduationAmount = (DEFAULT_GRADUATION_THRESHOLD * 10100n) / 9900n;
+
+            // The owner needs AMICA tokens - transfer from the initial supply
+            // In the fixture, amicaToken should have initial supply that we can use
+            const ownerAmicaBalance = await amicaToken.balanceOf(owner.address);
+            if (ownerAmicaBalance < graduationAmount) {
+                // If owner doesn't have enough, we need to get some
+                // Option 1: Use one of the existing users who has AMICA
+                const user1 = (await ethers.getSigners())[1];
+                await amicaToken.connect(user1).transfer(owner.address, graduationAmount);
+            }
+
             await amicaToken.connect(owner).approve(await personaFactory.getAddress(), graduationAmount);
 
             await personaFactory.connect(owner).swapExactTokensForTokens(

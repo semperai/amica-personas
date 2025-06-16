@@ -29,9 +29,6 @@ contract ERC20Implementation is
     error TransferFailed();
     error NoTokensToClaim();
 
-    // Constants
-    uint256 private constant PRECISION = 1e18;
-
     // Events
     event TokensBurnedAndClaimed(address indexed user, uint256 amountBurned, address[] tokens, uint256[] amounts);
 
@@ -82,22 +79,23 @@ contract ERC20Implementation is
         uint256 currentSupply = totalSupply();
         if (currentSupply == 0) revert NoSupply();
 
-        // Calculate share (with precision scaling)
-        uint256 sharePercentage = (amountToBurn * PRECISION) / currentSupply;
-
         uint256[] memory amounts = new uint256[](tokens.length);
         uint256 validClaims = 0;
 
-        // Process claims
+        // Process claims with improved precision
         for (uint256 i = 0; i < tokens.length; i++) {
             address token = tokens[i];
             if (token == address(0)) revert InvalidTokenAddress();
-            // No restriction on claiming self - contract can hold and distribute its own tokens
 
             uint256 balance = IERC20(token).balanceOf(address(this));
             if (balance == 0) continue;
 
-            uint256 claimAmount = (balance * sharePercentage) / PRECISION;
+            // Improved calculation to handle very small amounts
+            // Instead of: claimAmount = (balance * sharePercentage) / PRECISION
+            // We do: claimAmount = (balance * amountToBurn) / currentSupply
+            // This avoids the intermediate sharePercentage calculation that can round to 0
+            uint256 claimAmount = (balance * amountToBurn) / currentSupply;
+            
             if (claimAmount == 0) continue;
 
             // Transfer tokens
@@ -131,16 +129,13 @@ contract ERC20Implementation is
             return new uint256[](tokens.length);
         }
 
-        // Note: We don't enforce sorting/uniqueness in preview since it's view-only
-        // But caller should use sorted unique array for accurate preview
-
-        uint256 sharePercentage = (amountToBurn * PRECISION) / currentSupply;
         amounts = new uint256[](tokens.length);
 
         for (uint256 i = 0; i < tokens.length; i++) {
             if (tokens[i] != address(0)) {
                 uint256 balance = IERC20(tokens[i]).balanceOf(address(this));
-                amounts[i] = (balance * sharePercentage) / PRECISION;
+                // Direct calculation without intermediate precision scaling
+                amounts[i] = (balance * amountToBurn) / currentSupply;
             }
         }
     }
