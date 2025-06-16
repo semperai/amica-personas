@@ -351,9 +351,8 @@ describe("PersonaTokenFactory Creation", function () {
 
         // Creator should have bought tokens (but locked)
         const tokenId = 0;
-        const purchases = await personaFactory.getUserPurchases(tokenId, user1.address);
-        expect(purchases.length).to.equal(1);
-        expect(purchases[0].amount).to.be.gt(0);
+        const purchaseAmount = await personaFactory.userpurchases(tokenId, user1.address);
+        expect(purchaseAmount).to.be.gt(0);
     });
 
     it("Should handle insufficient balance gracefully", async function () {
