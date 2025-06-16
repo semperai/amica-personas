@@ -6,6 +6,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20Burnable
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 
 // Custom errors
 error InvalidWrapperAddress();
@@ -30,7 +31,13 @@ error NoTokensToClaim();
  * @notice Main AMICA token with burn-and-claim mechanism for deposited tokens
  * @dev Implements a fair distribution mechanism where burning AMICA gives proportional share of deposited tokens
  */
-contract AmicaToken is ERC20Upgradeable, ERC20BurnableUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract AmicaToken is 
+    ERC20Upgradeable, 
+    ERC20BurnableUpgradeable, 
+    OwnableUpgradeable, 
+    ReentrancyGuardUpgradeable,
+    PausableUpgradeable 
+{
     // State variables
     address[] private _depositedTokens;
     mapping(address => uint256) public tokenIndex;
@@ -66,6 +73,7 @@ contract AmicaToken is ERC20Upgradeable, ERC20BurnableUpgradeable, OwnableUpgrad
         __ERC20_init("Amica", "AMICA");
         __Ownable_init(initialOwner);
         __ReentrancyGuard_init();
+        __Pausable_init();
 
         // Only mint on Ethereum mainnet
         // On other chains, supply starts at 0 and is minted via bridge wrapper
@@ -74,6 +82,22 @@ contract AmicaToken is ERC20Upgradeable, ERC20BurnableUpgradeable, OwnableUpgrad
         }
 
         _depositedTokens.push(address(0)); // Reserve index 0
+    }
+
+    /**
+     * @notice Pause the contract
+     * @dev Only callable by owner
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @notice Unpause the contract
+     * @dev Only callable by owner
+     */
+    function unpause() external onlyOwner {
+        _unpause();
     }
 
     /**
@@ -91,7 +115,7 @@ contract AmicaToken is ERC20Upgradeable, ERC20BurnableUpgradeable, OwnableUpgrad
      * @param to Recipient address
      * @param amount Amount to mint
      */
-    function mint(address to, uint256 amount) external virtual {
+    function mint(address to, uint256 amount) external virtual whenNotPaused {
         if (msg.sender != bridgeWrapper) revert OnlyBridgeWrapper();
         if (block.chainid == 1) revert CannotMintOnMainnet();
         _mint(to, amount);
@@ -116,7 +140,7 @@ contract AmicaToken is ERC20Upgradeable, ERC20BurnableUpgradeable, OwnableUpgrad
      * @param to Recipient address
      * @param amount Amount to withdraw
      */
-    function withdraw(address to, uint256 amount) external onlyOwner {
+    function withdraw(address to, uint256 amount) external onlyOwner whenNotPaused {
         if (to == address(0)) revert InvalidRecipient();
         if (amount > balanceOf(address(this))) revert InsufficientBalance();
 
@@ -148,7 +172,7 @@ contract AmicaToken is ERC20Upgradeable, ERC20BurnableUpgradeable, OwnableUpgrad
      * @param token Token address to deposit
      * @param amount Amount to deposit
      */
-    function deposit(address token, uint256 amount) external nonReentrant {
+    function deposit(address token, uint256 amount) external nonReentrant whenNotPaused {
         if (amount == 0) revert InvalidAmount();
         if (token == address(0)) revert InvalidToken();
 
@@ -168,10 +192,12 @@ contract AmicaToken is ERC20Upgradeable, ERC20BurnableUpgradeable, OwnableUpgrad
      * @notice Burn AMICA and claim proportional share of specified tokens
      * @param amountToBurn Amount of AMICA to burn
      * @param tokenIndexes Indexes of tokens to claim (must be sorted in ascending order and unique)
+     * @dev Now includes reentrancy protection and processes all state changes before external calls
      */
     function burnAndClaim(uint256 amountToBurn, uint256[] calldata tokenIndexes)
         external
         nonReentrant
+        whenNotPaused
     {
         if (amountToBurn == 0) revert InvalidBurnAmount();
         if (tokenIndexes.length == 0) revert NoTokensSelected();
@@ -187,11 +213,15 @@ contract AmicaToken is ERC20Upgradeable, ERC20BurnableUpgradeable, OwnableUpgrad
         // Calculate share (with precision scaling)
         uint256 sharePercentage = (amountToBurn * PRECISION) / currentCirculating;
 
+        // First, burn AMICA tokens (state change before any external calls)
+        _burn(msg.sender, amountToBurn);
+
+        // Prepare arrays for successful claims
         address[] memory claimedTokens = new address[](tokenIndexes.length);
         uint256[] memory claimedAmounts = new uint256[](tokenIndexes.length);
         uint256 validClaims = 0;
 
-        // Process claims
+        // Calculate all claim amounts and update state BEFORE any transfers
         for (uint256 i = 0; i < tokenIndexes.length; i++) {
             if (tokenIndexes[i] >= _depositedTokens.length) revert InvalidTokenIndex();
 
@@ -204,11 +234,8 @@ contract AmicaToken is ERC20Upgradeable, ERC20BurnableUpgradeable, OwnableUpgrad
             uint256 claimAmount = (deposited * sharePercentage) / PRECISION;
             if (claimAmount == 0) continue;
 
-            // Update state before transfer
+            // Update state BEFORE transfer
             depositedBalances[tokenAddress] -= claimAmount;
-
-            // Transfer tokens
-            if (!IERC20(tokenAddress).transfer(msg.sender, claimAmount)) revert TransferFailed();
 
             claimedTokens[validClaims] = tokenAddress;
             claimedAmounts[validClaims] = claimAmount;
@@ -217,8 +244,12 @@ contract AmicaToken is ERC20Upgradeable, ERC20BurnableUpgradeable, OwnableUpgrad
 
         if (validClaims == 0) revert NoTokensToClaim();
 
-        // Burn AMICA tokens
-        _burn(msg.sender, amountToBurn);
+        // Now perform all external transfers
+        for (uint256 i = 0; i < validClaims; i++) {
+            if (!IERC20(claimedTokens[i]).transfer(msg.sender, claimedAmounts[i])) {
+                revert TransferFailed();
+            }
+        }
 
         // Emit event with actual claimed tokens
         assembly {
@@ -227,5 +258,33 @@ contract AmicaToken is ERC20Upgradeable, ERC20BurnableUpgradeable, OwnableUpgrad
         }
 
         emit TokensBurnedAndClaimed(msg.sender, amountToBurn, claimedTokens, claimedAmounts);
+    }
+
+    /**
+     * @notice Override transfer to add pause functionality
+     */
+    function transfer(address to, uint256 amount) public virtual override whenNotPaused returns (bool) {
+        return super.transfer(to, amount);
+    }
+
+    /**
+     * @notice Override transferFrom to add pause functionality
+     */
+    function transferFrom(address from, address to, uint256 amount) public virtual override whenNotPaused returns (bool) {
+        return super.transferFrom(from, to, amount);
+    }
+
+    /**
+     * @notice Override burn to respect pause state
+     */
+    function burn(uint256 amount) public virtual override whenNotPaused {
+        super.burn(amount);
+    }
+
+    /**
+     * @notice Override burnFrom to respect pause state
+     */
+    function burnFrom(address account, uint256 amount) public virtual override whenNotPaused {
+        super.burnFrom(account, amount);
     }
 }

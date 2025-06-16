@@ -19,8 +19,9 @@ interface IAmicaToken {
     function deposit(address token, uint256 amount) external;
 }
 
-interface IERC20Implementation {
+interface IPersonaToken {
     function initialize(string memory name, string memory symbol, uint256 supply, address owner) external;
+    function setGraduationStatus(bool status) external;
 }
 
 // ============================================================================
@@ -385,7 +386,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
         // Deploy ERC20 token
         address erc20Token = Clones.clone(erc20Implementation);
-        IERC20Implementation(erc20Token).initialize(
+        IPersonaToken(erc20Token).initialize(
             string(abi.encodePacked(name, TOKEN_SUFFIX)),
             string(abi.encodePacked(symbol, TOKEN_SUFFIX)),
             PERSONA_TOKEN_SUPPLY,
@@ -621,32 +622,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         }
     }
 
-    /**
-     * @notice Override tokenURI for custom metadata
-     */
-    function tokenURI(uint256 tokenId)
-        public
-        view
-        override
-        returns (string memory)
-    {
-        _requireOwned(tokenId);
-
-        PersonaData storage persona = personas[tokenId];
-
-        return string(abi.encodePacked(
-            'data:application/json;utf8,{"name":"',
-            persona.name,
-            '","symbol":"',
-            persona.symbol,
-            '","tokenId":"',
-            tokenId.toString(),
-            '","erc20Token":"',
-            Strings.toHexString(uint160(persona.erc20Token), 20),
-            '"}'
-        ));
-    }
-
     // ============================================================================
     // FEE MANAGEMENT FUNCTIONS
     // ============================================================================
@@ -714,6 +689,41 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     // ============================================================================
     // VIEW FUNCTIONS - GETTERS
     // ============================================================================
+
+    /**
+     * @notice Override tokenURI for custom metadata
+     */
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        override
+        returns (string memory)
+    {
+        _requireOwned(tokenId);
+
+        PersonaData storage persona = personas[tokenId];
+
+        return string(abi.encodePacked(
+            'data:application/json;utf8,{"name":"',
+            persona.name,
+            '","symbol":"',
+            persona.symbol,
+            '","tokenId":"',
+            tokenId.toString(),
+            '","erc20Token":"',
+            Strings.toHexString(uint160(persona.erc20Token), 20),
+            '"}'
+        ));
+    }
+
+    /**
+     * @notice Check if a persona token has graduated
+     * @param tokenId The persona token ID
+     * @return bool Whether the persona has graduated
+     */
+    function hasGraduated(uint256 tokenId) external view returns (bool) {
+        return personas[tokenId].pairCreated;
+    }
 
     /**
      * @notice Check if a persona is eligible for graduation
@@ -1135,15 +1145,15 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
     /**
      * @notice Create Uniswap pair when graduation threshold is met
+     * @dev Now also sets graduation status on the persona token
      */
     function _createLiquidityPair(uint256 tokenId) private {
         PersonaData storage persona = personas[tokenId];
         if (persona.pairCreated) revert PairAlreadyCreated();
 
         if (persona.agentToken != address(0) && persona.minAgentTokens > 0) {
-            if (persona.agentToken != address(0) && persona.minAgentTokens > 0 && persona.totalAgentDeposited < persona.minAgentTokens) revert InsufficientAgentTokens();
+            if (persona.totalAgentDeposited < persona.minAgentTokens) revert InsufficientAgentTokens();
         }
-
 
         TokenPurchase storage purchase = purchases[tokenId];
         address erc20Token = persona.erc20Token;
@@ -1164,7 +1174,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             IAmicaToken(address(amicaToken)).deposit(persona.agentToken, persona.totalAgentDeposited);
         }
 
-        // 3. Create liquidity pair
+        // 3. Create liquidity pair with slippage protection
         uint256 pairingTokenForLiquidity = purchase.totalDeposited;
 
         // Approve router
@@ -1173,25 +1183,34 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
         // Create pair if needed
         address pairAddress = uniswapFactory.getPair(erc20Token, persona.pairToken);
-        if (pairAddress == address(0x0)) {
+        if (pairAddress == address(0)) {
             uniswapFactory.createPair(erc20Token, persona.pairToken);
             pairAddress = uniswapFactory.getPair(erc20Token, persona.pairToken);
         }
 
-        // Add liquidity
+        // Calculate minimum amounts (95% of expected to allow for some slippage)
+        uint256 minLiquidityAmount = (liquidityAmount * 95) / 100;
+        uint256 minPairingTokenAmount = (pairingTokenForLiquidity * 95) / 100;
+
+        // Add liquidity with slippage protection
         (, , uint256 liquidity) = uniswapRouter.addLiquidity(
             erc20Token,
             persona.pairToken,
             liquidityAmount,
             pairingTokenForLiquidity,
-            0,
-            0,
+            minLiquidityAmount,          // Changed from 0
+            minPairingTokenAmount,        // Changed from 0
             address(this), // LP tokens go to contract
             block.timestamp + 300
         );
 
+        // Mark as graduated
         persona.pairCreated = true;
+
+        // Set graduation status on the persona token contract
+        IPersonaToken(erc20Token).setGraduationStatus(true);
 
         emit LiquidityPairCreated(tokenId, pairAddress, liquidity);
     }
+
 }
