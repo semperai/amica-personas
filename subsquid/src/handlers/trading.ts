@@ -1,6 +1,7 @@
 import { Context, Log } from '../processor'
 import * as factoryAbi from '../abi/PersonaTokenFactory'
 import { Persona, Trade } from '../model'
+import { DEPLOYMENT } from '../processor'
 
 export async function handleTokensPurchased(
   ctx: Context,
@@ -30,6 +31,7 @@ export async function handleTokensPurchased(
     timestamp,
     block: blockNumber,
     txHash: log.transactionHash,
+    chainId: DEPLOYMENT.chainId,
   })
   
   await ctx.store.insert(trade)

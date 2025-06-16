@@ -1,4 +1,4 @@
-import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, StringColumn as StringColumn_, Index as Index_, BigIntColumn as BigIntColumn_, DateTimeColumn as DateTimeColumn_} from "@subsquid/typeorm-store"
+import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, StringColumn as StringColumn_, Index as Index_, BigIntColumn as BigIntColumn_, DateTimeColumn as DateTimeColumn_, IntColumn as IntColumn_} from "@subsquid/typeorm-store"
 import {BridgeAction} from "./_bridgeAction"
 
 @Entity_()
@@ -29,4 +29,8 @@ export class BridgeActivity {
     @Index_()
     @StringColumn_({nullable: false})
     txHash!: string
+
+    @Index_()
+    @IntColumn_({nullable: false})
+    chainId!: number
 }

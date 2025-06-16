@@ -16,9 +16,10 @@ export async function handleLiquidityPairCreated(
     return
   }
   
+  // Update graduation status
   persona.pairCreated = true
   persona.pairAddress = event.pair.toLowerCase()
   await ctx.store.save(persona)
   
-  ctx.log.info(`Liquidity pair created for persona ${personaId}: ${event.pair}`)
+  ctx.log.info(`Persona ${personaId} graduated! Liquidity pair created at ${event.pair}`)
 }

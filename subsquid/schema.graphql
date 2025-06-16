@@ -15,6 +15,9 @@ type Persona @entity {
   pairCreated: Boolean!
   pairAddress: String
   
+  # Chain tracking
+  chainId: Int! @index
+  
   # Timestamps
   createdAt: DateTime!
   createdAtBlock: BigInt!
@@ -30,6 +33,8 @@ type Persona @entity {
   trades: [Trade!]! @derivedFrom(field: "persona")
   metadata: [PersonaMetadata!]! @derivedFrom(field: "persona")
   agentDeposits: [AgentDeposit!]! @derivedFrom(field: "persona")
+  transfers: [PersonaTransfer!]! @derivedFrom(field: "persona")
+  withdrawals: [TokenWithdrawal!]! @derivedFrom(field: "persona")
 }
 
 type PersonaMetadata @entity {
@@ -51,6 +56,7 @@ type Trade @entity {
   timestamp: DateTime!
   block: BigInt!
   txHash: String! @index
+  chainId: Int! @index
 }
 
 type AgentDeposit @entity {
@@ -74,6 +80,30 @@ type AgentReward @entity {
   timestamp: DateTime!
   block: BigInt!
   txHash: String! @index
+}
+
+# New entity for NFT transfers
+type PersonaTransfer @entity {
+  id: ID! # txHash-logIndex
+  persona: Persona!
+  from: String! @index
+  to: String! @index
+  timestamp: DateTime!
+  block: BigInt!
+  txHash: String! @index
+  chainId: Int! @index
+}
+
+# New entity for token withdrawals
+type TokenWithdrawal @entity {
+  id: ID! # txHash-logIndex
+  persona: Persona!
+  user: String! @index
+  amount: BigInt!
+  timestamp: DateTime!
+  block: BigInt!
+  txHash: String! @index
+  chainId: Int! @index
 }
 
 # Staking Entities
@@ -141,6 +171,7 @@ type BridgeActivity @entity {
   timestamp: DateTime!
   block: BigInt!
   txHash: String! @index
+  chainId: Int! @index
 }
 
 enum BridgeAction {

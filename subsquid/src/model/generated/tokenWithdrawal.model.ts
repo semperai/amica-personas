@@ -2,8 +2,8 @@ import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, M
 import {Persona} from "./persona.model"
 
 @Entity_()
-export class Trade {
-    constructor(props?: Partial<Trade>) {
+export class TokenWithdrawal {
+    constructor(props?: Partial<TokenWithdrawal>) {
         Object.assign(this, props)
     }
 
@@ -16,16 +16,10 @@ export class Trade {
 
     @Index_()
     @StringColumn_({nullable: false})
-    trader!: string
+    user!: string
 
     @BigIntColumn_({nullable: false})
-    amountIn!: bigint
-
-    @BigIntColumn_({nullable: false})
-    amountOut!: bigint
-
-    @BigIntColumn_({nullable: false})
-    feeAmount!: bigint
+    amount!: bigint
 
     @DateTimeColumn_({nullable: false})
     timestamp!: Date

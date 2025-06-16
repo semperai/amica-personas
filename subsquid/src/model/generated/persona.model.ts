@@ -1,7 +1,9 @@
-import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, BigIntColumn as BigIntColumn_, Index as Index_, StringColumn as StringColumn_, BooleanColumn as BooleanColumn_, DateTimeColumn as DateTimeColumn_, OneToMany as OneToMany_} from "@subsquid/typeorm-store"
+import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, BigIntColumn as BigIntColumn_, Index as Index_, StringColumn as StringColumn_, BooleanColumn as BooleanColumn_, IntColumn as IntColumn_, DateTimeColumn as DateTimeColumn_, OneToMany as OneToMany_} from "@subsquid/typeorm-store"
 import {Trade} from "./trade.model"
 import {PersonaMetadata} from "./personaMetadata.model"
 import {AgentDeposit} from "./agentDeposit.model"
+import {PersonaTransfer} from "./personaTransfer.model"
+import {TokenWithdrawal} from "./tokenWithdrawal.model"
 
 @Entity_()
 export class Persona {
@@ -49,6 +51,10 @@ export class Persona {
     @StringColumn_({nullable: true})
     pairAddress!: string | undefined | null
 
+    @Index_()
+    @IntColumn_({nullable: false})
+    chainId!: number
+
     @DateTimeColumn_({nullable: false})
     createdAt!: Date
 
@@ -78,4 +84,10 @@ export class Persona {
 
     @OneToMany_(() => AgentDeposit, e => e.persona)
     agentDeposits!: AgentDeposit[]
+
+    @OneToMany_(() => PersonaTransfer, e => e.persona)
+    transfers!: PersonaTransfer[]
+
+    @OneToMany_(() => TokenWithdrawal, e => e.persona)
+    withdrawals!: TokenWithdrawal[]
 }

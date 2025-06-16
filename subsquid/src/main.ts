@@ -21,6 +21,8 @@ import {
   GlobalStats,
   DailyStats,
   PersonaDailyStats,
+  PersonaTransfer,
+  TokenWithdrawal,
 } from './model'
 import { And, In, MoreThanOrEqual, LessThan, Between } from 'typeorm'
 
@@ -51,6 +53,8 @@ import {
 } from './handlers/staking'
 import { handleTokensWrapped, handleTokensUnwrapped } from './handlers/bridge'
 import { updateGlobalStats, updateDailyStats } from './handlers/stats'
+import { handleTransfer } from './handlers/transfers'
+import { handleTokensWithdrawn } from './handlers/withdrawals'
 
 // Log startup information
 console.log('=== SUBSQUID PROCESSOR STARTING ===')
@@ -114,6 +118,13 @@ processor.run(new TypeormDatabase({ supportHotBlocks: true }), async (ctx) => {
               await handlePersonaCreated(ctx, log, timestamp, blockNumber)
               break
               
+            case factoryAbi.events.Transfer.topic:
+              ctx.log.info('Processing Transfer event')
+              await handleTransfer(ctx, log, timestamp, blockNumber)
+              const transferEvent = factoryAbi.events.Transfer.decode(log)
+              personasToUpdate.add(transferEvent.tokenId.toString())
+              break
+              
             case factoryAbi.events.TokensPurchased.topic:
               ctx.log.info('Processing TokensPurchased event')
               const trade = await handleTokensPurchased(ctx, log, timestamp, blockNumber)
@@ -132,6 +143,8 @@ processor.run(new TypeormDatabase({ supportHotBlocks: true }), async (ctx) => {
             case factoryAbi.events.LiquidityPairCreated.topic:
               ctx.log.info('Processing LiquidityPairCreated event')
               await handleLiquidityPairCreated(ctx, log)
+              const liquidityEvent = factoryAbi.events.LiquidityPairCreated.decode(log)
+              personasToUpdate.add(liquidityEvent.tokenId.toString())
               break
               
             case factoryAbi.events.TradingFeesCollected.topic:
@@ -172,6 +185,11 @@ processor.run(new TypeormDatabase({ supportHotBlocks: true }), async (ctx) => {
             case factoryAbi.events.AgentRewardsDistributed.topic:
               ctx.log.info('Processing AgentRewardsDistributed event')
               await handleAgentRewardsDistributed(ctx, log, timestamp, blockNumber)
+              break
+              
+            case factoryAbi.events.TokensWithdrawn.topic:
+              ctx.log.info('Processing TokensWithdrawn event')
+              await handleTokensWithdrawn(ctx, log, timestamp, blockNumber)
               break
               
             default:

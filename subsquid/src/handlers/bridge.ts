@@ -1,6 +1,7 @@
 import { Context, Log } from '../processor'
 import * as bridgeAbi from '../abi/AmicaBridgeWrapper'
 import { BridgeActivity, BridgeAction } from '../model'
+import { DEPLOYMENT } from '../processor'
 
 export async function handleTokensWrapped(
   ctx: Context,
@@ -20,6 +21,7 @@ export async function handleTokensWrapped(
     timestamp,
     block: blockNumber,
     txHash: log.transactionHash,
+    chainId: DEPLOYMENT.chainId,
   })
   
   await ctx.store.insert(activity)
@@ -45,6 +47,7 @@ export async function handleTokensUnwrapped(
     timestamp,
     block: blockNumber,
     txHash: log.transactionHash,
+    chainId: DEPLOYMENT.chainId,
   })
   
   await ctx.store.insert(activity)

@@ -63,6 +63,7 @@ export const processor = new EvmBatchProcessor()
     address: [DEPLOYMENT.addresses.personaFactory],
     topic0: [
       factoryAbi.events.PersonaCreated.topic,
+      factoryAbi.events.Transfer.topic,
       factoryAbi.events.TokensPurchased.topic,
       factoryAbi.events.MetadataUpdated.topic,
       factoryAbi.events.LiquidityPairCreated.topic,
@@ -74,6 +75,7 @@ export const processor = new EvmBatchProcessor()
       factoryAbi.events.AgentTokensWithdrawn.topic,
       factoryAbi.events.AgentRewardsDistributed.topic,
       factoryAbi.events.TradingFeeConfigUpdated.topic,
+      factoryAbi.events.TokensWithdrawn.topic,
     ]
   })
   // StakingRewards events
