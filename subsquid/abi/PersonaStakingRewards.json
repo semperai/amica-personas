@@ -26,6 +26,81 @@
     "type": "constructor"
   },
   {
+    "inputs": [],
+    "name": "AlreadyWithdrawn",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "AmountCannotBeZero",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "CannotWithdrawLPTokens",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InsufficientBalance",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidDuration",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidIndex",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidLPToken",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidLockTier",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidMultiplier",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidPeriod",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidPool",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidToken",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "LockNotFound",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NoRewardsToClaim",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NothingToWithdraw",
+    "type": "error"
+  },
+  {
     "inputs": [
       {
         "internalType": "address",
@@ -49,6 +124,21 @@
   },
   {
     "inputs": [],
+    "name": "PoolAlreadyExists",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "PoolNotActive",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "PoolNotFound",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "ReentrancyGuardReentrantCall",
     "type": "error"
   },
@@ -61,6 +151,16 @@
       }
     ],
     "name": "SafeERC20FailedOperation",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "StillLocked",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "TotalAllocationExceeds100",
     "type": "error"
   },
   {
@@ -162,6 +262,12 @@
       {
         "indexed": true,
         "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
         "name": "token",
         "type": "address"
       },
@@ -172,7 +278,7 @@
         "type": "uint256"
       }
     ],
-    "name": "EmergencyWithdraw",
+    "name": "EmergencyWithdrawCompleted",
     "type": "event"
   },
   {
@@ -267,6 +373,25 @@
       }
     ],
     "name": "PoolAdded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "poolId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "timestamp",
+        "type": "uint256"
+      }
+    ],
+    "name": "PoolDeactivated",
     "type": "event"
   },
   {

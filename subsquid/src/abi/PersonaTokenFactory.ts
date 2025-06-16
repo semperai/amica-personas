@@ -37,12 +37,10 @@ export const functions = {
     STANDARD_AMICA_AMOUNT: viewFun("0x29c8ac8a", "STANDARD_AMICA_AMOUNT()", {}, p.uint256),
     STANDARD_BONDING_AMOUNT: viewFun("0xa5f9b7e3", "STANDARD_BONDING_AMOUNT()", {}, p.uint256),
     STANDARD_LIQUIDITY_AMOUNT: viewFun("0x5db01e9b", "STANDARD_LIQUIDITY_AMOUNT()", {}, p.uint256),
-    agentDeposits: viewFun("0xbcf2f19e", "agentDeposits(uint256,address,uint256)", {"_0": p.uint256, "_1": p.address, "_2": p.uint256}, {"amount": p.uint256, "timestamp": p.uint256, "withdrawn": p.bool}),
+    agentDeposits: viewFun("0x13ee32be", "agentDeposits(uint256,address)", {"_0": p.uint256, "_1": p.address}, p.uint256),
     amicaBalanceSnapshot: viewFun("0x86295e4e", "amicaBalanceSnapshot(address)", {"user": p.address}, p.uint256),
     amicaToken: viewFun("0xa04e401a", "amicaToken()", {}, p.address),
     approve: fun("0x095ea7b3", "approve(address,uint256)", {"to": p.address, "tokenId": p.uint256}, ),
-    approveAgentToken: fun("0xb086d49e", "approveAgentToken(address,bool)", {"token": p.address, "approved": p.bool}, ),
-    approvedAgentTokens: viewFun("0x20e20697", "approvedAgentTokens(address)", {"_0": p.address}, p.bool),
     balanceOf: viewFun("0x70a08231", "balanceOf(address)", {"owner": p.address}, p.uint256),
     calculateAgentRewards: viewFun("0x8d837eff", "calculateAgentRewards(uint256,address)", {"tokenId": p.uint256, "user": p.address}, {"personaReward": p.uint256, "agentAmount": p.uint256}),
     calculateAmountOut: viewFun("0x86935aa8", "calculateAmountOut(uint256,uint256,uint256)", {"amountIn": p.uint256, "reserveSold": p.uint256, "reserveTotal": p.uint256}, p.uint256),
@@ -65,9 +63,8 @@ export const functions = {
     getMetadata: viewFun("0x67e2274c", "getMetadata(uint256,string[])", {"tokenId": p.uint256, "keys": p.array(p.string)}, p.array(p.string)),
     getPersona: viewFun("0x14f9dc8b", "getPersona(uint256)", {"tokenId": p.uint256}, {"name": p.string, "symbol": p.string, "erc20Token": p.address, "pairToken": p.address, "pairCreated": p.bool, "createdAt": p.uint256, "minAgentTokens": p.uint256}),
     getTokenDistribution: viewFun("0x40b869e5", "getTokenDistribution(uint256)", {"tokenId": p.uint256}, {"liquidityAmount": p.uint256, "bondingAmount": p.uint256, "amicaAmount": p.uint256, "agentRewardsAmount": p.uint256}),
-    getUserAgentDeposits: viewFun("0xb6589df9", "getUserAgentDeposits(uint256,address)", {"tokenId": p.uint256, "user": p.address}, p.array(p.struct({"amount": p.uint256, "timestamp": p.uint256, "withdrawn": p.bool}))),
     getUserFeeInfo: viewFun("0xf278d74b", "getUserFeeInfo(address)", {"user": p.address}, {"currentBalance": p.uint256, "snapshotBalance": p.uint256, "effectiveBalance": p.uint256, "snapshotBlock_": p.uint256, "isEligible": p.bool, "blocksUntilEligible": p.uint256, "baseFeePercentage": p.uint256, "effectiveFeePercentage": p.uint256, "discountPercentage": p.uint256}),
-    getUserPurchases: viewFun("0x0939e918", "getUserPurchases(uint256,address)", {"tokenId": p.uint256, "user": p.address}, p.array(p.struct({"amount": p.uint256, "timestamp": p.uint256, "withdrawn": p.bool}))),
+    hasGraduated: viewFun("0xe74b9e2b", "hasGraduated(uint256)", {"tokenId": p.uint256}, p.bool),
     initialize: fun("0xf8c8765e", "initialize(address,address,address,address)", {"amicaToken_": p.address, "uniswapFactory_": p.address, "uniswapRouter_": p.address, "erc20Implementation_": p.address}, ),
     isApprovedForAll: viewFun("0xe985e9c5", "isApprovedForAll(address,address)", {"owner": p.address, "operator": p.address}, p.bool),
     name: viewFun("0x06fdde03", "name()", {}, p.string),
@@ -98,9 +95,9 @@ export const functions = {
     unpause: fun("0x3f4ba83a", "unpause()", {}, ),
     updateAmicaSnapshot: fun("0x121e2de6", "updateAmicaSnapshot()", {}, ),
     updateMetadata: fun("0xcaf54ab1", "updateMetadata(uint256,string[],string[])", {"tokenId": p.uint256, "keys": p.array(p.string), "values": p.array(p.string)}, ),
+    userPurchases: viewFun("0xefc20dad", "userPurchases(uint256,address)", {"_0": p.uint256, "_1": p.address}, p.uint256),
     userSnapshots: viewFun("0xc8a37bf1", "userSnapshots(address)", {"_0": p.address}, {"currentBalance": p.uint256, "currentBlock": p.uint256, "pendingBalance": p.uint256, "pendingBlock": p.uint256}),
-    userpurchases: viewFun("0x7cc56ea5", "userpurchases(uint256,address,uint256)", {"_0": p.uint256, "_1": p.address, "_2": p.uint256}, {"amount": p.uint256, "timestamp": p.uint256, "withdrawn": p.bool}),
-    withdrawAgentTokens: fun("0x6e1b4fce", "withdrawAgentTokens(uint256)", {"tokenId": p.uint256}, ),
+    withdrawAgentTokens: fun("0x8da9c676", "withdrawAgentTokens(uint256,uint256)", {"tokenId": p.uint256, "amount": p.uint256}, ),
     withdrawTokens: fun("0x315a095d", "withdrawTokens(uint256)", {"tokenId": p.uint256}, ),
 }
 
@@ -142,8 +139,8 @@ export class Contract extends ContractBase {
         return this.eth_call(functions.STANDARD_LIQUIDITY_AMOUNT, {})
     }
 
-    agentDeposits(_0: AgentDepositsParams["_0"], _1: AgentDepositsParams["_1"], _2: AgentDepositsParams["_2"]) {
-        return this.eth_call(functions.agentDeposits, {_0, _1, _2})
+    agentDeposits(_0: AgentDepositsParams["_0"], _1: AgentDepositsParams["_1"]) {
+        return this.eth_call(functions.agentDeposits, {_0, _1})
     }
 
     amicaBalanceSnapshot(user: AmicaBalanceSnapshotParams["user"]) {
@@ -152,10 +149,6 @@ export class Contract extends ContractBase {
 
     amicaToken() {
         return this.eth_call(functions.amicaToken, {})
-    }
-
-    approvedAgentTokens(_0: ApprovedAgentTokensParams["_0"]) {
-        return this.eth_call(functions.approvedAgentTokens, {_0})
     }
 
     balanceOf(owner: BalanceOfParams["owner"]) {
@@ -218,16 +211,12 @@ export class Contract extends ContractBase {
         return this.eth_call(functions.getTokenDistribution, {tokenId})
     }
 
-    getUserAgentDeposits(tokenId: GetUserAgentDepositsParams["tokenId"], user: GetUserAgentDepositsParams["user"]) {
-        return this.eth_call(functions.getUserAgentDeposits, {tokenId, user})
-    }
-
     getUserFeeInfo(user: GetUserFeeInfoParams["user"]) {
         return this.eth_call(functions.getUserFeeInfo, {user})
     }
 
-    getUserPurchases(tokenId: GetUserPurchasesParams["tokenId"], user: GetUserPurchasesParams["user"]) {
-        return this.eth_call(functions.getUserPurchases, {tokenId, user})
+    hasGraduated(tokenId: HasGraduatedParams["tokenId"]) {
+        return this.eth_call(functions.hasGraduated, {tokenId})
     }
 
     isApprovedForAll(owner: IsApprovedForAllParams["owner"], operator: IsApprovedForAllParams["operator"]) {
@@ -298,12 +287,12 @@ export class Contract extends ContractBase {
         return this.eth_call(functions.uniswapRouter, {})
     }
 
-    userSnapshots(_0: UserSnapshotsParams["_0"]) {
-        return this.eth_call(functions.userSnapshots, {_0})
+    userPurchases(_0: UserPurchasesParams["_0"], _1: UserPurchasesParams["_1"]) {
+        return this.eth_call(functions.userPurchases, {_0, _1})
     }
 
-    userpurchases(_0: UserpurchasesParams["_0"], _1: UserpurchasesParams["_1"], _2: UserpurchasesParams["_2"]) {
-        return this.eth_call(functions.userpurchases, {_0, _1, _2})
+    userSnapshots(_0: UserSnapshotsParams["_0"]) {
+        return this.eth_call(functions.userSnapshots, {_0})
     }
 }
 
@@ -371,12 +360,6 @@ export type AmicaTokenReturn = FunctionReturn<typeof functions.amicaToken>
 export type ApproveParams = FunctionArguments<typeof functions.approve>
 export type ApproveReturn = FunctionReturn<typeof functions.approve>
 
-export type ApproveAgentTokenParams = FunctionArguments<typeof functions.approveAgentToken>
-export type ApproveAgentTokenReturn = FunctionReturn<typeof functions.approveAgentToken>
-
-export type ApprovedAgentTokensParams = FunctionArguments<typeof functions.approvedAgentTokens>
-export type ApprovedAgentTokensReturn = FunctionReturn<typeof functions.approvedAgentTokens>
-
 export type BalanceOfParams = FunctionArguments<typeof functions.balanceOf>
 export type BalanceOfReturn = FunctionReturn<typeof functions.balanceOf>
 
@@ -443,14 +426,11 @@ export type GetPersonaReturn = FunctionReturn<typeof functions.getPersona>
 export type GetTokenDistributionParams = FunctionArguments<typeof functions.getTokenDistribution>
 export type GetTokenDistributionReturn = FunctionReturn<typeof functions.getTokenDistribution>
 
-export type GetUserAgentDepositsParams = FunctionArguments<typeof functions.getUserAgentDeposits>
-export type GetUserAgentDepositsReturn = FunctionReturn<typeof functions.getUserAgentDeposits>
-
 export type GetUserFeeInfoParams = FunctionArguments<typeof functions.getUserFeeInfo>
 export type GetUserFeeInfoReturn = FunctionReturn<typeof functions.getUserFeeInfo>
 
-export type GetUserPurchasesParams = FunctionArguments<typeof functions.getUserPurchases>
-export type GetUserPurchasesReturn = FunctionReturn<typeof functions.getUserPurchases>
+export type HasGraduatedParams = FunctionArguments<typeof functions.hasGraduated>
+export type HasGraduatedReturn = FunctionReturn<typeof functions.hasGraduated>
 
 export type InitializeParams = FunctionArguments<typeof functions.initialize>
 export type InitializeReturn = FunctionReturn<typeof functions.initialize>
@@ -542,11 +522,11 @@ export type UpdateAmicaSnapshotReturn = FunctionReturn<typeof functions.updateAm
 export type UpdateMetadataParams = FunctionArguments<typeof functions.updateMetadata>
 export type UpdateMetadataReturn = FunctionReturn<typeof functions.updateMetadata>
 
+export type UserPurchasesParams = FunctionArguments<typeof functions.userPurchases>
+export type UserPurchasesReturn = FunctionReturn<typeof functions.userPurchases>
+
 export type UserSnapshotsParams = FunctionArguments<typeof functions.userSnapshots>
 export type UserSnapshotsReturn = FunctionReturn<typeof functions.userSnapshots>
-
-export type UserpurchasesParams = FunctionArguments<typeof functions.userpurchases>
-export type UserpurchasesReturn = FunctionReturn<typeof functions.userpurchases>
 
 export type WithdrawAgentTokensParams = FunctionArguments<typeof functions.withdrawAgentTokens>
 export type WithdrawAgentTokensReturn = FunctionReturn<typeof functions.withdrawAgentTokens>

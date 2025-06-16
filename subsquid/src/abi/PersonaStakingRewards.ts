@@ -6,11 +6,12 @@ export const events = {
     Deposit: event("0x90890809c654f11d6e72a28fa60149770a0d11ec6c92319d6ceb2bb0a4ea1a15", "Deposit(address,uint256,uint256)", {"user": indexed(p.address), "poolId": indexed(p.uint256), "amount": p.uint256}),
     DepositLocked: event("0xaf371f6c2249ff29567a58317966ff76f384986ddbdd83922a2beeff54c68d19", "DepositLocked(address,uint256,uint256,uint256,uint256,uint256)", {"user": indexed(p.address), "poolId": indexed(p.uint256), "amount": p.uint256, "lockId": p.uint256, "unlockTime": p.uint256, "multiplier": p.uint256}),
     EmergencyExit: event("0xa4c9c75415df35968a558e9feb45cc3bdba07d1bf6ab989adead7488a720d2c1", "EmergencyExit(address,uint256,uint256)", {"user": indexed(p.address), "poolId": indexed(p.uint256), "amount": p.uint256}),
-    EmergencyWithdraw: event("0x5fafa99d0643513820be26656b45130b01e1c03062e1266bf36f88cbd3bd9695", "EmergencyWithdraw(address,uint256)", {"token": indexed(p.address), "amount": p.uint256}),
+    EmergencyWithdrawCompleted: event("0x9dec75b439f503136261ba841ce6d54e41dbb4e2511bd281e0abc86f9eac72dc", "EmergencyWithdrawCompleted(address,address,uint256)", {"user": indexed(p.address), "token": indexed(p.address), "amount": p.uint256}),
     LockTierAdded: event("0x62fa294915146f3737d4da5c6c457317c64e81f20b763268e20ca9781f75ae4f", "LockTierAdded(uint256,uint256)", {"duration": p.uint256, "multiplier": p.uint256}),
     LockTierUpdated: event("0x543b8d23705bb826c3c1a9184c62f221ee06a4308a50023409fe53a8a75aedd7", "LockTierUpdated(uint256,uint256,uint256)", {"index": p.uint256, "duration": p.uint256, "multiplier": p.uint256}),
     OwnershipTransferred: event("0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0", "OwnershipTransferred(address,address)", {"previousOwner": indexed(p.address), "newOwner": indexed(p.address)}),
     PoolAdded: event("0x3304593749274d0d6b1823f7eb984f8cdd14e8a4847f1c830f70af8b55189bf4", "PoolAdded(uint256,address,uint256,bool)", {"poolId": indexed(p.uint256), "lpToken": indexed(p.address), "allocBasisPoints": p.uint256, "isAgentPool": p.bool}),
+    PoolDeactivated: event("0x35e8784e70e18f30e0d262a23d57e3b0b384329e79eec7566083c2bd2a207ac8", "PoolDeactivated(uint256,uint256)", {"poolId": indexed(p.uint256), "timestamp": p.uint256}),
     PoolUpdated: event("0xec70f7b7f8beefa9ff0456053baafec83986e3915f156e2ed04b0acb57d7dd55", "PoolUpdated(uint256,uint256,bool)", {"poolId": indexed(p.uint256), "allocBasisPoints": p.uint256, "isActive": p.bool}),
     RewardPeriodUpdated: event("0x8dac4be85cb6508c2480ee75d110973601db7c7c414262229a5c01d37a427665", "RewardPeriodUpdated(uint256,uint256)", {"startBlock": p.uint256, "endBlock": p.uint256}),
     RewardRateUpdated: event("0x41d466ebd06fb97e7786086ac8b69b7eb7da798592036251291d34e9791cde01", "RewardRateUpdated(uint256)", {"amicaPerBlock": p.uint256}),
@@ -240,11 +241,12 @@ export class Contract extends ContractBase {
 export type DepositEventArgs = EParams<typeof events.Deposit>
 export type DepositLockedEventArgs = EParams<typeof events.DepositLocked>
 export type EmergencyExitEventArgs = EParams<typeof events.EmergencyExit>
-export type EmergencyWithdrawEventArgs = EParams<typeof events.EmergencyWithdraw>
+export type EmergencyWithdrawCompletedEventArgs = EParams<typeof events.EmergencyWithdrawCompleted>
 export type LockTierAddedEventArgs = EParams<typeof events.LockTierAdded>
 export type LockTierUpdatedEventArgs = EParams<typeof events.LockTierUpdated>
 export type OwnershipTransferredEventArgs = EParams<typeof events.OwnershipTransferred>
 export type PoolAddedEventArgs = EParams<typeof events.PoolAdded>
+export type PoolDeactivatedEventArgs = EParams<typeof events.PoolDeactivated>
 export type PoolUpdatedEventArgs = EParams<typeof events.PoolUpdated>
 export type RewardPeriodUpdatedEventArgs = EParams<typeof events.RewardPeriodUpdated>
 export type RewardRateUpdatedEventArgs = EParams<typeof events.RewardRateUpdated>
