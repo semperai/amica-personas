@@ -23,6 +23,42 @@ interface IERC20Implementation {
     function initialize(string memory name, string memory symbol, uint256 supply, address owner) external;
 }
 
+// ============================================================================
+// ERRORS
+// ============================================================================
+error InvalidToken();
+error InvalidAmount();
+error InvalidRecipient();
+error InvalidName();
+error InvalidSymbol();
+error InvalidMetadata();
+error TokenNotEnabled();
+error InsufficientBalance();
+error TransferFailed();
+error TradingOnUniswap();
+error InsufficientOutput();
+error TransactionExpired();
+error NotTokenOwner();
+error FeeTooHigh();
+error InvalidShare();
+error InvalidFeeRange();
+error InvalidMultiplier();
+error InsufficientAmica();
+error NoAgentToken();
+error AlreadyGraduated();
+error NotGraduated();
+error NoTokensToWithdraw();
+error NoDepositsToWithdraw();
+error NoDepositsToClaim();
+error InsufficientLiquidity();
+error InsufficientAgentTokens();
+error PairAlreadyCreated();
+error InvalidConfiguration();
+error InvalidIndex();
+error PaymentFailed();
+error CannotSetMinWithoutAgent();
+
+
 /**
  * @title PersonaTokenFactory
  * @notice Factory for creating persona NFTs with associated ERC20 tokens and optional agent token integration
@@ -132,7 +168,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
     // Agent token deposits
     mapping(uint256 => mapping(address => AgentDeposit[])) public agentDeposits;
-    mapping(address => bool) public approvedAgentTokens;  // Whitelist of agent tokens
 
     // Staking rewards contract (deployed separately)
     address public stakingRewards;
@@ -199,10 +234,12 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         __ReentrancyGuard_init();
         __Pausable_init();
 
-        require(amicaToken_ != address(0), "Invalid AMICA token");
-        require(uniswapFactory_ != address(0), "Invalid factory");
-        require(uniswapRouter_ != address(0), "Invalid router");
-        require(erc20Implementation_ != address(0), "Invalid implementation");
+        if (
+            amicaToken_ == address(0) ||
+            uniswapFactory_ == address(0) ||
+            uniswapRouter_ == address(0) ||
+            erc20Implementation_ == address(0)
+        ) revert InvalidToken();
 
         amicaToken = IERC20(amicaToken_);
         uniswapFactory = IUniswapV2Factory(uniswapFactory_);
@@ -251,7 +288,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 mintCost,
         uint256 graduationThreshold
     ) external onlyOwner {
-        require(token != address(0), "Invalid token");
+        if (token == address(0)) revert InvalidToken();
 
         pairingConfigs[token] = PairingConfig({
             enabled: true,
@@ -277,8 +314,8 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 feePercentage,
         uint256 creatorShare
     ) external onlyOwner {
-        require(feePercentage <= 1000, "Fee too high"); // Max 10%
-        require(creatorShare <= BASIS_POINTS, "Invalid creator share");
+        if (feePercentage > 1000) revert FeeTooHigh();
+        if (creatorShare > BASIS_POINTS) revert InvalidShare();
 
         tradingFeeConfig.feePercentage = feePercentage;
         tradingFeeConfig.creatorShare = creatorShare;
@@ -295,9 +332,9 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 minReductionMultiplier,
         uint256 maxReductionMultiplier
     ) external onlyOwner {
-        require(minAmicaForReduction < maxAmicaForReduction, "Invalid AMICA range");
-        require(minReductionMultiplier <= BASIS_POINTS, "Invalid min multiplier");
-        require(maxReductionMultiplier <= minReductionMultiplier, "Invalid max multiplier");
+        if (minAmicaForReduction >= maxAmicaForReduction) revert InvalidFeeRange();
+        if (minReductionMultiplier > BASIS_POINTS) revert InvalidMultiplier();
+        if (maxReductionMultiplier > minReductionMultiplier) revert InvalidMultiplier();
 
         feeReductionConfig = FeeReductionConfig({
             minAmicaForReduction: minAmicaForReduction,
@@ -312,13 +349,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             minReductionMultiplier,
             maxReductionMultiplier
         );
-    }
-
-    /**
-     * @notice Approve an agent token for use in the system
-     */
-    function approveAgentToken(address token, bool approved) external onlyOwner {
-        approvedAgentTokens[token] = approved;
     }
 
     /**
@@ -348,28 +378,19 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         address agentToken,
         uint256 minAgentTokens
     ) external nonReentrant whenNotPaused returns (uint256) {
-        // Validate agent token if provided
-        if (agentToken != address(0)) {
-            require(approvedAgentTokens[agentToken], "Agent token not approved");
-        } else {
-            require(minAgentTokens == 0, "Cannot set min agent tokens without agent token");
-        }
-
+        if (agentToken == address(0) && minAgentTokens != 0) revert CannotSetMinWithoutAgent();
 
         // Validations
         PairingConfig memory config = pairingConfigs[pairingToken];
-        require(config.enabled, "Pairing token not enabled");
-        require(bytes(name).length > 0 && bytes(name).length <= 32, "Invalid name length");
-        require(bytes(symbol).length > 0 && bytes(symbol).length <= 10, "Invalid symbol length");
-        require(metadataKeys.length == metadataValues.length, "Metadata mismatch");
+        if (!config.enabled) revert TokenNotEnabled();
+        if (bytes(name).length == 0 || bytes(name).length > 32) revert InvalidName();
+        if (bytes(symbol).length == 0 || bytes(symbol).length > 10) revert InvalidSymbol();
+        if (metadataKeys.length != metadataValues.length) revert InvalidMetadata();
 
         // Take payment in the pairing token
         uint256 totalPayment = config.mintCost + initialBuyAmount;
-        require(IERC20(pairingToken).balanceOf(msg.sender) >= totalPayment, "Insufficient balance");
-        require(
-            IERC20(pairingToken).transferFrom(msg.sender, address(this), totalPayment),
-            "Payment failed"
-        );
+        if (IERC20(pairingToken).balanceOf(msg.sender) < totalPayment) revert InsufficientBalance();
+        if (!IERC20(pairingToken).transferFrom(msg.sender, address(this), totalPayment)) revert PaymentFailed();
 
         // Mint NFT
         uint256 tokenId = _currentTokenId++;
@@ -449,12 +470,12 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 deadline,
         bool isInternal
     ) private returns (uint256 amountOut) {
-        require(block.timestamp <= deadline, "Transaction expired");
-        require(to != address(0), "Invalid recipient");
+        if (block.timestamp > deadline) revert TransactionExpired();
+        if (to == address(0)) revert InvalidRecipient();
 
         PersonaData storage persona = personas[tokenId];
-        require(!persona.pairCreated, "Trading already on Uniswap");
-        require(persona.erc20Token != address(0), "Invalid token");
+        if (persona.pairCreated) revert TradingOnUniswap();
+        if (persona.erc20Token == address(0)) revert InvalidToken();
 
         TokenPurchase storage purchase = purchases[tokenId];
 
@@ -476,15 +497,12 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             bondingAmount
         );
 
-        require(amountOut >= amountOutMin, "Insufficient output amount");
-        require(amountOut <= getAvailableTokens(tokenId), "Insufficient liquidity");
+        if (amountOut < amountOutMin) revert InsufficientOutput();
+        if (amountOut > getAvailableTokens(tokenId)) revert InsufficientLiquidity();
 
         // Only transfer tokens if this is NOT an internal call
         if (!isInternal) {
-            require(
-                IERC20(persona.pairToken).transferFrom(msg.sender, address(this), amountIn),
-                "Transfer failed"
-            );
+            if (!isInternal && !IERC20(persona.pairToken).transferFrom(msg.sender, address(this), amountIn)) revert TransferFailed();
         }
 
         // Handle fees if any
@@ -504,10 +522,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         }));
 
         // Transfer persona tokens to recipient
-        require(
-            IERC20(persona.erc20Token).transfer(to, amountOut),
-            "Token transfer failed"
-        );
+        if (!IERC20(persona.erc20Token).transfer(to, amountOut)) revert TransferFailed();
 
         emit TokensPurchased(tokenId, to, amountIn, amountOut);
 
@@ -522,7 +537,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      */
     function withdrawTokens(uint256 tokenId) external nonReentrant whenNotPaused {
         PersonaData storage persona = personas[tokenId];
-        require(persona.erc20Token != address(0), "Invalid token");
+        if (persona.erc20Token == address(0)) revert InvalidToken();
 
         UserPurchase[] storage purchasesLocal = userpurchases[tokenId][msg.sender];
         uint256 totalToWithdraw = 0;
@@ -534,13 +549,10 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             }
         }
 
-        require(totalToWithdraw > 0, "No tokens to withdraw");
+        if (totalToWithdraw == 0) revert NoTokensToWithdraw();
 
         // Transfer tokens
-        require(
-            IERC20(persona.erc20Token).transfer(msg.sender, totalToWithdraw),
-            "Transfer failed"
-        );
+        if (!IERC20(persona.erc20Token).transfer(msg.sender, totalToWithdraw)) revert TransferFailed();
 
         emit TokensWithdrawn(tokenId, msg.sender, totalToWithdraw);
     }
@@ -555,15 +567,12 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      */
     function depositAgentTokens(uint256 tokenId, uint256 amount) external nonReentrant whenNotPaused {
         PersonaData storage persona = personas[tokenId];
-        require(persona.agentToken != address(0), "No agent token associated");
-        require(!persona.pairCreated, "Already graduated");
-        require(amount > 0, "Invalid amount");
+        if (persona.agentToken == address(0)) revert NoAgentToken();
+        if (persona.pairCreated) revert AlreadyGraduated();
+        if (amount == 0) revert InvalidAmount();
 
         // Transfer agent tokens from user
-        require(
-            IERC20(persona.agentToken).transferFrom(msg.sender, address(this), amount),
-            "Transfer failed"
-        );
+        if (!IERC20(persona.agentToken).transferFrom(msg.sender, address(this), amount)) revert TransferFailed();
 
         // Record deposit
         agentDeposits[tokenId][msg.sender].push(AgentDeposit({
@@ -582,7 +591,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      */
     function withdrawAgentTokens(uint256 tokenId) external nonReentrant whenNotPaused {
         PersonaData storage persona = personas[tokenId];
-        require(!persona.pairCreated, "Already graduated");
+        if (persona.pairCreated) revert AlreadyGraduated();
 
         AgentDeposit[] storage deposits = agentDeposits[tokenId][msg.sender];
         uint256 totalToWithdraw = 0;
@@ -594,15 +603,12 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             }
         }
 
-        require(totalToWithdraw > 0, "No tokens to withdraw");
+        if (totalToWithdraw == 0) revert NoDepositsToWithdraw();
 
         persona.totalAgentDeposited -= totalToWithdraw;
 
         // Return agent tokens
-        require(
-            IERC20(persona.agentToken).transfer(msg.sender, totalToWithdraw),
-            "Transfer failed"
-        );
+        if (!IERC20(persona.agentToken).transfer(msg.sender, totalToWithdraw)) revert TransferFailed();
 
         emit AgentTokensWithdrawn(tokenId, msg.sender, totalToWithdraw);
     }
@@ -612,8 +618,8 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      */
     function claimAgentRewards(uint256 tokenId) external nonReentrant {
         PersonaData storage persona = personas[tokenId];
-        require(persona.pairCreated, "Not graduated yet");
-        require(persona.agentToken != address(0), "No agent token");
+        if (!persona.pairCreated) revert NotGraduated();
+        if (persona.agentToken == address(0)) revert NoAgentToken();
 
         AgentDeposit[] storage deposits = agentDeposits[tokenId][msg.sender];
         uint256 userAgentAmount = 0;
@@ -626,7 +632,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             }
         }
 
-        require(userAgentAmount > 0, "No deposits to claim");
+        if (userAgentAmount == 0) revert NoDepositsToClaim();
 
         // Calculate pro-rata share of persona tokens
         uint256 personaReward = 0;
@@ -635,10 +641,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         }
 
         if (personaReward > 0) {
-            require(
-                IERC20(persona.erc20Token).transfer(msg.sender, personaReward),
-                "Persona transfer failed"
-            );
+            if (personaReward > 0 && !IERC20(persona.erc20Token).transfer(msg.sender, personaReward)) revert TransferFailed();
         }
 
         emit AgentRewardsDistributed(tokenId, msg.sender, personaReward, userAgentAmount);
@@ -656,8 +659,8 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         string[] memory keys,
         string[] memory values
     ) external {
-        require(ownerOf(tokenId) == msg.sender, "Not token owner");
-        require(keys.length == values.length, "Key-value mismatch");
+        if (ownerOf(tokenId) != msg.sender) revert NotTokenOwner();
+        if (keys.length != values.length) revert InvalidMetadata();
 
         for (uint256 i = 0; i < keys.length; i++) {
             personas[tokenId].metadata[keys[i]] = values[i];
@@ -1047,8 +1050,8 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 reserveSold,
         uint256 reserveTotal
     ) internal pure returns (uint256) {
-        require(amountIn > 0, "Insufficient input amount");
-        require(reserveTotal > reserveSold, "Insufficient reserve");
+        if (amountIn == 0) revert InvalidAmount();
+        if (reserveTotal <= reserveSold) revert InsufficientLiquidity();
 
         // Bancor-inspired formula with virtual reserves
         uint256 virtualAmicaReserve = 100_000 ether;
@@ -1209,13 +1212,10 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      */
     function _createLiquidityPair(uint256 tokenId) private {
         PersonaData storage persona = personas[tokenId];
-        require(!persona.pairCreated, "Pair already created");
+        if (persona.pairCreated) revert PairAlreadyCreated();
 
         if (persona.agentToken != address(0) && persona.minAgentTokens > 0) {
-            require(
-                persona.totalAgentDeposited >= persona.minAgentTokens,
-                "Insufficient agent tokens deposited"
-            );
+            if (persona.agentToken != address(0) && persona.minAgentTokens > 0 && persona.totalAgentDeposited < persona.minAgentTokens) revert InsufficientAgentTokens();
         }
 
 

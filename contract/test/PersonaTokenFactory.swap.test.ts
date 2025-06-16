@@ -36,7 +36,7 @@ describe("Swap Tests", function () {
                 user2.address,
                 pastDeadline
             )
-        ).to.be.revertedWith("Transaction expired");
+        ).to.be.revertedWithCustomError(personaFactory, "TransactionExpired");
     });
 
     it("Should allow swapping to different recipient", async function () {
@@ -88,7 +88,7 @@ describe("Swap Tests", function () {
                 ethers.ZeroAddress,
                 deadline
             )
-        ).to.be.revertedWith("Invalid recipient");
+        ).to.be.revertedWithCustomError(personaFactory, "InvalidRecipient");
     });
 
     it("Should handle very small swaps correctly", async function () {
@@ -278,7 +278,7 @@ describe("Swap Tests", function () {
         // This should fail due to insufficient liquidity
         await expect(
             personaFactory.connect(user2).swapExactTokensForTokens(tokenId, hugeAmount, 0, user2.address, deadline)
-        ).to.be.revertedWith("Insufficient liquidity");
+        ).to.be.revertedWithCustomError(personaFactory, "InsufficientLiquidity");
     });
 
     it("Should handle purchase with minimum amount", async function () {
@@ -358,7 +358,7 @@ describe("Swap Tests", function () {
         // This should fail due to insufficient liquidity
         await expect(
             personaFactory.connect(user2).swapExactTokensForTokens(tokenId, hugeAmount, 0, user2.address, deadline)
-        ).to.be.revertedWith("Insufficient liquidity");
+        ).to.be.revertedWithCustomError(personaFactory, "InsufficientLiquidity");
     });
 
     it("Should reject purchase for non-existent token", async function () {
@@ -379,7 +379,7 @@ describe("Swap Tests", function () {
                 user2.address,
                 deadline
             )
-        ).to.be.revertedWith("Invalid token");
+        ).to.be.revertedWithCustomError(personaFactory, "InvalidToken");
     });
 
     it("Should reject purchase with slippage too high", async function () {
@@ -403,7 +403,7 @@ describe("Swap Tests", function () {
                 user2.address,
                 deadline
             )
-        ).to.be.revertedWith("Insufficient output amount");
+        ).to.be.revertedWithCustomError(personaFactory, "InsufficientOutput");
     });
 
     it("Should reject purchase after pair creation", async function () {
@@ -435,7 +435,7 @@ describe("Swap Tests", function () {
                 user2.address,
                 deadline
             )
-        ).to.be.revertedWith("Trading already on Uniswap");
+        ).to.be.revertedWithCustomError(personaFactory, "TradingOnUniswap");
     });
 
     it("Should purchase tokens with correct calculation", async function () {
