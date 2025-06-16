@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
-import { fetchPersonas } from '@/lib/api';
+import { fetchPersonas } from '@/lib/api-graphql'; // Updated import
 import { formatEther } from 'viem';
 import Link from 'next/link';
 
@@ -93,7 +93,7 @@ function PersonaCard({ persona }: PersonaCardProps) {
 
   return (
     <Link
-      href={`/persona/${persona.chain.id}/${persona.id.split('-')[1]}`}
+      href={`/persona/8453/${persona.id}`}
       className="group relative aspect-[3/4] rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -183,10 +183,12 @@ export default function HomePage() {
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState('volume');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadPersonas = async () => {
       try {
+        setError(null);
         const sortMap: Record<string, string> = {
           volume: 'totalVolume24h_DESC',
           tvl: 'totalDeposited_DESC',
@@ -201,6 +203,7 @@ export default function HomePage() {
         setPersonas(data.personas);
       } catch (error) {
         console.error('Error loading personas:', error);
+        setError('Failed to load personas. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -301,6 +304,13 @@ export default function HomePage() {
           </div>
         </div>
 
+        {/* Error State */}
+        {error && (
+          <div className="bg-red-500/10 backdrop-blur-sm border border-red-500/20 rounded-lg p-6 mb-8">
+            <p className="text-red-400 text-center">{error}</p>
+          </div>
+        )}
+
         {/* Personas Grid */}
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
@@ -316,7 +326,7 @@ export default function HomePage() {
           </div>
         )}
 
-        {!loading && personas.length === 0 && (
+        {!loading && personas.length === 0 && !error && (
           <div className="flex items-center justify-center h-64">
             <p className="text-white/60 text-lg">No personas found</p>
           </div>
