@@ -1,5 +1,5 @@
 // src/lib/api-graphql.ts
-import { apolloClient, GET_PERSONAS, GET_PERSONA_DETAILS, convertOrderBy, PersonasQueryResult } from './graphql/client';
+import { apolloClient, GET_PERSONAS, GET_PERSONA_DETAILS, GET_PERSONA_TRADES, GET_DAILY_STATS, convertOrderBy, PersonasQueryResult } from './graphql/client';
 import { mockPersonas, mockTrades, mockVolumeChart, mockUserPortfolio } from './mockData';
 
 const USE_MOCK_DATA = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true';
@@ -239,8 +239,28 @@ export async function fetchVolumeChart(chainId: string, tokenId: string, days = 
     return mockVolumeChart.slice(-days);
   }
   
-  // TODO: Implement with GraphQL query for PersonaDailyStats
-  return [];
+  try {
+    const personaId = `${chainId}-${tokenId}`;
+    const { data } = await apolloClient.query({
+      query: GET_DAILY_STATS,
+      variables: { 
+        personaId,
+        days 
+      }
+    });
+
+    // Transform the data to match expected format
+    return data.personaDailyStats.map((stat: any) => ({
+      date: stat.date,
+      volume: stat.volume,
+      trades: stat.trades,
+      uniqueTraders: stat.uniqueTraders
+    }));
+  } catch (error) {
+    console.error('Error fetching volume chart:', error);
+    // Return mock data as fallback
+    return mockVolumeChart.slice(-days);
+  }
 }
 
 export async function fetchTrending(): Promise<Persona[]> {
@@ -304,11 +324,34 @@ export async function fetchPersonaTrades(chainId: string, tokenId: string, limit
     };
   }
 
-  // TODO: Implement with GraphQL
-  return {
-    trades: [],
-    total: 0
-  };
+  try {
+    const personaId = `${chainId}-${tokenId}`;
+    const { data } = await apolloClient.query({
+      query: GET_PERSONA_TRADES,
+      variables: { 
+        personaId,
+        limit 
+      }
+    });
+
+    // Add chain info to trades
+    const chain = extractChainFromId(personaId);
+    const trades = data.trades.map((trade: any) => ({
+      ...trade,
+      chain
+    }));
+
+    return {
+      trades,
+      total: trades.length
+    };
+  } catch (error) {
+    console.error('Error fetching persona trades:', error);
+    return {
+      trades: [],
+      total: 0
+    };
+  }
 }
 
 // Health check - GraphQL endpoint doesn't need this

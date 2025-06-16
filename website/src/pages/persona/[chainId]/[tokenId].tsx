@@ -3,12 +3,13 @@ import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
 import { NextPage } from 'next';
 import { formatEther } from 'viem';
+import { useQuery } from '@apollo/client';
 import Layout from '@/components/Layout';
 import PersonaMetadata from '@/components/PersonaMetadata';
 import TradingInterface from '@/components/TradingInterface';
 import PriceChart from '@/components/PriceChart';
 import AgentDeposits from '@/components/AgentDeposits';
-import { fetchPersonaTrades } from '@/lib/api';
+import { GET_PERSONA_DETAILS, GET_PERSONA_TRADES } from '@/lib/graphql/client';
 import { useReadContract } from 'wagmi';
 import { FACTORY_ABI, getAddressesForChain } from '@/lib/contracts';
 import Link from 'next/link';
@@ -25,28 +26,14 @@ interface Trade {
   txHash: string;
 }
 
-// Create TradeHistory component
+// Create TradeHistory component with GraphQL
 const TradeHistory = ({ chainId, tokenId }: { chainId: string; tokenId: string }) => {
-  const [trades, setTrades] = useState<Trade[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-
-  useEffect(() => {
-    const loadTrades = async () => {
-      try {
-        setError(false);
-        const data = await fetchPersonaTrades(chainId, tokenId, 10);
-        setTrades(data.trades || []);
-      } catch (error) {
-        console.error('Failed to load trades:', error);
-        setError(true);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadTrades();
-  }, [chainId, tokenId]);
+  const personaId = `${chainId}-${tokenId}`;
+  
+  const { data, loading, error } = useQuery(GET_PERSONA_TRADES, {
+    variables: { personaId, limit: 10 },
+    skip: !chainId || !tokenId,
+  });
 
   if (loading) {
     return (
@@ -70,6 +57,8 @@ const TradeHistory = ({ chainId, tokenId }: { chainId: string; tokenId: string }
     );
   }
 
+  const trades = data?.trades || [];
+
   return (
     <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
       <h3 className="text-lg font-light text-white mb-4">Recent Trades</h3>
@@ -77,7 +66,7 @@ const TradeHistory = ({ chainId, tokenId }: { chainId: string; tokenId: string }
         <p className="text-white/50">No trades yet</p>
       ) : (
         <div className="space-y-3">
-          {trades.map((trade) => (
+          {trades.map((trade: Trade) => (
             <div key={trade.id} className="border-b border-white/10 pb-3 last:border-b-0">
               <div className="flex justify-between items-start">
                 <div>
@@ -145,12 +134,19 @@ const PersonaDetailPage: NextPage = () => {
   const chainIdStr = Array.isArray(chainId) ? chainId[0] : chainId;
   const tokenIdStr = Array.isArray(tokenId) ? tokenId[0] : tokenId;
   const chainIdNum = chainIdStr ? parseInt(chainIdStr) : undefined;
+  const personaId = chainIdStr && tokenIdStr ? `${chainIdStr}-${tokenIdStr}` : null;
 
   // Get contract addresses
   const addresses = chainIdNum ? getAddressesForChain(chainIdNum) : null;
 
-  // Check if persona exists by reading its data
-  const { data: personaData, isLoading: isCheckingPersona } = useReadContract({
+  // Check if persona exists using GraphQL
+  const { data: graphqlData, loading: isCheckingPersona } = useQuery(GET_PERSONA_DETAILS, {
+    variables: { id: personaId },
+    skip: !personaId || !router.isReady,
+  });
+
+  // Also check on-chain for verification (optional, can be removed if you trust GraphQL)
+  const { data: personaData } = useReadContract({
     address: addresses?.personaFactory as `0x${string}`,
     abi: FACTORY_ABI,
     functionName: 'getPersona',
@@ -160,11 +156,10 @@ const PersonaDetailPage: NextPage = () => {
     },
   }) as { 
     data: readonly [string, string, `0x${string}`, `0x${string}`, boolean, bigint, bigint] | undefined;
-    isLoading: boolean;
   };
 
-  // Check if the persona exists (has a non-zero erc20Token address)
-  const personaExists = personaData && personaData[2] !== '0x0000000000000000000000000000000000000000';
+  // Check if the persona exists
+  const personaExists = graphqlData?.persona || (personaData && personaData[2] !== '0x0000000000000000000000000000000000000000');
 
   // Handle loading state while router params are being resolved
   if (!router.isReady || !chainId || !tokenId) {

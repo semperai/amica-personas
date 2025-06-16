@@ -7,7 +7,6 @@ import { RainbowKitProvider, midnightTheme } from '@rainbow-me/rainbowkit';
 import { ApolloProvider } from '@apollo/client';
 import { config } from '@/lib/wagmi';
 import { apolloClient } from '@/lib/graphql/client';
-import { ApiStatusProvider } from '@/components/ApiStatusProvider';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 const queryClient = new QueryClient();
@@ -21,9 +20,7 @@ function MyApp({ Component, pageProps }: AppProps) {
             <RainbowKitProvider theme={midnightTheme({
               borderRadius: 'large',
             })}>
-              <ApiStatusProvider>
-                <Component {...pageProps} />
-              </ApiStatusProvider>
+              <Component {...pageProps} />
             </RainbowKitProvider>
           </QueryClientProvider>
         </WagmiProvider>

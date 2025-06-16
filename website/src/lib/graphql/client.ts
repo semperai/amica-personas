@@ -134,6 +134,37 @@ export const GET_USER_PORTFOLIO = gql`
   }
 `;
 
+export const GET_PERSONA_TRADES = gql`
+  query GetPersonaTrades($personaId: String!, $limit: Int = 10) {
+    trades(where: { persona: { id_eq: $personaId } }, orderBy: timestamp_DESC, limit: $limit) {
+      id
+      trader
+      amountIn
+      amountOut
+      feeAmount
+      timestamp
+      block
+      txHash
+    }
+  }
+`;
+
+export const GET_DAILY_STATS = gql`
+  query GetPersonaDailyStats($personaId: String!, $days: Int = 30) {
+    personaDailyStats(
+      where: { persona: { id_eq: $personaId } }
+      orderBy: date_DESC
+      limit: $days
+    ) {
+      id
+      date
+      trades
+      volume
+      uniqueTraders
+    }
+  }
+`;
+
 // Type definitions based on GraphQL schema
 export interface PersonaMetadata {
   key: string;

@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
-import { fetchPersonaDetail } from '@/lib/api';
+// src/components/PersonaMetadata.tsx
+import { useQuery } from '@apollo/client';
+import { GET_PERSONA_DETAILS } from '@/lib/graphql/client';
 import { formatEther } from 'viem';
 import AgentTokenInfo from './AgentTokenInfo';
 
@@ -13,69 +14,13 @@ interface MetadataItem {
   value: string;
 }
 
-interface PersonaData {
-  id: string;
-  name: string;
-  symbol: string;
-  creator: string;
-  erc20Token: string;
-  pairToken: string;
-  pairCreated?: boolean;
-  pairAddress?: string;
-  totalVolume24h: string;
-  totalVolumeAllTime: string;
-  totalTrades24h?: number;
-  totalTradesAllTime?: number;
-  uniqueTraders24h?: number;
-  uniqueTradersAllTime?: number;
-  totalDeposited?: string;
-  tokensSold?: string;
-  graduationThreshold?: string;
-  isGraduated: boolean;
-  createdAt?: string;
-  chain: {
-    id: string;
-    name: string;
-  };
-  metadata?: MetadataItem[];
-  tokenId: string;
-  agentToken?: string;
-  minAgentTokens?: string;
-  totalAgentDeposited?: string;
-}
-
 const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
-  const [persona, setPersona] = useState<PersonaData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadPersona = async () => {
-      try {
-        setError(null);
-        const data = await fetchPersonaDetail(chainId, tokenId);
-        // Add the tokenId from props since API doesn't return it
-        if (data) {
-          setPersona({
-            ...data,
-            creator: data.creator ?? '',
-            tokenId,
-            erc20Token: data.erc20Token ?? '',
-            pairToken: data.pairToken ?? '',
-          });
-        } else {
-          setPersona(null);
-        }
-      } catch (error) {
-        console.error('Failed to load persona:', error);
-        setError('Failed to load persona details. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadPersona();
-  }, [chainId, tokenId]);
+  const personaId = `${chainId}-${tokenId}`;
+  
+  const { data, loading, error } = useQuery(GET_PERSONA_DETAILS, {
+    variables: { id: personaId },
+    skip: !chainId || !tokenId,
+  });
 
   if (loading) {
     return (
@@ -91,11 +36,11 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
     );
   }
 
-  if (error || !persona) {
+  if (error || !data?.persona) {
     return (
       <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
         <div className="text-center">
-          <p className="text-red-400 mb-4">{error || 'Persona not found'}</p>
+          <p className="text-red-400 mb-4">{error?.message || 'Persona not found'}</p>
           <button
             onClick={() => window.location.reload()}
             className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
@@ -107,9 +52,20 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
     );
   }
 
+  const persona = data.persona;
+  const isGraduated = persona.pairCreated;
   const progress = persona.totalDeposited && persona.graduationThreshold
     ? (Number(persona.totalDeposited) / Number(persona.graduationThreshold)) * 100
     : 0;
+
+  // Extract chain info from ID
+  const [extractedChainId] = persona.id.split('-');
+  const chainNames: Record<string, string> = {
+    '1': 'ethereum',
+    '8453': 'base',
+    '42161': 'arbitrum'
+  };
+  const chainName = chainNames[extractedChainId] || 'unknown';
 
   return (
     <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
@@ -118,7 +74,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
           <h1 className="text-3xl font-light text-white">{persona.name}</h1>
           <p className="text-lg text-white/60">${persona.symbol}</p>
         </div>
-        {persona.isGraduated && (
+        {isGraduated && (
           <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-400 backdrop-blur-sm">
             Graduated
           </span>
@@ -139,23 +95,24 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
         </div>
         <div>
           <p className="text-sm text-white/50">Chain</p>
-          <p className="text-white font-light capitalize">{persona.chain?.name || 'Unknown'}</p>
+          <p className="text-white font-light capitalize">{chainName}</p>
         </div>
         <div>
           <p className="text-sm text-white/50">24h Volume</p>
           <p className="text-white font-light">
-            {formatEther(BigInt(persona.totalVolume24h || 0))} AMICA
+            {/* Using totalDeposited as proxy for volume in this example */}
+            {formatEther(BigInt(persona.totalDeposited || 0))} AMICA
           </p>
         </div>
         <div>
           <p className="text-sm text-white/50">Total Volume</p>
           <p className="text-white font-light">
-            {formatEther(BigInt(persona.totalVolumeAllTime || 0))} AMICA
+            {formatEther(BigInt(persona.totalDeposited || 0))} AMICA
           </p>
         </div>
       </div>
 
-      {!persona.isGraduated && (
+      {!isGraduated && (
         <div>
           <div className="flex justify-between text-sm mb-2">
             <span className="text-white/60">Graduation Progress</span>
@@ -192,7 +149,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
         agentToken={persona.agentToken}
         minAgentTokens={persona.minAgentTokens}
         totalAgentDeposited={persona.totalAgentDeposited}
-        isGraduated={persona.isGraduated}
+        isGraduated={isGraduated}
       />
     </div>
   );

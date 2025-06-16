@@ -1,9 +1,9 @@
 // src/components/AgentDeposits.tsx
 import { useState, useEffect } from 'react';
 import { useAccount, useReadContract, useWriteContract, useBalance, useWaitForTransactionReceipt } from 'wagmi';
-import { parseEther, formatEther } from 'viem';
+import { parseEther, formatEther, parseUnits } from 'viem';
+import { useQuery, gql } from '@apollo/client';
 import { FACTORY_ABI, getAddressesForChain } from '../lib/contracts';
-import { fetchPersonaDetail } from '../lib/api';
 
 interface AgentDepositsProps {
   chainId: string;
@@ -21,10 +21,39 @@ interface PersonaData {
 }
 
 interface AgentDeposit {
-  amount: bigint;
-  timestamp: bigint;
+  id: string;
+  amount: string;
+  timestamp: string;
   withdrawn: boolean;
+  txHash: string;
 }
+
+// GraphQL query for agent deposits
+const GET_AGENT_DEPOSITS = gql`
+  query GetAgentDeposits($personaId: String!, $user: String!) {
+    persona(id: $personaId) {
+      id
+      name
+      symbol
+      agentToken
+      minAgentTokens
+      totalAgentDeposited
+      pairCreated
+      agentDeposits(where: { user_eq: $user }) {
+        id
+        amount
+        timestamp
+        withdrawn
+        txHash
+      }
+    }
+    allDeposits: agentDeposits(where: { persona: { id_eq: $personaId } }) {
+      id
+      user
+      amount
+    }
+  }
+`;
 
 // ERC20 ABI for agent token operations
 const ERC20_ABI = [
@@ -77,45 +106,28 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
   const [showDeposits, setShowDeposits] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [activeTab, setActiveTab] = useState<'deposit' | 'withdraw'>('deposit');
-  const [mockPersona, setMockPersona] = useState<{
-    name: string;
-    symbol: string;
-    erc20Token?: string;
-    pairToken?: string;
-    isGraduated: boolean;
-    createdAt?: string;
-    agentToken?: string;
-    minAgentTokens?: string;
-    totalAgentDeposited?: string;
-  } | null>(null);
-  const [loading, setLoading] = useState(true);
-
+  
   const addresses = getAddressesForChain(Number(chainId));
   const { writeContract, data: hash, isPending, isError } = useWriteContract();
   const isMockMode = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true';
+  const personaId = `${chainId}-${tokenId}`;
   
   // Wait for transaction confirmations
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
   });
 
-  // Load mock data if in mock mode
-  useEffect(() => {
-    const loadMockData = async () => {
-      if (isMockMode) {
-        try {
-          const persona = await fetchPersonaDetail(chainId, tokenId);
-          setMockPersona(persona);
-        } catch (error) {
-          console.error('Failed to load mock persona:', error);
-        }
-      }
-      setLoading(false);
-    };
-    loadMockData();
-  }, [isMockMode, chainId, tokenId]);
+  // Query GraphQL for agent deposits
+  const { data: graphqlData, loading: graphqlLoading, refetch: refetchDeposits } = useQuery(GET_AGENT_DEPOSITS, {
+    variables: { 
+      personaId,
+      user: address?.toLowerCase() || ''
+    },
+    skip: !address || !chainId || !tokenId,
+    fetchPolicy: 'cache-and-network',
+  });
 
-  // Get persona details - the function returns a tuple
+  // Get persona details from contract (for real-time data)
   const { data: personaTuple } = useReadContract({
     address: addresses?.personaFactory as `0x${string}`,
     abi: FACTORY_ABI,
@@ -137,26 +149,6 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
     }
   }) as { data: { agentToken: `0x${string}`, totalAgentDeposited: bigint } | undefined };
 
-  // Mock user deposits for demo
-  const mockUserDeposits: AgentDeposit[] = isMockMode && address ? [
-    {
-      amount: BigInt("5000000000000000000000"), // 5k tokens
-      timestamp: BigInt(Math.floor(Date.now() / 1000) - 86400), // 1 day ago
-      withdrawn: false
-    }
-  ] : [];
-
-  // Get user's agent deposits
-  const { data: userDeposits } = useReadContract({
-    address: addresses?.personaFactory as `0x${string}`,
-    abi: FACTORY_ABI,
-    functionName: 'getUserAgentDeposits',
-    args: address ? [BigInt(tokenId), address] : undefined,
-    query: {
-      enabled: !!address && !!addresses && !isMockMode
-    }
-  }) as { data: AgentDeposit[] | undefined };
-
   // Calculate expected rewards
   const { data: rewardCalculation } = useReadContract({
     address: addresses?.personaFactory as `0x${string}`,
@@ -168,13 +160,13 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
     }
   }) as { data: readonly [bigint, bigint] | undefined };
 
-  // Get mock or real data
-  const agentToken = isMockMode ? mockPersona?.agentToken : personaStruct?.agentToken;
-  const totalAgentDeposited = isMockMode 
-    ? BigInt(mockPersona?.totalAgentDeposited || "0") 
+  // Get GraphQL or on-chain data
+  const agentToken = graphqlData?.persona?.agentToken || personaStruct?.agentToken;
+  const totalAgentDeposited = graphqlData?.persona?.totalAgentDeposited 
+    ? BigInt(graphqlData.persona.totalAgentDeposited)
     : (personaStruct?.totalAgentDeposited || BigInt(0));
 
-  // Get agent token symbol (mock it in mock mode)
+  // Get agent token symbol
   const { data: agentTokenSymbol } = useReadContract({
     address: agentToken as `0x${string}`,
     abi: ERC20_ABI,
@@ -184,10 +176,17 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
     }
   }) as { data: string | undefined };
 
-  const mockAgentTokenSymbol = isMockMode ? 'AGENT' : undefined;
-  const finalAgentTokenSymbol = agentTokenSymbol || mockAgentTokenSymbol;
+  // Get agent token decimals
+  const { data: agentTokenDecimals } = useReadContract({
+    address: agentToken as `0x${string}`,
+    abi: ERC20_ABI,
+    functionName: 'decimals',
+    query: {
+      enabled: !!agentToken && agentToken !== '0x0000000000000000000000000000000000000000' && !isMockMode
+    }
+  }) as { data: number | undefined };
 
-  // Get user's agent token balance (mock it in mock mode)
+  // Get user's agent token balance
   const { data: agentTokenBalance, refetch: refetchBalance } = useBalance({
     address: address,
     token: agentToken as `0x${string}`,
@@ -196,9 +195,7 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
     }
   });
 
-  const mockBalance = isMockMode && address ? BigInt("100000000000000000000000") : BigInt(0); // 100k tokens
-
-  // Get current allowance (mock it in mock mode)
+  // Get current allowance
   const { data: currentAllowance } = useReadContract({
     address: agentToken as `0x${string}`,
     abi: ERC20_ABI,
@@ -209,28 +206,20 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
     }
   }) as { data: bigint | undefined };
 
-  const mockAllowance = isMockMode ? BigInt(0) : undefined; // No allowance in mock mode
-
-  // Mock rewards calculation
-  const mockRewardCalculation: readonly [bigint, bigint] | undefined = isMockMode && address 
-    ? [BigInt("11111111111111111111111"), BigInt("5000000000000000000000")] // ~11k persona tokens for 5k agent tokens
-    : undefined;
-
   // Refetch data after successful transaction
   useEffect(() => {
     if (isSuccess && !isMockMode) {
-      // refetchDeposits();
+      refetchDeposits();
       refetchBalance();
-      // refetchAllowance();
       setDepositAmount('');
     }
-  }, [isSuccess, isMockMode]);
+  }, [isSuccess, isMockMode, refetchDeposits, refetchBalance]);
 
   const handleApprove = async () => {
-    if (!address || !addresses || !agentToken || !depositAmount) return;
+    if (!address || !addresses || !agentToken || !depositAmount || !agentTokenDecimals) return;
 
     if (isMockMode) {
-      alert('Mock Mode: Would approve ' + depositAmount + ' ' + finalAgentTokenSymbol);
+      alert('Mock Mode: Would approve ' + depositAmount + ' ' + agentTokenSymbol);
       return;
     }
 
@@ -240,7 +229,7 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
         address: agentToken as `0x${string}`,
         abi: ERC20_ABI,
         functionName: 'approve',
-        args: [addresses.personaFactory as `0x${string}`, parseEther(depositAmount)]
+        args: [addresses.personaFactory as `0x${string}`, parseUnits(depositAmount, agentTokenDecimals)]
       });
     } finally {
       setIsApproving(false);
@@ -248,10 +237,10 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
   };
 
   const handleDeposit = async () => {
-    if (!address || !depositAmount || !addresses) return;
+    if (!address || !depositAmount || !addresses || !agentTokenDecimals) return;
 
     if (isMockMode) {
-      alert('Mock Mode: Would deposit ' + depositAmount + ' ' + finalAgentTokenSymbol);
+      alert('Mock Mode: Would deposit ' + depositAmount + ' ' + agentTokenSymbol);
       return;
     }
 
@@ -261,7 +250,7 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
       functionName: 'depositAgentTokens',
       args: [
         BigInt(tokenId),
-        parseEther(depositAmount)
+        parseUnits(depositAmount, agentTokenDecimals)
       ]
     });
   };
@@ -303,8 +292,8 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
     return null;
   }
 
-  // Wait for data to load in mock mode
-  if (isMockMode && loading) {
+  // Wait for data to load
+  if (graphqlLoading) {
     return (
       <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
         <div className="animate-pulse">
@@ -315,45 +304,33 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
     );
   }
 
-  // Parse persona data
-  const persona: PersonaData | null = isMockMode && mockPersona ? {
-    name: mockPersona.name,
-    symbol: mockPersona.symbol,
-    erc20Token: mockPersona.erc20Token || '0x0000000000000000000000000000000000000000',
-    pairToken: mockPersona.pairToken || '0x0000000000000000000000000000000000000000',
-    pairCreated: mockPersona.isGraduated,
-    createdAt: BigInt(Math.floor(new Date(mockPersona.createdAt || Date.now()).getTime() / 1000)),
-    minAgentTokens: BigInt(mockPersona.minAgentTokens || "0")
-  } : personaTuple ? {
-    name: personaTuple[0],
-    symbol: personaTuple[1],
-    erc20Token: personaTuple[2],
-    pairToken: personaTuple[3],
-    pairCreated: personaTuple[4],
-    createdAt: personaTuple[5],
-    minAgentTokens: personaTuple[6]
-  } : null;
-
+  const persona = graphqlData?.persona;
   if (!persona) return null;
 
   const isGraduated = persona.pairCreated;
-  const minAgentTokens = persona.minAgentTokens;
+  const minAgentTokens = BigInt(persona.minAgentTokens || 0);
+  
+  // Get user's deposits from GraphQL
+  const userDeposits = persona.agentDeposits || [];
+  const activeDeposits = userDeposits.filter((d: AgentDeposit) => !d.withdrawn);
+  const totalDeposited = activeDeposits.reduce((sum: bigint, d: AgentDeposit) => sum + BigInt(d.amount), BigInt(0));
 
-  const activeDeposits = (isMockMode ? mockUserDeposits : userDeposits)?.filter(d => !d.withdrawn) || [];
-  const totalDeposited = activeDeposits.reduce((sum, d) => sum + d.amount, BigInt(0));
+  // Format token amounts based on decimals
+  const formatTokenAmount = (amount: bigint | string) => {
+    const amountBigInt = typeof amount === 'string' ? BigInt(amount) : amount;
+    return agentTokenDecimals ? formatUnits(amountBigInt, agentTokenDecimals) : formatEther(amountBigInt);
+  };
 
   // Check if approval is needed
-  const finalAllowance = currentAllowance !== undefined ? currentAllowance : mockAllowance;
-  const needsApproval = depositAmount && finalAllowance !== undefined && parseEther(depositAmount) > finalAllowance;
+  const depositAmountWei = depositAmount && agentTokenDecimals 
+    ? parseUnits(depositAmount, agentTokenDecimals) 
+    : BigInt(0);
+  const needsApproval = depositAmount && currentAllowance !== undefined && depositAmountWei > currentAllowance;
 
   // Calculate progress percentage safely
   const progressPercentage = minAgentTokens > BigInt(0) 
     ? Math.min(100, (Number(totalAgentDeposited) * 100) / Number(minAgentTokens))
     : 100;
-
-  // Get final values for display
-  const finalBalance = agentTokenBalance?.value || mockBalance;
-  const finalRewardCalculation = rewardCalculation || mockRewardCalculation;
 
   return (
     <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
@@ -363,9 +340,9 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
           {isMockMode && (
             <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded">Mock Mode</span>
           )}
-          {finalAgentTokenSymbol && (
+          {agentTokenSymbol && (
             <span className="text-sm text-purple-400 font-medium">
-              {finalAgentTokenSymbol}
+              {agentTokenSymbol}
             </span>
           )}
         </div>
@@ -375,14 +352,14 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
       <div className="mb-6 p-4 bg-white/5 rounded-xl">
         <div className="flex justify-between text-sm mb-2">
           <span className="text-white/60">Total Deposited (All Users)</span>
-          <span className="font-light text-white">{formatEther(totalAgentDeposited)} {finalAgentTokenSymbol || 'tokens'}</span>
+          <span className="font-light text-white">{formatTokenAmount(totalAgentDeposited)} {agentTokenSymbol || 'tokens'}</span>
         </div>
         
         {minAgentTokens > BigInt(0) && (
           <>
             <div className="flex justify-between text-sm mb-2">
               <span className="text-white/60">Required for Graduation</span>
-              <span className="font-light text-white">{formatEther(minAgentTokens)} {finalAgentTokenSymbol || 'tokens'}</span>
+              <span className="font-light text-white">{formatTokenAmount(minAgentTokens)} {agentTokenSymbol || 'tokens'}</span>
             </div>
             
             <div className="w-full bg-white/10 rounded-full h-2 mt-3">
@@ -448,15 +425,15 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
                     className="flex-1 p-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/40 focus:border-white/40 focus:outline-none transition-colors"
                   />
                   <button
-                    onClick={() => setDepositAmount(formatEther(finalBalance))}
+                    onClick={() => setDepositAmount(agentTokenBalance ? formatTokenAmount(agentTokenBalance.value) : '0')}
                     className="px-4 py-3 bg-white/10 rounded-xl hover:bg-white/20 transition-colors text-white/80 text-sm"
                   >
                     MAX
                   </button>
                 </div>
-                {finalBalance && (
+                {agentTokenBalance && (
                   <p className="text-xs text-white/50 mt-1">
-                    Balance: {formatEther(finalBalance)} {finalAgentTokenSymbol}
+                    Balance: {formatTokenAmount(agentTokenBalance.value)} {agentTokenSymbol}
                   </p>
                 )}
               </div>
@@ -477,7 +454,7 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
                   disabled={!address || !depositAmount || isPending || isApproving || isConfirming}
                   className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-3 rounded-xl hover:from-yellow-600 hover:to-orange-600 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transition-all"
                 >
-                  {isApproving || isConfirming ? 'Approving...' : 'Approve ' + finalAgentTokenSymbol}
+                  {isApproving || isConfirming ? 'Approving...' : 'Approve ' + agentTokenSymbol}
                 </button>
               ) : (
                 <button
@@ -485,7 +462,7 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
                   disabled={!address || !depositAmount || isPending || parseFloat(depositAmount) <= 0 || isConfirming}
                   className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-xl hover:from-purple-600 hover:to-pink-600 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transition-all"
                 >
-                  {isPending || isConfirming ? 'Depositing...' : 'Deposit ' + finalAgentTokenSymbol}
+                  {isPending || isConfirming ? 'Depositing...' : 'Deposit ' + agentTokenSymbol}
                 </button>
               )}
             </div>
@@ -499,13 +476,13 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
                   <div className="p-4 bg-white/5 rounded-xl">
                     <div className="flex justify-between mb-2">
                       <span className="text-white/60">Your Total Deposited</span>
-                      <span className="font-light text-white">{formatEther(totalDeposited)} {finalAgentTokenSymbol}</span>
+                      <span className="font-light text-white">{formatTokenAmount(totalDeposited)} {agentTokenSymbol}</span>
                     </div>
-                    {finalRewardCalculation && finalRewardCalculation[0] > BigInt(0) && (
+                    {rewardCalculation && rewardCalculation[0] > BigInt(0) && (
                       <div className="flex justify-between">
                         <span className="text-white/60">Expected Rewards</span>
                         <span className="font-light text-green-400">
-                          ~{formatEther(finalRewardCalculation[0])} {persona.symbol}
+                          ~{formatEther(rewardCalculation[0])} {persona.symbol}
                         </span>
                       </div>
                     )}
@@ -522,14 +499,22 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
 
                     {showDeposits && activeDeposits.length > 0 && (
                       <div className="space-y-2">
-                        {activeDeposits.map((deposit, index) => (
-                          <div key={index} className="text-sm p-3 bg-white/5 border border-white/10 rounded-lg">
+                        {activeDeposits.map((deposit: AgentDeposit) => (
+                          <div key={deposit.id} className="text-sm p-3 bg-white/5 border border-white/10 rounded-lg">
                             <div className="flex justify-between">
-                              <span className="text-white/80">{formatEther(deposit.amount)} {finalAgentTokenSymbol}</span>
+                              <span className="text-white/80">{formatTokenAmount(deposit.amount)} {agentTokenSymbol}</span>
                               <span className="text-white/50">
-                                {new Date(Number(deposit.timestamp) * 1000).toLocaleDateString()}
+                                {new Date(deposit.timestamp).toLocaleDateString()}
                               </span>
                             </div>
+                            <a
+                              href={`https://etherscan.io/tx/${deposit.txHash}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-purple-400 hover:text-purple-300"
+                            >
+                              {deposit.txHash.slice(0, 10)}...
+                            </a>
                           </div>
                         ))}
                       </div>
@@ -559,19 +544,19 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
       ) : (
         /* After graduation - claim rewards */
         <div>
-          {finalRewardCalculation && finalRewardCalculation[0] > BigInt(0) ? (
+          {rewardCalculation && rewardCalculation[0] > BigInt(0) ? (
             <div className="space-y-4">
               <div className="p-4 bg-green-500/10 backdrop-blur-sm rounded-xl border border-green-500/20">
                 <p className="text-sm font-light text-white mb-3">🎉 Graduation Complete!</p>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-white/60">Your Agent Token Deposits</span>
-                    <span className="text-white">{formatEther(finalRewardCalculation[1])} {finalAgentTokenSymbol}</span>
+                    <span className="text-white">{formatTokenAmount(rewardCalculation[1])} {agentTokenSymbol}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-white/60">Persona Token Rewards</span>
                     <span className="font-light text-green-400">
-                      {formatEther(finalRewardCalculation[0])} {persona.symbol}
+                      {formatEther(rewardCalculation[0])} {persona.symbol}
                     </span>
                   </div>
                 </div>

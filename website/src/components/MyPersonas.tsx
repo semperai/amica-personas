@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { fetchUserPortfolio } from '../lib/api';
+import { useQuery } from '@apollo/client';
 import { formatEther } from 'viem';
+import { GET_USER_PORTFOLIO } from '@/lib/graphql/client';
 
 interface MyPersonasProps {
   address: string;
@@ -9,16 +10,12 @@ interface MyPersonasProps {
 
 interface CreatedPersona {
   id: string;
+  tokenId: string;
   name: string;
   symbol: string;
-  totalVolume24h: string;
-  totalVolumeAllTime: string;
-  totalDeposited?: string;
-  isGraduated: boolean;
-  chain: {
-    id: string;
-    name: string;
-  };
+  totalDeposited: string;
+  pairCreated: boolean;
+  createdAt: string;
 }
 
 // Generate gradient for persona cards
@@ -49,6 +46,20 @@ const getPersonaImage = (id: string) => {
   return images[index % images.length];
 };
 
+// Extract chain info from persona ID
+const extractChainFromId = (id: string) => {
+  const [chainId] = id.split('-');
+  const chainNames: Record<string, string> = {
+    '1': 'ethereum',
+    '8453': 'base',
+    '42161': 'arbitrum'
+  };
+  return {
+    id: chainId,
+    name: chainNames[chainId] || 'unknown'
+  };
+};
+
 interface PersonaCardProps {
   persona: CreatedPersona;
 }
@@ -56,10 +67,11 @@ interface PersonaCardProps {
 function PersonaCard({ persona }: PersonaCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const chain = extractChainFromId(persona.id);
 
   return (
     <Link
-      href={`/persona/${persona.chain.id}/${persona.id.split('-')[1]}`}
+      href={`/persona/${chain.id}/${persona.tokenId}`}
       className="group relative aspect-[3/4] rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -89,7 +101,7 @@ function PersonaCard({ persona }: PersonaCardProps) {
       <div className="relative h-full p-5 flex flex-col justify-between">
         {/* Top Section */}
         <div>
-          {persona.isGraduated && (
+          {persona.pairCreated && (
             <div className="inline-flex items-center px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-sm mb-3">
               <span className="text-xs font-medium text-white">Graduated</span>
             </div>
@@ -107,22 +119,22 @@ function PersonaCard({ persona }: PersonaCardProps) {
 
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-xs text-white/60">24h Vol</span>
-              <span className="text-sm font-medium text-white">
-                {parseFloat(formatEther(BigInt(persona.totalVolume24h))).toFixed(2)} Ξ
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
               <span className="text-xs text-white/60">TVL</span>
               <span className="text-sm font-medium text-white">
                 {parseFloat(formatEther(BigInt(persona.totalDeposited || '0'))).toFixed(2)} Ξ
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-white/60">Created</span>
+              <span className="text-sm font-medium text-white">
+                {new Date(persona.createdAt).toLocaleDateString()}
               </span>
             </div>
           </div>
 
           {/* Chain indicator */}
           <div className="pt-2 border-t border-white/20">
-            <span className="text-xs text-white/60 capitalize">{persona.chain.name}</span>
+            <span className="text-xs text-white/60 capitalize">{chain.name}</span>
           </div>
         </div>
       </div>
@@ -134,23 +146,11 @@ function PersonaCard({ persona }: PersonaCardProps) {
 }
 
 export function MyPersonas({ address }: MyPersonasProps) {
-  const [personas, setPersonas] = useState<CreatedPersona[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadPortfolio = async () => {
-      try {
-        const data = await fetchUserPortfolio(address);
-        setPersonas(data.createdPersonas);
-      } catch (error) {
-        console.error('Error loading portfolio:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadPortfolio();
-  }, [address]);
+  const { data, loading, error } = useQuery(GET_USER_PORTFOLIO, {
+    variables: { creator: address.toLowerCase() },
+    skip: !address,
+    fetchPolicy: 'network-only', // Always fetch fresh data
+  });
 
   if (loading) {
     return (
@@ -164,6 +164,25 @@ export function MyPersonas({ address }: MyPersonasProps) {
       </div>
     );
   }
+
+  if (error) {
+    return (
+      <div>
+        <h2 className="text-2xl font-light text-white mb-6">My Created Personas</h2>
+        <div className="text-center py-12">
+          <p className="text-red-400 mb-4">Error loading personas</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const personas = data?.createdPersonas || [];
 
   if (personas.length === 0) {
     return (
@@ -184,9 +203,9 @@ export function MyPersonas({ address }: MyPersonasProps) {
 
   return (
     <div>
-      <h2 className="text-2xl font-light text-white mb-6">My Created Personas</h2>
+      <h2 className="text-2xl font-light text-white mb-6">My Created Personas ({personas.length})</h2>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-        {personas.map((persona) => (
+        {personas.map((persona: CreatedPersona) => (
           <PersonaCard key={persona.id} persona={persona} />
         ))}
       </div>

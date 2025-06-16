@@ -5,8 +5,6 @@ import { ReactNode, useState } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useApiStatus } from '@/components/ApiStatusProvider';
-import { ApiSetupGuide } from '@/components/ApiSetupGuide';
 import { useAccount } from 'wagmi';
 import { hasBridgeWrapper } from '@/lib/contracts';
 
@@ -22,7 +20,6 @@ const yomogi = Yomogi({
 
 const Layout = ({ children }: LayoutProps) => {
   const router = useRouter();
-  const { isOnline, isChecking, isMockMode } = useApiStatus();
   const { chainId } = useAccount();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -32,6 +29,8 @@ const Layout = ({ children }: LayoutProps) => {
 
   // Check if bridge is available on current chain
   const showBridge = chainId && hasBridgeWrapper(chainId);
+
+  const isMockMode = process.env.NEXT_PUBLIC_MOCK_MODE === 'true';
 
   const navItems = [
     { href: '/', label: 'Explore' },
@@ -47,13 +46,6 @@ const Layout = ({ children }: LayoutProps) => {
       {isMockMode && (
         <div className="bg-purple-600/20 backdrop-blur-sm text-white px-4 py-2 text-center text-sm border-b border-purple-500/20">
           <span>🧪 Mock Mode Enabled - Using test data for development</span>
-        </div>
-      )}
-
-      {/* API Status Banner */}
-      {!isChecking && !isOnline && !isMockMode && (
-        <div className="bg-yellow-500/20 backdrop-blur-sm text-white px-4 py-2 text-center text-sm border-b border-yellow-500/20">
-          <span>⚠️ API service is currently offline. Some features may not work properly.</span>
         </div>
       )}
 
@@ -157,9 +149,6 @@ const Layout = ({ children }: LayoutProps) => {
         <div className="absolute -top-1/2 -right-1/2 w-full h-full bg-blue-500/10 rounded-full blur-3xl" />
         <div className="absolute -bottom-1/2 -left-1/2 w-full h-full bg-purple-500/10 rounded-full blur-3xl" />
       </div>
-
-      {/* API Setup Guide (development only) */}
-      <ApiSetupGuide />
     </div>
   );
 };
