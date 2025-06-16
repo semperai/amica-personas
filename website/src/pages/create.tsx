@@ -1,5 +1,5 @@
-// src/pages/create.tsx
-import { useState, useEffect } from 'react';
+// src/pages/create.tsx - First part (showing the fix for pairingTokenOptions)
+import { useState, useEffect, useMemo } from 'react';
 import Layout from '@/components/Layout';
 import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
@@ -86,8 +86,8 @@ export default function CreatePersonaPage() {
   // Get addresses for current chain
   const addresses = chainId ? getAddressesForChain(chainId) : null;
 
-  // Define pairing token options
-  const pairingTokenOptions: TokenOption[] = [
+  // Define pairing token options using useMemo to prevent recreating on every render
+  const pairingTokenOptions: TokenOption[] = useMemo(() => [
     {
       address: addresses?.amicaToken || '',
       symbol: 'AMICA',
@@ -100,7 +100,7 @@ export default function CreatePersonaPage() {
       name: 'Arbius Token',
       icon: '🤖' // You can replace with actual icon URL
     }
-  ];
+  ], [addresses?.amicaToken]);
 
   // Set default pairing token on mount or chain change
   useEffect(() => {
@@ -715,4 +715,3 @@ export default function CreatePersonaPage() {
     </Layout>
   );
 }
-

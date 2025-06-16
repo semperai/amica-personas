@@ -117,17 +117,6 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
     fetchPolicy: 'cache-and-network',
   });
 
-  // Get persona details from contract (for real-time data)
-  const { data: personaTuple } = useReadContract({
-    address: addresses?.personaFactory as `0x${string}`,
-    abi: FACTORY_ABI,
-    functionName: 'getPersona',
-    args: [BigInt(tokenId)],
-    query: {
-      enabled: !!addresses && !isMockMode
-    }
-  }) as { data: readonly [string, string, `0x${string}`, `0x${string}`, boolean, bigint, bigint] | undefined };
-
   // Get the full persona struct to access agentToken
   const { data: personaStruct } = useReadContract({
     address: addresses?.personaFactory as `0x${string}`,

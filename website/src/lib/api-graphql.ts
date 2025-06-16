@@ -1,5 +1,5 @@
 // src/lib/api-graphql.ts
-import { apolloClient, GET_PERSONAS, GET_PERSONA_DETAILS, GET_PERSONA_TRADES, GET_DAILY_STATS, convertOrderBy, PersonasQueryResult } from './graphql/client';
+import { apolloClient, GET_PERSONAS, GET_PERSONA_DETAILS, GET_PERSONA_TRADES, GET_DAILY_STATS, convertOrderBy, PersonasQueryResult, executeQuery } from './graphql/client';
 import { mockPersonas, mockTrades, mockVolumeChart, mockUserPortfolio } from './mockData';
 
 const USE_MOCK_DATA = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true';
@@ -157,18 +157,34 @@ export async function fetchPersonas(params?: FetchPersonasParams): Promise<Perso
     // Convert sort parameter to GraphQL orderBy
     const orderBy = params?.sort ? convertOrderBy(params.sort) : 'createdAt_DESC';
     
-    const { data } = await apolloClient.query<PersonasQueryResult>({
-      query: GET_PERSONAS,
-      variables: {
-        limit: params?.limit || 50,
-        offset: params?.offset || 0,
-        orderBy: [orderBy]
-      },
-      fetchPolicy: 'network-only' // Always fetch fresh data
+    const result = await executeQuery(async () => {
+      const { data } = await apolloClient.query<PersonasQueryResult>({
+        query: GET_PERSONAS,
+        variables: {
+          limit: params?.limit || 50,
+          offset: params?.offset || 0,
+          orderBy: [orderBy]
+        },
+        fetchPolicy: 'network-only' // Always fetch fresh data
+      });
+      return data;
+    }, {
+      showError: true,
+      fallbackData: null
     });
 
+    if (!result) {
+      // Return empty result on error
+      return {
+        personas: [],
+        total: 0,
+        limit: params?.limit,
+        offset: params?.offset
+      };
+    }
+
     // Transform the data
-    let personas = data.personas.map(transformPersona);
+    let personas = result.personas.map(transformPersona);
 
     // Apply client-side filters if needed
     if (params?.chainId) {
@@ -191,13 +207,13 @@ export async function fetchPersonas(params?: FetchPersonasParams): Promise<Perso
 
     return {
       personas,
-      total: data.personasConnection.totalCount,
+      total: result.personasConnection.totalCount,
       limit: params?.limit,
       offset: params?.offset
     };
   } catch (error) {
-    console.error('Error fetching personas from Subsquid:', error);
-    // Return empty result on error
+    console.error('Error fetching personas:', error);
+    // Error is already handled by the error link
     return {
       personas: [],
       total: 0,
@@ -217,23 +233,44 @@ export async function fetchPersonaDetail(chainId: string, tokenId: string): Prom
 
   try {
     const personaId = `${chainId}-${tokenId}`;
-    const { data } = await apolloClient.query({
-      query: GET_PERSONA_DETAILS,
-      variables: { id: personaId }
+    const result = await executeQuery(async () => {
+      const { data } = await apolloClient.query({
+        query: GET_PERSONA_DETAILS,
+        variables: { id: personaId }
+      });
+      return data;
+    }, {
+      showError: true,
+      fallbackData: null
     });
 
-    if (!data.persona) {
+    if (!result?.persona) {
       return null;
     }
 
-    return transformPersona(data.persona);
+    return transformPersona(result.persona);
   } catch (error) {
     console.error('Error fetching persona detail:', error);
     return null;
   }
 }
 
-// Keep other functions as they were (they'll be updated in subsequent steps)
+// Chart data type
+interface ChartData {
+  date: string;
+  volume: string;
+  trades: number;
+  uniqueTraders?: number;
+}
+
+interface DailyStat {
+  id: string;
+  date: string;
+  trades: number;
+  volume: string;
+  uniqueTraders: number;
+}
+
 export async function fetchVolumeChart(chainId: string, tokenId: string, days = 30): Promise<ChartData[]> {
   if (USE_MOCK_DATA) {
     return mockVolumeChart.slice(-days);
@@ -241,16 +278,27 @@ export async function fetchVolumeChart(chainId: string, tokenId: string, days = 
   
   try {
     const personaId = `${chainId}-${tokenId}`;
-    const { data } = await apolloClient.query({
-      query: GET_DAILY_STATS,
-      variables: { 
-        personaId,
-        days 
-      }
+    const result = await executeQuery(async () => {
+      const { data } = await apolloClient.query({
+        query: GET_DAILY_STATS,
+        variables: { 
+          personaId,
+          days 
+        }
+      });
+      return data;
+    }, {
+      showError: false, // Don't show error for chart data
+      fallbackData: null
     });
 
+    if (!result?.personaDailyStats) {
+      // Return mock data as fallback
+      return mockVolumeChart.slice(-days);
+    }
+
     // Transform the data to match expected format
-    return data.personaDailyStats.map((stat: DailyStat) => ({
+    return result.personaDailyStats.map((stat: DailyStat) => ({
       date: stat.date,
       volume: stat.volume,
       trades: stat.trades,
@@ -272,126 +320,32 @@ export async function fetchTrending(): Promise<Persona[]> {
 
   // For now, return top personas by total deposited
   try {
-    const { data } = await apolloClient.query<PersonasQueryResult>({
-      query: GET_PERSONAS,
-      variables: {
-        limit: 10,
-        orderBy: ['totalDeposited_DESC']
-      }
+    const result = await executeQuery(async () => {
+      const { data } = await apolloClient.query<PersonasQueryResult>({
+        query: GET_PERSONAS,
+        variables: {
+          limit: 10,
+          orderBy: ['totalDeposited_DESC']
+        }
+      });
+      return data;
+    }, {
+      showError: false,
+      fallbackData: null
     });
 
-    return data.personas.map(transformPersona);
+    if (!result) {
+      return [];
+    }
+
+    return result.personas.map(transformPersona);
   } catch (error) {
     console.error('Error fetching trending:', error);
     return [];
   }
 }
 
-export async function fetchUserPortfolio(address: string): Promise<UserPortfolio> {
-  if (USE_MOCK_DATA) {
-    const userPersonas = mockPersonas
-      .filter(p => p.creator?.toLowerCase() === address.toLowerCase())
-      .slice(0, 2);
-
-    return {
-      ...mockUserPortfolio,
-      createdPersonas: userPersonas.length > 0 ? userPersonas : mockUserPortfolio.createdPersonas
-    };
-  }
-
-  // TODO: Implement with GraphQL
-  return {
-    createdPersonas: [],
-    tradedPersonasCount: 0,
-    totalTradeVolume: "0",
-    totalBridgedVolume: "0",
-    recentTrades: [],
-    bridgeActivities: []
-  };
-}
-
-export async function fetchPersonaTrades(chainId: string, tokenId: string, limit = 10): Promise<TradesResponse> {
-  if (USE_MOCK_DATA) {
-    const personaId = `${chainId}-${tokenId}`;
-    const trades = mockTrades.filter(t =>
-      t.persona?.id === personaId ||
-      (personaId === '1-0' && !t.persona)
-    ).slice(0, limit);
-
-    return {
-      trades,
-      total: trades.length
-    };
-  }
-
-  try {
-    const personaId = `${chainId}-${tokenId}`;
-    const { data } = await apolloClient.query({
-      query: GET_PERSONA_TRADES,
-      variables: { 
-        personaId,
-        limit 
-      }
-    });
-
-    // Add chain info to trades
-    const chain = extractChainFromId(personaId);
-    const trades = data.trades.map((trade: Trade) => ({
-      ...trade,
-      chain
-    }));
-
-    return {
-      trades,
-      total: trades.length
-    };
-  } catch (error) {
-    console.error('Error fetching persona trades:', error);
-    return {
-      trades: [],
-      total: 0
-    };
-  }
-}
-
-// Health check - GraphQL endpoint doesn't need this
-export async function checkApiHealth(): Promise<boolean> {
-  if (USE_MOCK_DATA) {
-    return true;
-  }
-
-  try {
-    // Simple query to check if GraphQL is responding
-    await apolloClient.query({
-      query: GET_PERSONAS,
-      variables: { limit: 1 }
-    });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export function isApiConfigured(): boolean {
-  return true; // GraphQL endpoint is always configured
-}
-
-// Type imports for proper typing
-interface ChartData {
-  date: string;
-  volume: string;
-  trades: number;
-  uniqueTraders?: number;
-}
-
-interface DailyStat {
-  id: string;
-  date: string;
-  trades: number;
-  volume: string;
-  uniqueTraders: number;
-}
-
+// User portfolio type
 interface UserPortfolio {
   createdPersonas: Persona[];
   tradedPersonasCount: number;
@@ -427,18 +381,120 @@ interface BridgeActivity {
   chain: PersonaChain;
 }
 
+export async function fetchUserPortfolio(address: string): Promise<UserPortfolio> {
+  if (USE_MOCK_DATA) {
+    const userPersonas = mockPersonas
+      .filter(p => p.creator?.toLowerCase() === address.toLowerCase())
+      .slice(0, 2);
+
+    return {
+      ...mockUserPortfolio,
+      createdPersonas: userPersonas.length > 0 ? userPersonas : mockUserPortfolio.createdPersonas
+    };
+  }
+
+  // TODO: Implement with GraphQL
+  return {
+    createdPersonas: [],
+    tradedPersonasCount: 0,
+    totalTradeVolume: "0",
+    totalBridgedVolume: "0",
+    recentTrades: [],
+    bridgeActivities: []
+  };
+}
+
 interface TradesResponse {
   trades: Trade[];
   total: number;
 }
 
-// src/lib/wagmi.ts
-import { getDefaultConfig } from '@rainbow-me/rainbowkit';
-import { base } from 'wagmi/chains';
+export async function fetchPersonaTrades(chainId: string, tokenId: string, limit = 10): Promise<TradesResponse> {
+  if (USE_MOCK_DATA) {
+    const personaId = `${chainId}-${tokenId}`;
+    const trades = mockTrades.filter(t =>
+      t.persona?.id === personaId ||
+      (personaId === '1-0' && !t.persona)
+    ).slice(0, limit);
 
-export const config = getDefaultConfig({
-  appName: 'Amica Personas',
-  projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || 'YOUR_PROJECT_ID_HERE',
-  chains: [base],
-  ssr: true,
-});
+    return {
+      trades,
+      total: trades.length
+    };
+  }
+
+  try {
+    const personaId = `${chainId}-${tokenId}`;
+    const result = await executeQuery(async () => {
+      const { data } = await apolloClient.query({
+        query: GET_PERSONA_TRADES,
+        variables: { 
+          personaId,
+          limit 
+        }
+      });
+      return data;
+    }, {
+      showError: false,
+      fallbackData: null
+    });
+
+    if (!result?.trades) {
+      return {
+        trades: [],
+        total: 0
+      };
+    }
+
+    // Add chain info to trades
+    const chain = extractChainFromId(personaId);
+    const trades = result.trades.map((trade: Trade) => ({
+      ...trade,
+      chain
+    }));
+
+    return {
+      trades,
+      total: trades.length
+    };
+  } catch (error) {
+    console.error('Error fetching persona trades:', error);
+    return {
+      trades: [],
+      total: 0
+    };
+  }
+}
+
+// Health check
+export async function checkApiHealth(): Promise<boolean> {
+  if (USE_MOCK_DATA) {
+    return true;
+  }
+
+  try {
+    // Use timeout for health check
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+    await apolloClient.query({
+      query: GET_PERSONAS,
+      variables: { limit: 1 },
+      context: {
+        fetchOptions: {
+          signal: controller.signal
+        }
+      }
+    });
+
+    clearTimeout(timeoutId);
+    return true;
+  } catch (error) {
+    console.error('API health check failed:', error);
+    return false;
+  }
+}
+
+export function isApiConfigured(): boolean {
+  return true; // GraphQL endpoint is always configured
+}
