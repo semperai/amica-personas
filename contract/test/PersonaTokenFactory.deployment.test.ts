@@ -52,7 +52,7 @@ describe("PersonaTokenFactory Deployment", function () {
                 await mockRouter.getAddress(),
                 owner.address
             ])
-        ).to.be.revertedWith("Invalid AMICA token");
+        ).to.be.revertedWithCustomError(PersonaTokenFactory, "InvalidToken");
 
         await expect(
             upgrades.deployProxy(PersonaTokenFactory, [
@@ -61,7 +61,7 @@ describe("PersonaTokenFactory Deployment", function () {
                 await mockRouter.getAddress(),
                 owner.address
             ])
-        ).to.be.revertedWith("Invalid factory");
+        ).to.be.revertedWithCustomError(PersonaTokenFactory, "InvalidToken");
 
         await expect(
             upgrades.deployProxy(PersonaTokenFactory, [
@@ -70,7 +70,7 @@ describe("PersonaTokenFactory Deployment", function () {
                 ethers.ZeroAddress,
                 owner.address
             ])
-        ).to.be.revertedWith("Invalid router");
+        ).to.be.revertedWithCustomError(PersonaTokenFactory, "InvalidToken");
 
         await expect(
             upgrades.deployProxy(PersonaTokenFactory, [
@@ -79,7 +79,7 @@ describe("PersonaTokenFactory Deployment", function () {
                 await mockRouter.getAddress(),
                 ethers.ZeroAddress
             ])
-        ).to.be.revertedWith("Invalid implementation");
+        ).to.be.revertedWithCustomError(PersonaTokenFactory, "InvalidToken");
     });
 });
 

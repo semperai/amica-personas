@@ -173,7 +173,7 @@ describe("PersonaTokenFactory Creation", function () {
                 ethers.ZeroAddress,
                 0, // No minimum agent tokens
             )
-        ).to.be.revertedWith("Pairing token not enabled");
+        ).to.be.revertedWithCustomError(personaFactory, "TokenNotEnabled");
     });
 
     it("Should reject creation with invalid name length", async function () {
@@ -196,7 +196,7 @@ describe("PersonaTokenFactory Creation", function () {
                 ethers.ZeroAddress,
                 0, // No minimum agent tokens
             )
-        ).to.be.revertedWith("Invalid name length");
+        ).to.be.revertedWithCustomError(personaFactory, "InvalidName");
 
         // Name too long (33 characters)
         await expect(
@@ -210,7 +210,7 @@ describe("PersonaTokenFactory Creation", function () {
                 ethers.ZeroAddress,
                 0, // No minimum agent tokens
             )
-        ).to.be.revertedWith("Invalid name length");
+        ).to.be.revertedWithCustomError(personaFactory, "InvalidName");
     });
 
     it("Should reject creation with invalid symbol length", async function () {
@@ -233,7 +233,7 @@ describe("PersonaTokenFactory Creation", function () {
                 ethers.ZeroAddress,
                 0, // No minimum agent tokens
             )
-        ).to.be.revertedWith("Invalid symbol length");
+        ).to.be.revertedWithCustomError(personaFactory, "InvalidSymbol");
 
         // Symbol too long (11 characters)
         await expect(
@@ -247,7 +247,7 @@ describe("PersonaTokenFactory Creation", function () {
                 ethers.ZeroAddress,
                 0, // No minimum agent tokens
             )
-        ).to.be.revertedWith("Invalid symbol length");
+        ).to.be.revertedWithCustomError(personaFactory, "InvalidSymbol");
     });
 
     it("Should reject creation with mismatched metadata arrays", async function () {
@@ -269,7 +269,7 @@ describe("PersonaTokenFactory Creation", function () {
                 ethers.ZeroAddress,
                 0, // No minimum agent tokens
             )
-        ).to.be.revertedWith("Metadata mismatch");
+        ).to.be.revertedWithCustomError(personaFactory, "InvalidMetadata");
     });
 
     it("Should reject creation without payment approval", async function () {
@@ -388,7 +388,7 @@ describe("PersonaTokenFactory Creation", function () {
                 ethers.ZeroAddress,
                 0, // No minimum agent tokens
             )
-        ).to.be.revertedWith("Insufficient balance");
+        ).to.be.revertedWithCustomError(personaFactory, "InsufficientPairingToken");
     });
 
     it("Should handle failed payment transfer gracefully", async function () {
@@ -424,7 +424,7 @@ describe("PersonaTokenFactory Creation", function () {
                 ethers.ZeroAddress,
                 0, // No minimum agent tokens
             )
-        ).to.be.revertedWith("Insufficient balance");
+        ).to.be.revertedWithCustomError(personaFactory, "InsufficientPairingToken");
     });
 
     it("Should verify token suffix is applied correctly", async function () {

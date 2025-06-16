@@ -266,7 +266,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 personaFactory.connect(buyer1).swapExactTokensForTokens(
                     tokenId, ethers.parseEther("1000"), 0, buyer1.address, deadline()
                 )
-            ).to.be.revertedWith("Trading already on Uniswap");
+            ).to.be.revertedWithCustomError(personaFactory, "TradingOnUniswap");
             console.log("✓ Further bonding curve purchases blocked");
 
             // 6. Summary
@@ -552,7 +552,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
                 personaFactory.connect(buyer2).swapExactTokensForTokens(
                     tokenId, ethers.parseEther("0.1"), 0, buyer2.address, deadline()
                 )
-            ).to.be.revertedWith("Trading already on Uniswap");
+            ).to.be.revertedWithCustomError(personaFactory, "TradingOnUniswap");
             console.log("✓ Further bonding curve purchases blocked after graduation");
 
             // Summary
@@ -725,7 +725,7 @@ describe("PersonaTokenFactory - Complete Lifecycle", function () {
             // Verify tokens are locked
             await expect(
                 personaFactory.connect(creator).withdrawTokens(tokenId)
-            ).to.be.revertedWith("No tokens to withdraw");
+            ).to.be.revertedWithCustomError(personaFactory, "NoTokensToWithdraw");
             console.log("✓ Creator's tokens are locked for 1 week");
         });
     });

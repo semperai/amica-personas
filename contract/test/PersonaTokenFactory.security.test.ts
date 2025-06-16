@@ -169,7 +169,7 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
                     user1.address,
                     getDeadline()
                 )
-            ).to.be.revertedWith("Insufficient output amount");
+            ).to.be.revertedWithCustomError(personaFactory, "InsufficientOutput");
         });
 
         it("Should handle sandwich attacks with deadline protection", async function () {
@@ -196,7 +196,7 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
                     user1.address,
                     shortDeadline
                 )
-            ).to.be.revertedWith("Transaction expired");
+            ).to.be.revertedWithCustomError(personaFactory, "TransactionExpired");
         });
     });
 
@@ -333,7 +333,7 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
                     ethers.ZeroAddress,
                     0, // No minimum agent tokens
                 )
-            ).to.be.revertedWith("Insufficient balance");
+            ).to.be.revertedWithCustomError(personaFactory, "InsufficientPairingToken");
         });
 
         it("Should handle fee configuration edge cases", async function () {
@@ -347,7 +347,7 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
             // Try to set fee above 10%
             await expect(
                 personaFactory.connect(owner).configureTradingFees(1001, 5000)
-            ).to.be.revertedWith("Fee too high");
+            ).to.be.revertedWithCustomError(personaFactory, "FeeTooHigh");
 
             // Set creator share to 0% (all fees to protocol)
             await expect(
@@ -384,7 +384,7 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
                     user2.address,
                     getDeadline()
                 )
-            ).to.be.revertedWith("Insufficient liquidity");
+            ).to.be.revertedWithCustomError(personaFactory, "InsufficientLiquidity");
         });
 
         it("Should correctly handle available tokens calculation near limits", async function () {
@@ -490,7 +490,7 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
                     ["description"],
                     ["Should fail"]
                 )
-            ).to.be.revertedWith("Not token owner");
+            ).to.be.revertedWithCustomError(personaFactory, "NotTokenOwner");
         });
     });
 
@@ -552,7 +552,7 @@ describe("PersonaTokenFactory Security and Edge Cases", function () {
                     ethers.ZeroAddress,
                     0, // No minimum agent tokens
                 )
-            ).to.be.revertedWith("Pairing token not enabled");
+            ).to.be.revertedWithCustomError(personaFactory, "TokenNotEnabled");
         });
     });
 

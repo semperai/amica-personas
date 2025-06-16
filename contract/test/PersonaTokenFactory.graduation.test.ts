@@ -351,7 +351,7 @@ describe("PersonaTokenFactory Graduation", function () {
         // Further purchases should fail
         await expect(
             personaFactory.connect(user2).swapExactTokensForTokens(tokenId, ethers.parseEther("1000"), 0, user2.address, deadline)
-        ).to.be.revertedWith("Trading already on Uniswap");
+        ).to.be.revertedWithCustomError(personaFactory, "TradingOnUniswap");
     });
 
     it("Should handle edge case with exact graduation threshold", async function () {
@@ -541,7 +541,7 @@ describe("PersonaTokenFactory Graduation", function () {
         // User2 has no purchases
         await expect(
             personaFactory.connect(user2).withdrawTokens(tokenId)
-        ).to.be.revertedWith("No tokens to withdraw");
+        ).to.be.revertedWithCustomError(personaFactory, "NoTokensToWithdraw");
     });
 
     it("Should handle multiple withdrawal attempts", async function () {
@@ -582,6 +582,6 @@ describe("PersonaTokenFactory Graduation", function () {
         // Second withdrawal should fail since all tokens are already withdrawn
         await expect(
             personaFactory.connect(user2).withdrawTokens(tokenId)
-        ).to.be.revertedWith("No tokens to withdraw");
+        ).to.be.revertedWithCustomError(personaFactory, "NoTokensToWithdraw");
     });
 });

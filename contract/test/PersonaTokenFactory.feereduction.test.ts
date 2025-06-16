@@ -491,7 +491,7 @@ describe("PersonaTokenFactory Fee Reduction System", function () {
                     9000,
                     0
                 )
-            ).to.be.revertedWith("Invalid AMICA range");
+            ).to.be.revertedWithCustomError(personaFactory, "InvalidFeeRange");
 
             // Invalid multipliers
             await expect(
@@ -501,7 +501,7 @@ describe("PersonaTokenFactory Fee Reduction System", function () {
                     10001, // > 100%
                     0
                 )
-            ).to.be.revertedWith("Invalid min multiplier");
+            ).to.be.revertedWithCustomError(personaFactory, "InvalidMultiplier");
 
             // Max multiplier > Min multiplier
             await expect(
@@ -511,7 +511,7 @@ describe("PersonaTokenFactory Fee Reduction System", function () {
                     5000,
                     6000 // Greater than min
                 )
-            ).to.be.revertedWith("Invalid max multiplier");
+            ).to.be.revertedWithCustomError(personaFactory, "InvalidMultiplier");
         });
     });
 

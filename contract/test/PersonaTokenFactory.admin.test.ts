@@ -63,7 +63,7 @@ describe("PersonaTokenFactory Admin", function () {
                 ethers.parseEther("100"),
                 ethers.parseEther("100000"),
             )
-        ).to.be.revertedWith("Invalid token");
+        ).to.be.revertedWithCustomError(personaFactory, "InvalidToken");
     });
 
     it("Should configure trading fees correctly", async function () {
@@ -85,7 +85,7 @@ describe("PersonaTokenFactory Admin", function () {
 
         await expect(
             personaFactory.connect(owner).configureTradingFees(1001, 5000) // 10.01%
-        ).to.be.revertedWith("Fee too high");
+        ).to.be.revertedWithCustomError(personaFactory, "FeeTooHigh");
     });
 
 });

@@ -34,7 +34,7 @@ describe("PersonaTokenFactory Metadata Management", function () {
                 ["description"],
                 ["Hacked!"]
             )
-        ).to.be.revertedWith("Not token owner");
+        ).to.be.revertedWithCustomError(personaFactory, "NotTokenOwner");
     });
 
     it("Should reject metadata update with mismatched arrays", async function () {
@@ -46,7 +46,7 @@ describe("PersonaTokenFactory Metadata Management", function () {
                 ["key1", "key2"],
                 ["value1"] // Missing value2
             )
-        ).to.be.revertedWith("Key-value mismatch");
+        ).to.be.revertedWithCustomError(personaFactory, "InvalidMetadata");
     });
 
     it("Should return empty string for non-existent metadata keys", async function () {

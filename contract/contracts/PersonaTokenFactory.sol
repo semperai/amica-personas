@@ -33,7 +33,7 @@ error InvalidName();
 error InvalidSymbol();
 error InvalidMetadata();
 error TokenNotEnabled();
-error InsufficientBalance();
+error InsufficientPairingToken();
 error TransferFailed();
 error TradingOnUniswap();
 error InsufficientOutput();
@@ -43,7 +43,6 @@ error FeeTooHigh();
 error InvalidShare();
 error InvalidFeeRange();
 error InvalidMultiplier();
-error InsufficientAmica();
 error NoAgentToken();
 error AlreadyGraduated();
 error NotGraduated();
@@ -389,7 +388,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
         // Take payment in the pairing token
         uint256 totalPayment = config.mintCost + initialBuyAmount;
-        if (IERC20(pairingToken).balanceOf(msg.sender) < totalPayment) revert InsufficientBalance();
+        if (IERC20(pairingToken).balanceOf(msg.sender) < totalPayment) revert InsufficientPairingToken();
         if (!IERC20(pairingToken).transferFrom(msg.sender, address(this), totalPayment)) revert PaymentFailed();
 
         // Mint NFT
