@@ -1,46 +1,38 @@
 {
-  "name": "amica-multichain-indexer",
+  "name": "amica-base-indexer",
   "version": "1.0.0",
-  "description": "Multichain Subsquid indexer for Amica personas",
+  "description": "Subsquid indexer for Amica protocol on Base network",
   "scripts": {
     "build": "rm -rf lib && tsc",
+    "clean": "rm -rf lib .squid",
     "db:migrate": "npx squid-typeorm-migration apply",
-    "db:create-migration": "npx squid-typeorm-migration generate",
-    "db:reset": "npx squid-typeorm-migration revert",
+    "db:migrate:create": "npx squid-typeorm-migration generate",
+    "db:reset": "docker compose down && docker compose up -d db && sleep 5 && npm run db:migrate",
     "codegen": "npx squid-typeorm-codegen",
-    "processor:run": "node lib/main.js",
-    "processor:run:ethereum": "node lib/processors/ethereum.processor.js",
-    "processor:run:base": "node lib/processors/base.processor.js",
-    "dev": "npm run build && npm run processor:run",
-    "dev:ethereum": "npm run build && npm run processor:run:ethereum",
-    "dev:base": "npm run build && npm run processor:run:base",
+    "typegen": "npx squid-evm-typegen src/abi/*.json --multicall",
+    "processor:start": "node lib/main.js",
     "serve": "npx squid-graphql-server",
     "serve:prod": "npx squid-graphql-server --production",
-    "check-updates": "npx npm-check-updates --filter /^@subsquid/",
-    "lint": "eslint . --ext .ts --fix"
+    "check-updates": "npx npm-check-updates --filter /subsquid/",
+    "bump": "npx npm-check-updates --filter /subsquid/ -u && npm i -f"
   },
   "dependencies": {
-    "@subsquid/archive-registry": "^3.3.0",
+    "@subsquid/archive-registry": "^3.3.2",
     "@subsquid/evm-abi": "^0.3.1",
     "@subsquid/evm-codec": "^0.3.0",
-    "@subsquid/evm-processor": "^1.16.1",
-    "@subsquid/graphql-server": "^4.5.0",
+    "@subsquid/evm-processor": "^1.16.2",
+    "@subsquid/graphql-server": "^4.6.0",
     "@subsquid/typeorm-migration": "^1.3.0",
-    "@subsquid/typeorm-store": "^1.4.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "ethers": "^6.9.0",
-    "express": "^4.18.2",
-    "pg": "^8.11.3",
+    "@subsquid/typeorm-store": "^1.5.1",
+    "dotenv": "^16.4.5",
+    "pg": "^8.11.5",
     "reflect-metadata": "^0.2.2",
-    "typeorm": "^0.3.17"
+    "typeorm": "^0.3.20"
   },
   "devDependencies": {
     "@subsquid/evm-typegen": "^4.4.0",
-    "@subsquid/typeorm-codegen": "^1.3.3",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "@types/node": "^20.10.5",
-    "typescript": "^5.3.3"
+    "@subsquid/typeorm-codegen": "^2.0.2",
+    "@types/node": "^20.14.10",
+    "typescript": "^5.5.3"
   }
 }

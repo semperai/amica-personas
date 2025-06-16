@@ -1,10 +1,10 @@
 import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, ManyToOne as ManyToOne_, Index as Index_} from "typeorm"
 import * as marshal from "./marshal"
-import {Persona} from "./persona.model"
+import {UserStake} from "./userStake.model"
 
 @Entity_()
-export class Trade {
-    constructor(props?: Partial<Trade>) {
+export class StakeLock {
+    constructor(props?: Partial<StakeLock>) {
         Object.assign(this, props)
     }
 
@@ -12,29 +12,29 @@ export class Trade {
     id!: string
 
     @Index_()
-    @ManyToOne_(() => Persona, {nullable: true})
-    persona!: Persona
+    @ManyToOne_(() => UserStake, {nullable: true})
+    userStake!: UserStake
 
     @Index_()
-    @Column_("text", {nullable: false})
-    trader!: string
+    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    lockId!: bigint
 
     @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
-    amountIn!: bigint
+    amount!: bigint
 
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
-    amountOut!: bigint
+    @Index_()
+    @Column_("timestamp with time zone", {nullable: false})
+    unlockTime!: Date
 
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
-    feeAmount!: bigint
+    @Column_("int4", {nullable: false})
+    lockMultiplier!: number
 
     @Column_("timestamp with time zone", {nullable: false})
-    timestamp!: Date
+    createdAt!: Date
 
     @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
-    block!: bigint
+    createdAtBlock!: bigint
 
-    @Index_()
-    @Column_("text", {nullable: false})
-    txHash!: string
+    @Column_("bool", {nullable: false})
+    isWithdrawn!: boolean
 }

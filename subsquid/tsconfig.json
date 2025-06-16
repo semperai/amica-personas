@@ -1,16 +1,23 @@
 {
   "compilerOptions": {
+    "target": "es2020",
+    "module": "commonjs",
+    "lib": ["es2020"],
     "rootDir": "src",
     "outDir": "lib",
-    "module": "commonjs",
-    "target": "es2020",
+    "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": false,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "resolveJsonModule": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "incremental": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "lib"]

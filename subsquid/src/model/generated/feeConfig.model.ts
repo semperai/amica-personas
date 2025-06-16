@@ -2,8 +2,8 @@ import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_} f
 import * as marshal from "./marshal"
 
 @Entity_()
-export class GlobalStats {
-    constructor(props?: Partial<GlobalStats>) {
+export class FeeConfig {
+    constructor(props?: Partial<FeeConfig>) {
         Object.assign(this, props)
     }
 
@@ -11,22 +11,22 @@ export class GlobalStats {
     id!: string
 
     @Column_("int4", {nullable: false})
-    totalPersonas!: number
+    feePercentage!: number
 
     @Column_("int4", {nullable: false})
-    totalTrades!: number
+    creatorShare!: number
 
     @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
-    totalVolume!: bigint
+    minAmicaForReduction!: bigint
+
+    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    maxAmicaForReduction!: bigint
 
     @Column_("int4", {nullable: false})
-    totalStakingPools!: number
+    minReductionMultiplier!: number
 
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
-    totalStaked!: bigint
-
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
-    totalBridgeVolume!: bigint
+    @Column_("int4", {nullable: false})
+    maxReductionMultiplier!: number
 
     @Column_("timestamp with time zone", {nullable: false})
     lastUpdated!: Date

@@ -3,8 +3,8 @@ import * as marshal from "./marshal"
 import {Persona} from "./persona.model"
 
 @Entity_()
-export class Trade {
-    constructor(props?: Partial<Trade>) {
+export class PersonaMetadata {
+    constructor(props?: Partial<PersonaMetadata>) {
         Object.assign(this, props)
     }
 
@@ -17,24 +17,14 @@ export class Trade {
 
     @Index_()
     @Column_("text", {nullable: false})
-    trader!: string
+    key!: string
 
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
-    amountIn!: bigint
-
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
-    amountOut!: bigint
-
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
-    feeAmount!: bigint
+    @Column_("text", {nullable: false})
+    value!: string
 
     @Column_("timestamp with time zone", {nullable: false})
-    timestamp!: Date
+    updatedAt!: Date
 
     @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
-    block!: bigint
-
-    @Index_()
-    @Column_("text", {nullable: false})
-    txHash!: string
+    updatedAtBlock!: bigint
 }

@@ -1,10 +1,9 @@
 import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, Index as Index_} from "typeorm"
 import * as marshal from "./marshal"
-import {BridgeAction} from "./_bridgeAction"
 
 @Entity_()
-export class BridgeActivity {
-    constructor(props?: Partial<BridgeActivity>) {
+export class StakingRewardClaim {
+    constructor(props?: Partial<StakingRewardClaim>) {
         Object.assign(this, props)
     }
 
@@ -15,11 +14,8 @@ export class BridgeActivity {
     @Column_("text", {nullable: false})
     user!: string
 
-    @Column_("varchar", {length: 6, nullable: false})
-    action!: BridgeAction
-
     @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
-    amount!: bigint
+    totalAmount!: bigint
 
     @Column_("timestamp with time zone", {nullable: false})
     timestamp!: Date

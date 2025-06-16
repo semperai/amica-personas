@@ -1,7 +1,8 @@
-import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, ManyToOne as ManyToOne_, Index as Index_, BigIntColumn as BigIntColumn_, StringColumn as StringColumn_, BooleanColumn as BooleanColumn_, DateTimeColumn as DateTimeColumn_, IntColumn as IntColumn_, OneToMany as OneToMany_} from "@subsquid/typeorm-store"
-import {Chain} from "./chain.model"
-import {Metadata} from "./metadata.model"
+import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, Index as Index_, OneToMany as OneToMany_} from "typeorm"
+import * as marshal from "./marshal"
 import {Trade} from "./trade.model"
+import {PersonaMetadata} from "./personaMetadata.model"
+import {AgentDeposit} from "./agentDeposit.model"
 
 @Entity_()
 export class Persona {
@@ -13,78 +14,69 @@ export class Persona {
     id!: string
 
     @Index_()
-    @ManyToOne_(() => Chain, {nullable: true})
-    chain!: Chain
-
-    @Index_()
-    @BigIntColumn_({nullable: false})
+    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
     tokenId!: bigint
 
     @Index_()
-    @StringColumn_({nullable: false})
+    @Column_("text", {nullable: false})
     creator!: string
 
     @Index_()
-    @StringColumn_({nullable: false})
+    @Column_("text", {nullable: false})
+    owner!: string
+
+    @Index_()
+    @Column_("text", {nullable: false})
     name!: string
 
     @Index_()
-    @StringColumn_({nullable: false})
+    @Column_("text", {nullable: false})
     symbol!: string
 
     @Index_()
-    @StringColumn_({nullable: false})
+    @Column_("text", {nullable: false})
     erc20Token!: string
 
     @Index_()
-    @StringColumn_({nullable: false})
+    @Column_("text", {nullable: false})
     pairToken!: string
 
-    @BooleanColumn_({nullable: false})
+    @Column_("text", {nullable: true})
+    agentToken!: string | undefined | null
+
+    @Column_("bool", {nullable: false})
     pairCreated!: boolean
 
-    @StringColumn_({nullable: true})
+    @Column_("text", {nullable: true})
     pairAddress!: string | undefined | null
 
-    @DateTimeColumn_({nullable: false})
+    @Column_("timestamp with time zone", {nullable: false})
     createdAt!: Date
 
-    @BigIntColumn_({nullable: false})
+    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
     createdAtBlock!: bigint
 
-    @BigIntColumn_({nullable: false})
-    totalVolume24h!: bigint
-
-    @BigIntColumn_({nullable: false})
-    totalVolumeAllTime!: bigint
-
-    @IntColumn_({nullable: false})
-    totalTrades24h!: number
-
-    @IntColumn_({nullable: false})
-    totalTradesAllTime!: number
-
-    @IntColumn_({nullable: false})
-    uniqueTraders24h!: number
-
-    @IntColumn_({nullable: false})
-    uniqueTradersAllTime!: number
-
-    @BigIntColumn_({nullable: false})
+    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
     totalDeposited!: bigint
 
-    @BigIntColumn_({nullable: false})
+    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
     tokensSold!: bigint
 
-    @BigIntColumn_({nullable: false})
+    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
     graduationThreshold!: bigint
 
-    @BooleanColumn_({nullable: false})
-    isGraduated!: boolean
+    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    totalAgentDeposited!: bigint
 
-    @OneToMany_(() => Metadata, e => e.persona)
-    metadata!: Metadata[]
+    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    minAgentTokens!: bigint
 
     @OneToMany_(() => Trade, e => e.persona)
     trades!: Trade[]
+
+    @OneToMany_(() => PersonaMetadata, e => e.persona)
+    metadata!: PersonaMetadata[]
+
+    @OneToMany_(() => AgentDeposit, e => e.persona)
+    agentDeposits!: AgentDeposit[]
 }

@@ -1,376 +1,206 @@
-# Amica Multichain Indexer
+# Amica Base Network Indexer
 
-A high-performance multichain indexer for the Amica protocol, built with [Subsquid](https://subsquid.io). Tracks personas, trading activity, and bridge operations across Ethereum, Base, Arbitrum, and other EVM chains.
+A Subsquid indexer for the Amica protocol on Base network.
 
 ## Features
 
-- 🌐 **Multichain Support**: Index personas across multiple EVM chains simultaneously
-- 🔄 **Real-time Updates**: Live tracking of trades, metadata updates, and graduations
-- 🌉 **Bridge Monitoring**: Track AMICA token movements between chains
-- 📊 **Advanced Analytics**: Volume tracking, leaderboards, and trending personas
-- 🚀 **High Performance**: Efficient batch processing with minimal RPC calls
-- 📈 **GraphQL API**: Rich querying capabilities with filtering and sorting
-- 🔌 **REST API**: Simple HTTP endpoints for frontend integration
+- Indexes all Persona NFT creation and metadata
+- Tracks bonding curve trades and liquidity events
+- Monitors staking pools and user positions
+- Records bridge activity (wrap/unwrap)
+- Aggregates statistics (global and daily)
+- Handles agent token functionality
 
-## Architecture
+## Prerequisites
 
-```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   Ethereum      │     │     Base        │     │   Arbitrum      │
-│   Processor     │     │   Processor     │     │   Processor     │
-└────────┬────────┘     └────────┬────────┘     └────────┬────────┘
-         │                       │                         │
-         └───────────────────────┴─────────────────────────┘
-                                 │
-                         ┌───────▼────────┐
-                         │   PostgreSQL   │
-                         │    Database    │
-                         └───────┬────────┘
-                                 │
-                 ┌───────────────┴───────────────┐
-                 │                               │
-         ┌───────▼────────┐             ┌───────▼────────┐
-         │  GraphQL API   │             │   REST API     │
-         │  (Port 4350)   │             │  (Port 3001)   │
-         └────────────────┘             └────────────────┘
-```
-
-## Quick Start
-
-### Prerequisites
-
-- Node.js 18+ and npm
+- Node.js v18 or higher
 - Docker and Docker Compose
-- RPC endpoints for target chains
-- Deployed Amica contracts
+- PostgreSQL (via Docker)
 
-### Installation
+## Setup
 
+1. **Clone and install dependencies:**
 ```bash
-# Clone the repository
-git clone https://github.com/your-org/amica-indexer
-cd amica-indexer
-
-# Install dependencies
 npm install
+```
 
-# Copy environment template
+2. **Set up environment variables:**
+```bash
 cp .env.example .env
+# Edit .env with your configuration
 ```
 
-### Configuration
-
-1. **Edit `.env`** with your values:
-
-```env
-# Ethereum Mainnet
-ETHEREUM_RPC=https://mainnet.infura.io/v3/YOUR_KEY
-ETHEREUM_AMICA_TOKEN=0x...
-ETHEREUM_FACTORY=0x...
-ETHEREUM_DEPLOYMENT_BLOCK=18500000
-
-# Base
-BASE_RPC=https://mainnet.base.org
-BASE_AMICA_TOKEN=0x...
-BASE_FACTORY=0x...
-BASE_BRIDGE_WRAPPER=0x...
-BASE_DEPLOYMENT_BLOCK=8000000
-
-# Arbitrum
-ARBITRUM_RPC=https://arb1.arbitrum.io/rpc
-ARBITRUM_AMICA_TOKEN=0x...
-ARBITRUM_FACTORY=0x...
-ARBITRUM_BRIDGE_WRAPPER=0x...
-ARBITRUM_DEPLOYMENT_BLOCK=150000000
-
-# Enabled chains (comma-separated chain IDs)
-ENABLED_CHAINS=1,8453,42161
-```
-
-2. **Update chain configuration** in `src/config/chains.ts`
-
-### Running Locally
-
+3. **Start the database:**
 ```bash
-# Start PostgreSQL
-docker-compose up -d db
+docker compose up -d
+```
 
-# Generate TypeORM models
-npx squid-typeorm-codegen
-
-# Generate ABI types
+4. **Generate TypeORM models from schema:**
+```bash
 npm run codegen
+```
 
-# Run database migrations
+5. **Generate TypeScript types from ABIs:**
+```bash
+npm run typegen
+```
+
+6. **Run database migrations:**
+```bash
 npm run db:migrate
-
-# Start the indexer
-npm run dev
-
-# In another terminal, start GraphQL server
-npm run query-node:start
-
-# In another terminal, start REST API
-npm run api:start
 ```
 
-### Using Docker
-
+7. **Build the project:**
 ```bash
-# Start all services
-docker-compose up -d
-
-# Check logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
+npm run build
 ```
 
-## API Usage
-
-### GraphQL API (http://localhost:4350/graphql)
-
-#### Get top personas across all chains
-```graphql
-query TopPersonasGlobal {
-  personas(
-    orderBy: totalVolume24h_DESC
-    limit: 10
-  ) {
-    id
-    name
-    symbol
-    totalVolume24h
-    creator
-    chain {
-      name
-    }
-  }
-}
-```
-
-#### Get personas on specific chain
-```graphql
-query PersonasOnBase {
-  personas(
-    where: { chain: { id_eq: "8453" } }
-    orderBy: totalVolume24h_DESC
-  ) {
-    id
-    name
-    totalVolume24h
-    isGraduated
-  }
-}
-```
-
-#### Search personas
-```graphql
-query SearchPersonas($search: String!) {
-  personas(
-    where: { name_containsInsensitive: $search }
-    limit: 20
-  ) {
-    id
-    name
-    symbol
-    chain {
-      name
-    }
-  }
-}
-```
-
-### REST API (http://localhost:3001)
-
-#### Get all supported chains
+8. **Start the processor:**
 ```bash
-GET /api/chains
+npm run processor:start
 ```
 
-#### Get personas with filters
+9. **In a separate terminal, start the GraphQL server:**
 ```bash
-GET /api/personas?chainId=8453&sort=totalVolume24h_DESC&limit=20
+npm run serve
 ```
 
-#### Get persona details
-```bash
-GET /api/personas/{chainId}/{tokenId}
-```
+The GraphQL playground will be available at http://localhost:4000/graphql
 
-#### Get global statistics
-```bash
-GET /api/stats
-```
-
-#### Get user portfolio
-```bash
-GET /api/users/{address}/portfolio
-```
-
-#### Search personas
-```bash
-GET /api/search?q=persona&chainId=8453
-```
-
-## Schema
-
-### Core Entities
-
-- **Chain**: Blockchain network information
-- **Persona**: NFT with associated ERC20 token
-- **Trade**: Token purchase on bonding curve
-- **Metadata**: Key-value pairs for personas
-- **BridgeActivity**: Cross-chain token movements
-- **DailyVolume**: Aggregated daily trading volume
-
-See [schema.graphql](./schema.graphql) for complete definitions.
-
-## Adding New Chains
-
-1. **Update environment variables** in `.env`:
-```env
-POLYGON_RPC=https://polygon-rpc.com
-POLYGON_AMICA_TOKEN=0x...
-POLYGON_FACTORY=0x...
-POLYGON_BRIDGE_WRAPPER=0x...
-POLYGON_DEPLOYMENT_BLOCK=45000000
-```
-
-2. **Add chain configuration** in `src/config/chains.ts`:
-```typescript
-137: {
-  id: 137,
-  name: 'polygon',
-  rpcUrl: process.env.POLYGON_RPC!,
-  archive: 'https://v2.archive.subsquid.io/network/polygon-mainnet',
-  amicaToken: process.env.POLYGON_AMICA_TOKEN!,
-  factoryAddress: process.env.POLYGON_FACTORY!,
-  bridgeWrapperAddress: process.env.POLYGON_BRIDGE_WRAPPER!,
-  deploymentBlock: parseInt(process.env.POLYGON_DEPLOYMENT_BLOCK!),
-  isMainnet: false
-}
-```
-
-3. **Update enabled chains**:
-```env
-ENABLED_CHAINS=1,8453,42161,137
-```
-
-4. **Restart the indexer**
-
-## Production Deployment
-
-### Using Subsquid Cloud
-
-```bash
-# Install Subsquid CLI
-npm i -g @subsquid/cli
-
-# Login
-sqd login
-
-# Deploy
-sqd deploy --org YOUR_ORG ./
-```
-
-### Using Kubernetes
-
-See [k8s/](./k8s/) directory for Kubernetes manifests.
-
-### Performance Tuning
-
-- **Batch Size**: Adjust in processor configuration (default: 100)
-- **RPC Rate Limit**: Configure per chain in `chains.ts`
-- **Database Pool**: Set max connections in `ormconfig.json`
-- **Memory**: Increase Node.js heap size if needed
-
-## Monitoring
-
-### Health Checks
-
-- Indexer health: `http://localhost:4350/health`
-- API health: `http://localhost:3001/health`
-- Metrics: `http://localhost:4350/metrics`
-
-### Recommended Metrics
-
-- Indexer lag (blocks behind head)
-- RPC request rate and errors
-- Database query performance
-- API response times
-
-## Troubleshooting
-
-### Common Issues
-
-**RPC rate limits exceeded**
-- Reduce `rateLimit` in chain configuration
-- Use archive nodes for historical data
-
-**Out of memory errors**
-```bash
-NODE_OPTIONS="--max-old-space-size=8192" npm run processor:start
-```
-
-**Slow queries**
-- Add database indexes for common queries
-- Enable query logging to identify bottlenecks
-
-**Missing events**
-- Verify contract addresses are correct
-- Check deployment block numbers
-- Ensure ABIs match deployed contracts
-
-## Development
-
-### Project Structure
+## Project Structure
 
 ```
 src/
-├── abi/                  # Contract ABIs and generated types
-├── config/               # Chain configurations
-├── model/               # TypeORM entities
-├── processors/          # Chain-specific processors
-├── utils/               # Helper functions
-├── main.ts              # Main processor entry
-└── api-service.ts       # REST API server
+├── abi/                 # Contract ABIs
+├── handlers/           # Event handler modules
+│   ├── agent.ts       # Agent token events
+│   ├── bridge.ts      # Bridge events
+│   ├── fees.ts        # Fee configuration events
+│   ├── liquidity.ts   # Liquidity events
+│   ├── metadata.ts    # Metadata events
+│   ├── persona.ts     # Persona creation events
+│   ├── staking.ts     # Staking events
+│   ├── stats.ts       # Statistics aggregation
+│   └── trading.ts     # Trading events
+├── model/             # Generated TypeORM entities
+├── main.ts           # Main processor logic
+└── processor.ts      # Processor configuration
 ```
 
-### Running Tests
+## Key Entities
 
+### Persona
+- Core NFT representing an AI agent
+- Tracks token info, trading stats, and graduation status
+
+### Trade
+- Individual trades on the bonding curve
+- Includes fee calculations
+
+### StakingPool
+- Staking pool configuration
+- Tracks total staked and reward distribution
+
+### UserStake
+- User's position in a staking pool
+- Supports both flexible and locked staking
+
+### BridgeActivity
+- Records AMICA token wrapping/unwrapping
+
+## Example Queries
+
+### Get all personas with their stats:
+```graphql
+query {
+  personas(orderBy: createdAt_DESC) {
+    id
+    name
+    symbol
+    erc20Token
+    totalDeposited
+    tokensSold
+    pairCreated
+    trades {
+      id
+      amountIn
+      amountOut
+      timestamp
+    }
+  }
+}
+```
+
+### Get staking pools and user positions:
+```graphql
+query {
+  stakingPools {
+    id
+    lpToken
+    totalStaked
+    isActive
+    userStakes {
+      user
+      flexibleAmount
+      lockedAmount
+    }
+  }
+}
+```
+
+### Get daily statistics:
+```graphql
+query {
+  dailyStats(orderBy: date_DESC, limit: 7) {
+    date
+    newPersonas
+    trades
+    volume
+    uniqueTraders
+    bridgeVolume
+  }
+}
+```
+
+## Troubleshooting
+
+### Database connection issues
+- Ensure PostgreSQL is running: `docker compose ps`
+- Check connection settings in `.env`
+
+### Missing events
+- Verify the start block in `src/processor.ts`
+- Check RPC endpoint is working
+
+### Type errors
+- Regenerate types: `npm run codegen && npm run typegen`
+- Rebuild: `npm run build`
+
+## Development
+
+### Adding new events:
+1. Add event topic to processor configuration
+2. Create handler function in appropriate handler module
+3. Update main.ts to call the handler
+4. Add any new entities to schema.graphql
+5. Regenerate models: `npm run codegen`
+
+### Testing locally:
 ```bash
-npm test
+# Reset database and start fresh
+npm run db:reset
+
+# Start processor with verbose logging
+DEBUG=* npm run processor:start
 ```
 
-### Code Style
+## Deployment
 
-```bash
-npm run lint
-npm run format
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+For production deployment on Subsquid Cloud:
+1. Update `squid.yaml` with your squid name
+2. Install Subsquid CLI: `npm i -g @subsquid/cli`
+3. Deploy: `sqd deploy`
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Support
-
-- Documentation: [https://docs.subsquid.io](https://docs.subsquid.io)
-- Discord: [Join our community](https://discord.gg/subsquid)
-- Issues: [GitHub Issues](https://github.com/your-org/amica-indexer/issues)
-
-## Acknowledgments
-
-- Built with [Subsquid](https://subsquid.io)
-- Powered by [TypeORM](https://typeorm.io)
-- GraphQL server by [Apollo](https://www.apollographql.com)
+MIT

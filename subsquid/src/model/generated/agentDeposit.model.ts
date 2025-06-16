@@ -3,8 +3,8 @@ import * as marshal from "./marshal"
 import {Persona} from "./persona.model"
 
 @Entity_()
-export class Trade {
-    constructor(props?: Partial<Trade>) {
+export class AgentDeposit {
+    constructor(props?: Partial<AgentDeposit>) {
         Object.assign(this, props)
     }
 
@@ -17,19 +17,19 @@ export class Trade {
 
     @Index_()
     @Column_("text", {nullable: false})
-    trader!: string
+    user!: string
 
     @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
-    amountIn!: bigint
-
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
-    amountOut!: bigint
-
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
-    feeAmount!: bigint
+    amount!: bigint
 
     @Column_("timestamp with time zone", {nullable: false})
     timestamp!: Date
+
+    @Column_("bool", {nullable: false})
+    withdrawn!: boolean
+
+    @Column_("bool", {nullable: false})
+    rewardsClaimed!: boolean
 
     @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
     block!: bigint

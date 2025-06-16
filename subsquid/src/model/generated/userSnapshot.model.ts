@@ -1,33 +1,31 @@
 import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, Index as Index_} from "typeorm"
 import * as marshal from "./marshal"
-import {BridgeAction} from "./_bridgeAction"
 
 @Entity_()
-export class BridgeActivity {
-    constructor(props?: Partial<BridgeActivity>) {
+export class UserSnapshot {
+    constructor(props?: Partial<UserSnapshot>) {
         Object.assign(this, props)
     }
 
     @PrimaryColumn_()
     id!: string
 
-    @Index_()
+    @Index_({unique: true})
     @Column_("text", {nullable: false})
     user!: string
 
-    @Column_("varchar", {length: 6, nullable: false})
-    action!: BridgeAction
+    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    currentBalance!: bigint
 
     @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
-    amount!: bigint
+    currentBlock!: bigint
+
+    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    pendingBalance!: bigint
+
+    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    pendingBlock!: bigint
 
     @Column_("timestamp with time zone", {nullable: false})
-    timestamp!: Date
-
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
-    block!: bigint
-
-    @Index_()
-    @Column_("text", {nullable: false})
-    txHash!: string
+    lastUpdated!: Date
 }

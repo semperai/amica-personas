@@ -1,0 +1,215 @@
+# Get persona details with recent trades
+query GetPersona($id: String!) {
+  persona(id: $id) {
+    id
+    tokenId
+    name
+    symbol
+    creator
+    owner
+    erc20Token
+    pairToken
+    agentToken
+    pairCreated
+    pairAddress
+    createdAt
+    totalDeposited
+    tokensSold
+    graduationThreshold
+    totalAgentDeposited
+    minAgentTokens
+    trades(orderBy: timestamp_DESC, limit: 10) {
+      id
+      trader
+      amountIn
+      amountOut
+      feeAmount
+      timestamp
+      txHash
+    }
+    metadata {
+      key
+      value
+      updatedAt
+    }
+  }
+}
+
+# Get all personas with pagination
+query GetPersonas($limit: Int = 10, $offset: Int = 0) {
+  personas(limit: $limit, offset: $offset, orderBy: createdAt_DESC) {
+    id
+    name
+    symbol
+    creator
+    totalDeposited
+    tokensSold
+    pairCreated
+    createdAt
+  }
+}
+
+# Get staking pool info
+query GetStakingPool($id: String!) {
+  stakingPool(id: $id) {
+    id
+    poolId
+    lpToken
+    allocBasisPoints
+    isActive
+    totalStaked
+    createdAt
+    userStakes(limit: 10, orderBy: flexibleAmount_DESC) {
+      id
+      user
+      flexibleAmount
+      lockedAmount
+      unclaimedRewards
+      locks {
+        id
+        amount
+        unlockTime
+        lockMultiplier
+        isWithdrawn
+      }
+    }
+  }
+}
+
+# Get user's staking positions
+query GetUserStakes($user: String!) {
+  userStakes(where: { user_eq: $user }) {
+    id
+    pool {
+      id
+      lpToken
+      isActive
+    }
+    flexibleAmount
+    lockedAmount
+    unclaimedRewards
+    firstStakeAt
+    lastStakeAt
+  }
+}
+
+# Get recent trades across all personas
+query GetRecentTrades($limit: Int = 20) {
+  trades(limit: $limit, orderBy: timestamp_DESC) {
+    id
+    persona {
+      id
+      name
+      symbol
+    }
+    trader
+    amountIn
+    amountOut
+    feeAmount
+    timestamp
+    txHash
+  }
+}
+
+# Get bridge activity
+query GetBridgeActivity($user: String) {
+  bridgeActivities(
+    where: { user_eq: $user }
+    orderBy: timestamp_DESC
+    limit: 50
+  ) {
+    id
+    user
+    action
+    amount
+    timestamp
+    txHash
+  }
+}
+
+# Get global statistics
+query GetGlobalStats {
+  globalStats(id: "global") {
+    totalPersonas
+    totalTrades
+    totalVolume
+    totalStakingPools
+    totalStaked
+    totalBridgeVolume
+    lastUpdated
+  }
+}
+
+# Get daily statistics for the last 30 days
+query GetDailyStats {
+  dailyStats(orderBy: date_DESC, limit: 30) {
+    id
+    date
+    newPersonas
+    trades
+    volume
+    uniqueTraders
+    bridgeVolume
+  }
+}
+
+# Get user's fee configuration
+query GetUserFeeInfo($user: String!) {
+  userSnapshot(id: $user) {
+    user
+    currentBalance
+    currentBlock
+    pendingBalance
+    pendingBlock
+    lastUpdated
+  }
+  feeConfig(id: "fee-config") {
+    feePercentage
+    creatorShare
+    minAmicaForReduction
+    maxAmicaForReduction
+    minReductionMultiplier
+    maxReductionMultiplier
+  }
+}
+
+# Search personas by name
+query SearchPersonas($name: String!) {
+  personas(where: { name_containsInsensitive: $name }, limit: 20) {
+    id
+    name
+    symbol
+    creator
+    erc20Token
+    pairCreated
+    totalDeposited
+  }
+}
+
+# Get agent deposits for a persona
+query GetAgentDeposits($personaId: String!) {
+  agentDeposits(where: { persona: { id_eq: $personaId } }) {
+    id
+    user
+    amount
+    timestamp
+    withdrawn
+    rewardsClaimed
+    txHash
+  }
+}
+
+# Get top personas by volume
+query GetTopPersonas($limit: Int = 10) {
+  personas(orderBy: totalDeposited_DESC, limit: $limit) {
+    id
+    name
+    symbol
+    totalDeposited
+    tokensSold
+    pairCreated
+    trades(limit: 1) {
+      id
+    }
+  }
+}
