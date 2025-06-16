@@ -22,9 +22,13 @@ async function deployContracts() {
   const network = await ethers.provider.getNetwork();
   const chainId = Number(network.chainId);
 
+
+  const blockNumber = await ethers.provider.getBlockNumber();
+
   console.log(`📍 Network: ${networks[getNetworkName(chainId)]?.name || "Unknown"} (Chain ID: ${chainId})`);
   console.log(`👤 Deployer: ${deployer.address}`);
   console.log(`💰 Balance: ${ethers.formatEther(await ethers.provider.getBalance(deployer.address))} ETH`);
+  console.log(`📅 Block Number: ${blockNumber}`);
 
   // Get Uniswap addresses for this chain
   const uniswap = uniswapAddresses[chainId];
@@ -218,7 +222,7 @@ async function deployContracts() {
     chainId,
     chainName: getNetworkName(chainId),
     addresses,
-    blockNumber: await ethers.provider.getBlockNumber(),
+    blockNumber,
     timestamp: new Date().toISOString(),
     deployer: deployer.address,
     transactionHashes: txHashes,

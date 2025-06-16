@@ -1,5 +1,4 @@
-import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, Index as Index_} from "typeorm"
-import * as marshal from "./marshal"
+import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, StringColumn as StringColumn_, Index as Index_, BigIntColumn as BigIntColumn_, DateTimeColumn as DateTimeColumn_} from "@subsquid/typeorm-store"
 
 @Entity_()
 export class UserSnapshot {
@@ -11,21 +10,21 @@ export class UserSnapshot {
     id!: string
 
     @Index_({unique: true})
-    @Column_("text", {nullable: false})
+    @StringColumn_({nullable: false})
     user!: string
 
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    @BigIntColumn_({nullable: false})
     currentBalance!: bigint
 
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    @BigIntColumn_({nullable: false})
     currentBlock!: bigint
 
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    @BigIntColumn_({nullable: false})
     pendingBalance!: bigint
 
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    @BigIntColumn_({nullable: false})
     pendingBlock!: bigint
 
-    @Column_("timestamp with time zone", {nullable: false})
+    @DateTimeColumn_({nullable: false})
     lastUpdated!: Date
 }

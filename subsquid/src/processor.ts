@@ -6,6 +6,7 @@ import {
   Log as _Log,
   Transaction as _Transaction,
 } from '@subsquid/evm-processor'
+import { assertNotNull } from '@subsquid/util-internal'
 import { Store } from '@subsquid/typeorm-store'
 import * as factoryAbi from './abi/PersonaTokenFactory'
 import * as stakingAbi from './abi/PersonaStakingRewards'
@@ -23,10 +24,15 @@ export const DEPLOYMENT = {
     stakingRewards: '0xEfc05BA7cca5653a71dA0569D589848dfAb60CdA'.toLowerCase(),
     erc20Implementation: '0x4b140c2d84c75D50E28b46f4126fF9C1c5e4C3DD'.toLowerCase(),
   },
-  startBlock: 31632254,
+  startBlock: 31632211,
 }
 
-export const processor = new EvmBatchProcessor()
+export const processor = new EvmBatchProcessor().setRpcEndpoint(
+  assertNotNull(
+    process.env.RPC_BASE_HTTP,
+    'Required env variable RPC_BASE_HTTP is missing'
+  )
+)
   .setGateway('https://v2.archive.subsquid.io/network/base-mainnet')
   .setRpcEndpoint({
     url: process.env.RPC_BASE_HTTP || 'https://mainnet.base.org',

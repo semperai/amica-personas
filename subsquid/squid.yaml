@@ -1,14 +1,16 @@
-manifestVersion: subsquid.io/v0.1
+manifest_version: subsquid.io/v0.1
 name: amica-base-indexer
 version: 1
 description: Indexer for Amica protocol on Base network
 build:
 deploy:
+  addons:
+    rpc:
+      - base.http
   processor:
-    cmd:
-      - npx
-      - squid-processor-start
+    cmd: ["sqd", "process:prod"]
   api:
-    cmd:
-      - npx
-      - squid-graphql-server
+    cmd: ["sqd", "serve:prod"]
+scale:
+  api:
+    profile: small

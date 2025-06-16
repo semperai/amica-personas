@@ -10,7 +10,7 @@
     "db:reset": "docker compose down && docker compose up -d db && sleep 5 && npm run db:migrate",
     "codegen": "npx squid-typeorm-codegen",
     "typegen": "npx squid-evm-typegen src/abi/*.json --multicall",
-    "processor:start": "node lib/main.js",
+    "processor:start": "node -r dotenv/config lib/main.js",
     "serve": "npx squid-graphql-server",
     "serve:prod": "npx squid-graphql-server --production",
     "check-updates": "npx npm-check-updates --filter /subsquid/",

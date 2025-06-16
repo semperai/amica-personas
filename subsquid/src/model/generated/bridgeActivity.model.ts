@@ -1,5 +1,4 @@
-import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, Index as Index_} from "typeorm"
-import * as marshal from "./marshal"
+import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, StringColumn as StringColumn_, Index as Index_, BigIntColumn as BigIntColumn_, DateTimeColumn as DateTimeColumn_} from "@subsquid/typeorm-store"
 import {BridgeAction} from "./_bridgeAction"
 
 @Entity_()
@@ -12,22 +11,22 @@ export class BridgeActivity {
     id!: string
 
     @Index_()
-    @Column_("text", {nullable: false})
+    @StringColumn_({nullable: false})
     user!: string
 
     @Column_("varchar", {length: 6, nullable: false})
     action!: BridgeAction
 
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    @BigIntColumn_({nullable: false})
     amount!: bigint
 
-    @Column_("timestamp with time zone", {nullable: false})
+    @DateTimeColumn_({nullable: false})
     timestamp!: Date
 
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    @BigIntColumn_({nullable: false})
     block!: bigint
 
     @Index_()
-    @Column_("text", {nullable: false})
+    @StringColumn_({nullable: false})
     txHash!: string
 }

@@ -1,5 +1,4 @@
-import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, Index as Index_} from "typeorm"
-import * as marshal from "./marshal"
+import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, DateTimeColumn as DateTimeColumn_, Index as Index_, IntColumn as IntColumn_, BigIntColumn as BigIntColumn_} from "@subsquid/typeorm-store"
 
 @Entity_()
 export class DailyStats {
@@ -11,21 +10,21 @@ export class DailyStats {
     id!: string
 
     @Index_()
-    @Column_("timestamp with time zone", {nullable: false})
+    @DateTimeColumn_({nullable: false})
     date!: Date
 
-    @Column_("int4", {nullable: false})
+    @IntColumn_({nullable: false})
     newPersonas!: number
 
-    @Column_("int4", {nullable: false})
+    @IntColumn_({nullable: false})
     trades!: number
 
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    @BigIntColumn_({nullable: false})
     volume!: bigint
 
-    @Column_("int4", {nullable: false})
+    @IntColumn_({nullable: false})
     uniqueTraders!: number
 
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    @BigIntColumn_({nullable: false})
     bridgeVolume!: bigint
 }

@@ -1,5 +1,4 @@
-import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, ManyToOne as ManyToOne_, Index as Index_} from "typeorm"
-import * as marshal from "./marshal"
+import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, ManyToOne as ManyToOne_, Index as Index_, StringColumn as StringColumn_, DateTimeColumn as DateTimeColumn_, BigIntColumn as BigIntColumn_} from "@subsquid/typeorm-store"
 import {Persona} from "./persona.model"
 
 @Entity_()
@@ -16,15 +15,15 @@ export class PersonaMetadata {
     persona!: Persona
 
     @Index_()
-    @Column_("text", {nullable: false})
+    @StringColumn_({nullable: false})
     key!: string
 
-    @Column_("text", {nullable: false})
+    @StringColumn_({nullable: false})
     value!: string
 
-    @Column_("timestamp with time zone", {nullable: false})
+    @DateTimeColumn_({nullable: false})
     updatedAt!: Date
 
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    @BigIntColumn_({nullable: false})
     updatedAtBlock!: bigint
 }

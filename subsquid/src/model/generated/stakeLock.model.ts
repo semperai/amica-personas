@@ -1,5 +1,4 @@
-import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, ManyToOne as ManyToOne_, Index as Index_} from "typeorm"
-import * as marshal from "./marshal"
+import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, ManyToOne as ManyToOne_, Index as Index_, BigIntColumn as BigIntColumn_, DateTimeColumn as DateTimeColumn_, IntColumn as IntColumn_, BooleanColumn as BooleanColumn_} from "@subsquid/typeorm-store"
 import {UserStake} from "./userStake.model"
 
 @Entity_()
@@ -16,25 +15,25 @@ export class StakeLock {
     userStake!: UserStake
 
     @Index_()
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    @BigIntColumn_({nullable: false})
     lockId!: bigint
 
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    @BigIntColumn_({nullable: false})
     amount!: bigint
 
     @Index_()
-    @Column_("timestamp with time zone", {nullable: false})
+    @DateTimeColumn_({nullable: false})
     unlockTime!: Date
 
-    @Column_("int4", {nullable: false})
+    @IntColumn_({nullable: false})
     lockMultiplier!: number
 
-    @Column_("timestamp with time zone", {nullable: false})
+    @DateTimeColumn_({nullable: false})
     createdAt!: Date
 
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    @BigIntColumn_({nullable: false})
     createdAtBlock!: bigint
 
-    @Column_("bool", {nullable: false})
+    @BooleanColumn_({nullable: false})
     isWithdrawn!: boolean
 }

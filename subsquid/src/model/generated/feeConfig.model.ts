@@ -1,5 +1,4 @@
-import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_} from "typeorm"
-import * as marshal from "./marshal"
+import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, IntColumn as IntColumn_, BigIntColumn as BigIntColumn_, DateTimeColumn as DateTimeColumn_} from "@subsquid/typeorm-store"
 
 @Entity_()
 export class FeeConfig {
@@ -10,24 +9,24 @@ export class FeeConfig {
     @PrimaryColumn_()
     id!: string
 
-    @Column_("int4", {nullable: false})
+    @IntColumn_({nullable: false})
     feePercentage!: number
 
-    @Column_("int4", {nullable: false})
+    @IntColumn_({nullable: false})
     creatorShare!: number
 
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    @BigIntColumn_({nullable: false})
     minAmicaForReduction!: bigint
 
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    @BigIntColumn_({nullable: false})
     maxAmicaForReduction!: bigint
 
-    @Column_("int4", {nullable: false})
+    @IntColumn_({nullable: false})
     minReductionMultiplier!: number
 
-    @Column_("int4", {nullable: false})
+    @IntColumn_({nullable: false})
     maxReductionMultiplier!: number
 
-    @Column_("timestamp with time zone", {nullable: false})
+    @DateTimeColumn_({nullable: false})
     lastUpdated!: Date
 }

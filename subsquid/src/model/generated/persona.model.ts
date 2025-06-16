@@ -1,5 +1,4 @@
-import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, Index as Index_, OneToMany as OneToMany_} from "typeorm"
-import * as marshal from "./marshal"
+import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, BigIntColumn as BigIntColumn_, Index as Index_, StringColumn as StringColumn_, BooleanColumn as BooleanColumn_, DateTimeColumn as DateTimeColumn_, OneToMany as OneToMany_} from "@subsquid/typeorm-store"
 import {Trade} from "./trade.model"
 import {PersonaMetadata} from "./personaMetadata.model"
 import {AgentDeposit} from "./agentDeposit.model"
@@ -14,61 +13,61 @@ export class Persona {
     id!: string
 
     @Index_()
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    @BigIntColumn_({nullable: false})
     tokenId!: bigint
 
     @Index_()
-    @Column_("text", {nullable: false})
+    @StringColumn_({nullable: false})
     creator!: string
 
     @Index_()
-    @Column_("text", {nullable: false})
+    @StringColumn_({nullable: false})
     owner!: string
 
     @Index_()
-    @Column_("text", {nullable: false})
+    @StringColumn_({nullable: false})
     name!: string
 
     @Index_()
-    @Column_("text", {nullable: false})
+    @StringColumn_({nullable: false})
     symbol!: string
 
     @Index_()
-    @Column_("text", {nullable: false})
+    @StringColumn_({nullable: false})
     erc20Token!: string
 
     @Index_()
-    @Column_("text", {nullable: false})
+    @StringColumn_({nullable: false})
     pairToken!: string
 
-    @Column_("text", {nullable: true})
+    @StringColumn_({nullable: true})
     agentToken!: string | undefined | null
 
-    @Column_("bool", {nullable: false})
+    @BooleanColumn_({nullable: false})
     pairCreated!: boolean
 
-    @Column_("text", {nullable: true})
+    @StringColumn_({nullable: true})
     pairAddress!: string | undefined | null
 
-    @Column_("timestamp with time zone", {nullable: false})
+    @DateTimeColumn_({nullable: false})
     createdAt!: Date
 
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    @BigIntColumn_({nullable: false})
     createdAtBlock!: bigint
 
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    @BigIntColumn_({nullable: false})
     totalDeposited!: bigint
 
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    @BigIntColumn_({nullable: false})
     tokensSold!: bigint
 
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    @BigIntColumn_({nullable: false})
     graduationThreshold!: bigint
 
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    @BigIntColumn_({nullable: false})
     totalAgentDeposited!: bigint
 
-    @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+    @BigIntColumn_({nullable: false})
     minAgentTokens!: bigint
 
     @OneToMany_(() => Trade, e => e.persona)
