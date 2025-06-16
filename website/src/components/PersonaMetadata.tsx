@@ -1,10 +1,45 @@
 // src/components/PersonaMetadata.tsx
-
-import { useQuery } from '@apollo/client';
-import { GET_PERSONA_DETAILS } from '@/lib/graphql/client';
+import { useQuery, gql } from '@apollo/client';
 import { formatEther } from 'viem';
 import AgentTokenInfo from './AgentTokenInfo';
 import { useState, useEffect } from 'react';
+
+// Updated query to use BigInt for tokenId
+const GET_PERSONA_BY_TOKEN_AND_CHAIN = gql`
+  query GetPersonaByTokenAndChain($tokenId: BigInt!, $chainId: Int!) {
+    personas(
+      where: { 
+        tokenId_eq: $tokenId, 
+        chainId_eq: $chainId 
+      }, 
+      limit: 1
+    ) {
+      id
+      tokenId
+      name
+      symbol
+      creator
+      owner
+      erc20Token
+      pairToken
+      agentToken
+      pairCreated
+      pairAddress
+      createdAt
+      totalDeposited
+      tokensSold
+      graduationThreshold
+      totalAgentDeposited
+      minAgentTokens
+      chainId
+      metadata {
+        key
+        value
+        updatedAt
+      }
+    }
+  }
+`;
 
 interface PersonaMetadataProps {
   chainId: string;
@@ -17,14 +52,21 @@ interface MetadataItem {
 }
 
 const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
-  const personaId = `${chainId}-${tokenId}`;
   const [retryCount, setRetryCount] = useState(0);
   
-  const { data, loading, error, refetch, networkStatus } = useQuery(GET_PERSONA_DETAILS, {
-    variables: { id: personaId },
+  // Convert chainId to number and tokenId to BigInt string for the query
+  const chainIdNum = parseInt(chainId);
+  const tokenIdBigInt = tokenId.replace(/^0+/, '') || '0'; // Remove leading zeros
+  
+  const { data, loading, error, refetch, networkStatus } = useQuery(GET_PERSONA_BY_TOKEN_AND_CHAIN, {
+    variables: { 
+      tokenId: tokenIdBigInt, // Pass as string representation of BigInt
+      chainId: chainIdNum 
+    },
     skip: !chainId || !tokenId,
-    errorPolicy: 'all', // Return partial data even if there are errors
+    errorPolicy: 'all',
     notifyOnNetworkStatusChange: true,
+    fetchPolicy: 'cache-and-network',
   });
 
   // Check if we're refetching
@@ -32,15 +74,15 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
 
   // Auto-retry on error with exponential backoff
   useEffect(() => {
-    if (error && retryCount < 3) {
+    if (error && retryCount < 3 && !data) {
       const timeout = setTimeout(() => {
         refetch();
         setRetryCount(prev => prev + 1);
-      }, Math.pow(2, retryCount) * 1000); // 1s, 2s, 4s
+      }, Math.pow(2, retryCount) * 1000);
 
       return () => clearTimeout(timeout);
     }
-  }, [error, retryCount, refetch]);
+  }, [error, retryCount, refetch, data]);
 
   // Loading state with skeleton
   if (loading && !data) {
@@ -64,8 +106,11 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
     );
   }
 
-  // Error state with retry
-  if (error && !data) {
+  // Check if we have persona data
+  const persona = data?.personas?.[0];
+
+  // No data found (but no error) or empty result
+  if (!loading && !persona) {
     return (
       <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
         <div className="text-center py-8">
@@ -75,11 +120,9 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-white mb-2">Unable to Load Persona</h3>
+          <h3 className="text-lg font-medium text-white mb-2">Persona Not Found</h3>
           <p className="text-white/60 mb-6 max-w-sm mx-auto">
-            {error.networkError && 'statusCode' in error.networkError && error.networkError.statusCode === 404 
-              ? 'This persona could not be found.'
-              : 'We encountered an issue loading this persona. Please try again.'}
+            This persona (Token ID: {tokenId} on Chain {chainId}) doesn't exist or hasn't been indexed yet.
           </p>
           <div className="flex gap-3 justify-center">
             <button
@@ -92,7 +135,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
                 isRefetching ? 'animate-pulse' : ''
               }`}
             >
-              {isRefetching ? 'Retrying...' : 'Try Again'}
+              {isRefetching ? 'Checking...' : 'Check Again'}
             </button>
             <button
               onClick={() => window.history.back()}
@@ -101,47 +144,28 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
               Go Back
             </button>
           </div>
-          {retryCount > 0 && (
-            <p className="text-xs text-white/40 mt-4">
-              Retry attempt {retryCount} of 3
-            </p>
-          )}
         </div>
       </div>
     );
   }
 
-  // No data found (but no error)
-  if (!data?.personas || data.personas.length === 0) {
-    return (
-      <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-        <div className="text-center py-8">
-          <p className="text-white/60">Persona not found</p>
-          <button
-            onClick={() => refetch()}
-            className="mt-4 text-purple-400 hover:text-purple-300 text-sm"
-          >
-            Refresh
-          </button>
-        </div>
-      </div>
-    );
+  // If we have an error but also have cached data, show the data
+  if (error && persona) {
+    console.warn('Error fetching persona but showing cached data:', error);
   }
 
-  const persona = data.personas[0];
   const isGraduated = persona.pairCreated;
   const progress = persona.totalDeposited && persona.graduationThreshold
     ? (Number(persona.totalDeposited) / Number(persona.graduationThreshold)) * 100
     : 0;
 
-  // Extract chain info from ID
-  const [extractedChainId] = persona.id.split('-');
+  // Extract chain info
   const chainNames: Record<string, string> = {
     '1': 'ethereum',
     '8453': 'base',
     '42161': 'arbitrum'
   };
-  const chainName = chainNames[extractedChainId] || 'unknown';
+  const chainName = chainNames[chainId] || 'unknown';
 
   return (
     <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10 relative">
@@ -184,15 +208,13 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
           <p className="text-white font-light capitalize">{chainName}</p>
         </div>
         <div>
-          <p className="text-sm text-white/50">24h Volume</p>
-          <p className="text-white font-light">
-            {formatEther(BigInt(persona.totalDeposited || 0))} AMICA
-          </p>
+          <p className="text-sm text-white/50">Token ID</p>
+          <p className="text-white font-light">#{tokenId}</p>
         </div>
         <div>
           <p className="text-sm text-white/50">Total Volume</p>
           <p className="text-white font-light">
-            {formatEther(BigInt(persona.totalDeposited || 0))} AMICA
+            {formatEther(BigInt(persona.totalDeposited || 0))} {persona.pairToken === '0x...' ? 'AMICA' : 'tokens'}
           </p>
         </div>
       </div>
@@ -210,7 +232,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
             />
           </div>
           <p className="text-xs text-white/50 mt-2">
-            {formatEther(BigInt(persona.totalDeposited || 0))} / {formatEther(BigInt(persona.graduationThreshold || 0))} AMICA
+            {formatEther(BigInt(persona.totalDeposited || 0))} / {formatEther(BigInt(persona.graduationThreshold || 0))} tokens
           </p>
         </div>
       )}
@@ -222,7 +244,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
             {persona.metadata.map((item: MetadataItem) => (
               <div key={item.key} className="flex justify-between text-sm">
                 <span className="text-white/50">{item.key}:</span>
-                <span className="text-white/80">{item.value}</span>
+                <span className="text-white/80 break-all">{item.value}</span>
               </div>
             ))}
           </div>

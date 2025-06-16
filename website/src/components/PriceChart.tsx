@@ -23,11 +23,16 @@ interface Trade {
   trader: string;
 }
 
-// GraphQL query for daily stats
+// Updated query to use BigInt for tokenId
 const GET_PERSONA_DAILY_STATS = gql`
-  query GetPersonaDailyStats($personaId: String!, $days: Int = 30) {
+  query GetPersonaDailyStats($tokenId: BigInt!, $chainId: Int!, $days: Int = 30) {
     personaDailyStats(
-      where: { persona: { id_eq: $personaId } }
+      where: {
+        persona: {
+          tokenId_eq: $tokenId,
+          chainId_eq: $chainId
+        }
+      }
       orderBy: date_DESC
       limit: $days
     ) {
@@ -37,10 +42,15 @@ const GET_PERSONA_DAILY_STATS = gql`
       volume
       uniqueTraders
     }
-    
+
     # Also get recent trades for fallback data
     recentTrades: trades(
-      where: { persona: { id_eq: $personaId } }
+      where: {
+        persona: {
+          tokenId_eq: $tokenId,
+          chainId_eq: $chainId
+        }
+      }
       orderBy: timestamp_DESC
       limit: 100
     ) {
@@ -109,9 +119,16 @@ export default function PriceChart({ chainId, tokenId }: PriceChartProps) {
   const personaId = `${chainId}-${tokenId}`;
   const isMockMode = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true';
   
+  // Convert tokenId to BigInt string for GraphQL
+  const tokenIdBigInt = tokenId.replace(/^0+/, '') || '0';
+  
   // Fetch data from GraphQL
   const { data, loading, error } = useQuery(GET_PERSONA_DAILY_STATS, {
-    variables: { personaId, days },
+    variables: {
+      tokenId: tokenIdBigInt, // Pass as string representation of BigInt
+      chainId: parseInt(chainId),
+      days
+    },
     skip: !chainId || !tokenId,
     fetchPolicy: 'cache-and-network',
   });
@@ -249,19 +266,6 @@ export default function PriceChart({ chainId, tokenId }: PriceChartProps) {
               dot={{ fill: '#a855f7', r: 4 }}
               activeDot={{ r: 6 }}
             />
-            {/* Optionally add trades line */}
-            {formattedData.some(d => d.trades > 0) && (
-              <Line
-                type="monotone"
-                dataKey="trades"
-                stroke="#ec4899"
-                strokeWidth={2}
-                name="Trades"
-                yAxisId="right"
-                dot={{ fill: '#ec4899', r: 3 }}
-                activeDot={{ r: 5 }}
-              />
-            )}
           </LineChart>
         </ResponsiveContainer>
       ) : (

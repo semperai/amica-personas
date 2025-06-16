@@ -18,11 +18,16 @@ interface AgentDeposit {
   txHash: string;
 }
 
-// GraphQL query for agent deposits - updated to match new schema
-// GraphQL query for agent deposits - updated to match new schema
+// Updated query to use BigInt for tokenId
 const GET_AGENT_DEPOSITS = gql`
-  query GetAgentDeposits($personaId: String!, $user: String!) {
-    personas(where: { id_eq: $personaId }, limit: 1) {
+  query GetAgentDeposits($tokenId: BigInt!, $chainId: Int!, $user: String!) {
+    personas(
+      where: {
+        tokenId_eq: $tokenId,
+        chainId_eq: $chainId
+      },
+      limit: 1
+    ) {
       id
       name
       symbol
@@ -38,7 +43,14 @@ const GET_AGENT_DEPOSITS = gql`
         txHash
       }
     }
-    allDeposits: agentDeposits(where: { persona: { id_eq: $personaId } }) {
+    allDeposits: agentDeposits(
+      where: {
+        persona: {
+          tokenId_eq: $tokenId,
+          chainId_eq: $chainId
+        }
+      }
+    ) {
       id
       user
       amount
@@ -103,6 +115,9 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
   const isMockMode = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true';
   const personaId = `${chainId}-${tokenId}`;
   
+  // Convert tokenId to BigInt string for GraphQL
+  const tokenIdBigInt = tokenId.replace(/^0+/, '') || '0';
+  
   // Wait for transaction confirmations
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
@@ -110,13 +125,14 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
 
   // Query GraphQL for agent deposits
   const { data: graphqlData, loading: graphqlLoading, refetch: refetchDeposits, error: graphqlError } = useQuery(GET_AGENT_DEPOSITS, {
-    variables: { 
-      personaId,
+    variables: {
+      tokenId: tokenIdBigInt, // Pass as string representation of BigInt
+      chainId: parseInt(chainId),
       user: address?.toLowerCase() || ''
     },
     skip: !address || !chainId || !tokenId,
     fetchPolicy: 'cache-and-network',
-    errorPolicy: 'all', // Continue even if there are errors
+    errorPolicy: 'all',
   });
 
   // Get the full persona struct to access agentToken
