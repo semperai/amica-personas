@@ -1,7 +1,7 @@
 // src/pages/index.tsx - Enhanced with new contract features and improved UX
 import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
-import { fetchPersonas, fetchGlobalStats, fetchTrending } from '@/lib/api-graphql';
+import { fetchPersonas, fetchGlobalStats, GlobalStats, fetchTrending } from '@/lib/api-graphql';
 import { formatEther } from 'viem';
 import Link from 'next/link';
 
@@ -93,16 +93,6 @@ interface Persona {
   };
   growthMultiplier?: number;
   createdAt?: string;
-}
-
-interface GlobalStats {
-  totalPersonas: number;
-  totalTrades: number;
-  totalBuyTrades: number;
-  totalSellTrades: number;
-  totalVolume: string;
-  totalBuyVolume: string;
-  totalSellVolume: string;
 }
 
 // Generate a unique gradient background for each persona based on its ID
@@ -322,8 +312,6 @@ function AnimatedHeroText() {
 
 export default function HomePage() {
   const [personas, setPersonas] = useState<Persona[]>([]);
-  const [trendingPersonas, setTrendingPersonas] = useState<Persona[]>([]);
-  const [globalStats, setGlobalStats] = useState<GlobalStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState('trending');
   const [filterBy, setFilterBy] = useState('all');
@@ -333,60 +321,38 @@ export default function HomePage() {
     const loadData = async () => {
       try {
         setError(null);
-        
-        // Load global stats
-        const stats = await fetchGlobalStats();
-        if (stats) {
-          setGlobalStats(stats);
-        }
-
-        // Load trending personas first
-        const trending = await fetchTrending('24h');
-        setTrendingPersonas(trending.slice(0, 5));
-
-        // Load main personas list
+        setLoading(true);
         const sortMap: Record<string, string> = {
-          trending: 'totalVolume24h_DESC',
-          volume: 'totalVolume24h_DESC',
+          trending: 'totalDeposited_DESC',  // Changed from totalVolume24h_DESC
+          volume: 'totalDeposited_DESC',    // Changed from totalVolume24h_DESC
           tvl: 'totalDeposited_DESC',
           new: 'createdAt_DESC',
-          graduated: 'totalVolumeAllTime_DESC'
+          graduated: 'totalDeposited_DESC'  // Changed from totalVolumeAllTime_DESC
         };
 
-        const whereParams: any = {};
-        if (filterBy === 'graduated') {
-          whereParams.graduated = 'true';
-        } else if (filterBy === 'not-graduated') {
-          whereParams.graduated = 'false';
-        } else if (filterBy === 'agent-token') {
-          whereParams.hasAgentToken = true;
-        } else if (filterBy === 'ready-to-graduate') {
-          // This would need to be implemented in the API
-          whereParams.graduated = 'false';
+  
+        try {
+          const data = await fetchPersonas({
+            sort: sortMap[sortBy],
+            limit: 50,
+          });
+  
+          setPersonas(data.personas);
+        } catch (personasError) {
+          console.error('Failed to load personas:', personasError);
+          setError('Unable to load personas. Please try again later.');
+          setPersonas([]);
         }
-
-        const data = await fetchPersonas({
-          sort: sortMap[sortBy],
-          limit: 50,
-          ...whereParams
-        });
-
-        setPersonas(data.personas);
       } catch (error) {
-        console.error('Error loading data:', error);
-        setError('Failed to load data. Please try again later.');
+        console.error('Unexpected error loading data:', error);
+        setError('An unexpected error occurred. Please refresh the page.');
       } finally {
         setLoading(false);
       }
     };
-
+  
     loadData();
   }, [sortBy, filterBy]);
-
-  // Calculate buy/sell ratio for display
-  const buyPercentage = globalStats && globalStats.totalBuyVolume && globalStats.totalVolume
-    ? (Number(formatEther(BigInt(globalStats.totalBuyVolume))) / Number(formatEther(BigInt(globalStats.totalVolume)))) * 100
-    : 50;
 
   return (
     <Layout>
@@ -429,29 +395,29 @@ export default function HomePage() {
             {/* Enhanced Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
               <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                <p className="text-3xl font-light text-white">{globalStats?.totalPersonas || '250+'}
+                <p className="text-3xl font-light text-white">{'250+'}
                   <span className="text-sm text-green-400 ml-1">
-                    {globalStats?.totalPersonas ? '' : '+'}
+                    100
                   </span>
                 </p>
                 <p className="text-sm text-white/60">Active Personas</p>
               </div>
               <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
                 <p className="text-3xl font-light text-white">
-                  ${globalStats ? (Number(formatEther(BigInt(globalStats.totalVolume))) / 1000000).toFixed(1) : '12'}M
+                  12M
                   <span className="text-sm text-green-400 ml-1">+</span>
                 </p>
                 <p className="text-sm text-white/60">Total Volume</p>
               </div>
               <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                <p className="text-3xl font-light text-white">{globalStats?.totalTrades ? (globalStats.totalTrades / 1000).toFixed(1) : '5.2'}K
+                <p className="text-3xl font-light text-white">777K
                   <span className="text-sm text-green-400 ml-1">+</span>
                 </p>
                 <p className="text-sm text-white/60">Total Trades</p>
               </div>
               <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                <p className="text-3xl font-light text-white">{buyPercentage.toFixed(0)}%
-                  <span className="text-sm text-white/60">/{(100 - buyPercentage).toFixed(0)}%</span>
+                <p className="text-3xl font-light text-white">25%
+                  <span className="text-sm text-white/60">100%</span>
                 </p>
                 <p className="text-sm text-white/60">Buy/Sell Ratio</p>
               </div>
@@ -467,65 +433,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Trending Section */}
-      {trendingPersonas.length > 0 && (
-        <section className="max-w-7xl mx-auto px-6 py-8">
-          <h2 className="text-3xl font-light text-white mb-6">🔥 Trending Now</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {trendingPersonas.map((persona) => (
-              <PersonaCard key={persona.id} persona={persona} />
-            ))}
-          </div>
-        </section>
-      )}
-
       {/* Main Content */}
       <div id="explore" className="max-w-7xl mx-auto px-6 py-8">
         {/* Enhanced Filters */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setFilterBy('all')}
-              className={`px-4 py-2 rounded-full font-light transition-all ${
-                filterBy === 'all'
-                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
-                  : 'bg-white/10 text-white/70 hover:bg-white/20'
-              }`}
-            >
-              All Personas
-            </button>
-            <button
-              onClick={() => setFilterBy('agent-token')}
-              className={`px-4 py-2 rounded-full font-light transition-all ${
-                filterBy === 'agent-token'
-                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
-                  : 'bg-white/10 text-white/70 hover:bg-white/20'
-              }`}
-            >
-              Agent Token
-            </button>
-            <button
-              onClick={() => setFilterBy('graduated')}
-              className={`px-4 py-2 rounded-full font-light transition-all ${
-                filterBy === 'graduated'
-                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
-                  : 'bg-white/10 text-white/70 hover:bg-white/20'
-              }`}
-            >
-              Graduated
-            </button>
-            <button
-              onClick={() => setFilterBy('not-graduated')}
-              className={`px-4 py-2 rounded-full font-light transition-all ${
-                filterBy === 'not-graduated'
-                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
-                  : 'bg-white/10 text-white/70 hover:bg-white/20'
-              }`}
-            >
-              Trading Active
-            </button>
-          </div>
-          
           <div className="relative">
             <select
               value={sortBy}

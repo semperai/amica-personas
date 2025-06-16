@@ -109,7 +109,7 @@ interface TokenWithdrawalRecord {
   chainId: number;
 }
 
-interface GlobalStats {
+export interface GlobalStats {
   totalPersonas: number;
   totalTrades: number;
   totalBuyTrades: number;
@@ -1029,13 +1029,14 @@ interface GlobalStatsQueryResult {
 }
 
 // New function to fetch global statistics
+
 export async function fetchGlobalStats(): Promise<GlobalStats | null> {
   try {
     const result = await executeQuery(async () => {
-      const { data } = await apolloClient.query<GlobalStatsQueryResult>({
+      const { data } = await apolloClient.query({
         query: gql`
           query GetGlobalStats {
-            globalStats(id: "global") {
+            globalStats {
               totalPersonas
               totalTrades
               totalBuyTrades
@@ -1057,7 +1058,18 @@ export async function fetchGlobalStats(): Promise<GlobalStats | null> {
       fallbackData: null
     });
 
-    return result?.globalStats || {
+    // Handle both array and single object responses
+    if (result?.globalStats) {
+      // If it's an array, take the first element
+      if (Array.isArray(result.globalStats)) {
+        return result.globalStats[0] || null;
+      }
+      // If it's a single object, return it
+      return result.globalStats;
+    }
+
+    // Return default values if no data
+    return {
       totalPersonas: 0,
       totalTrades: 0,
       totalBuyTrades: 0,
