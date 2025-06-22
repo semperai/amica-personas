@@ -36,8 +36,8 @@ const Layout = ({ children }: LayoutProps) => {
     { href: '/', label: 'Explore' },
     { href: '/create', label: 'Create' },
     { href: '/portfolio', label: 'Portfolio' },
-    ...(showBridge ? [{ href: '/bridge', label: 'Bridge' }] : []),
-    { href: '/staking', label: 'Staking' },
+    // ...(showBridge ? [{ href: '/bridge', label: 'Bridge' }] : []),
+    // { href: '/staking', label: 'Staking' },
   ];
 
   return (
