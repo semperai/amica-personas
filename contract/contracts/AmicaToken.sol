@@ -2,7 +2,6 @@
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
@@ -47,7 +46,6 @@ error NoTokensToClaim();
  */
 contract AmicaToken is
     ERC20Upgradeable,
-    ERC20BurnableUpgradeable,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
     PausableUpgradeable
@@ -63,13 +61,6 @@ contract AmicaToken is
     /// @notice Tracks the deposited balance for each token address
     /// @dev This is separate from the actual token balance to handle accidental transfers
     mapping(address => uint256) public depositedBalances;
-
-    /// @notice Address of the bridge wrapper contract for cross-chain functionality
-    /// @dev Can only mint new tokens on non-mainnet chains
-    address public bridgeWrapper;
-
-    /// @notice Total supply of AMICA tokens (1 billion with 18 decimals)
-    uint256 public constant TOTAL_SUPPLY = 1_000_000_000 ether;
 
     /// @notice Precision multiplier for percentage calculations
     /// @dev Used to maintain precision when calculating token shares
@@ -120,17 +111,13 @@ contract AmicaToken is
      * @custom:requirement initialOwner must not be the zero address
      * @custom:requirement Can only be called once due to initializer modifier
      */
-    function initialize(address initialOwner) external initializer virtual {
+    function initialize(address initialOwner, uint256 initialSupply) external initializer virtual {
         __ERC20_init("Amica", "AMICA");
         __Ownable_init(initialOwner);
         __ReentrancyGuard_init();
         __Pausable_init();
 
-        // Only mint on Ethereum mainnet
-        // On other chains, supply starts at 0 and is minted via bridge wrapper
-        if (block.chainid == 1) {
-            _mint(address(this), TOTAL_SUPPLY);
-        }
+        _mint(initialOwner, initialSupply);
 
         _depositedTokens.push(address(0)); // Reserve index 0
     }
@@ -153,35 +140,6 @@ contract AmicaToken is
      */
     function unpause() external onlyOwner {
         _unpause();
-    }
-
-    /**
-     * @notice Sets or updates the bridge wrapper contract address
-     * @dev The bridge wrapper is the only address allowed to mint tokens on non-mainnet chains
-     * @param _bridgeWrapper Address of the bridge wrapper contract
-     * @custom:access Restricted to contract owner
-     * @custom:requirement _bridgeWrapper cannot be the zero address
-     * @custom:emits BridgeWrapperSet
-     */
-    function setBridgeWrapper(address _bridgeWrapper) external onlyOwner {
-        if (_bridgeWrapper == address(0)) revert InvalidWrapperAddress();
-        bridgeWrapper = _bridgeWrapper;
-        emit BridgeWrapperSet(_bridgeWrapper);
-    }
-
-    /**
-     * @notice Mints new AMICA tokens (only for cross-chain bridging)
-     * @dev Can only be called by the bridge wrapper on non-mainnet chains
-     * @param to Address to receive the minted tokens
-     * @param amount Amount of tokens to mint
-     * @custom:access Restricted to bridge wrapper address
-     * @custom:requirement Cannot be called on Ethereum mainnet (chain ID 1)
-     * @custom:requirement Contract must not be paused
-     */
-    function mint(address to, uint256 amount) external virtual whenNotPaused {
-        if (msg.sender != bridgeWrapper) revert OnlyBridgeWrapper();
-        if (block.chainid == 1) revert CannotMintOnMainnet();
-        _mint(to, amount);
     }
 
     /**
@@ -388,29 +346,5 @@ contract AmicaToken is
      */
     function transferFrom(address from, address to, uint256 amount) public virtual override whenNotPaused returns (bool) {
         return super.transferFrom(from, to, amount);
-    }
-
-    /**
-     * @notice Burns tokens from the caller's balance
-     * @dev Overrides ERC20Burnable burn to add pause functionality
-     * @param amount Amount of tokens to burn
-     * @custom:requirement Contract must not be paused
-     * @custom:requirement Caller must have sufficient balance
-     */
-    function burn(uint256 amount) public virtual override whenNotPaused {
-        super.burn(amount);
-    }
-
-    /**
-     * @notice Burns tokens from another address using allowance
-     * @dev Overrides ERC20Burnable burnFrom to add pause functionality
-     * @param account Address to burn tokens from
-     * @param amount Amount of tokens to burn
-     * @custom:requirement Contract must not be paused
-     * @custom:requirement Caller must have sufficient allowance from account
-     * @custom:requirement Account must have sufficient balance
-     */
-    function burnFrom(address account, uint256 amount) public virtual override whenNotPaused {
-        super.burnFrom(account, amount);
     }
 }

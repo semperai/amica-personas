@@ -1,15 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/proxy/Clones.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
-import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
-import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
+
+import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {ModifyLiquidityParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
+import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
+import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
+import {Currency, CurrencyLibrary} from "@uniswap/v4-core/src/types/Currency.sol";
+import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
+import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
+import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
+import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
 
 // ============================================================================
 // INTERFACES
@@ -24,8 +31,22 @@ interface IPersonaToken {
     function setGraduationStatus(bool status) external;
 }
 
+interface IAmicaFeeReductionHook {
+    function distributeFeesForNFT(uint256 nftTokenId) external;
+    function getAccumulatedFees(PoolId poolId) external view returns (uint256);
+    function registerPool(PoolId poolId, uint256 nftTokenId) external; // ADD THIS LINE
+}
+
+interface IUniswapV4Handler {
+    function initializePool(address token0, address token1, uint24 fee, uint160 initialPrice, uint256 nftTokenId)
+        external returns (PoolId poolId, PoolKey memory poolKey);
+    function getTickRangeForSingleSided(uint160 sqrtPriceX96, bool personaIsToken0)
+        external pure returns (int24 tickLower, int24 tickUpper);
+    function getAgentPoolInitialPrice(bool personaIsToken0) external pure returns (uint160);
+}
+
 // ============================================================================
-// CONSOLIDATED ERRORS (Optimization #2)
+// CONSOLIDATED ERRORS
 // ============================================================================
 
 /**
@@ -60,6 +81,8 @@ error NotAllowed(uint8 code);
  */
 contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
     using Strings for uint256;
+    using CurrencyLibrary for Currency;
+    using PoolIdLibrary for PoolKey;
 
     // ============================================================================
     // OPTIMIZED CONSTANTS (Optimization #8)
@@ -78,6 +101,13 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     /// @notice Number of blocks to wait before snapshot becomes active
     uint256 public constant SNAPSHOT_DELAY = 100;
 
+
+    /// @notice V4 tick spacing for standard pools
+    int24 private constant TICK_SPACING = 60;
+
+    /// @notice Initial price sqrt ratio for 1:1 pools
+    uint160 private constant SQRT_RATIO_1_1 = 79228162514264337593543950336;
+
     // ============================================================================
     // STRUCTS
     // ============================================================================
@@ -94,6 +124,8 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @param totalAgentDeposited Total amount of agent tokens deposited
      * @param minAgentTokens Minimum agent tokens required for graduation
      * @param metadata Key-value metadata storage
+     * @param poolId Uniswap V4 pool ID for persona/pairToken
+     * @param agentPoolId Uniswap V4 pool ID for persona/agentToken (if exists)
      */
     struct PersonaData {
         string name;
@@ -106,6 +138,8 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 totalAgentDeposited;
         uint256 minAgentTokens;
         mapping(string => string) metadata;
+        PoolId poolId;
+        PoolId agentPoolId;
     }
 
     /**
@@ -188,12 +222,15 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
     /// @notice AMICA token contract
     IERC20 public amicaToken;
-    
-    /// @notice Uniswap V2 factory contract
-    IUniswapV2Factory public uniswapFactory;
-    
-    /// @notice Uniswap V2 router contract
-    IUniswapV2Router02 public uniswapRouter;
+
+    /// @notice Uniswap V4 PoolManager contract
+    IPoolManager public poolManager;
+
+    /// @notice Uniswap V4 pool manager contract
+    IUniswapV4Handler public uniswapHandler;
+
+    /// @notice Address of the AMICA fee reduction hook
+    address public amicaFeeReductionHook;
     
     /// @notice Implementation contract for persona ERC20 tokens
     address public erc20Implementation;
@@ -283,14 +320,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     event TokensSold(uint256 indexed tokenId, address indexed seller, uint256 tokensSold, uint256 amountReceived);
 
     /**
-     * @notice Emitted when Uniswap pair is created (graduation)
-     * @param tokenId Persona token ID
-     * @param pair Address of the Uniswap pair
-     * @param liquidity Amount of LP tokens created
-     */
-    event LiquidityPairCreated(uint256 indexed tokenId, address indexed pair, uint256 liquidity);
-
-    /**
      * @notice Emitted when trading fee configuration is updated
      * @param feePercentage New fee percentage
      * @param creatorShare New creator share percentage
@@ -370,6 +399,32 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      */
     event StakingRewardsSet(address indexed stakingRewards);
 
+    /**
+     * @notice Emitted when V4 pool is created for a persona
+     * @param tokenId Persona token ID
+     * @param poolId V4 pool ID
+     * @param liquidity Initial liquidity amount
+     */
+    event V4PoolCreated(
+        uint256 indexed tokenId,
+        PoolId indexed poolId,
+        uint256 liquidity
+    );
+
+    /**
+     * @notice Emitted when V4 agent pool is created for a persona
+     * @param tokenId Persona token ID
+     * @param agentPoolId V4 agent pool ID
+     * @param personaTokenAmount Amount of persona tokens provided
+     * @param initialPrice Initial price ratio (sqrtPriceX96)
+     */
+    event V4AgentPoolCreated(
+        uint256 indexed tokenId,
+        PoolId indexed agentPoolId,
+        uint256 personaTokenAmount,
+        uint160 initialPrice
+    );
+
     // ============================================================================
     // INITIALIZATION
     // ============================================================================
@@ -382,14 +437,14 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     /**
      * @notice Initializes the factory contract
      * @param amicaToken_ Address of AMICA token
-     * @param uniswapFactory_ Address of Uniswap V2 factory
-     * @param uniswapRouter_ Address of Uniswap V2 router
+     * @param poolManager_ Address of Uniswap V4 PoolManager
+     * @param uniswapHandler_ Address of Uniswap V4 handler
      * @param erc20Implementation_ Address of persona token implementation
      */
     function initialize(
         address amicaToken_,
-        address uniswapFactory_,
-        address uniswapRouter_,
+        address poolManager_,
+        address uniswapHandler_,
         address erc20Implementation_
     ) public initializer {
         __ERC721_init("Amica Persona", "PERSONA");
@@ -399,14 +454,14 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
         if (
             amicaToken_ == address(0) ||
-            uniswapFactory_ == address(0) ||
-            uniswapRouter_ == address(0) ||
+            poolManager_ == address(0) ||
+            uniswapHandler_ == address(0) ||
             erc20Implementation_ == address(0)
         ) revert Invalid(0);
 
         amicaToken = IERC20(amicaToken_);
-        uniswapFactory = IUniswapV2Factory(uniswapFactory_);
-        uniswapRouter = IUniswapV2Router02(uniswapRouter_);
+        poolManager = IPoolManager(poolManager_);
+        uniswapHandler = IUniswapV4Handler(uniswapHandler_);
         erc20Implementation = erc20Implementation_;
 
         pairingConfigs[amicaToken_] = PairingConfig({
@@ -792,7 +847,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         emit TokensPurchased(tokenId, to, amountIn, amountOut);
 
         if (purchase.totalDeposited >= pairingConfigs[persona.pairToken].graduationThreshold) {
-            _createLiquidityPair(tokenId);
+            _createV4Pool(tokenId);
         }
     }
 
@@ -940,6 +995,10 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         emit SnapshotUpdated(msg.sender, currentBalance, block.number);
     }
 
+    // ============================================================================
+    // VIEW FUNCTIONS
+    // ============================================================================
+
     /**
      * @notice Calculates effective fee percentage for a user
      * @param user Address to check
@@ -966,10 +1025,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
         return (tradingFeeConfig.feePercentage * effectiveMultiplier) / BASIS_POINTS;
     }
-
-    // ============================================================================
-    // VIEW FUNCTIONS
-    // ============================================================================
 
     /**
      * @notice Returns metadata URI for a persona NFT
@@ -1123,11 +1178,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         emit TradingFeesCollected(tokenId, feeAmount, creatorFees, amicaFees);
     }
 
-    /**
-     * @notice Creates Uniswap liquidity pair (graduation)
-     * @param tokenId ID of the persona
-     */
-    function _createLiquidityPair(uint256 tokenId) private {
+    function _createV4Pool(uint256 tokenId) private {
         PersonaData storage persona = personas[tokenId];
         if (persona.pairCreated) revert NotAllowed(7);
 
@@ -1140,6 +1191,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
         TokenAmounts memory amounts = _getTokenAmounts(persona.agentToken != address(0));
 
+        // Send tokens to AMICA protocol
         IERC20(erc20Token).approve(address(amicaToken), amounts.amica);
         IAmicaToken(address(amicaToken)).deposit(erc20Token, amounts.amica);
 
@@ -1149,39 +1201,85 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         }
 
         uint256 pairingTokenForLiquidity = purchase.totalDeposited;
-
-        IERC20(erc20Token).approve(address(uniswapRouter), amounts.liquidity);
-        IERC20(persona.pairToken).approve(address(uniswapRouter), pairingTokenForLiquidity);
-
-        address pairAddress = uniswapFactory.getPair(erc20Token, persona.pairToken);
-        if (pairAddress == address(0)) {
-            uniswapFactory.createPair(erc20Token, persona.pairToken);
-            pairAddress = uniswapFactory.getPair(erc20Token, persona.pairToken);
+        uint256 personaTokensForMainPool = amounts.liquidity;
+        uint256 personaTokensForAgentPool = 0;
+        
+        if (persona.agentToken != address(0)) {
+            personaTokensForMainPool = amounts.liquidity / 2;
+            personaTokensForAgentPool = amounts.liquidity - personaTokensForMainPool;
         }
 
-        uint256 minLiquidityAmount = (amounts.liquidity * 95) / 100;
-        uint256 minPairingTokenAmount = (pairingTokenForLiquidity * 95) / 100;
-
-        // create pair if it doesn't exist
-        if (uniswapFactory.getPair(erc20Token, persona.pairToken) == address(0)) {
-            uniswapFactory.createPair(erc20Token, persona.pairToken);
-        }
-
-        (, , uint256 liquidity) = uniswapRouter.addLiquidity(
+        // Initialize pool through handler (no token approvals needed for handler)
+        (PoolId poolId, PoolKey memory poolKey) = uniswapHandler.initializePool(
             erc20Token,
             persona.pairToken,
-            amounts.liquidity,
-            pairingTokenForLiquidity,
-            minLiquidityAmount,
-            minPairingTokenAmount,
-            address(this),
-            block.timestamp + 300
+            3000, // 0.3% fee
+            SQRT_RATIO_1_1, // 1:1 initial price
+            tokenId
         );
+        persona.poolId = poolId;
+
+        // Approve poolManager for liquidity (not handler)
+        IERC20(erc20Token).approve(address(poolManager), personaTokensForMainPool);
+        IERC20(persona.pairToken).approve(address(poolManager), pairingTokenForLiquidity);
+
+        bool zeroForOne = uint160(erc20Token) < uint160(persona.pairToken);
+        uint256 liquidityAmount = zeroForOne ? personaTokensForMainPool : pairingTokenForLiquidity;
+
+        ModifyLiquidityParams memory params = ModifyLiquidityParams({
+            tickLower: -887200,
+            tickUpper: 887200,
+            liquidityDelta: int256(liquidityAmount),
+            salt: bytes32(tokenId)
+        });
+
+        poolManager.modifyLiquidity(poolKey, params, abi.encode(tokenId));
+
+        // Create agent pool if needed
+        if (persona.agentToken != address(0) && personaTokensForAgentPool > 0) {
+            _createAgentPersonaPool(tokenId, personaTokensForAgentPool);
+        }
 
         persona.pairCreated = true;
         IPersonaToken(erc20Token).setGraduationStatus(true);
 
-        emit LiquidityPairCreated(tokenId, pairAddress, liquidity);
+        emit V4PoolCreated(tokenId, persona.poolId, personaTokensForMainPool);
+    }
+
+    function _createAgentPersonaPool(uint256 tokenId, uint256 personaTokenAmount) private {
+        PersonaData storage persona = personas[tokenId];
+        
+        bool personaIsToken0 = uint160(persona.erc20Token) < uint160(persona.agentToken);
+        uint160 initialPrice = uniswapHandler.getAgentPoolInitialPrice(personaIsToken0);
+        
+        // Initialize pool
+        (PoolId agentPoolId, PoolKey memory poolKey) = uniswapHandler.initializePool(
+            persona.erc20Token,
+            persona.agentToken,
+            10000, // 1% fee
+            initialPrice,
+            tokenId
+        );
+        persona.agentPoolId = agentPoolId;
+        
+        // Add liquidity directly to poolManager
+        IERC20(persona.erc20Token).approve(address(poolManager), personaTokenAmount);
+        
+        (int24 tickLower, int24 tickUpper) = uniswapHandler.getTickRangeForSingleSided(
+            initialPrice,
+            personaIsToken0
+        );
+        
+        ModifyLiquidityParams memory params = ModifyLiquidityParams({
+            tickLower: tickLower,
+            tickUpper: tickUpper,
+            liquidityDelta: int256(personaTokenAmount),
+            salt: bytes32(tokenId)
+        });
+        
+        poolManager.modifyLiquidity(poolKey, params, abi.encode(tokenId));
+        
+        emit V4AgentPoolCreated(tokenId, agentPoolId, personaTokenAmount, initialPrice);
     }
 
     /**

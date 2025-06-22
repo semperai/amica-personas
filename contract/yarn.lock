@@ -1997,6 +1997,16 @@
     "@uniswap/lib" "1.1.1"
     "@uniswap/v2-core" "1.0.0"
 
+"@uniswap/v4-core@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@uniswap/v4-core/-/v4-core-1.0.2.tgz#5b5701267eea25e84221f7697d971fb4f66169f6"
+  integrity sha512-X15Tm2wWd+USAzEExMbo+g9naA6QN6mPgWm0MzDwRNlOfaNlepfUpSyt9RSrUfEODspwbyWbcLg6t5nwc/e7lg==
+
+"@uniswap/v4-periphery@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@uniswap/v4-periphery/-/v4-periphery-1.0.2.tgz#7dc2dd96bcf588ce7c32ac1e54b6c2deaad08920"
+  integrity sha512-DgdfC+V2lF04YCCIA55Om+twhvvuk31K3ErbWquvdaqP5DynEGszcvADLrVdWNaVcGZkqhtMSxVnHnIylNAznw==
+
 "@vue/compiler-sfc@2.7.16":
   version "2.7.16"
   resolved "https://registry.yarnpkg.com/@vue/compiler-sfc/-/compiler-sfc-2.7.16.tgz#ff81711a0fac9c68683d8bb00b63f857de77dc83"

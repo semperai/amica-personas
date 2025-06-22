@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "./PersonaTokenFactory.sol";
+import {PersonaTokenFactory} from "./PersonaTokenFactory.sol";
+import {PoolId} from "@uniswap/v4-core/src/types/PoolId.sol";
 
 /**
  * @title PersonaFactoryViewer
@@ -36,35 +37,7 @@ contract PersonaFactoryViewer {
     // ============================================================================
     
     /**
-     * @notice Gets core persona information
-     * @param tokenId ID of the persona
-     * @return name Persona name
-     * @return symbol Persona token symbol
-     * @return erc20Token Address of persona's ERC20 token
-     * @return pairToken Address of pairing token
-     * @return pairCreated Whether Uniswap pair exists
-     * @return createdAt Creation timestamp
-     * @return minAgentTokens Minimum agent tokens for graduation
-     */
-    function getPersona(uint256 tokenId)
-        external
-        view
-        returns (
-            string memory name,
-            string memory symbol,
-            address erc20Token,
-            address pairToken,
-            bool pairCreated,
-            uint256 createdAt,
-            uint256 minAgentTokens
-        )
-    {
-        (name, symbol, erc20Token, pairToken, , pairCreated, createdAt, , minAgentTokens) = factory.personas(tokenId);
-        return (name, symbol, erc20Token, pairToken, pairCreated, createdAt, minAgentTokens);
-    }
-    
-    /**
-     * @notice Gets extended persona information including agent token data
+     * @notice Gets persona information
      * @param tokenId ID of the persona
      * @return name Persona name
      * @return symbol Persona token symbol
@@ -76,7 +49,7 @@ contract PersonaFactoryViewer {
      * @return totalAgentDeposited Total agent tokens deposited
      * @return minAgentTokens Minimum agent tokens for graduation
      */
-    function getPersonaExtended(uint256 tokenId)
+    function getPersona(uint256 tokenId)
         external
         view
         returns (
@@ -88,11 +61,13 @@ contract PersonaFactoryViewer {
             bool pairCreated,
             uint256 createdAt,
             uint256 totalAgentDeposited,
-            uint256 minAgentTokens
+            uint256 minAgentTokens,
+            PoolId poolId,
+            PoolId agentPoolId
         )
     {
-        (name, symbol, erc20Token, pairToken, agentToken, pairCreated, createdAt, totalAgentDeposited, minAgentTokens) = factory.personas(tokenId);
-        return (name, symbol, erc20Token, pairToken, agentToken, pairCreated, createdAt, totalAgentDeposited, minAgentTokens);
+        (name, symbol, erc20Token, pairToken, agentToken, pairCreated, createdAt, totalAgentDeposited, minAgentTokens, poolId, agentPoolId) = factory.personas(tokenId);
+        return (name, symbol, erc20Token, pairToken, agentToken, pairCreated, createdAt, totalAgentDeposited, minAgentTokens, poolId, agentPoolId);
     }
     
     /**
@@ -133,7 +108,7 @@ contract PersonaFactoryViewer {
         uint256 amicaAmount,
         uint256 agentRewardsAmount
     ) {
-        (, , , , address agentToken, , , , ) = factory.personas(tokenId);
+        (, , , , address agentToken, , , , , , ) = factory.personas(tokenId);
         
         if (agentToken != address(0)) {
             // With agent token: 1/3, 2/9, 2/9, 2/9
@@ -209,7 +184,7 @@ contract PersonaFactoryViewer {
         
         // Calculate output directly without using getAmountOut (which applies base fee)
         (uint256 totalDeposited, uint256 tokensSold) = factory.purchases(tokenId);
-        (, , , , address agentToken, , , , ) = factory.personas(tokenId);
+        (, , , , address agentToken, , , , , , ) = factory.personas(tokenId);
         
         // Get token distribution
         uint256 bondingAmount;
@@ -300,7 +275,7 @@ contract PersonaFactoryViewer {
         
         // Calculate output directly without using getAmountOut (which applies base fee)
         (uint256 totalDeposited, uint256 tokensSold) = factory.purchases(tokenId);
-        (, , , , address agentToken, , , , ) = factory.personas(tokenId);
+        (, , , , address agentToken, , , , , , ) = factory.personas(tokenId);
         
         // Get token distribution
         uint256 bondingAmount;
@@ -358,7 +333,7 @@ contract PersonaFactoryViewer {
      * @return reason Reason if not eligible
      */
     function canGraduate(uint256 tokenId) external view returns (bool eligible, string memory reason) {
-        (, , , address pairToken, address agentToken, bool pairCreated, , uint256 totalAgentDeposited, uint256 minAgentTokens) = factory.personas(tokenId);
+        (, , , address pairToken, address agentToken, bool pairCreated, , uint256 totalAgentDeposited, uint256 minAgentTokens, , ) = factory.personas(tokenId);
         
         if (pairCreated) {
             return (false, "Already graduated");
@@ -400,7 +375,7 @@ contract PersonaFactoryViewer {
             uint256 agentRequired
         )
     {
-        (, , , address pairToken, address agentToken, , , uint256 totalAgentDeposited, uint256 minAgentTokens) = factory.personas(tokenId);
+        (, , , address pairToken, address agentToken, , , uint256 totalAgentDeposited, uint256 minAgentTokens, , ) = factory.personas(tokenId);
         (currentDeposited, ) = factory.purchases(tokenId);
         (, , thresholdRequired) = factory.pairingConfigs(pairToken);
         
@@ -425,7 +400,7 @@ contract PersonaFactoryViewer {
         view
         returns (uint256 personaReward, uint256 agentAmount)
     {
-        (, , , , address agentToken, , , uint256 totalAgentDeposited, ) = factory.personas(tokenId);
+        (, , , , address agentToken, , , uint256 totalAgentDeposited, , , ) = factory.personas(tokenId);
         
         agentAmount = factory.agentDeposits(tokenId, user);
         
@@ -451,74 +426,6 @@ contract PersonaFactoryViewer {
     // ============================================================================
     // FEE INFORMATION
     // ============================================================================
-    
-    /**
-     * @notice Gets detailed fee information for a user
-     * @param user User address
-     * @return currentBalance Current AMICA balance
-     * @return snapshotBalance Active snapshot balance
-     * @return effectiveBalance Balance used for fee calculation
-     * @return snapshotBlock Block number of active snapshot
-     * @return isEligible Whether eligible for fee reduction
-     * @return blocksUntilEligible Blocks until eligibility
-     * @return baseFeePercentage Base fee percentage
-     * @return effectiveFeePercentage User's effective fee
-     * @return discountPercentage Discount percentage (0-10000)
-     */
-    function getUserFeeInfo(address user) external view returns (
-        uint256 currentBalance,
-        uint256 snapshotBalance,
-        uint256 effectiveBalance,
-        uint256 snapshotBlock,
-        bool isEligible,
-        uint256 blocksUntilEligible,
-        uint256 baseFeePercentage,
-        uint256 effectiveFeePercentage,
-        uint256 discountPercentage
-    ) {
-        IERC20 amicaToken = factory.amicaToken();
-        currentBalance = amicaToken.balanceOf(user);
-        effectiveBalance = factory.getEffectiveAmicaBalance(user);
-        
-        (uint256 currentBal, uint256 currentBlk, uint256 pendingBal, uint256 pendingBlk) = factory.userSnapshots(user);
-        
-        // Determine which snapshot is active/pending
-        if (pendingBlk > 0 && block.number >= pendingBlk + factory.SNAPSHOT_DELAY()) {
-            snapshotBalance = pendingBal;
-            snapshotBlock = pendingBlk;
-            isEligible = true;
-            blocksUntilEligible = 0;
-        } else if (currentBlk > 0 && block.number >= currentBlk + factory.SNAPSHOT_DELAY()) {
-            snapshotBalance = currentBal;
-            snapshotBlock = currentBlk;
-            isEligible = true;
-            blocksUntilEligible = 0;
-        } else if (pendingBlk > 0) {
-            snapshotBalance = pendingBal;
-            snapshotBlock = pendingBlk;
-            isEligible = false;
-            blocksUntilEligible = (pendingBlk + factory.SNAPSHOT_DELAY()) - block.number;
-        } else if (currentBlk > 0) {
-            snapshotBalance = currentBal;
-            snapshotBlock = currentBlk;
-            isEligible = false;
-            blocksUntilEligible = (currentBlk + factory.SNAPSHOT_DELAY()) - block.number;
-        } else {
-            snapshotBalance = 0;
-            snapshotBlock = 0;
-            isEligible = false;
-            blocksUntilEligible = factory.SNAPSHOT_DELAY();
-        }
-        
-        (baseFeePercentage, ) = factory.tradingFeeConfig();
-        effectiveFeePercentage = factory.getEffectiveFeePercentage(user);
-        
-        if (baseFeePercentage > 0) {
-            discountPercentage = ((baseFeePercentage - effectiveFeePercentage) * 10000) / baseFeePercentage;
-        } else {
-            discountPercentage = 0;
-        }
-    }
     
     /**
      * @notice Gets fee reduction configuration
@@ -581,7 +488,7 @@ contract PersonaFactoryViewer {
      */
     function calculateBuyPriceImpact(uint256 tokenId, uint256 amountIn) external view returns (uint256) {
         (uint256 totalDeposited, uint256 tokensSold) = factory.purchases(tokenId);
-        (, , , , address agentToken, , , , ) = factory.personas(tokenId);
+        (, , , , address agentToken, , , , , , ) = factory.personas(tokenId);
         
         uint256 bondingAmount = agentToken != address(0) ? 222_222_222 ether : 333_333_333 ether;
         
@@ -611,7 +518,7 @@ contract PersonaFactoryViewer {
      */
     function calculateSellPriceImpact(uint256 tokenId, uint256 amountIn) external view returns (uint256) {
         (uint256 totalDeposited, uint256 tokensSold) = factory.purchases(tokenId);
-        (, , , , address agentToken, , , , ) = factory.personas(tokenId);
+        (, , , , address agentToken, , , , , , ) = factory.personas(tokenId);
         
         uint256 bondingAmount = agentToken != address(0) ? 222_222_222 ether : 333_333_333 ether;
         
@@ -659,7 +566,7 @@ contract PersonaFactoryViewer {
         graduated = new bool[](length);
         
         for (uint256 i = 0; i < length; i++) {
-            (string memory name, , address erc20Token, , , bool pairCreated, , , ) = factory.personas(tokenIds[i]);
+            (string memory name, , address erc20Token, , , bool pairCreated, , , , ,  ) = factory.personas(tokenIds[i]);
             names[i] = name;
             erc20Tokens[i] = erc20Token;
             graduated[i] = pairCreated;
