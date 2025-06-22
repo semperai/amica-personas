@@ -1162,6 +1162,11 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 minLiquidityAmount = (amounts.liquidity * 95) / 100;
         uint256 minPairingTokenAmount = (pairingTokenForLiquidity * 95) / 100;
 
+        // create pair if it doesn't exist
+        if (uniswapFactory.getPair(erc20Token, persona.pairToken) == address(0)) {
+            uniswapFactory.createPair(erc20Token, persona.pairToken);
+        }
+
         (, , uint256 liquidity) = uniswapRouter.addLiquidity(
             erc20Token,
             persona.pairToken,
