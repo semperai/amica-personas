@@ -103,6 +103,7 @@ contract UniswapV4Manager is Ownable {
         return (poolId, poolKey);
     }
 
+    // TODO fix this
     /**
      * @notice Calculates tick range for single-sided liquidity
      * @param sqrtPriceX96 Current pool price
@@ -131,6 +132,7 @@ contract UniswapV4Manager is Ownable {
         return (tickLower, tickUpper);
     }
 
+    // TODO fix this
     /**
      * @notice Gets the initial sqrt price for agent pools (1:4 ratio)
      * @param personaIsToken0 Whether persona token is token0
