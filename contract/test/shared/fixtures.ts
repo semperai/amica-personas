@@ -175,8 +175,10 @@ export async function deployAmicaTokenWithTokensFixture(): Promise<AmicaTokenWit
 
 // Fixtures
 export async function deployUniswapV4Fixture(): Promise<UniswapV4Fixture> {
-    const PoolManager = await ethers.getContractFactory("@uniswap/v4-core/src/PoolManager.sol:PoolManager");
-    const poolManager = await PoolManager.deploy() as unknown as IPoolManager;
+    const initialOwner = (await ethers.getSigners())[0];
+
+    const PoolManager = await ethers.getContractFactory("PoolManager");
+    const poolManager = await PoolManager.deploy(initialOwner) as unknown as IPoolManager;
 
     return { poolManager };
 }
@@ -206,6 +208,7 @@ export async function deployPersonaTokenFactoryFixture(): Promise<PersonaTokenFa
 
     // Deploy fee reduction hook
     const AmicaFeeReductionHook = await ethers.getContractFactory("AmicaFeeReductionHook");
+    console.log('PoolManager address:', await poolManager.getAddress());
     const feeReductionHook = await AmicaFeeReductionHook.deploy(
         await poolManager.getAddress()
     );

@@ -76,5 +76,28 @@
         "upgrader": "0x8115F3DBb2DF930cC07b8D910C3bb06b5b9bf573"
       }
     ]
+  },
+  {
+    "chainId": 8453,
+    "chainName": "base",
+    "addresses": {
+      "amicaToken": "0x63aed0013bA2a651Fe81D5E4792C93a2403a0820",
+      "amicaTokenImpl": "0x5cd4D299Bde682A0567ADa566a5112B02d5A61e1",
+      "uniswapV4Manager": "0xB22eFdcffeb3eA308e51055D93b5d5bF317397b5",
+      "personaFactory": "0xE87C316913621F26a5a31400A981d52aE427c82e",
+      "personaFactoryImpl": "0x933da4B3BF403f91b19556aEE817BA9e72017818",
+      "personaFactoryViewer": "0xd439d36b580e89058BA9A2cE72A442bbccD677c2",
+      "proxyAdmin": "0x4F7C11f1eA93844dF607C2c7628396fb1004834C",
+      "erc20Implementation": "0xa3c4fD72f35f1969b204fa217a28c021e388214E"
+    },
+    "blockNumber": 31935907,
+    "timestamp": "2025-06-23T06:46:57.979Z",
+    "deployer": "0x8115F3DBb2DF930cC07b8D910C3bb06b5b9bf573",
+    "transactionHashes": {
+      "amicaToken": "0xfa4ad71aff5c96d189750da761d651e68bc7717cbba28d57979024f02686df31",
+      "erc20Implementation": "0xe3a4d3ecf5503202e94b17b55297dd9d812efc2593e82330ddeb5cf94f287cd8",
+      "personaFactory": "0x32ff3136e49c149157e985caf67c0512f97e8169a0a52cd1dd183f06077fdb82",
+      "personaFactoryViewer": "0x1ffd9921e80b570d24f7143d3a1a9dafd5150cc6cc89c4c01cd270b80adc0e74"
+    }
   }
 ]

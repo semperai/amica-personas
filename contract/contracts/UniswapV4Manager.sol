@@ -7,8 +7,10 @@ import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {Currency, CurrencyLibrary} from "@uniswap/v4-core/src/types/Currency.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
-import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
+import {IPositionManager} from "@uniswap/v4-periphery/src/interfaces/IPositionManager.sol";
+import {Actions} from "@uniswap/v4-periphery/src/libraries/Actions.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title UniswapV4Helper
@@ -25,6 +27,7 @@ contract UniswapV4Manager is Ownable {
 
     // Immutable addresses
     IPoolManager public immutable poolManager;
+    IPositionManager public immutable positionManager;
     address public immutable feeReductionHook;
     
     // Authorized factory
@@ -39,11 +42,26 @@ contract UniswapV4Manager is Ownable {
         _;
     }
 
-    constructor(address _poolManager, address _feeReductionHook) Ownable(msg.sender) {
-        if (_poolManager == address(0) || _feeReductionHook == address(0)) {
-            revert InvalidAddress();
-        }
+    event FeesCollected(
+        uint256 indexed nftTokenId,
+        PoolId poolId,
+        uint256 amount0,
+        uint256 amount1
+    );
+
+    constructor(
+        address _poolManager,
+        address _positionManager,
+        address _feeReductionHook
+    ) Ownable(msg.sender) {
+        if (
+            _poolManager == address(0) ||
+            _positionManager == address(0) ||
+            _feeReductionHook == address(0)
+        ) revert InvalidAddress();
+
         poolManager = IPoolManager(_poolManager);
+        positionManager = IPositionManager(_positionManager);
         feeReductionHook = _feeReductionHook;
     }
 
@@ -103,46 +121,54 @@ contract UniswapV4Manager is Ownable {
         return (poolId, poolKey);
     }
 
-    // TODO fix this
-    /**
-     * @notice Calculates tick range for single-sided liquidity
-     * @param sqrtPriceX96 Current pool price
-     * @param personaIsToken0 Whether persona token is token0
-     * @return tickLower Lower tick
-     * @return tickUpper Upper tick
-     */
-    function getTickRangeForSingleSided(
-        uint160 sqrtPriceX96,
-        bool personaIsToken0
-    ) external pure returns (int24 tickLower, int24 tickUpper) {
-        int24 currentTick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+    function collectFees(uint256 nftTokenId, address to) external returns (uint256 collectedFees) {
+        if (factory.ownerOf(nftTokenId) != msg.sender) revert Unauthorized();
+        (, , , , , , , , , PoolId poolId, PoolId agentPoolId) = factory.personas(nftTokenId);
+        if (poolId == PoolId.wrap(0)) revert Unauthorized();
+        if (to == address(0)) revert InvalidAddress();
 
-        if (personaIsToken0) {
-            tickLower = -887200;
-            tickUpper = currentTick - TICK_SPACING;
-        } else {
-            tickLower = currentTick + TICK_SPACING;
-            tickUpper = 887200;
-        }
+        uint256 balance0before = IERC20(poolKey.currency0).balanceOf(to);
+        uint256 balance1before = IERC20(poolKey.currency1).balanceOf(to);
+        
+        bytes memory actions = abi.encodePacked(
+            uint8(Actions.DECREASE_LIQUIDITY),
+            uint8(Actions.TAKE_PAIR)
+        );
+        bytes memory hookData = abi.encode();
 
-        // Round to tick spacing
-        tickLower = (tickLower / TICK_SPACING) * TICK_SPACING;
-        tickUpper = (tickUpper / TICK_SPACING) * TICK_SPACING;
+        bytes[] memory params = new bytes[](2);
 
-        return (tickLower, tickUpper);
-    }
+        // DECREASE_LIQUIDITY action
+        // poolId, liquidity, amount0min, amount1min, hookData
+        // to take only fees we set liquidity to 0
+        // there is no risk of front running so safe for minimums=0
+        params[0] = abi.encode(poolId, 0, 0, 0, hookData);
 
-    // TODO fix this
-    /**
-     * @notice Gets the initial sqrt price for agent pools (1:4 ratio)
-     * @param personaIsToken0 Whether persona token is token0
-     * @return sqrtPriceX96 The sqrt price
-     */
-    function getAgentPoolInitialPrice(bool personaIsToken0) external pure returns (uint160) {
-        if (personaIsToken0) {
-            return uint160(2 << 96); // 1 agent = 4 persona
-        } else {
-            return uint160(1 << 95); // 4 agent = 1 persona
-        }
+
+        // TAKE_PAIR action
+        // currency0, currency1, recipient
+        params[1] = abi.encode(
+            poolKey.currency0,
+            poolKey.currency1,
+            to
+        );
+
+        uint256 deadline = block.timestamp + 60; // 1 minute deadline
+        uint256 valueToPass = currency0.isAddressZero() ? amount0Max : 0;
+
+        positionManager.modifyLiquidities{value: valueToPass}(
+            abi.encode(actions, params),
+            deadline
+        );
+
+        uint256 balance0after = IERC20(poolKey.currency0).balanceOf(to);
+        uint256 balance1after = IERC20(poolKey.currency1).balanceOf(to);
+
+        emit FeesCollected(
+            nftTokenId,
+            poolId,
+            balance0after - balance0before,
+            balance1after - balance1before
+        );
     }
 }

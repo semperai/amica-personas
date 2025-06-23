@@ -13,6 +13,7 @@ const GAS_LIMIT_DEFAULT = 10_000_000;
 
 // from uniswap v4
 const POOL_MANAGER_ADDRESS = "0x498581fF718922c3f8e6A244956aF099B2652b2b";
+const POSITION_MANAGER_ADDRESS = "0x7c5f5a4bbd8fd63184577525326123b519429bdc";
 // from running:
 // forge script script/DeployAmicaHookMinedAddressScript.sol:DeployAmicaHookMinedAddressScript --rpc-url https://mainnet.base.org --chain 8453 --broadcast
 const AMICA_FEE_REDUCTION_HOOK_ADDRESS = "0xd458b59895590ac14aff613057261c60c3f74080";
@@ -43,6 +44,7 @@ async function deployContracts() {
   const UniswapV4Manager = await ethers.getContractFactory("UniswapV4Manager");
   const uniswapV4Manager = await UniswapV4Manager.deploy(
     POOL_MANAGER_ADDRESS,
+    POSITION_MANAGER_ADDRESS,
     AMICA_FEE_REDUCTION_HOOK_ADDRESS,
     {
       gasPrice: GAS_PRICE_DEFAULT,
