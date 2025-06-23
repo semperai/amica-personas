@@ -13,6 +13,7 @@ import {Currency, CurrencyLibrary} from "@uniswap/v4-core/src/types/Currency.sol
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import "hardhat/console.sol";
 
 /**
  * @title IPersonaTokenFactory
@@ -95,6 +96,7 @@ contract AmicaFeeReductionHook is BaseHook, Ownable {
     // ============================================================================
 
     constructor(IPoolManager _poolManager) BaseHook(_poolManager) Ownable(msg.sender) {
+        console.log("AmicaFeeReductionHook deployed with PoolManager:", address(_poolManager));
         if (address(_poolManager) == address(0)) revert InvalidPoolManager();
     }
 
