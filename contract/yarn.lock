@@ -1068,6 +1068,13 @@
     debug "^4.1.1"
     lodash.isequal "^4.5.0"
 
+"@nomicfoundation/hardhat-foundry@^1.1.4":
+  version "1.1.4"
+  resolved "https://registry.yarnpkg.com/@nomicfoundation/hardhat-foundry/-/hardhat-foundry-1.1.4.tgz#56b681ecb43410481ba37e9af37ca88689eaf187"
+  integrity sha512-jpKyOr8bYKJPCuxJIJGOJzzyQPLcLJYq+kLPx135dkgCXyHiFdbSaGA9AEwqsPf97wlwXkskXGn4a21XOkSOPg==
+  dependencies:
+    picocolors "^1.1.0"
+
 "@nomicfoundation/hardhat-network-helpers@^1.0.0":
   version "1.0.12"
   resolved "https://registry.yarnpkg.com/@nomicfoundation/hardhat-network-helpers/-/hardhat-network-helpers-1.0.12.tgz#2c0abec0c50b75f9d0d71776e49e3b5ef746d289"

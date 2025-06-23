@@ -1,6 +1,7 @@
 import { HardhatUserConfig } from "hardhat/config";
 import '@openzeppelin/hardhat-upgrades';
 import "@nomicfoundation/hardhat-toolbox";
+import "@nomicfoundation/hardhat-foundry";
 import "hardhat-contract-sizer";
 import "hardhat-docgen";
 import "./scripts/tasks";
