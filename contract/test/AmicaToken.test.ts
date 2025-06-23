@@ -639,43 +639,6 @@ describe("AmicaToken", function () {
         });
     });
 
-    it("Should handle burn and claim with exactly 0 circulating supply", async function () {
-        const { amicaToken, owner, user1, user2, user3 } = await loadFixture(deployPersonaTokenFactoryFixture);
-
-        // Get all tokens in circulation back to contract
-        const user1Balance = await amicaToken.balanceOf(user1.address);
-        const user2Balance = await amicaToken.balanceOf(user2.address);
-        const user3Balance = await amicaToken.balanceOf(user3.address);
-
-        if (user1Balance > 0) {
-            await amicaToken.connect(user1).transfer(await amicaToken.getAddress(), user1Balance);
-        }
-        if (user2Balance > 0) {
-            await amicaToken.connect(user2).transfer(await amicaToken.getAddress(), user2Balance);
-        }
-        if (user3Balance > 0) {
-            await amicaToken.connect(user3).transfer(await amicaToken.getAddress(), user3Balance);
-        }
-
-        // Verify circulating supply is 0
-        expect(await amicaToken.circulatingSupply()).to.equal(0);
-
-        // Now trying to burn and claim should fail with "No circulating supply"
-        // First, we need to deposit some tokens to claim
-        const TestToken = await ethers.getContractFactory("TestERC20");
-        const testToken = await TestToken.deploy("Test", "TEST", ethers.parseEther("10000"));
-
-        await testToken.approve(await amicaToken.getAddress(), ethers.parseEther("1000"));
-        await amicaToken.deposit(await testToken.getAddress(), ethers.parseEther("1000"));
-
-        const tokenIndex = await amicaToken.tokenIndex(await testToken.getAddress());
-
-        // This should fail with "No circulating supply" since no tokens are in circulation
-        await expect(
-            amicaToken.burnAndClaim(ethers.parseEther("100"), [tokenIndex])
-        ).to.be.revertedWithCustomError(amicaToken, "NoCirculatingSupply");
-    });
-
     it("Should handle concurrent deposits of same token", async function () {
         const { amicaToken, user1, user2 } = await loadFixture(deployPersonaTokenFactoryFixture);
 

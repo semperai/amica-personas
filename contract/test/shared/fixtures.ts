@@ -6,10 +6,9 @@ import {
     PersonaFactoryViewer,
     AmicaToken,
     ERC20Implementation,
-    MockUniswapV2Factory,
-    MockUniswapV2Router,
     TestERC20,
-    AmicaBridgeWrapper
+    UniswapV4Manager,
+    IPoolManager
 } from "../../typechain-types";
 
 // Constants
@@ -90,16 +89,16 @@ export async function deployViewer(factoryAddress: string): Promise<PersonaFacto
     return await PersonaFactoryViewer.deploy(factoryAddress) as PersonaFactoryViewer;
 }
 
-// Fixture interfaces
-export interface MocksFixture {
-    mockFactory: MockUniswapV2Factory;
-    mockRouter: MockUniswapV2Router;
+export interface UniswapV4Fixture {
+    poolManager: IPoolManager;
 }
 
-export interface PersonaTokenFactoryFixture extends MocksFixture {
+export interface PersonaTokenFactoryFixture {
     personaFactory: PersonaTokenFactory;
     viewer: PersonaFactoryViewer;
     amicaToken: AmicaToken;
+    poolManager: IPoolManager;
+    uniswapV4Manager: UniswapV4Manager;
     erc20Implementation: ERC20Implementation;
     owner: SignerWithAddress;
     user1: SignerWithAddress;
@@ -175,21 +174,18 @@ export async function deployAmicaTokenWithTokensFixture(): Promise<AmicaTokenWit
 }
 
 // Fixtures
-export async function deployMocksFixture(): Promise<MocksFixture> {
-    const MockUniswapV2Factory = await ethers.getContractFactory("MockUniswapV2Factory");
-    const mockFactory = await MockUniswapV2Factory.deploy();
+export async function deployUniswapV4Fixture(): Promise<UniswapV4Fixture> {
+    const PoolManager = await ethers.getContractFactory("@uniswap/v4-core/src/PoolManager.sol:PoolManager");
+    const poolManager = await PoolManager.deploy() as unknown as IPoolManager;
 
-    const MockUniswapV2Router = await ethers.getContractFactory("MockUniswapV2Router");
-    const mockRouter = await MockUniswapV2Router.deploy();
-
-    return { mockFactory, mockRouter };
+    return { poolManager };
 }
 
 export async function deployPersonaTokenFactoryFixture(): Promise<PersonaTokenFactoryFixture> {
     const [owner, user1, user2, user3] = await ethers.getSigners();
 
     // Deploy mocks
-    const { mockFactory, mockRouter } = await loadFixture(deployMocksFixture);
+    const { poolManager } = await loadFixture(deployUniswapV4Fixture);
 
     // Deploy AmicaToken using upgrades plugin
     const AmicaToken = await ethers.getContractFactory("AmicaToken");
@@ -199,20 +195,30 @@ export async function deployPersonaTokenFactoryFixture(): Promise<PersonaTokenFa
         { initializer: "initialize" }
     ) as unknown as AmicaToken;
 
-    // Deploy a mock bridged token
     const userAmount = ethers.parseEther("10000000");
 
     // Give owner bridged tokens
     await amicaToken.transfer(owner.address, ethers.parseEther("50000000"));
 
-    // Wrap bridged tokens to get native AMICA for each user
     for (const user of [user1, user2, user3]) {
         await amicaToken.transfer(user.address, userAmount);
     }
 
+    // Deploy fee reduction hook
+    const AmicaFeeReductionHook = await ethers.getContractFactory("AmicaFeeReductionHook");
+    const feeReductionHook = await AmicaFeeReductionHook.deploy(
+        await poolManager.getAddress()
+    );
+
     // Deploy ERC20Implementation
     const ERC20Implementation = await ethers.getContractFactory("ERC20Implementation");
     const erc20Implementation = await ERC20Implementation.deploy();
+
+    const UniswapV4Manager = await ethers.getContractFactory("UniswapV4Manager");
+    const uniswapV4Manager = await UniswapV4Manager.deploy(
+        await poolManager.getAddress(),
+        await feeReductionHook.getAddress()
+    );
 
     // Deploy PersonaTokenFactory using upgrades
     const PersonaTokenFactory = await ethers.getContractFactory("PersonaTokenFactory");
@@ -220,12 +226,15 @@ export async function deployPersonaTokenFactoryFixture(): Promise<PersonaTokenFa
         PersonaTokenFactory,
         [
             await amicaToken.getAddress(),
-            await mockFactory.getAddress(),
-            await mockRouter.getAddress(),
+            await poolManager.getAddress(),
+            await feeReductionHook.getAddress(),
             await erc20Implementation.getAddress()
         ],
         { initializer: "initialize" }
     ) as unknown as PersonaTokenFactory;
+
+    feeReductionHook.setPersonaFactory(await personaFactory.getAddress());
+    feeReductionHook.transferOwnership(await personaFactory.getAddress());
 
     // Deploy viewer contract
     const viewer = await deployViewer(await personaFactory.getAddress());
@@ -235,8 +244,9 @@ export async function deployPersonaTokenFactoryFixture(): Promise<PersonaTokenFa
         viewer,
         amicaToken,
         erc20Implementation,
-        mockFactory,
-        mockRouter,
+        poolManager,
+        uniswapV4Manager,
+        feeReductionHook,
         owner,
         user1,
         user2,

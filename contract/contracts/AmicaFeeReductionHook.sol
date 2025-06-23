@@ -39,6 +39,7 @@ contract AmicaFeeReductionHook is BaseHook, Ownable {
     // ============================================================================
     
     error InvalidFactory();
+    error InvalidPoolManager();
     error UnauthorizedPool();
     error InvalidFeeRecipient();
     error TransferFailed();
@@ -62,7 +63,7 @@ contract AmicaFeeReductionHook is BaseHook, Ownable {
     // ============================================================================
 
     /// @notice PersonaTokenFactory contract
-    IPersonaTokenFactory public immutable personaFactory;
+    IPersonaTokenFactory public personaFactory;
 
     /// @notice Mapping from pool ID to pool information
     mapping(PoolId => PoolInfo) public poolInfo;
@@ -93,12 +94,17 @@ contract AmicaFeeReductionHook is BaseHook, Ownable {
     // CONSTRUCTOR
     // ============================================================================
 
-    constructor(
-        IPoolManager _poolManager,
-        address _personaFactory
-    ) BaseHook(_poolManager) Ownable(msg.sender) {
-        if (_personaFactory == address(0)) revert InvalidFactory();
-        personaFactory = IPersonaTokenFactory(_personaFactory);
+    constructor(IPoolManager _poolManager) BaseHook(_poolManager) Ownable(msg.sender) {
+        if (address(_poolManager) == address(0)) revert InvalidPoolManager();
+    }
+
+    /// @notice Sets the PersonaTokenFactory address
+    /// @param _personaFactory The new PersonaTokenFactory address
+    /// @dev Can only be called by the contract owner
+    /// @dev Reverts if the address is zero
+    function setPersonaFactory(IPersonaTokenFactory _personaFactory) external onlyOwner {
+        if (address(_personaFactory) == address(0)) revert InvalidFactory();
+        personaFactory = _personaFactory;
     }
 
     // ============================================================================
@@ -158,7 +164,7 @@ contract AmicaFeeReductionHook is BaseHook, Ownable {
     function _beforeSwap(
         address sender,
         PoolKey calldata key,
-        SwapParams calldata params,
+        SwapParams calldata /*params*/,
         bytes calldata
     ) internal override returns (bytes4, BeforeSwapDelta, uint24) {
         PoolId poolId = key.toId();
