@@ -2,16 +2,13 @@
 pragma solidity ^0.8.28;
 
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
+import {LPFeeLibrary} from "@uniswap/v4-core/src/libraries/LPFeeLibrary.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {Currency, CurrencyLibrary} from "@uniswap/v4-core/src/types/Currency.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-
-interface IAmicaFeeReductionHook {
-    function registerPool(PoolId poolId, uint256 nftTokenId) external;
-}
 
 /**
  * @title UniswapV4Helper
@@ -92,7 +89,7 @@ contract UniswapV4Manager is Ownable {
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
-            fee: fee,
+            fee: LPFeeLibrary.DYNAMIC_FEE_FLAG,
             tickSpacing: TICK_SPACING,
             hooks: IHooks(feeReductionHook)
         });
@@ -102,7 +99,6 @@ contract UniswapV4Manager is Ownable {
         
         // Get pool ID and register with hook
         poolId = poolKey.toId();
-        IAmicaFeeReductionHook(feeReductionHook).registerPool(poolId, nftTokenId);
 
         return (poolId, poolKey);
     }
