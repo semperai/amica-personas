@@ -79,20 +79,19 @@ contract AmicaFeeReductionHook is BaseHook, Ownable {
             afterSwap: false,
             beforeDonate: false,
             afterDonate: false,
-            beforeSwapReturnDelta: true,
+            beforeSwapReturnDelta: false,
             afterSwapReturnDelta: false,
             afterAddLiquidityReturnDelta: false,
             afterRemoveLiquidityReturnDelta: false
         });
     }
 
-    /**
-     * @notice Called before a swap to calculate dynamic fees
-     * @dev Gets fee from PersonaTokenFactory based on user's AMICA holdings
-     */
+    /// @notice Called before a swap to calculate dynamic fees
+    /// @param sender The address initiating the swap
+    /// @dev Gets fee from PersonaTokenFactory based on user's AMICA holdings
     function _beforeSwap(
         address sender,
-        PoolKey calldata/*key*/,
+        PoolKey calldata,
         SwapParams calldata,
         bytes calldata
     ) internal override returns (bytes4, BeforeSwapDelta, uint24) {

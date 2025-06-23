@@ -10,8 +10,8 @@ import {AmicaFeeReductionHook} from "../contracts/AmicaFeeReductionHook.sol";
 
 // IMPORTANT
 // Replace with actual addresses
-address constant CREATE2_DEPLOYER = address(0x0);
-address constant POOLMANAGER = address(0x0);
+address constant CREATE2_DEPLOYER = address(0x4e59b44847b379578588920cA78FbF26c0B4956C);
+address constant POOLMANAGER = address(0x498581fF718922c3f8e6A244956aF099B2652b2b);
 
 /// @notice Mines the address and deploys the AmicaFeeReductionHook.sol Hook contract
 contract DeployAmicaHookMinedAddressScript is Script {
@@ -27,7 +27,7 @@ contract DeployAmicaHookMinedAddressScript is Script {
             HookMiner.find(CREATE2_DEPLOYER, flags, type(AmicaFeeReductionHook).creationCode, constructorArgs);
 
         // Deploy the hook using CREATE2
-        vm.broadcast();
+        vm.broadcast(vm.envUint("PRIVATE_KEY_HEX"));
         AmicaFeeReductionHook hook = new AmicaFeeReductionHook{salt: salt}(IPoolManager(POOLMANAGER));
         require(address(hook) == hookAddress, "DeployAmicaHookMinedAddressScript: hook address mismatch");
     }
