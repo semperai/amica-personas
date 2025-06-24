@@ -17,10 +17,10 @@ import "hardhat/console.sol";
 
 /**
  * @title IFeeReductionSystem
- * @notice Interface to get effective fee percentage
+ * @notice Interface to get dynamic fee for users
  */
 interface IFeeReductionSystem {
-    function getEffectiveFeePercentage(address user) external view returns (uint256);
+    function getFee(address user) external view returns (uint24);
 }
 
 /**
@@ -39,12 +39,6 @@ contract AmicaFeeReductionHook is BaseHook, Ownable {
 
     /// @notice FeeReductionSystem contract
     IFeeReductionSystem public feeReductionSystem;
-
-    /// @notice Fee divisor for Uniswap V4 (1,000,000 = 100%)
-    uint256 private constant FEE_DIVISOR = 1_000_000;
-
-    /// @notice Basis points to fee divisor conversion
-    uint256 private constant BASIS_TO_FEE_DIVISOR = 100;
 
     /// @notice Event emitted when the FeeReductionSystem is updated
     /// @param newFeeReductionSystem The new FeeReductionSystem address
@@ -95,16 +89,9 @@ contract AmicaFeeReductionHook is BaseHook, Ownable {
         SwapParams calldata,
         bytes calldata
     ) internal override returns (bytes4, BeforeSwapDelta, uint24) {
-        // Get effective fee fromFeeReductionSystem (in basis points)
-        uint256 feeInBasisPoints = feeReductionSystem.getEffectiveFeePercentage(sender);
-        
-        // Convert basis points to V4 fee format (per million)
-        uint24 dynamicFee = uint24(feeInBasisPoints * BASIS_TO_FEE_DIVISOR);
+        uint24 dynamicFee = feeReductionSystem.getFee(sender)
+            | LPFeeLibrary.OVERRIDE_FEE_FLAG;
 
-        // Ensure fee is within valid range
-        dynamicFee |= LPFeeLibrary.OVERRIDE_FEE_FLAG;
-        
-        // Return the selector, no delta, and the dynamic fee
         return (BaseHook.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, dynamicFee);
     }
 }

@@ -5,53 +5,59 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {PersonaTokenFactory} from "./PersonaTokenFactory.sol";
 
+/**
+ * @title UniswapFeeReductionSystem
+ * @notice Manages fee reduction for Uniswap V4 pools based on AMICA token holdings
+ * @dev Uses Uniswap V4's fee units (per million) throughout
+ */
 contract UniswapFeeReductionSystem is Ownable {
     /**
      * @notice Fee reduction based on AMICA holdings
      * @param minAmicaForReduction Minimum AMICA to qualify for reduction
      * @param maxAmicaForReduction AMICA amount for maximum reduction
-     * @param minReductionMultiplier Fee multiplier at minimum threshold
-     * @param maxReductionMultiplier Fee multiplier at maximum threshold
+     * @param baseFee Base fee without any reduction (per million)
+     * @param maxDiscountedFee Fee at maximum reduction (per million)
      */
     struct FeeReductionConfig {
         uint256 minAmicaForReduction;
         uint256 maxAmicaForReduction;
-        uint256 minReductionMultiplier;
-        uint256 maxReductionMultiplier;
+        uint24 baseFee;
+        uint24 maxDiscountedFee;
     }
 
     /**
      * @notice User's AMICA balance snapshot for fee reduction
-     * @param currentBalance Active snapshot balance
-     * @param currentBlock Block number of active snapshot
-     * @param pendingBalance Pending snapshot balance
-     * @param pendingBlock Block number of pending snapshot
+     * @param activeBalance Currently active balance for fee calculation
+     * @param activeBlock Block when active balance was set
+     * @param pendingBalance Balance waiting to become active
+     * @param pendingBlock Block when pending balance was set
      */
     struct UserSnapshot {
-        uint256 currentBalance;
-        uint256 currentBlock;
+        uint256 activeBalance;
+        uint256 activeBlock;
         uint256 pendingBalance;
         uint256 pendingBlock;
     }
 
-    /// @notice Custom errors for the contract
-    error NotAllowed(uint256 code);
-    error Invalid(uint256 code);
+    /// @notice Custom errors
+    error InvalidConfiguration();
+    error SnapshotTooEarly();
+    error BelowMinimumThreshold();
 
     /// @notice Number of blocks to wait before snapshot becomes active
     uint256 public constant SNAPSHOT_DELAY = 100;
 
-    /// @notice Trading fee percentage for uniswap pools
-    uint256 public constant TRADING_FEE_PERCENTAGE = 100; 
+    /// @notice Maximum fee value in Uniswap V4 (100%)
+    uint256 private constant MAX_FEE = 1_000_000;
 
-    /// @notice Basis points constant for percentage calculations
-    uint256 private constant BASIS_POINTS = 10000;
+    /// @notice Precision for calculations
+    uint256 private constant PRECISION = 1e18;
 
     /// @notice Amica token for fee reduction
-    IERC20 public amicaToken;
+    IERC20 public immutable amicaToken;
 
     /// @notice Reference to the main factory contract
-    PersonaTokenFactory public factory;
+    PersonaTokenFactory public immutable factory;
 
     /// @notice User snapshots for fee reduction
     mapping(address => UserSnapshot) public userSnapshots;
@@ -60,16 +66,15 @@ contract UniswapFeeReductionSystem is Ownable {
     FeeReductionConfig public feeReductionConfig;
 
     /// @dev Storage gap for upgradeable contracts
-    uint256[50] private __gap; // Reserved for future upgrades
-
+    uint256[50] private __gap;
 
     /**
      * @notice Emitted when user's AMICA snapshot is updated
      * @param user User address
-     * @param snapshotBalance Balance being snapshotted
+     * @param balance Balance being snapshotted
      * @param blockNumber Block number of snapshot
      */
-    event SnapshotUpdated(address indexed user, uint256 snapshotBalance, uint256 blockNumber);
+    event SnapshotUpdated(address indexed user, uint256 balance, uint256 blockNumber);
 
     /**
      * @notice Emitted when fee reduction configuration is updated
@@ -77,92 +82,85 @@ contract UniswapFeeReductionSystem is Ownable {
     event FeeReductionConfigUpdated(
         uint256 minAmicaForReduction,
         uint256 maxAmicaForReduction,
-        uint256 minReductionMultiplier,
-        uint256 maxReductionMultiplier
+        uint24 baseFee,
+        uint24 maxDiscountedFee
     );
 
-    constructor(IERC20 _amicaToken, PersonaTokenFactory _factory) Ownable(msg.sender) {
+    constructor(
+        IERC20 _amicaToken,
+        PersonaTokenFactory _factory
+    ) Ownable(msg.sender) {
         amicaToken = _amicaToken;
         factory = _factory;
 
         feeReductionConfig = FeeReductionConfig({
             minAmicaForReduction: 1000 ether,
             maxAmicaForReduction: 1_000_000 ether,
-            minReductionMultiplier: 9000,
-            maxReductionMultiplier: 0
+            baseFee: 10000, // 1%
+            maxDiscountedFee: 0 // 0%
         });
     }
 
     /**
-     * @notice Calculates effective fee percentage for a user
+     * @notice Gets the dynamic fee for a user based on their AMICA holdings
      * @param user Address to check
-     * @return Effective fee percentage in basis points
+     * @return fee The fee in Uniswap V4 format (per million)
      */
-    function getEffectiveFeePercentage(address user) public view returns (uint256) {
-        UserSnapshot memory snapshot = userSnapshots[user];
-
-        uint256 activeBalance;
-        uint256 activeBlock;
-
-        if (snapshot.pendingBlock > 0 && block.number >= snapshot.pendingBlock + SNAPSHOT_DELAY) {
-            activeBalance = snapshot.pendingBalance;
-            activeBlock = snapshot.pendingBlock;
-        } else if (snapshot.currentBlock > 0 && block.number >= snapshot.currentBlock + SNAPSHOT_DELAY) {
-            activeBalance = snapshot.currentBalance;
-            activeBlock = snapshot.currentBlock;
-        } else {
-            return 0;
-        }
-
-        uint256 realBalance = amicaToken.balanceOf(user);
-        uint256 effectiveBalance = realBalance < activeBalance ? realBalance : activeBalance;
-
+    function getFee(address user) external view returns (uint24) {
+        uint256 effectiveBalance = _getEffectiveBalance(user);
+        
+        // If below minimum threshold, return base fee
         if (effectiveBalance < feeReductionConfig.minAmicaForReduction) {
-            return TRADING_FEE_PERCENTAGE;
+            return feeReductionConfig.baseFee;
         }
 
+        // If at or above maximum threshold, return max discounted fee
         if (effectiveBalance >= feeReductionConfig.maxAmicaForReduction) {
-            return (TRADING_FEE_PERCENTAGE * feeReductionConfig.maxReductionMultiplier) / BASIS_POINTS;
+            return feeReductionConfig.maxDiscountedFee;
         }
 
+        // Calculate fee reduction using quadratic curve
         uint256 range = feeReductionConfig.maxAmicaForReduction - feeReductionConfig.minAmicaForReduction;
         uint256 userPosition = effectiveBalance - feeReductionConfig.minAmicaForReduction;
-        uint256 progress = (userPosition * 1e18) / range;
-        uint256 exponentialProgress = (progress * progress) / 1e18;
-        uint256 multiplierRange = feeReductionConfig.minReductionMultiplier - feeReductionConfig.maxReductionMultiplier;
-        uint256 reduction = (multiplierRange * exponentialProgress) / 1e18;
-        uint256 effectiveMultiplier = feeReductionConfig.minReductionMultiplier - reduction;
-
-        return (TRADING_FEE_PERCENTAGE * effectiveMultiplier) / BASIS_POINTS;
+        
+        // Calculate progress (0 to 1e18)
+        uint256 progress = (userPosition * PRECISION) / range;
+        
+        // Apply quadratic curve for smoother reduction
+        uint256 quadraticProgress = (progress * progress) / PRECISION;
+        
+        // Calculate fee interpolation
+        uint256 feeRange = uint256(feeReductionConfig.baseFee) - uint256(feeReductionConfig.maxDiscountedFee);
+        uint256 feeReduction = (feeRange * quadraticProgress) / PRECISION;
+        
+        return uint24(uint256(feeReductionConfig.baseFee) - feeReduction);
     }
 
     /**
      * @notice Updates user's AMICA balance snapshot for fee reduction
-     * @dev Should be called periodically by user to update their snapshot
      * @dev Snapshot becomes active after SNAPSHOT_DELAY blocks
      */
-    function updateAmicaSnapshot() external {
+    function updateSnapshot() external {
         uint256 currentBalance = amicaToken.balanceOf(msg.sender);
+        
+        // Clear snapshot if below minimum
         if (currentBalance < feeReductionConfig.minAmicaForReduction) {
-            // If below minimum, reset snapshot
-            userSnapshots[msg.sender] = UserSnapshot({
-                currentBalance: 0,
-                currentBlock: block.number,
-                pendingBalance: 0,
-                pendingBlock: 0
-            });
+            delete userSnapshots[msg.sender];
+            emit SnapshotUpdated(msg.sender, 0, block.number);
             return;
         }
 
         UserSnapshot storage snapshot = userSnapshots[msg.sender];
 
+        // Promote pending to active if delay has passed
         if (snapshot.pendingBlock > 0 && block.number >= snapshot.pendingBlock + SNAPSHOT_DELAY) {
-            snapshot.currentBalance = snapshot.pendingBalance;
-            snapshot.currentBlock = snapshot.pendingBlock;
+            snapshot.activeBalance = snapshot.pendingBalance;
+            snapshot.activeBlock = snapshot.pendingBlock;
             snapshot.pendingBalance = 0;
             snapshot.pendingBlock = 0;
         }
 
+        // Set new pending snapshot
         snapshot.pendingBalance = currentBalance;
         snapshot.pendingBlock = block.number;
 
@@ -170,36 +168,85 @@ contract UniswapFeeReductionSystem is Ownable {
     }
 
     /**
-     * @notice Configures fee reduction based on AMICA holdings
+     * @notice Configures fee reduction parameters
      * @param minAmicaForReduction Minimum AMICA for fee reduction
      * @param maxAmicaForReduction AMICA for maximum fee reduction
-     * @param minReductionMultiplier Fee multiplier at minimum (in basis points)
-     * @param maxReductionMultiplier Fee multiplier at maximum (in basis points)
+     * @param baseFee Fee without reduction (per million)
+     * @param maxDiscountedFee Fee at maximum reduction (per million)
      * @dev Only callable by owner
      */
     function configureFeeReduction(
         uint256 minAmicaForReduction,
         uint256 maxAmicaForReduction,
-        uint256 minReductionMultiplier,
-        uint256 maxReductionMultiplier
+        uint24 baseFee,
+        uint24 maxDiscountedFee
     ) external onlyOwner {
-        if (minAmicaForReduction >= maxAmicaForReduction) revert NotAllowed(10);
-        if (minReductionMultiplier > BASIS_POINTS) revert Invalid(9);
-        if (maxReductionMultiplier > minReductionMultiplier) revert Invalid(9);
+        if (minAmicaForReduction >= maxAmicaForReduction) revert InvalidConfiguration();
+        if (baseFee > MAX_FEE) revert InvalidConfiguration();
+        if (maxDiscountedFee > baseFee) revert InvalidConfiguration();
 
         feeReductionConfig = FeeReductionConfig({
             minAmicaForReduction: minAmicaForReduction,
             maxAmicaForReduction: maxAmicaForReduction,
-            minReductionMultiplier: minReductionMultiplier,
-            maxReductionMultiplier: maxReductionMultiplier
+            baseFee: baseFee,
+            maxDiscountedFee: maxDiscountedFee
         });
 
         emit FeeReductionConfigUpdated(
             minAmicaForReduction,
             maxAmicaForReduction,
-            minReductionMultiplier,
-            maxReductionMultiplier
+            baseFee,
+            maxDiscountedFee
         );
     }
 
+    /**
+     * @notice Gets the effective balance for fee calculation
+     * @param user Address to check
+     * @return effectiveBalance The balance used for fee calculation
+     */
+    function _getEffectiveBalance(address user) private view returns (uint256) {
+        UserSnapshot memory snapshot = userSnapshots[user];
+        
+        // Determine which balance is active
+        uint256 snapshotBalance;
+        if (snapshot.pendingBlock > 0 && block.number >= snapshot.pendingBlock + SNAPSHOT_DELAY) {
+            snapshotBalance = snapshot.pendingBalance;
+        } else if (snapshot.activeBlock > 0 && block.number >= snapshot.activeBlock + SNAPSHOT_DELAY) {
+            snapshotBalance = snapshot.activeBalance;
+        } else {
+            return 0; // No active snapshot
+        }
+
+        // Use minimum of snapshot and current balance (prevents gaming)
+        uint256 currentBalance = amicaToken.balanceOf(user);
+        return currentBalance < snapshotBalance ? currentBalance : snapshotBalance;
+    }
+
+    /**
+     * @notice View function to check when a user's snapshot will become active
+     * @param user Address to check
+     * @return blocksRemaining Blocks until snapshot is active (0 if already active)
+     */
+    function getBlocksUntilActive(address user) external view returns (uint256) {
+        UserSnapshot memory snapshot = userSnapshots[user];
+        
+        if (snapshot.pendingBlock > 0) {
+            uint256 activationBlock = snapshot.pendingBlock + SNAPSHOT_DELAY;
+            if (block.number < activationBlock) {
+                return activationBlock - block.number;
+            }
+        }
+        
+        return 0;
+    }
+
+    /**
+     * @notice View function to get user's current effective balance
+     * @param user Address to check
+     * @return balance The effective balance for fee calculation
+     */
+    function getEffectiveBalance(address user) external view returns (uint256) {
+        return _getEffectiveBalance(user);
+    }
 }
