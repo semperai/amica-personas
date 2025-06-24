@@ -183,7 +183,7 @@ contract PersonaFactoryViewer {
         amountInAfterFee = amountIn - feeAmount;
         
         // Calculate output directly without using getAmountOut (which applies base fee)
-        (uint256 totalDeposited, uint256 tokensSold) = factory.purchases(tokenId);
+        (, uint256 tokensSold) = factory.purchases(tokenId);
         (, , , , address agentToken, , , , , , ) = factory.personas(tokenId);
         
         // Get token distribution
@@ -274,7 +274,7 @@ contract PersonaFactoryViewer {
         uint256 amountInAfterFee = amountIn - feeAmount;
         
         // Calculate output directly without using getAmountOut (which applies base fee)
-        (uint256 totalDeposited, uint256 tokensSold) = factory.purchases(tokenId);
+        (, uint256 tokensSold) = factory.purchases(tokenId);
         (, , , , address agentToken, , , , , , ) = factory.personas(tokenId);
         
         // Get token distribution
@@ -360,7 +360,6 @@ contract PersonaFactoryViewer {
      * @param tokenId ID of the persona
      * @return currentDeposited Current pairing tokens deposited
      * @return thresholdRequired Threshold for graduation
-     * @return percentComplete Percentage complete (0-100)
      * @return currentAgentDeposited Current agent tokens deposited
      * @return agentRequired Required agent tokens
      */
@@ -370,16 +369,14 @@ contract PersonaFactoryViewer {
         returns (
             uint256 currentDeposited,
             uint256 thresholdRequired,
-            uint256 percentComplete,
             uint256 currentAgentDeposited,
             uint256 agentRequired
         )
     {
-        (, , , address pairToken, address agentToken, , , uint256 totalAgentDeposited, uint256 minAgentTokens, , ) = factory.personas(tokenId);
+        (, , , address pairToken, , , , uint256 totalAgentDeposited, uint256 minAgentTokens, , ) = factory.personas(tokenId);
         (currentDeposited, ) = factory.purchases(tokenId);
         (, , thresholdRequired) = factory.pairingConfigs(pairToken);
         
-        percentComplete = thresholdRequired > 0 ? (currentDeposited * 100) / thresholdRequired : 0;
         currentAgentDeposited = totalAgentDeposited;
         agentRequired = minAgentTokens;
     }
@@ -487,7 +484,7 @@ contract PersonaFactoryViewer {
      * @return priceImpactBasisPoints Price impact in basis points
      */
     function calculateBuyPriceImpact(uint256 tokenId, uint256 amountIn) external view returns (uint256) {
-        (uint256 totalDeposited, uint256 tokensSold) = factory.purchases(tokenId);
+        (, uint256 tokensSold) = factory.purchases(tokenId);
         (, , , , address agentToken, , , , , , ) = factory.personas(tokenId);
         
         uint256 bondingAmount = agentToken != address(0) ? 222_222_222 ether : 333_333_333 ether;
@@ -517,7 +514,7 @@ contract PersonaFactoryViewer {
      * @return priceImpactBasisPoints Price impact in basis points (negative)
      */
     function calculateSellPriceImpact(uint256 tokenId, uint256 amountIn) external view returns (uint256) {
-        (uint256 totalDeposited, uint256 tokensSold) = factory.purchases(tokenId);
+        (, uint256 tokensSold) = factory.purchases(tokenId);
         (, , , , address agentToken, , , , , , ) = factory.personas(tokenId);
         
         uint256 bondingAmount = agentToken != address(0) ? 222_222_222 ether : 333_333_333 ether;

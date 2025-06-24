@@ -19,3 +19,8 @@ node_modules
 
 # OS
 .DS_Store
+
+# Forge
+/cache_forge
+/broadcast
+/out

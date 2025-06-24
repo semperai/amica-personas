@@ -5,6 +5,7 @@ import "@nomicfoundation/hardhat-foundry";
 import "@nomiclabs/hardhat-solhint";
 import "hardhat-contract-sizer";
 import "hardhat-docgen";
+import "hardhat-gas-reporter";
 import "./scripts/tasks";
 import * as dotenv from "dotenv";
 

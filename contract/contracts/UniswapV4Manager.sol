@@ -79,7 +79,6 @@ contract UniswapV4Manager is Ownable {
      * @notice Initializes a pool and returns the pool key for liquidity operations
      * @param token0 First token address
      * @param token1 Second token address
-     * @param fee Fee tier
      * @param initialPrice Initial sqrt price (use SQRT_RATIO_1_1 for 1:1)
      * @param nftTokenId NFT token ID for hook registration
      * @return poolId The pool ID
@@ -88,7 +87,6 @@ contract UniswapV4Manager is Ownable {
     function initializePool(
         address token0,
         address token1,
-        uint24 fee,
         uint160 initialPrice,
         uint256 nftTokenId
     ) external onlyFactory returns (PoolId poolId, PoolKey memory poolKey) {
