@@ -16,10 +16,10 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import "hardhat/console.sol";
 
 /**
- * @title IPersonaTokenFactory
- * @notice Interface for PersonaTokenFactory to get effective fee percentage
+ * @title IFeeReductionSystem
+ * @notice Interface to get effective fee percentage
  */
-interface IPersonaTokenFactory {
+interface IFeeReductionSystem {
     function getEffectiveFeePercentage(address user) external view returns (uint256);
 }
 
@@ -27,18 +27,18 @@ interface IPersonaTokenFactory {
  * @title AmicaFeeReductionHook
  * @author Amica Protocol
  * @notice Uniswap V4 hook that provides fee reduction based on AMICA token holdings
- * @dev Uses PersonaTokenFactory for fee calculations
+ * @dev Uses FeeReductionSystem for fee calculations
  */
 contract AmicaFeeReductionHook is BaseHook, Ownable {
     using PoolIdLibrary for PoolKey;
     using CurrencyLibrary for Currency;
     using BeforeSwapDeltaLibrary for BeforeSwapDelta;
 
-    error InvalidFactory();
+    error InvalidFeeReductionSystem();
     error InvalidPoolManager();
 
-    /// @notice PersonaTokenFactory contract
-    IPersonaTokenFactory public personaFactory;
+    /// @notice FeeReductionSystem contract
+    IFeeReductionSystem public feeReductionSystem;
 
     /// @notice Fee divisor for Uniswap V4 (1,000,000 = 100%)
     uint256 private constant FEE_DIVISOR = 1_000_000;
@@ -46,23 +46,23 @@ contract AmicaFeeReductionHook is BaseHook, Ownable {
     /// @notice Basis points to fee divisor conversion
     uint256 private constant BASIS_TO_FEE_DIVISOR = 100;
 
-    /// @notice Event emitted when the PersonaTokenFactory is updated
-    /// @param newFactory The new PersonaTokenFactory address
-    event PersonaFactoryUpdated(IPersonaTokenFactory newFactory);
+    /// @notice Event emitted when the FeeReductionSystem is updated
+    /// @param newFeeReductionSystem The new FeeReductionSystem address
+    event FeeReductionSystemUpdated(IFeeReductionSystem newFeeReductionSystem);
 
     constructor(IPoolManager _poolManager) BaseHook(_poolManager) Ownable(msg.sender) {
         console.log("AmicaFeeReductionHook deployed with PoolManager:", address(_poolManager));
         if (address(_poolManager) == address(0)) revert InvalidPoolManager();
     }
 
-    /// @notice Sets the PersonaTokenFactory address
-    /// @param _personaFactory The new PersonaTokenFactory address
+    /// @notice Sets the FeeReductionSystem address
+    /// @param _feeReductionSystem The new FeeReductionSystem address
     /// @dev Can only be called by the contract owner
     /// @dev Reverts if the address is zero
-    function setPersonaFactory(IPersonaTokenFactory _personaFactory) external onlyOwner {
-        if (address(_personaFactory) == address(0)) revert InvalidFactory();
-        personaFactory = _personaFactory;
-        emit PersonaFactoryUpdated(_personaFactory);
+    function setFeeReductionSystem(IFeeReductionSystem _feeReductionSystem) external onlyOwner {
+        if (address(_feeReductionSystem) == address(0)) revert InvalidFeeReductionSystem();
+        feeReductionSystem = _feeReductionSystem;
+        emit FeeReductionSystemUpdated(_feeReductionSystem);
     }
 
     /// @notice Gets the hook permissions for this contract
@@ -88,15 +88,15 @@ contract AmicaFeeReductionHook is BaseHook, Ownable {
 
     /// @notice Called before a swap to calculate dynamic fees
     /// @param sender The address initiating the swap
-    /// @dev Gets fee from PersonaTokenFactory based on user's AMICA holdings
+    /// @dev Gets fee from FeeReductionSystem based on user's AMICA holdings
     function _beforeSwap(
         address sender,
         PoolKey calldata,
         SwapParams calldata,
         bytes calldata
     ) internal override returns (bytes4, BeforeSwapDelta, uint24) {
-        // Get effective fee from PersonaTokenFactory (in basis points)
-        uint256 feeInBasisPoints = personaFactory.getEffectiveFeePercentage(sender);
+        // Get effective fee fromFeeReductionSystem (in basis points)
+        uint256 feeInBasisPoints = feeReductionSystem.getEffectiveFeePercentage(sender);
         
         // Convert basis points to V4 fee format (per million)
         uint24 dynamicFee = uint24(feeInBasisPoints * BASIS_TO_FEE_DIVISOR);

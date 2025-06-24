@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-
 import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
@@ -11,12 +10,14 @@ import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {ModifyLiquidityParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
+import {LPFeeLibrary} from "@uniswap/v4-core/src/libraries/LPFeeLibrary.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {Currency, CurrencyLibrary} from "@uniswap/v4-core/src/types/Currency.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
-import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
+import {IPositionManager} from "@uniswap/v4-periphery/src/interfaces/IPositionManager.sol";
+import {Actions} from "@uniswap/v4-periphery/src/libraries/Actions.sol";
 
 // ============================================================================
 // INTERFACES
@@ -34,15 +35,7 @@ interface IPersonaToken {
 interface IAmicaFeeReductionHook {
     function distributeFeesForNFT(uint256 nftTokenId) external;
     function getAccumulatedFees(PoolId poolId) external view returns (uint256);
-    function registerPool(PoolId poolId, uint256 nftTokenId) external; // ADD THIS LINE
-}
-
-interface IUniswapV4Handler {
-    function initializePool(address token0, address token1, uint24 fee, uint160 initialPrice, uint256 nftTokenId)
-        external returns (PoolId poolId, PoolKey memory poolKey);
-    function getTickRangeForSingleSided(uint160 sqrtPriceX96, bool personaIsToken0)
-        external pure returns (int24 tickLower, int24 tickUpper);
-    function getAgentPoolInitialPrice(bool personaIsToken0) external pure returns (uint160);
+    function registerPool(PoolId poolId, uint256 nftTokenId) external;
 }
 
 // ============================================================================
@@ -51,7 +44,7 @@ interface IUniswapV4Handler {
 
 /**
  * @notice Consolidated error for invalid inputs
- * @param code Error code: 0=Token, 1=Amount, 2=Recipient, 3=Name, 4=Symbol, 5=Metadata, 6=Configuration, 7=Index, 8=Share, 9=Multiplier, 10=NonRegisteredDomain, 11=AlreadyRegisteredDomain
+ * @param code Error code: 0=Token, 1=Amount, 2=Recipient, 3=Name, 4=Symbol, 5=Metadata, 6=Configuration, 7=Index, 8=Share, 9=Multiplier, 10=NonRegisteredDomain, 11=AlreadyRegisteredDomain, 12=Address
  */
 error Invalid(uint8 code);
 
@@ -69,14 +62,14 @@ error Failed(uint8 code);
 
 /**
  * @notice Consolidated error for permission/state issues
- * @param code Error code: 0=NotOwner, 1=NotEnabled, 2=AlreadyGraduated, 3=NotGraduated, 4=TradingOnUniswap, 5=ExpiredDeadline, 6=NoAgentToken, 7=PairExists, 8=FeeTooHigh, 9=NoTokens, 10=FeeRange
+ * @param code Error code: 0=NotOwner, 1=NotEnabled, 2=AlreadyGraduated, 3=NotGraduated, 4=TradingOnUniswap, 5=ExpiredDeadline, 6=NoAgentToken, 7=PairExists, 8=FeeTooHigh, 9=NoTokens, 10=FeeRange, 11=Unauthorized
  */
 error NotAllowed(uint8 code);
 
 /**
  * @title PersonaTokenFactory
  * @author Amica Protocol
- * @notice Factory contract for creating and managing persona tokens with bonding curves
+ * @notice Factory contract for creating and managing persona tokens with bonding curves and Uniswap V4 integration
  * @dev Implements ERC721 for persona ownership, with each NFT controlling an ERC20 token
  */
 contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
@@ -95,20 +88,11 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     uint256 private constant THIRD_SUPPLY = 333_333_333 ether;
     uint256 private constant NINTH_SUPPLY = 222_222_222 ether;
     
-    /// @notice Basis points constant for percentage calculations
-    uint256 private constant BASIS_POINTS = 10000;
-    
-    /// @notice Number of blocks to wait before snapshot becomes active
-    uint256 public constant SNAPSHOT_DELAY = 100;
-
-    /// @notice Trading fee percentage for uniswap pools
-    uint256 public constant TRADING_FEE_PERCENTAGE = 100; 
-
     /// @notice V4 tick spacing for standard pools
-    int24 private constant TICK_SPACING = 60;
+    int24 public constant TICK_SPACING = 60;
 
     /// @notice Initial price sqrt ratio for 1:1 pools
-    uint160 private constant SQRT_RATIO_1_1 = 79228162514264337593543950336;
+    uint160 public constant SQRT_RATIO_1_1 = 79228162514264337593543950336;
 
     // ============================================================================
     // STRUCTS
@@ -146,7 +130,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     /**
      * @notice Configuration for pairing tokens
      * @param enabled Whether this token can be used for creating personas
-     * @param mintCost Cost in pairing tokens to mint a persona
+     * @param mintCost Cost to mint a persona with this token
      * @param graduationThreshold Amount needed to create Uniswap pair
      */
     struct PairingConfig {
@@ -163,34 +147,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     struct TokenPurchase {
         uint256 totalDeposited;
         uint256 tokensSold;
-    }
-
-    /**
-     * @notice Fee reduction based on AMICA holdings
-     * @param minAmicaForReduction Minimum AMICA to qualify for reduction
-     * @param maxAmicaForReduction AMICA amount for maximum reduction
-     * @param minReductionMultiplier Fee multiplier at minimum threshold
-     * @param maxReductionMultiplier Fee multiplier at maximum threshold
-     */
-    struct FeeReductionConfig {
-        uint256 minAmicaForReduction;
-        uint256 maxAmicaForReduction;
-        uint256 minReductionMultiplier;
-        uint256 maxReductionMultiplier;
-    }
-
-    /**
-     * @notice User's AMICA balance snapshot for fee reduction
-     * @param currentBalance Active snapshot balance
-     * @param currentBlock Block number of active snapshot
-     * @param pendingBalance Pending snapshot balance
-     * @param pendingBlock Block number of pending snapshot
-     */
-    struct UserSnapshot {
-        uint256 currentBalance;
-        uint256 currentBlock;
-        uint256 pendingBalance;
-        uint256 pendingBlock;
     }
 
     /**
@@ -217,11 +173,11 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     /// @notice Uniswap V4 PoolManager contract
     IPoolManager public poolManager;
 
-    /// @notice Uniswap V4 pool manager contract
-    IUniswapV4Handler public uniswapHandler;
+    /// @notice Uniswap V4 PositionManager contract (from UniswapV4Manager)
+    IPositionManager public positionManager;
 
-    /// @notice Address of the AMICA fee reduction hook
-    address public amicaFeeReductionHook;
+    /// @notice Address of the fee reduction hook (from UniswapV4Manager)
+    address public feeReductionHook;
     
     /// @notice Implementation contract for persona ERC20 tokens
     address public erc20Implementation;
@@ -250,15 +206,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     /// @notice Configuration for each pairing token
     mapping(address => PairingConfig) public pairingConfigs;
     
-    /// @notice Global fee reduction configuration
-    FeeReductionConfig public feeReductionConfig;
-    
-    /// @notice User snapshots for fee reduction
-    mapping(address => UserSnapshot) public userSnapshots;
-
-    /// @dev Storage gap for upgradeable contracts
-    uint256[50] private __gap;
-
     // ============================================================================
     // EVENTS
     // ============================================================================
@@ -313,24 +260,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @param amount Amount withdrawn
      */
     event TokensWithdrawn(uint256 indexed tokenId, address indexed user, uint256 amount);
-
-    /**
-     * @notice Emitted when fee reduction configuration is updated
-     */
-    event FeeReductionConfigUpdated(
-        uint256 minAmicaForReduction,
-        uint256 maxAmicaForReduction,
-        uint256 minReductionMultiplier,
-        uint256 maxReductionMultiplier
-    );
-
-    /**
-     * @notice Emitted when user's AMICA snapshot is updated
-     * @param user User address
-     * @param snapshotBalance Balance being snapshotted
-     * @param blockNumber Block number of snapshot
-     */
-    event SnapshotUpdated(address indexed user, uint256 snapshotBalance, uint256 blockNumber);
 
     /**
      * @notice Emitted when agent token is associated with persona
@@ -390,6 +319,20 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint160 initialPrice
     );
 
+    /**
+     * @notice Emitted when fees are collected (from UniswapV4Manager)
+     * @param nftTokenId NFT token ID
+     * @param poolId Pool ID
+     * @param amount0 Amount of token0 collected
+     * @param amount1 Amount of token1 collected
+     */
+    event FeesCollected(
+        uint256 indexed nftTokenId,
+        PoolId poolId,
+        uint256 amount0,
+        uint256 amount1
+    );
+
     // ============================================================================
     // INITIALIZATION
     // ============================================================================
@@ -403,13 +346,15 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @notice Initializes the factory contract
      * @param amicaToken_ Address of AMICA token
      * @param poolManager_ Address of Uniswap V4 PoolManager
-     * @param uniswapHandler_ Address of Uniswap V4 handler
+     * @param positionManager_ Address of Uniswap V4 PositionManager
+     * @param feeReductionHook_ Address of fee reduction hook
      * @param erc20Implementation_ Address of persona token implementation
      */
     function initialize(
         address amicaToken_,
         address poolManager_,
-        address uniswapHandler_,
+        address positionManager_,
+        address feeReductionHook_,
         address erc20Implementation_
     ) public initializer {
         __ERC721_init("Amica Persona", "PERSONA");
@@ -420,13 +365,15 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         if (
             amicaToken_ == address(0) ||
             poolManager_ == address(0) ||
-            uniswapHandler_ == address(0) ||
+            positionManager_ == address(0) ||
+            feeReductionHook_ == address(0) ||
             erc20Implementation_ == address(0)
-        ) revert Invalid(0);
+        ) revert Invalid(12);
 
         amicaToken = IERC20(amicaToken_);
         poolManager = IPoolManager(poolManager_);
-        uniswapHandler = IUniswapV4Handler(uniswapHandler_);
+        positionManager = IPositionManager(positionManager_);
+        feeReductionHook = feeReductionHook_;
         erc20Implementation = erc20Implementation_;
 
         pairingConfigs[amicaToken_] = PairingConfig({
@@ -435,12 +382,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             graduationThreshold: 1_000_000 ether
         });
 
-        feeReductionConfig = FeeReductionConfig({
-            minAmicaForReduction: 1000 ether,
-            maxAmicaForReduction: 1_000_000 ether,
-            minReductionMultiplier: 9000,
-            maxReductionMultiplier: 0
-        });
     }
 
     // ============================================================================
@@ -508,39 +449,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         });
 
         emit PairingConfigUpdated(token);
-    }
-
-    /**
-     * @notice Configures fee reduction based on AMICA holdings
-     * @param minAmicaForReduction Minimum AMICA for fee reduction
-     * @param maxAmicaForReduction AMICA for maximum fee reduction
-     * @param minReductionMultiplier Fee multiplier at minimum (in basis points)
-     * @param maxReductionMultiplier Fee multiplier at maximum (in basis points)
-     * @dev Only callable by owner
-     */
-    function configureFeeReduction(
-        uint256 minAmicaForReduction,
-        uint256 maxAmicaForReduction,
-        uint256 minReductionMultiplier,
-        uint256 maxReductionMultiplier
-    ) external onlyOwner {
-        if (minAmicaForReduction >= maxAmicaForReduction) revert NotAllowed(10);
-        if (minReductionMultiplier > BASIS_POINTS) revert Invalid(9);
-        if (maxReductionMultiplier > minReductionMultiplier) revert Invalid(9);
-
-        feeReductionConfig = FeeReductionConfig({
-            minAmicaForReduction: minAmicaForReduction,
-            maxAmicaForReduction: maxAmicaForReduction,
-            minReductionMultiplier: minReductionMultiplier,
-            maxReductionMultiplier: maxReductionMultiplier
-        });
-
-        emit FeeReductionConfigUpdated(
-            minAmicaForReduction,
-            maxAmicaForReduction,
-            minReductionMultiplier,
-            maxReductionMultiplier
-        );
     }
 
     // ============================================================================
@@ -842,6 +750,65 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     // ============================================================================
+    // FEE COLLECTION FUNCTION (from UniswapV4Manager)
+    // ============================================================================
+
+    /**
+     * @notice Collects accumulated fees from pools (integrated from UniswapV4Manager)
+     * @param nftTokenId NFT token ID
+     * @param to Address to receive the fees
+     * @return amount0 Amount of token0 collected
+     * @return amount1 Amount of token1 collected
+     */
+    function collectFees(uint256 nftTokenId, address to) external nonReentrant returns (uint256 amount0, uint256 amount1) {
+        if (ownerOf(nftTokenId) != msg.sender) revert NotAllowed(11);
+        
+        PersonaData storage persona = personas[nftTokenId];
+        if (PoolId.unwrap(persona.poolId) == bytes32(0)) revert NotAllowed(11);
+        if (to == address(0)) revert Invalid(12);
+
+        // Get pool key to determine currencies
+        PoolKey memory poolKey = _getPoolKey(persona);
+        
+        // Get balances before
+        uint256 balance0before = _getBalance(poolKey.currency0, to);
+        uint256 balance1before = _getBalance(poolKey.currency1, to);
+        
+        // Prepare actions for fee collection
+        bytes memory actions = abi.encodePacked(
+            uint8(Actions.DECREASE_LIQUIDITY),
+            uint8(Actions.TAKE_PAIR)
+        );
+
+        bytes[] memory params = new bytes[](2);
+
+        // DECREASE_LIQUIDITY with 0 liquidity to collect only fees
+        params[0] = abi.encode(persona.poolId, 0, 0, 0, "");
+
+        // TAKE_PAIR to withdraw collected fees
+        params[1] = abi.encode(
+            poolKey.currency0,
+            poolKey.currency1,
+            to
+        );
+
+        uint256 deadline = block.timestamp + 60; // 1 minute deadline
+        uint256 valueToPass = poolKey.currency0.isAddressZero() ? 0 : 0; // Handle native ETH if needed
+
+        // Execute fee collection through position manager
+        positionManager.modifyLiquidities{value: valueToPass}(
+            abi.encode(actions, params),
+            deadline
+        );
+
+        // Calculate collected amounts
+        amount0 = _getBalance(poolKey.currency0, to) - balance0before;
+        amount1 = _getBalance(poolKey.currency1, to) - balance1before;
+
+        emit FeesCollected(nftTokenId, persona.poolId, amount0, amount1);
+    }
+
+    // ============================================================================
     // METADATA FUNCTIONS
     // ============================================================================
 
@@ -893,85 +860,9 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     // FEE MANAGEMENT FUNCTIONS
     // ============================================================================
 
-    /**
-     * @notice Updates user's AMICA balance snapshot for fee reduction
-     * @dev Should be called periodically by user to update their snapshot
-     * @dev Snapshot becomes active after SNAPSHOT_DELAY blocks
-     */
-    function updateAmicaSnapshot() external {
-        uint256 currentBalance = amicaToken.balanceOf(msg.sender);
-        if (currentBalance < feeReductionConfig.minAmicaForReduction) {
-            // If below minimum, reset snapshot
-            userSnapshots[msg.sender] = UserSnapshot({
-                currentBalance: 0,
-                currentBlock: block.number,
-                pendingBalance: 0,
-                pendingBlock: 0
-            });
-            return;
-        }
-
-        UserSnapshot storage snapshot = userSnapshots[msg.sender];
-
-        if (snapshot.pendingBlock > 0 && block.number >= snapshot.pendingBlock + SNAPSHOT_DELAY) {
-            snapshot.currentBalance = snapshot.pendingBalance;
-            snapshot.currentBlock = snapshot.pendingBlock;
-            snapshot.pendingBalance = 0;
-            snapshot.pendingBlock = 0;
-        }
-
-        snapshot.pendingBalance = currentBalance;
-        snapshot.pendingBlock = block.number;
-
-        emit SnapshotUpdated(msg.sender, currentBalance, block.number);
-    }
-
     // ============================================================================
     // VIEW FUNCTIONS
     // ============================================================================
-
-    /**
-     * @notice Calculates effective fee percentage for a user
-     * @param user Address to check
-     * @return Effective fee percentage in basis points
-     */
-    function getEffectiveFeePercentage(address user) public view returns (uint256) {
-        UserSnapshot storage snapshot = userSnapshots[user];
-
-        uint256 activeBalance;
-        uint256 activeBlock;
-
-        if (snapshot.pendingBlock > 0 && block.number >= snapshot.pendingBlock + SNAPSHOT_DELAY) {
-            activeBalance = snapshot.pendingBalance;
-            activeBlock = snapshot.pendingBlock;
-        } else if (snapshot.currentBlock > 0 && block.number >= snapshot.currentBlock + SNAPSHOT_DELAY) {
-            activeBalance = snapshot.currentBalance;
-            activeBlock = snapshot.currentBlock;
-        } else {
-            return 0;
-        }
-
-        uint256 currentBalance = amicaToken.balanceOf(user);
-        uint256 effectiveBalance = currentBalance < activeBalance ? currentBalance : activeBalance;
-
-        if (effectiveBalance < feeReductionConfig.minAmicaForReduction) {
-            return TRADING_FEE_PERCENTAGE;
-        }
-
-        if (effectiveBalance >= feeReductionConfig.maxAmicaForReduction) {
-            return (TRADING_FEE_PERCENTAGE * feeReductionConfig.maxReductionMultiplier) / BASIS_POINTS;
-        }
-
-        uint256 range = feeReductionConfig.maxAmicaForReduction - feeReductionConfig.minAmicaForReduction;
-        uint256 userPosition = effectiveBalance - feeReductionConfig.minAmicaForReduction;
-        uint256 progress = (userPosition * 1e18) / range;
-        uint256 exponentialProgress = (progress * progress) / 1e18;
-        uint256 multiplierRange = feeReductionConfig.minReductionMultiplier - feeReductionConfig.maxReductionMultiplier;
-        uint256 reduction = (multiplierRange * exponentialProgress) / 1e18;
-        uint256 effectiveMultiplier = feeReductionConfig.minReductionMultiplier - reduction;
-
-        return (TRADING_FEE_PERCENTAGE * effectiveMultiplier) / BASIS_POINTS;
-    }
 
     /**
      * @notice Gets available tokens in bonding curve
@@ -986,36 +877,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 sold = purchases[tokenId].tokensSold;
         
         return sold >= amounts.bonding ? 0 : amounts.bonding - sold;
-    }
-
-    /**
-     * @notice Calculates output for buying tokens
-     * @param tokenId ID of the persona
-     * @param amountIn Amount of pairing tokens
-     * @return Expected persona tokens out (with base fee applied)
-     */
-    function getAmountOut(uint256 tokenId, uint256 amountIn) external view returns (uint256) {
-        TokenPurchase storage purchase = purchases[tokenId];
-        PersonaData storage persona = personas[tokenId];
-
-        TokenAmounts memory amounts = _getTokenAmounts(persona.agentToken != address(0));
-        
-        return _calculateAmountOut(amountIn, purchase.tokensSold, amounts.bonding);
-    }
-
-    /**
-     * @notice Calculates output for selling tokens
-     * @param tokenId ID of the persona
-     * @param amountIn Amount of persona tokens to sell
-     * @return Expected pairing tokens out (before fees)
-     */
-    function getAmountOutForSell(uint256 tokenId, uint256 amountIn) external view returns (uint256) {
-        TokenPurchase storage purchase = purchases[tokenId];
-        PersonaData storage persona = personas[tokenId];
-
-        TokenAmounts memory amounts = _getTokenAmounts(persona.agentToken != address(0));
-        
-        return _calculateAmountOutForSell(amountIn, purchase.tokensSold, amounts.bonding, purchase.totalDeposited);
     }
 
     // ============================================================================
@@ -1053,17 +914,19 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             personaTokensForAgentPool = amounts.liquidity - personaTokensForMainPool;
         }
 
-        // Initialize pool through handler (no token approvals needed for handler)
-        (PoolId poolId, PoolKey memory poolKey) = uniswapHandler.initializePool(
+        // Initialize pool using internal function
+        (PoolId poolId, PoolKey memory poolKey) = _initializePool(
             erc20Token,
             persona.pairToken,
-            3000, // 0.3% fee
-            SQRT_RATIO_1_1, // 1:1 initial price
+            SQRT_RATIO_1_1,
             tokenId
         );
         persona.poolId = poolId;
 
-        // Approve poolManager for liquidity (not handler)
+        // Register pool with fee reduction hook
+        IAmicaFeeReductionHook(feeReductionHook).registerPool(poolId, tokenId);
+
+        // Approve poolManager for liquidity
         IERC20(erc20Token).approve(address(poolManager), personaTokensForMainPool);
         IERC20(persona.pairToken).approve(address(poolManager), pairingTokenForLiquidity);
 
@@ -1094,22 +957,24 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         PersonaData storage persona = personas[tokenId];
         
         bool personaIsToken0 = uint160(persona.erc20Token) < uint160(persona.agentToken);
-        uint160 initialPrice = uniswapHandler.getAgentPoolInitialPrice(personaIsToken0);
+        uint160 initialPrice = _getAgentPoolInitialPrice(personaIsToken0);
         
         // Initialize pool
-        (PoolId agentPoolId, PoolKey memory poolKey) = uniswapHandler.initializePool(
+        (PoolId agentPoolId, PoolKey memory poolKey) = _initializePool(
             persona.erc20Token,
             persona.agentToken,
-            10000, // 1% fee
             initialPrice,
             tokenId
         );
         persona.agentPoolId = agentPoolId;
+
+        // Register pool with fee reduction hook
+        IAmicaFeeReductionHook(feeReductionHook).registerPool(agentPoolId, tokenId);
         
         // Add liquidity directly to poolManager
         IERC20(persona.erc20Token).approve(address(poolManager), personaTokenAmount);
         
-        (int24 tickLower, int24 tickUpper) = uniswapHandler.getTickRangeForSingleSided(
+        (int24 tickLower, int24 tickUpper) = _getTickRangeForSingleSided(
             initialPrice,
             personaIsToken0
         );
@@ -1124,6 +989,138 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         poolManager.modifyLiquidity(poolKey, params, abi.encode(tokenId));
         
         emit V4AgentPoolCreated(tokenId, agentPoolId, personaTokenAmount, initialPrice);
+    }
+
+    /**
+     * @notice Internal pool initialization (replaces UniswapV4Manager functionality)
+     * @param token0 First token address
+     * @param token1 Second token address
+     * @param initialPrice Initial sqrt price
+     * @param nftTokenId NFT token ID for hook registration
+     * @return poolId The pool ID
+     * @return poolKey The pool key needed for liquidity operations
+     */
+    function _initializePool(
+        address token0,
+        address token1,
+        uint160 initialPrice,
+        uint256 nftTokenId
+    ) private returns (PoolId poolId, PoolKey memory poolKey) {
+        // Sort tokens
+        Currency currency0;
+        Currency currency1;
+
+        if (uint160(token0) < uint160(token1)) {
+            currency0 = Currency.wrap(token0);
+            currency1 = Currency.wrap(token1);
+        } else {
+            currency0 = Currency.wrap(token1);
+            currency1 = Currency.wrap(token0);
+        }
+
+        // Create pool key with dynamic fee
+        poolKey = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            fee: LPFeeLibrary.DYNAMIC_FEE_FLAG,
+            tickSpacing: TICK_SPACING,
+            hooks: IHooks(feeReductionHook)
+        });
+
+        // Initialize pool
+        poolManager.initialize(poolKey, initialPrice);
+        
+        // Get pool ID
+        poolId = poolKey.toId();
+
+        return (poolId, poolKey);
+    }
+
+    /**
+     * @notice Helper to get pool key for a persona
+     * @param persona Persona data
+     * @return poolKey The pool key
+     */
+    function _getPoolKey(PersonaData storage persona) private view returns (PoolKey memory poolKey) {
+        Currency currency0;
+        Currency currency1;
+
+        if (uint160(persona.erc20Token) < uint160(persona.pairToken)) {
+            currency0 = Currency.wrap(persona.erc20Token);
+            currency1 = Currency.wrap(persona.pairToken);
+        } else {
+            currency0 = Currency.wrap(persona.pairToken);
+            currency1 = Currency.wrap(persona.erc20Token);
+        }
+
+        poolKey = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            fee: LPFeeLibrary.DYNAMIC_FEE_FLAG,
+            tickSpacing: TICK_SPACING,
+            hooks: IHooks(feeReductionHook)
+        });
+    }
+
+    /**
+     * @notice Helper to get token balance
+     * @param currency The currency to check
+     * @param account The account to check
+     * @return balance The balance
+     */
+    function _getBalance(Currency currency, address account) private view returns (uint256) {
+        if (currency.isAddressZero()) {
+            return account.balance;
+        } else {
+            return IERC20(Currency.unwrap(currency)).balanceOf(account);
+        }
+    }
+
+    /**
+     * @notice Get initial price for agent pool (from UniswapV4Handler logic)
+     * @param personaIsToken0 Whether persona token is token0
+     * @return initialPrice The initial sqrt price
+     */
+    function _getAgentPoolInitialPrice(bool personaIsToken0) private pure returns (uint160) {
+        // Price ratio of 10:1 (agent:persona)
+        if (personaIsToken0) {
+            // persona is token0, agent is token1
+            // Price = agent/persona = 10/1 = 10
+            // sqrtPrice = sqrt(10) * 2^96
+            return 250541478223274320632946051840; // sqrt(10) * 2^96
+        } else {
+            // agent is token0, persona is token1
+            // Price = persona/agent = 1/10 = 0.1
+            // sqrtPrice = sqrt(0.1) * 2^96
+            return 25054147822327432063294605184; // sqrt(0.1) * 2^96
+        }
+    }
+
+    /**
+     * @notice Get tick range for single-sided liquidity (from UniswapV4Handler logic)
+     * @param sqrtPriceX96 Current sqrt price
+     * @param personaIsToken0 Whether persona token is token0
+     * @return tickLower Lower tick
+     * @return tickUpper Upper tick
+     */
+    function _getTickRangeForSingleSided(
+        uint160 sqrtPriceX96,
+        bool personaIsToken0
+    ) private pure returns (int24 tickLower, int24 tickUpper) {
+        int24 currentTick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        
+        // Round to nearest tick spacing
+        currentTick = (currentTick / TICK_SPACING) * TICK_SPACING;
+        
+        if (personaIsToken0) {
+            // Provide liquidity above current price (persona token only)
+            tickLower = currentTick + TICK_SPACING;
+            tickUpper = 887200; // Max tick
+        } else {
+            // Provide liquidity below current price (persona token only)
+            tickLower = -887200; // Min tick
+            tickUpper = currentTick - TICK_SPACING;
+        }
     }
 
     /**
