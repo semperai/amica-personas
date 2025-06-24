@@ -91,7 +91,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @notice Core data for each persona
      * @param name Display name of the persona
      * @param symbol Token symbol for the persona
-     * @param erc20Token Address of the persona's ERC20 token
+     * @param token Address of the persona's ERC20 token
      * @param pairToken Address of the token paired for bonding/liquidity
      * @param agentToken Optional token for agent staking
      * @param pairCreated Whether Uniswap pair has been created (graduated)
@@ -105,7 +105,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     struct PersonaData {
         string name;
         string symbol;
-        address erc20Token;
+        address token;
         address pairToken;
         address agentToken;
         bool pairCreated;
@@ -169,7 +169,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     address public dynamicFeeHook;
     
     /// @notice Implementation contract for persona ERC20 tokens
-    address public erc20Implementation;
+    address public personaTokenImplementation;
     
     /// @dev Current token ID counter
     uint256 private _currentTokenId;
@@ -203,12 +203,12 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @notice Emitted when a new persona is created
      * @param tokenId NFT token ID of the persona
      * @param domain Domain of the persona
-     * @param erc20Token Address of the persona's ERC20 token
+     * @param token Address of the persona's ERC20 token
      */
     event PersonaCreated(
         uint256 indexed tokenId,
         bytes32 indexed domain,
-        address indexed erc20Token
+        address indexed token
     );
 
     /**
@@ -337,14 +337,14 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @param poolManager_ Address of Uniswap V4 PoolManager
      * @param positionManager_ Address of Uniswap V4 PositionManager
      * @param dynamicFeeHook_ Address of fee reduction hook
-     * @param erc20Implementation_ Address of persona token implementation
+     * @param personaTokenImplementation_ Address of persona token implementation
      */
     function initialize(
         address amicaToken_,
         address poolManager_,
         address positionManager_,
         address dynamicFeeHook_,
-        address erc20Implementation_
+        address personaTokenImplementation_
     ) public initializer {
         __ERC721_init("Amica Persona", "PERSONA");
         __Ownable_init(msg.sender);
@@ -356,14 +356,14 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             poolManager_ == address(0) ||
             positionManager_ == address(0) ||
             dynamicFeeHook_ == address(0) ||
-            erc20Implementation_ == address(0)
+            personaTokenImplementation_ == address(0)
         ) revert Invalid(12);
 
         amicaToken = IERC20(amicaToken_);
         poolManager = IPoolManager(poolManager_);
         positionManager = IPositionManager(positionManager_);
         dynamicFeeHook = dynamicFeeHook_;
-        erc20Implementation = erc20Implementation_;
+        personaTokenImplementation = personaTokenImplementation_;
 
         pairingConfigs[amicaToken_] = PairingConfig({
             enabled: true,
@@ -481,8 +481,8 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 tokenId = _currentTokenId++;
         _safeMint(msg.sender, tokenId);
 
-        address erc20Token = Clones.clone(erc20Implementation);
-        IPersonaToken(erc20Token).initialize(
+        address token = Clones.clone(personaTokenImplementation);
+        IPersonaToken(token).initialize(
             string.concat(name, ".amica"),
             string.concat(symbol, ".amica"),
             PERSONA_TOKEN_SUPPLY,
@@ -492,7 +492,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         PersonaData storage persona = personas[tokenId];
         persona.name = name;
         persona.symbol = symbol;
-        persona.erc20Token = erc20Token;
+        persona.token = token;
         persona.pairToken = pairingToken;
         persona.agentToken = agentToken;
         persona.createdAt = block.timestamp;
@@ -501,7 +501,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
          // Register domain
         domains[domain] = tokenId;
 
-        emit PersonaCreated(tokenId, domain, erc20Token);
+        emit PersonaCreated(tokenId, domain, token);
 
         if (agentToken != address(0)) {
             emit AgentTokenAssociated(tokenId, agentToken);
@@ -566,7 +566,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
         PersonaData storage persona = personas[tokenId];
         if (persona.pairCreated) revert NotAllowed(4);
-        if (persona.erc20Token == address(0)) revert Invalid(0);
+        if (persona.token == address(0)) revert Invalid(0);
 
         TokenPurchase storage purchase = purchases[tokenId];
 
@@ -615,7 +615,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
         PersonaData storage persona = personas[tokenId];
         if (persona.pairCreated) revert NotAllowed(4);
-        if (persona.erc20Token == address(0)) revert Invalid(0);
+        if (persona.token == address(0)) revert Invalid(0);
 
         TokenPurchase storage purchase = purchases[tokenId];
 
@@ -653,7 +653,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      */
     function withdrawTokens(uint256 tokenId) external nonReentrant whenNotPaused {
         PersonaData storage persona = personas[tokenId];
-        if (persona.erc20Token == address(0)) revert Invalid(0);
+        if (persona.token == address(0)) revert Invalid(0);
         
         // Can only withdraw after graduation
         if (!persona.pairCreated) revert NotAllowed(3); // 3 = NotGraduated
@@ -662,7 +662,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         if (totalToWithdraw == 0) revert NotAllowed(9);
         userPurchases[tokenId][msg.sender] = 0;
 
-        if (!IERC20(persona.erc20Token).transfer(msg.sender, totalToWithdraw)) revert Failed(0);
+        if (!IERC20(persona.token).transfer(msg.sender, totalToWithdraw)) revert Failed(0);
 
         emit TokensWithdrawn(tokenId, msg.sender, totalToWithdraw);
     }
@@ -732,7 +732,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         }
 
         if (personaReward > 0) {
-            if (!IERC20(persona.erc20Token).transfer(msg.sender, personaReward)) revert Failed(0);
+            if (!IERC20(persona.token).transfer(msg.sender, personaReward)) revert Failed(0);
         }
 
         emit AgentRewardsDistributed(tokenId, msg.sender, personaReward, userAgentAmount);
@@ -839,8 +839,8 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             persona.symbol,
             '","tokenId":"',
             tokenId.toString(),
-            '","erc20Token":"',
-            Strings.toHexString(uint160(persona.erc20Token), 20),
+            '","token":"',
+            Strings.toHexString(uint160(persona.token), 20),
             '"}'
         ));
     }
@@ -856,7 +856,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      */
     function getAvailableTokens(uint256 tokenId) public view returns (uint256) {
         PersonaData storage persona = personas[tokenId];
-        if (persona.pairCreated || persona.erc20Token == address(0)) return 0;
+        if (persona.pairCreated || persona.token == address(0)) return 0;
         
         TokenAmounts memory amounts = _getTokenAmounts(persona.agentToken != address(0));
         uint256 sold = purchases[tokenId].tokensSold;
@@ -877,13 +877,13 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         }
 
         TokenPurchase storage purchase = purchases[tokenId];
-        address erc20Token = persona.erc20Token;
+        address token = persona.token;
 
         TokenAmounts memory amounts = _getTokenAmounts(persona.agentToken != address(0));
 
         // Send tokens to AMICA protocol
-        IERC20(erc20Token).approve(address(amicaToken), amounts.amica);
-        IAmicaToken(address(amicaToken)).deposit(erc20Token, amounts.amica);
+        IERC20(token).approve(address(amicaToken), amounts.amica);
+        IAmicaToken(address(amicaToken)).deposit(token, amounts.amica);
 
         if (persona.agentToken != address(0) && persona.totalAgentDeposited > 0) {
             IERC20(persona.agentToken).approve(address(amicaToken), persona.totalAgentDeposited);
@@ -901,17 +901,17 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
         // Initialize pool using internal function
         (PoolId poolId, PoolKey memory poolKey) = _initializePool(
-            erc20Token,
+            token,
             persona.pairToken,
             SQRT_RATIO_1_1
         );
         persona.poolId = poolId;
 
         // Approve poolManager for liquidity
-        IERC20(erc20Token).approve(address(poolManager), personaTokensForMainPool);
+        IERC20(token).approve(address(poolManager), personaTokensForMainPool);
         IERC20(persona.pairToken).approve(address(poolManager), pairingTokenForLiquidity);
 
-        bool zeroForOne = uint160(erc20Token) < uint160(persona.pairToken);
+        bool zeroForOne = uint160(token) < uint160(persona.pairToken);
         uint256 liquidityAmount = zeroForOne ? personaTokensForMainPool : pairingTokenForLiquidity;
 
         ModifyLiquidityParams memory params = ModifyLiquidityParams({
@@ -936,19 +936,19 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     function _createAgentPersonaPool(uint256 tokenId, uint256 personaTokenAmount) private {
         PersonaData storage persona = personas[tokenId];
         
-        bool personaIsToken0 = uint160(persona.erc20Token) < uint160(persona.agentToken);
+        bool personaIsToken0 = uint160(persona.token) < uint160(persona.agentToken);
         uint160 initialPrice = _getAgentPoolInitialPrice(personaIsToken0);
         
         // Initialize pool
         (PoolId agentPoolId, PoolKey memory poolKey) = _initializePool(
-            persona.erc20Token,
+            persona.token,
             persona.agentToken,
             initialPrice
         );
         persona.agentPoolId = agentPoolId;
 
         // Add liquidity directly to poolManager
-        IERC20(persona.erc20Token).approve(address(poolManager), personaTokenAmount);
+        IERC20(persona.token).approve(address(poolManager), personaTokenAmount);
         
         (int24 tickLower, int24 tickUpper) = _getTickRangeForSingleSided(
             initialPrice,
@@ -1019,12 +1019,12 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         Currency currency0;
         Currency currency1;
 
-        if (uint160(persona.erc20Token) < uint160(persona.pairToken)) {
-            currency0 = Currency.wrap(persona.erc20Token);
+        if (uint160(persona.token) < uint160(persona.pairToken)) {
+            currency0 = Currency.wrap(persona.token);
             currency1 = Currency.wrap(persona.pairToken);
         } else {
             currency0 = Currency.wrap(persona.pairToken);
-            currency1 = Currency.wrap(persona.erc20Token);
+            currency1 = Currency.wrap(persona.token);
         }
 
         poolKey = PoolKey({
