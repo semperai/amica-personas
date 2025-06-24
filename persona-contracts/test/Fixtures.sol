@@ -3,7 +3,7 @@ pragma solidity ^0.8.26;
 
 import "forge-std/Test.sol";
 import {Deployers} from "v4-core/test/utils/Deployers.sol";
-import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
+import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {PersonaTokenFactory} from "../src/PersonaTokenFactory.sol";
 import {AmicaToken} from "../src/AmicaToken.sol";
 import {PersonaToken} from "../src/PersonaToken.sol";
@@ -92,9 +92,9 @@ abstract contract Fixtures is Test, Deployers, DeployPermit2 {
     
     function _deployCore() internal {
         // Deploy AmicaToken as upgradeable proxy
-        address amicaProxy = Upgrades.deployTransparentProxy(
-            "AmicaToken.sol",
-            factoryOwner,
+        address amicaImpl = address(new AmicaToken());
+        address amicaProxy = UnsafeUpgrades.deployUUPSProxy(
+            amicaImpl,
             abi.encodeCall(AmicaToken.initialize, (factoryOwner, AMICA_TOTAL_SUPPLY))
         );
         amicaToken = AmicaToken(amicaProxy);
@@ -148,9 +148,9 @@ abstract contract Fixtures is Test, Deployers, DeployPermit2 {
     
     function _deployFactory() internal {
         // Deploy PersonaTokenFactory as upgradeable proxy
-        address factoryProxy = Upgrades.deployTransparentProxy(
-            "PersonaTokenFactory.sol",
-            factoryOwner,
+        address factoryImpl = address(new PersonaTokenFactory());
+        address factoryProxy = UnsafeUpgrades.deployUUPSProxy(
+            factoryImpl,
             abi.encodeCall(
                 PersonaTokenFactory.initialize,
                 (
