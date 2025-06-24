@@ -11,6 +11,7 @@ import {IPositionManager} from "@uniswap/v4-periphery/src/interfaces/IPositionMa
 import {Actions} from "@uniswap/v4-periphery/src/libraries/Actions.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {PersonaTokenFactory} from "./PersonaTokenFactory.sol";
 
 /**
  * @title UniswapV4Helper
@@ -31,14 +32,14 @@ contract UniswapV4Manager is Ownable {
     address public immutable feeReductionHook;
     
     // Authorized factory
-    address public factory;
+    PersonaTokenFactory public factory;
 
     // Errors
     error Unauthorized();
     error InvalidAddress();
 
     modifier onlyFactory() {
-        if (msg.sender != factory) revert Unauthorized();
+        if (msg.sender != address(factory)) revert Unauthorized();
         _;
     }
 
@@ -71,7 +72,7 @@ contract UniswapV4Manager is Ownable {
      */
     function setFactory(address _factory) external onlyOwner {
         if (_factory == address(0)) revert InvalidAddress();
-        factory = _factory;
+        factory = PersonaTokenFactory(_factory);
     }
 
     /**
@@ -124,9 +125,10 @@ contract UniswapV4Manager is Ownable {
     function collectFees(uint256 nftTokenId, address to) external returns (uint256 collectedFees) {
         if (factory.ownerOf(nftTokenId) != msg.sender) revert Unauthorized();
         (, , , , , , , , , PoolId poolId, PoolId agentPoolId) = factory.personas(nftTokenId);
-        if (poolId == PoolId.wrap(0)) revert Unauthorized();
-        if (to == address(0)) revert InvalidAddress();
+        // if (poolId == PoolId.wrap(0)) revert Unauthorized();
+        // if (to == address(0)) revert InvalidAddress();
 
+        /*
         uint256 balance0before = IERC20(poolKey.currency0).balanceOf(to);
         uint256 balance1before = IERC20(poolKey.currency1).balanceOf(to);
         
@@ -170,5 +172,6 @@ contract UniswapV4Manager is Ownable {
             balance0after - balance0before,
             balance1after - balance1before
         );
+        */
     }
 }

@@ -12,14 +12,12 @@ Amica Protocol revolutionizes AI persona monetization by enabling creators to la
 
 ### Key Features
 
-- 🚀 **Multi-Chain Support**: Deploy seamlessly across Ethereum, Arbitrum, Optimism, Polygon, Base, Avalanche, and BSC
 - 🤖 **AI Persona Tokens**: Each persona is an NFT (ERC721) with an associated ERC20 token
 - 📈 **Bonding Curves**: Bancor-style automated price discovery with virtual reserves
 - 🔄 **Auto-Graduation**: Automatic Uniswap V2 pair creation at configurable threshold
 - 💰 **Fee Reduction**: AMICA holders enjoy trading fee discounts up to 100% based on snapshot balance
 - 🔥 **Burn Mechanism**: Burn AMICA to claim proportional share of deposited tokens
-- 🤝 **Agent Token Integration**: Optional pairing with approved agent tokens for enhanced rewards
-- 🌾 **Staking Rewards**: MasterChef-style staking for LP providers with boosted rewards for agent pools
+- 🤝 **Agent Token Integration**: Optional pairing with agent tokens for enhanced rewards
 
 ## 🏗️ Architecture
 
@@ -28,16 +26,8 @@ Amica Protocol revolutionizes AI persona monetization by enabling creators to la
 ```
 AmicaToken.sol               - Main AMICA token with burn-and-claim mechanism
 PersonaTokenFactory.sol      - Upgradeable factory for creating personas with bonding curves
-PersonaStakingFactory.sol    - Staking rewards contract for LP providers
 ERC20Implementation.sol      - Gas-efficient cloneable ERC20 template
-AmicaBridgeWrapper.sol       - Enables cross-chain AMICA conversion
 ```
-
-### Multi-Chain Infrastructure
-
-The protocol uses a hub-and-spoke model:
-- **Ethereum Mainnet**: Primary deployment with full AMICA supply (1B tokens)
-- **L2s/Alt Chains**: Bridge wrappers convert bridged AMICA to native tokens
 
 ## 💸 Tokenomics
 

@@ -84,7 +84,7 @@ contract PersonaFactoryViewer {
         string[] memory values = new string[](keys.length);
         
         for (uint256 i = 0; i < keys.length; i++) {
-            values[i] = factory.getMetadataValue(tokenId, keys[i]);
+            values[i] = factory.metadata(tokenId, keys[i]);
         }
         
         return values;

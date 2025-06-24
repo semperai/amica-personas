@@ -51,7 +51,7 @@ interface IUniswapV4Handler {
 
 /**
  * @notice Consolidated error for invalid inputs
- * @param code Error code: 0=Token, 1=Amount, 2=Recipient, 3=Name, 4=Symbol, 5=Metadata, 6=Configuration, 7=Index, 8=Share, 9=Multiplier
+ * @param code Error code: 0=Token, 1=Amount, 2=Recipient, 3=Name, 4=Symbol, 5=Metadata, 6=Configuration, 7=Index, 8=Share, 9=Multiplier, 10=NonRegisteredDomain, 11=AlreadyRegisteredDomain
  */
 error Invalid(uint8 code);
 
@@ -101,6 +101,8 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     /// @notice Number of blocks to wait before snapshot becomes active
     uint256 public constant SNAPSHOT_DELAY = 100;
 
+    /// @notice Trading fee percentage for uniswap pools
+    uint256 public constant TRADING_FEE_PERCENTAGE = 100; 
 
     /// @notice V4 tick spacing for standard pools
     int24 private constant TICK_SPACING = 60;
@@ -137,7 +139,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 createdAt;
         uint256 totalAgentDeposited;
         uint256 minAgentTokens;
-        mapping(string => string) metadata;
         PoolId poolId;
         PoolId agentPoolId;
     }
@@ -162,16 +163,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     struct TokenPurchase {
         uint256 totalDeposited;
         uint256 tokensSold;
-    }
-
-    /**
-     * @notice Trading fee configuration
-     * @param feePercentage Base fee in basis points (e.g., 100 = 1%)
-     * @param creatorShare Percentage of fees going to creator (in basis points)
-     */
-    struct TradingFeeConfig {
-        uint256 feePercentage;
-        uint256 creatorShare;
     }
 
     /**
@@ -207,7 +198,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @param liquidity Amount for Uniswap liquidity
      * @param bonding Amount available in bonding curve
      * @param amica Amount sent to AMICA protocol
-     * @param agentRewards Amount reserved for agent stakers
+     * @param agentRewards Amount reserved for agent buyers
      */
     struct TokenAmounts {
         uint256 liquidity;
@@ -240,6 +231,12 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     
     /// @notice Mapping from token ID to persona data
     mapping(uint256 => PersonaData) public personas;
+
+    /// @notice Mapping from token ID to metadata list
+    mapping(uint256 => mapping(string => string)) public metadata;
+
+    /// @notice So we can check if a domain is registered / unique
+    mapping(bytes32 => uint256) public domains;
     
     /// @notice Mapping from token ID to purchase state
     mapping(uint256 => TokenPurchase) public purchases;
@@ -250,14 +247,8 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     /// @notice Mapping from token ID to user address to agent tokens deposited
     mapping(uint256 => mapping(address => uint256)) public agentDeposits;
     
-    /// @notice Address receiving staking rewards
-    address public stakingRewards;
-    
     /// @notice Configuration for each pairing token
     mapping(address => PairingConfig) public pairingConfigs;
-    
-    /// @notice Global trading fee configuration
-    TradingFeeConfig public tradingFeeConfig;
     
     /// @notice Global fee reduction configuration
     FeeReductionConfig public feeReductionConfig;
@@ -275,17 +266,13 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     /**
      * @notice Emitted when a new persona is created
      * @param tokenId NFT token ID of the persona
-     * @param creator Address that created the persona
+     * @param domain Domain of the persona
      * @param erc20Token Address of the persona's ERC20 token
-     * @param name Name of the persona
-     * @param symbol Symbol of the persona token
      */
     event PersonaCreated(
         uint256 indexed tokenId,
-        address indexed creator,
-        address indexed erc20Token,
-        string name,
-        string symbol
+        bytes32 indexed domain,
+        address indexed erc20Token
     );
 
     /**
@@ -320,28 +307,12 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     event TokensSold(uint256 indexed tokenId, address indexed seller, uint256 tokensSold, uint256 amountReceived);
 
     /**
-     * @notice Emitted when trading fee configuration is updated
-     * @param feePercentage New fee percentage
-     * @param creatorShare New creator share percentage
-     */
-    event TradingFeeConfigUpdated(uint256 feePercentage, uint256 creatorShare);
-
-    /**
      * @notice Emitted when tokens are withdrawn
      * @param tokenId Persona token ID
      * @param user User address
      * @param amount Amount withdrawn
      */
     event TokensWithdrawn(uint256 indexed tokenId, address indexed user, uint256 amount);
-
-    /**
-     * @notice Emitted when trading fees are collected
-     * @param tokenId Persona token ID
-     * @param totalFees Total fees collected
-     * @param creatorFees Fees sent to creator
-     * @param amicaFees Fees kept by protocol
-     */
-    event TradingFeesCollected(uint256 indexed tokenId, uint256 totalFees, uint256 creatorFees, uint256 amicaFees);
 
     /**
      * @notice Emitted when fee reduction configuration is updated
@@ -392,12 +363,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @param agentShare Amount of agent tokens returned
      */
     event AgentRewardsDistributed(uint256 indexed tokenId, address indexed recipient, uint256 personaTokens, uint256 agentShare);
-
-    /**
-     * @notice Emitted when staking rewards address is set
-     * @param stakingRewards New staking rewards address
-     */
-    event StakingRewardsSet(address indexed stakingRewards);
 
     /**
      * @notice Emitted when V4 pool is created for a persona
@@ -470,11 +435,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             graduationThreshold: 1_000_000 ether
         });
 
-        tradingFeeConfig = TradingFeeConfig({
-            feePercentage: 100,
-            creatorShare: 5000
-        });
-
         feeReductionConfig = FeeReductionConfig({
             minAmicaForReduction: 1000 ether,
             maxAmicaForReduction: 1_000_000 ether,
@@ -536,46 +496,18 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     function configurePairingToken(
         address token,
         uint256 mintCost,
-        uint256 graduationThreshold
+        uint256 graduationThreshold,
+        bool enabled
     ) external onlyOwner {
         if (token == address(0)) revert Invalid(0);
 
         pairingConfigs[token] = PairingConfig({
-            enabled: true,
+            enabled: enabled,
             mintCost: mintCost,
             graduationThreshold: graduationThreshold
         });
 
         emit PairingConfigUpdated(token);
-    }
-
-    /**
-     * @notice Disables a pairing token
-     * @param token Address of the token to disable
-     * @dev Only callable by owner
-     */
-    function disablePairingToken(address token) external onlyOwner {
-        pairingConfigs[token].enabled = false;
-        emit PairingConfigUpdated(token);
-    }
-
-    /**
-     * @notice Configures trading fees
-     * @param feePercentage Fee percentage in basis points (max 10%)
-     * @param creatorShare Share of fees going to creator in basis points
-     * @dev Only callable by owner
-     */
-    function configureTradingFees(
-        uint256 feePercentage,
-        uint256 creatorShare
-    ) external onlyOwner {
-        if (feePercentage > 1000) revert NotAllowed(8);
-        if (creatorShare > BASIS_POINTS) revert Invalid(8);
-
-        tradingFeeConfig.feePercentage = feePercentage;
-        tradingFeeConfig.creatorShare = creatorShare;
-
-        emit TradingFeeConfigUpdated(feePercentage, creatorShare);
     }
 
     /**
@@ -611,16 +543,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         );
     }
 
-    /**
-     * @notice Sets the staking rewards contract address
-     * @param _stakingRewards Address of staking rewards contract
-     * @dev Only callable by owner
-     */
-    function setStakingRewards(address _stakingRewards) external onlyOwner {
-        stakingRewards = _stakingRewards;
-        emit StakingRewardsSet(_stakingRewards);
-    }
-
     // ============================================================================
     // CORE FUNCTIONS - PERSONA CREATION
     // ============================================================================
@@ -630,8 +552,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @param pairingToken Token to use for pairing/bonding
      * @param name Name of the persona (max 32 chars)
      * @param symbol Symbol of the persona token (max 10 chars)
-     * @param metadataKeys Array of metadata keys
-     * @param metadataValues Array of metadata values
      * @param initialBuyAmount Amount to spend on initial token purchase
      * @param agentToken Optional agent token for staking
      * @param minAgentTokens Minimum agent tokens required for graduation
@@ -641,8 +561,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         address pairingToken,
         string memory name,
         string memory symbol,
-        string[] memory metadataKeys,
-        string[] memory metadataValues,
+        bytes32 domain,
         uint256 initialBuyAmount,
         address agentToken,
         uint256 minAgentTokens
@@ -653,7 +572,10 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         if (!config.enabled) revert NotAllowed(1);
         if (bytes(name).length == 0 || bytes(name).length > 32) revert Invalid(3);
         if (bytes(symbol).length == 0 || bytes(symbol).length > 10) revert Invalid(4);
-        if (metadataKeys.length != metadataValues.length) revert Invalid(5);
+
+        if (domain == bytes32(0)) revert Invalid(10);
+        if (domains[domain] != 0) revert Invalid(11);
+
 
         uint256 totalPayment = config.mintCost + initialBuyAmount;
         if (IERC20(pairingToken).balanceOf(msg.sender) < totalPayment) revert Insufficient(0);
@@ -679,12 +601,10 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         persona.createdAt = block.timestamp;
         persona.minAgentTokens = minAgentTokens;
 
-        for (uint256 i = 0; i < metadataKeys.length; i++) {
-            persona.metadata[metadataKeys[i]] = metadataValues[i];
-            emit MetadataUpdated(tokenId, metadataKeys[i]);
-        }
+         // Register domain
+        domains[domain] = tokenId;
 
-        emit PersonaCreated(tokenId, msg.sender, erc20Token, name, symbol);
+        emit PersonaCreated(tokenId, domain, erc20Token);
 
         if (agentToken != address(0)) {
             emit AgentTokenAssociated(tokenId, agentToken);
@@ -757,8 +677,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 userBalance = userPurchases[tokenId][msg.sender];
         if (userBalance < amountIn) revert Insufficient(4);
 
-        _checkAndUpdateSnapshot(msg.sender);
-
         // Calculate output using bonding curve
         TokenAmounts memory amounts = _getTokenAmounts(persona.agentToken != address(0));
         amountOut = _calculateAmountOutForSell(
@@ -768,12 +686,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             purchase.totalDeposited
         );
 
-        // Apply fees
-        uint256 effectiveFeePercentage = getEffectiveFeePercentage(msg.sender);
-        uint256 feeAmount = (amountOut * effectiveFeePercentage) / BASIS_POINTS;
-        uint256 amountOutAfterFee = amountOut - feeAmount;
-
-        if (amountOutAfterFee < amountOutMin) revert Insufficient(1);
+        if (amountOut < amountOutMin) revert Insufficient(1);
 
         // Update state
         purchase.tokensSold -= amountIn;
@@ -781,16 +694,11 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         userPurchases[tokenId][msg.sender] -= amountIn;
 
         // Transfer pairing tokens to user
-        if (!IERC20(persona.pairToken).transfer(to, amountOutAfterFee)) revert Failed(0);
+        if (!IERC20(persona.pairToken).transfer(to, amountOut)) revert Failed(0);
 
-        // Distribute fees
-        if (feeAmount > 0) {
-            _distributeTradingFees(tokenId, feeAmount);
-        }
+        emit TokensSold(tokenId, msg.sender, amountIn, amountOut);
 
-        emit TokensSold(tokenId, msg.sender, amountIn, amountOutAfterFee);
-
-        return amountOutAfterFee;
+        return amountOut;
     }
 
     /**
@@ -814,16 +722,10 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
         TokenPurchase storage purchase = purchases[tokenId];
 
-        _checkAndUpdateSnapshot(msg.sender);
-
-        uint256 effectiveFeePercentage = getEffectiveFeePercentage(msg.sender);
-        uint256 feeAmount = (amountIn * effectiveFeePercentage) / BASIS_POINTS;
-        uint256 amountInAfterFee = amountIn - feeAmount;
-
         TokenAmounts memory amounts = _getTokenAmounts(persona.agentToken != address(0));
 
         amountOut = _calculateAmountOut(
-            amountInAfterFee,
+            amountIn,
             purchase.tokensSold,
             amounts.bonding
         );
@@ -835,11 +737,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             if (!IERC20(persona.pairToken).transferFrom(msg.sender, address(this), amountIn)) revert Failed(0);
         }
 
-        if (feeAmount > 0) {
-            _distributeTradingFees(tokenId, feeAmount);
-        }
-
-        purchase.totalDeposited += amountInAfterFee;
+        purchase.totalDeposited += amountIn;
         purchase.tokensSold += amountOut;
         userPurchases[tokenId][to] += amountOut;
 
@@ -963,9 +861,32 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         if (keys.length != values.length) revert Invalid(5);
 
         for (uint256 i = 0; i < keys.length; i++) {
-            personas[tokenId].metadata[keys[i]] = values[i];
+            metadata[tokenId][keys[i]] = values[i];
             emit MetadataUpdated(tokenId, keys[i]);
         }
+    }
+
+    /**
+     * @notice Returns metadata URI for a persona NFT
+     * @param tokenId ID of the persona
+     * @return JSON metadata URI
+     */
+    function tokenURI(uint256 tokenId) public view override returns (string memory) {
+        _requireOwned(tokenId);
+
+        PersonaData storage persona = personas[tokenId];
+
+        return string(abi.encodePacked(
+            'data:application/json;utf8,{"name":"',
+            persona.name,
+            '","symbol":"',
+            persona.symbol,
+            '","tokenId":"',
+            tokenId.toString(),
+            '","erc20Token":"',
+            Strings.toHexString(uint160(persona.erc20Token), 20),
+            '"}'
+        ));
     }
 
     // ============================================================================
@@ -974,11 +895,21 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
     /**
      * @notice Updates user's AMICA balance snapshot for fee reduction
+     * @dev Should be called periodically by user to update their snapshot
      * @dev Snapshot becomes active after SNAPSHOT_DELAY blocks
      */
     function updateAmicaSnapshot() external {
         uint256 currentBalance = amicaToken.balanceOf(msg.sender);
-        if (currentBalance < feeReductionConfig.minAmicaForReduction) revert Insufficient(4);
+        if (currentBalance < feeReductionConfig.minAmicaForReduction) {
+            // If below minimum, reset snapshot
+            userSnapshots[msg.sender] = UserSnapshot({
+                currentBalance: 0,
+                currentBlock: block.number,
+                pendingBalance: 0,
+                pendingBlock: 0
+            });
+            return;
+        }
 
         UserSnapshot storage snapshot = userSnapshots[msg.sender];
 
@@ -1005,14 +936,30 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @return Effective fee percentage in basis points
      */
     function getEffectiveFeePercentage(address user) public view returns (uint256) {
-        uint256 effectiveBalance = getEffectiveAmicaBalance(user);
+        UserSnapshot storage snapshot = userSnapshots[user];
+
+        uint256 activeBalance;
+        uint256 activeBlock;
+
+        if (snapshot.pendingBlock > 0 && block.number >= snapshot.pendingBlock + SNAPSHOT_DELAY) {
+            activeBalance = snapshot.pendingBalance;
+            activeBlock = snapshot.pendingBlock;
+        } else if (snapshot.currentBlock > 0 && block.number >= snapshot.currentBlock + SNAPSHOT_DELAY) {
+            activeBalance = snapshot.currentBalance;
+            activeBlock = snapshot.currentBlock;
+        } else {
+            return 0;
+        }
+
+        uint256 currentBalance = amicaToken.balanceOf(user);
+        uint256 effectiveBalance = currentBalance < activeBalance ? currentBalance : activeBalance;
 
         if (effectiveBalance < feeReductionConfig.minAmicaForReduction) {
-            return tradingFeeConfig.feePercentage;
+            return TRADING_FEE_PERCENTAGE;
         }
 
         if (effectiveBalance >= feeReductionConfig.maxAmicaForReduction) {
-            return (tradingFeeConfig.feePercentage * feeReductionConfig.maxReductionMultiplier) / BASIS_POINTS;
+            return (TRADING_FEE_PERCENTAGE * feeReductionConfig.maxReductionMultiplier) / BASIS_POINTS;
         }
 
         uint256 range = feeReductionConfig.maxAmicaForReduction - feeReductionConfig.minAmicaForReduction;
@@ -1023,40 +970,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 reduction = (multiplierRange * exponentialProgress) / 1e18;
         uint256 effectiveMultiplier = feeReductionConfig.minReductionMultiplier - reduction;
 
-        return (tradingFeeConfig.feePercentage * effectiveMultiplier) / BASIS_POINTS;
-    }
-
-    /**
-     * @notice Returns metadata URI for a persona NFT
-     * @param tokenId ID of the persona
-     * @return JSON metadata URI
-     */
-    function tokenURI(uint256 tokenId) public view override returns (string memory) {
-        _requireOwned(tokenId);
-
-        PersonaData storage persona = personas[tokenId];
-
-        return string(abi.encodePacked(
-            'data:application/json;utf8,{"name":"',
-            persona.name,
-            '","symbol":"',
-            persona.symbol,
-            '","tokenId":"',
-            tokenId.toString(),
-            '","erc20Token":"',
-            Strings.toHexString(uint160(persona.erc20Token), 20),
-            '"}'
-        ));
-    }
-
-    /**
-     * @notice Gets metadata value for a key
-     * @param tokenId ID of the persona
-     * @param key Metadata key
-     * @return Metadata value
-     */
-    function getMetadataValue(uint256 tokenId, string memory key) external view returns (string memory) {
-        return personas[tokenId].metadata[key];
+        return (TRADING_FEE_PERCENTAGE * effectiveMultiplier) / BASIS_POINTS;
     }
 
     /**
@@ -1075,31 +989,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Gets user's effective AMICA balance for fee calculation
-     * @param user User address
-     * @return Effective balance considering snapshot delay
-     */
-    function getEffectiveAmicaBalance(address user) public view returns (uint256) {
-        UserSnapshot storage snapshot = userSnapshots[user];
-
-        uint256 activeBalance;
-        uint256 activeBlock;
-
-        if (snapshot.pendingBlock > 0 && block.number >= snapshot.pendingBlock + SNAPSHOT_DELAY) {
-            activeBalance = snapshot.pendingBalance;
-            activeBlock = snapshot.pendingBlock;
-        } else if (snapshot.currentBlock > 0 && block.number >= snapshot.currentBlock + SNAPSHOT_DELAY) {
-            activeBalance = snapshot.currentBalance;
-            activeBlock = snapshot.currentBlock;
-        } else {
-            return 0;
-        }
-
-        uint256 currentBalance = amicaToken.balanceOf(user);
-        return currentBalance < activeBalance ? currentBalance : activeBalance;
-    }
-
-    /**
      * @notice Calculates output for buying tokens
      * @param tokenId ID of the persona
      * @param amountIn Amount of pairing tokens
@@ -1111,10 +1000,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
         TokenAmounts memory amounts = _getTokenAmounts(persona.agentToken != address(0));
         
-        uint256 feeAmount = (amountIn * tradingFeeConfig.feePercentage) / BASIS_POINTS;
-        uint256 amountInAfterFee = amountIn - feeAmount;
-
-        return _calculateAmountOut(amountInAfterFee, purchase.tokensSold, amounts.bonding);
+        return _calculateAmountOut(amountIn, purchase.tokensSold, amounts.bonding);
     }
 
     /**
@@ -1135,48 +1021,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     // ============================================================================
     // INTERNAL FUNCTIONS
     // ============================================================================
-
-    /**
-     * @notice Checks and updates user's AMICA snapshot
-     * @param user User address
-     */
-    function _checkAndUpdateSnapshot(address user) internal {
-        UserSnapshot storage snapshot = userSnapshots[user];
-
-        if (snapshot.pendingBlock > 0 && block.number >= snapshot.pendingBlock + SNAPSHOT_DELAY) {
-            snapshot.currentBalance = snapshot.pendingBalance;
-            snapshot.currentBlock = snapshot.pendingBlock;
-            snapshot.pendingBalance = 0;
-            snapshot.pendingBlock = 0;
-        }
-
-        if (snapshot.currentBlock == 0 && snapshot.pendingBlock == 0) {
-            uint256 balance = amicaToken.balanceOf(user);
-            if (balance >= feeReductionConfig.minAmicaForReduction) {
-                snapshot.pendingBalance = balance;
-                snapshot.pendingBlock = block.number;
-                emit SnapshotUpdated(user, balance, block.number);
-            }
-        }
-    }
-
-    /**
-     * @notice Distributes trading fees
-     * @param tokenId ID of the persona
-     * @param feeAmount Total fee amount to distribute
-     */
-    function _distributeTradingFees(uint256 tokenId, uint256 feeAmount) private {
-        PersonaData storage persona = personas[tokenId];
-
-        uint256 creatorFees = (feeAmount * tradingFeeConfig.creatorShare) / BASIS_POINTS;
-        uint256 amicaFees = feeAmount - creatorFees;
-
-        if (creatorFees > 0) {
-            IERC20(persona.pairToken).transfer(ownerOf(tokenId), creatorFees);
-        }
-
-        emit TradingFeesCollected(tokenId, feeAmount, creatorFees, amicaFees);
-    }
 
     function _createV4Pool(uint256 tokenId) private {
         PersonaData storage persona = personas[tokenId];
@@ -1308,8 +1152,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 newTokenReserve = k / newAmicaReserve;
         uint256 amountOut = currentTokenReserve - newTokenReserve;
 
-        amountOut = amountOut * 99 / 100;
-
         return amountOut;
     }
 
@@ -1343,9 +1185,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         uint256 newAmicaReserve = k / newTokenReserve;
         
         uint256 amountOut = currentAmicaReserve - newAmicaReserve;
-
-        // Apply 1% slippage protection
-        amountOut = amountOut * 99 / 100;
 
         // Ensure we don't exceed total deposited
         if (amountOut > totalDeposited) {
