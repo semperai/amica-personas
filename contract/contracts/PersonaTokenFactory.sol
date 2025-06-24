@@ -29,18 +29,7 @@ interface IAmicaToken {
 
 interface IPersonaToken {
     function initialize(string memory name, string memory symbol, uint256 supply, address owner) external;
-    function setGraduationStatus(bool status) external;
 }
-
-interface IAmicaFeeReductionHook {
-    function distributeFeesForNFT(uint256 nftTokenId) external;
-    function getAccumulatedFees(PoolId poolId) external view returns (uint256);
-    function registerPool(PoolId poolId, uint256 nftTokenId) external;
-}
-
-// ============================================================================
-// CONSOLIDATED ERRORS
-// ============================================================================
 
 /**
  * @notice Consolidated error for invalid inputs
@@ -173,11 +162,11 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     /// @notice Uniswap V4 PoolManager contract
     IPoolManager public poolManager;
 
-    /// @notice Uniswap V4 PositionManager contract (from UniswapV4Manager)
+    /// @notice Uniswap V4 PositionManager contract
     IPositionManager public positionManager;
 
-    /// @notice Address of the fee reduction hook (from UniswapV4Manager)
-    address public feeReductionHook;
+    /// @notice Address of the fee reduction hook
+    address public dynamicFeeHook;
     
     /// @notice Implementation contract for persona ERC20 tokens
     address public erc20Implementation;
@@ -347,14 +336,14 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @param amicaToken_ Address of AMICA token
      * @param poolManager_ Address of Uniswap V4 PoolManager
      * @param positionManager_ Address of Uniswap V4 PositionManager
-     * @param feeReductionHook_ Address of fee reduction hook
+     * @param dynamicFeeHook_ Address of fee reduction hook
      * @param erc20Implementation_ Address of persona token implementation
      */
     function initialize(
         address amicaToken_,
         address poolManager_,
         address positionManager_,
-        address feeReductionHook_,
+        address dynamicFeeHook_,
         address erc20Implementation_
     ) public initializer {
         __ERC721_init("Amica Persona", "PERSONA");
@@ -366,14 +355,14 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             amicaToken_ == address(0) ||
             poolManager_ == address(0) ||
             positionManager_ == address(0) ||
-            feeReductionHook_ == address(0) ||
+            dynamicFeeHook_ == address(0) ||
             erc20Implementation_ == address(0)
         ) revert Invalid(12);
 
         amicaToken = IERC20(amicaToken_);
         poolManager = IPoolManager(poolManager_);
         positionManager = IPositionManager(positionManager_);
-        feeReductionHook = feeReductionHook_;
+        dynamicFeeHook = dynamicFeeHook_;
         erc20Implementation = erc20Implementation_;
 
         pairingConfigs[amicaToken_] = PairingConfig({
@@ -857,10 +846,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     // ============================================================================
-    // FEE MANAGEMENT FUNCTIONS
-    // ============================================================================
-
-    // ============================================================================
     // VIEW FUNCTIONS
     // ============================================================================
 
@@ -918,13 +903,9 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         (PoolId poolId, PoolKey memory poolKey) = _initializePool(
             erc20Token,
             persona.pairToken,
-            SQRT_RATIO_1_1,
-            tokenId
+            SQRT_RATIO_1_1
         );
         persona.poolId = poolId;
-
-        // Register pool with fee reduction hook
-        IAmicaFeeReductionHook(feeReductionHook).registerPool(poolId, tokenId);
 
         // Approve poolManager for liquidity
         IERC20(erc20Token).approve(address(poolManager), personaTokensForMainPool);
@@ -948,7 +929,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         }
 
         persona.pairCreated = true;
-        IPersonaToken(erc20Token).setGraduationStatus(true);
 
         emit V4PoolCreated(tokenId, persona.poolId, personaTokensForMainPool);
     }
@@ -963,14 +943,10 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         (PoolId agentPoolId, PoolKey memory poolKey) = _initializePool(
             persona.erc20Token,
             persona.agentToken,
-            initialPrice,
-            tokenId
+            initialPrice
         );
         persona.agentPoolId = agentPoolId;
 
-        // Register pool with fee reduction hook
-        IAmicaFeeReductionHook(feeReductionHook).registerPool(agentPoolId, tokenId);
-        
         // Add liquidity directly to poolManager
         IERC20(persona.erc20Token).approve(address(poolManager), personaTokenAmount);
         
@@ -992,19 +968,17 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Internal pool initialization (replaces UniswapV4Manager functionality)
+     * @notice Internal pool initialization
      * @param token0 First token address
      * @param token1 Second token address
      * @param initialPrice Initial sqrt price
-     * @param nftTokenId NFT token ID for hook registration
      * @return poolId The pool ID
      * @return poolKey The pool key needed for liquidity operations
      */
     function _initializePool(
         address token0,
         address token1,
-        uint160 initialPrice,
-        uint256 nftTokenId
+        uint160 initialPrice
     ) private returns (PoolId poolId, PoolKey memory poolKey) {
         // Sort tokens
         Currency currency0;
@@ -1024,7 +998,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             currency1: currency1,
             fee: LPFeeLibrary.DYNAMIC_FEE_FLAG,
             tickSpacing: TICK_SPACING,
-            hooks: IHooks(feeReductionHook)
+            hooks: IHooks(dynamicFeeHook)
         });
 
         // Initialize pool
@@ -1058,7 +1032,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             currency1: currency1,
             fee: LPFeeLibrary.DYNAMIC_FEE_FLAG,
             tickSpacing: TICK_SPACING,
-            hooks: IHooks(feeReductionHook)
+            hooks: IHooks(dynamicFeeHook)
         });
     }
 
@@ -1077,7 +1051,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Get initial price for agent pool (from UniswapV4Handler logic)
+     * @notice Get initial price for agent pool
      * @param personaIsToken0 Whether persona token is token0
      * @return initialPrice The initial sqrt price
      */
@@ -1097,7 +1071,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Get tick range for single-sided liquidity (from UniswapV4Handler logic)
+     * @notice Get tick range for single-sided liquidity
      * @param sqrtPriceX96 Current sqrt price
      * @param personaIsToken0 Whether persona token is token0
      * @return tickLower Lower tick

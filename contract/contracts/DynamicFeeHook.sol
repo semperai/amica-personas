@@ -24,12 +24,12 @@ interface IFeeReductionSystem {
 }
 
 /**
- * @title AmicaFeeReductionHook
+ * @title DynamicFeeHook
  * @author Amica Protocol
  * @notice Uniswap V4 hook that provides fee reduction based on AMICA token holdings
  * @dev Uses FeeReductionSystem for fee calculations
  */
-contract AmicaFeeReductionHook is BaseHook, Ownable {
+contract DynamicFeeHook is BaseHook, Ownable {
     using PoolIdLibrary for PoolKey;
     using CurrencyLibrary for Currency;
     using BeforeSwapDeltaLibrary for BeforeSwapDelta;
@@ -45,7 +45,7 @@ contract AmicaFeeReductionHook is BaseHook, Ownable {
     event FeeReductionSystemUpdated(IFeeReductionSystem newFeeReductionSystem);
 
     constructor(IPoolManager _poolManager) BaseHook(_poolManager) Ownable(msg.sender) {
-        console.log("AmicaFeeReductionHook deployed with PoolManager:", address(_poolManager));
+        console.log("AmicaFeeHook deployed with PoolManager:", address(_poolManager));
         if (address(_poolManager) == address(0)) revert InvalidPoolManager();
     }
 

@@ -27,13 +27,9 @@ error InvalidTokenAddress();
 error TransferFailed();
 /// @notice Thrown when there are no tokens to claim after calculation
 error NoTokensToClaim();
-/// @notice Thrown when attempting to burn and claim before token graduation
-error TokenNotGraduated();
-/// @notice Thrown when non-factory address attempts to call factory-only functions
-error OnlyFactory();
 
 /**
- * @title ERC20Implementation
+ * @title PersonaToken
  * @author Kasumi
  * @notice Implementation contract for cloneable ERC20 tokens with burn-and-claim functionality
  * @dev This contract is designed to be used with a minimal proxy pattern (EIP-1167).
@@ -42,28 +38,18 @@ error OnlyFactory();
  * - Burnable tokens
  * - Ownership management
  * - Burn-and-claim mechanism for distributing held tokens proportionally
- * - Graduation status management by factory
  *
  * The burn-and-claim mechanism allows token holders to burn their tokens and receive
  * a proportional share of any tokens held by this contract. This is useful for
  * distributing rewards, airdrops, or other tokens collected by the contract.
  */
-contract ERC20Implementation is
+contract PersonaToken is
     Initializable,
     ERC20Upgradeable,
     ERC20BurnableUpgradeable,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable
 {
-    // State variables
-    /// @notice Indicates whether the token has graduated (e.g., from a bonding curve)
-    /// @dev Only graduated tokens can use the burn-and-claim functionality
-    bool public hasGraduated;
-
-    /// @notice Address of the factory contract that deployed this token
-    /// @dev Only the factory can update the graduation status
-    address public factory;
-
     // Events
     /**
      * @notice Emitted when tokens are burned and other tokens are claimed
@@ -113,20 +99,6 @@ contract ERC20Implementation is
         __ReentrancyGuard_init();
 
         _mint(owner_, initialSupply_);
-        factory = msg.sender; // The factory is the deployer
-        hasGraduated = false;
-    }
-
-    /**
-     * @notice Updates the graduation status of the token
-     * @dev Only callable by the factory contract that deployed this token
-     * @param _graduated New graduation status to set
-     * @custom:throws OnlyFactory if called by non-factory address
-     */
-    function setGraduationStatus(bool _graduated) external {
-        if (msg.sender != factory) revert OnlyFactory();
-        hasGraduated = _graduated;
-        emit GraduationStatusSet(_graduated);
     }
 
     /**
@@ -161,9 +133,6 @@ contract ERC20Implementation is
         external
         nonReentrant
     {
-        // Check if token has graduated
-        if (!hasGraduated) revert TokenNotGraduated();
-
         if (amountToBurn == 0) revert InvalidBurnAmount();
         if (tokens.length == 0) revert NoTokensSelected();
 
@@ -225,11 +194,6 @@ contract ERC20Implementation is
         view
         returns (uint256[] memory amounts)
     {
-        // Return empty array if not graduated
-        if (!hasGraduated) {
-            return new uint256[](tokens.length);
-        }
-
         uint256 currentSupply = totalSupply();
         if (currentSupply == 0 || amountToBurn == 0) {
             return new uint256[](tokens.length);
