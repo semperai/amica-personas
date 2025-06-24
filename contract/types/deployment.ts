@@ -2,22 +2,13 @@
 
 export interface DeploymentAddresses {
   amicaToken: string;
-  amicaTokenImpl?: string;
-  personaFactory: string;
-  personaFactoryImpl?: string;
-  personaFactoryViewer?: string;
-  proxyAdmin?: string;
-  bridgeWrapper?: string;
-  bridgeWrapperImpl?: string;
-  erc20Implementation: string;
-  bridgedAmicaAddress?: string;
-  stakingRewards?: string;
-}
-
-export interface ExtendedDeploymentAddresses extends DeploymentAddresses {
   amicaTokenImpl: string;
+  personaFactory: string;
   personaFactoryImpl: string;
+  personaFactoryViewer: string;
   proxyAdmin: string;
+  personaToken: string;
+  feeReductionSystem: string;
 }
 
 export interface UpgradeHistory {

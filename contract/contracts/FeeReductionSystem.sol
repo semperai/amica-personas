@@ -6,11 +6,11 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {PersonaTokenFactory} from "./PersonaTokenFactory.sol";
 
 /**
- * @title UniswapFeeReductionSystem
+ * @title FeeReductionSystem
  * @notice Manages fee reduction for Uniswap V4 pools based on AMICA token holdings
  * @dev Uses Uniswap V4's fee units (per million) throughout
  */
-contract UniswapFeeReductionSystem is Ownable {
+contract FeeReductionSystem is Ownable {
     /**
      * @notice Fee reduction based on AMICA holdings
      * @param minAmicaForReduction Minimum AMICA to qualify for reduction
