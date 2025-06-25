@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAccount } from 'wagmi';
 import { hasBridgeWrapper } from '@/lib/contracts';
+import Image from 'next/image';
 
 interface LayoutProps {
   children: ReactNode;
@@ -56,6 +57,14 @@ const Layout = ({ children }: LayoutProps) => {
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center space-x-12">
               <Link href="/" className="flex items-center group">
+                {/* Logo Image */}
+                <Image 
+                  src="/logo.png"
+                  alt="Amica Logo"
+                  width={32}
+                  height={32}
+                  className="mr-3 group-hover:opacity-80 transition-opacity"
+                />
                 <span className="text-2xl font-extrabold text-white tracking-wider group-hover:text-white/80 transition-colors">AMICA</span>
               </Link>
 
