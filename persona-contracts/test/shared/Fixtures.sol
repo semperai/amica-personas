@@ -132,12 +132,12 @@ abstract contract Fixtures is Test, Deployers {
 
     function _distributeTokens() internal {
         // Give users much more AMICA tokens to handle graduation threshold
-        amicaToken.transfer(user1, 10_000_000 ether);  // 10M tokens
-        amicaToken.transfer(user2, 10_000_000 ether);  // 10M tokens
-        amicaToken.transfer(user3, 10_000_000 ether);  // 10M tokens
-        
+        amicaToken.transfer(user1, 10_000_000 ether); // 10M tokens
+        amicaToken.transfer(user2, 10_000_000 ether); // 10M tokens
+        amicaToken.transfer(user3, 10_000_000 ether); // 10M tokens
+
         // IMPORTANT: Also give the test contract some tokens for when it acts as msg.sender
-        amicaToken.transfer(address(this), 10_000_000 ether);  // 10M tokens for test contract
+        amicaToken.transfer(address(this), 10_000_000 ether); // 10M tokens for test contract
 
         // Give users some ETH for gas
         vm.deal(factoryOwner, 100 ether);

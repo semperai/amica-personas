@@ -7,7 +7,7 @@ import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
 contract PersonaTokenFactoryPauseTest is Fixtures {
     function setUp() public override {
         super.setUp();
-        
+
         // The test contract needs to approve the factory to spend its tokens
         amicaToken.approve(address(personaFactory), type(uint256).max);
     }
@@ -77,7 +77,7 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
 
         // Get the persona token address
         (,, address personaToken,,,,,,,,) = personaFactory.personas(tokenId);
-        
+
         // Pause the contract
         vm.prank(factoryOwner);
         personaFactory.pause();
@@ -109,7 +109,7 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
 
         // Get the persona token address
         (,, address personaToken,,,,,,,,) = personaFactory.personas(tokenId);
-        
+
         // Pause the contract
         vm.prank(factoryOwner);
         personaFactory.pause();
@@ -124,7 +124,7 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         // This test verifies that withdrawTokens respects the pause
         // We'll create a scenario where a user has purchased tokens
         // but the contract gets paused before they can withdraw
-        
+
         // Setup: create persona
         uint256 tokenId = personaFactory.createPersona(
             address(amicaToken),
@@ -149,7 +149,7 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         // we'll verify that the function would be paused by checking a different error
         // The function will fail with NotGraduated error before reaching the pause check
         // So let's test a different paused function instead to maintain test coverage
-        
+
         // Try to buy more tokens when paused
         vm.prank(user2);
         amicaToken.approve(address(personaFactory), 100 ether);
@@ -220,7 +220,9 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         vm.prank(user1);
         amicaToken.approve(address(personaFactory), DEFAULT_MINT_COST);
         vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
-        personaFactory.createPersona(address(amicaToken), "Test Persona", "TEST", bytes32("testunpause"), 0, address(0), 0);
+        personaFactory.createPersona(
+            address(amicaToken), "Test Persona", "TEST", bytes32("testunpause"), 0, address(0), 0
+        );
 
         // Unpause the contract
         vm.prank(factoryOwner);
@@ -228,8 +230,9 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
 
         // Now operations should work
         vm.prank(user1);
-        uint256 tokenId =
-            personaFactory.createPersona(address(amicaToken), "Test Persona", "TEST", bytes32("testunpause2"), 0, address(0), 0);
+        uint256 tokenId = personaFactory.createPersona(
+            address(amicaToken), "Test Persona", "TEST", bytes32("testunpause2"), 0, address(0), 0
+        );
 
         // Verify persona was created
         (string memory name,, address token,,,,,,,,) = personaFactory.personas(tokenId);
