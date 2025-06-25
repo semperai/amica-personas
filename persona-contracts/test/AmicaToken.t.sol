@@ -3,7 +3,7 @@ pragma solidity ^0.8.26;
 
 import "forge-std/Test.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
+import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import "../src/AmicaToken.sol";
 import "./TestERC20.sol";
 
@@ -47,9 +47,10 @@ contract AmicaTokenTest is Test {
         // Deploy AmicaToken using OpenZeppelin Upgrades
         vm.startPrank(owner);
         
+        AmicaToken amicaTokenImpl = new AmicaToken();
         // Deploy as upgradeable proxy
-        address proxy = Upgrades.deployTransparentProxy(
-            "AmicaToken.sol",
+        address proxy = UnsafeUpgrades.deployTransparentProxy(
+            address(amicaTokenImpl),
             owner,
             abi.encodeCall(AmicaToken.initialize, (owner, TOTAL_SUPPLY))
         );
@@ -745,14 +746,14 @@ contract AmicaTokenTest is Test {
     function test_Upgradeability() public {
         // Simply verify that this is a proxy by checking that the implementation
         // address is different from the proxy address
-        address implementation = Upgrades.getImplementationAddress(address(amicaToken));
+        address implementation = UnsafeUpgrades.getImplementationAddress(address(amicaToken));
         
         // Basic proxy verification
         assertTrue(implementation != address(0), "Implementation should exist");
         assertTrue(implementation != address(amicaToken), "Should be a proxy");
         
         // Verify admin exists
-        address admin = Upgrades.getAdminAddress(address(amicaToken));
+        address admin = UnsafeUpgrades.getAdminAddress(address(amicaToken));
         assertTrue(admin != address(0), "Admin should exist");
     }
 }

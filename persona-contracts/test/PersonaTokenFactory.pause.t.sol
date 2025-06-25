@@ -61,11 +61,14 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
 
     function test_SwapExactTokensForTokens_WhenPaused() public {
         // First create a persona
-        uint256 tokenId = createPersona(
+        uint256 tokenId = personaFactory.createPersona(
             user1,
             "Test Persona",
             "TEST",
-            generateDomain("test.swap")
+            generateDomain("test.swap"),
+            0, // no initial buy
+            address(0), // no agent token
+            0 // no min agent tokens
         );
 
         // Pause the contract
@@ -88,11 +91,14 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
 
     function test_SwapExactTokensForPairingTokens_WhenPaused() public {
         // First create a persona and buy some tokens
-        uint256 tokenId = createPersona(
+        uint256 tokenId = personaFactory.createPersona(
             user1,
             "Test Persona",
             "TEST",
-            generateDomain("test.sell")
+            generateDomain("test.sell"),
+            0, // no initial buy
+            address(0), // no agent token
+            0 // no min agent tokens
         );
 
         // Buy some tokens first
@@ -124,11 +130,14 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
 
     function test_WithdrawTokens_WhenPaused() public {
         // Setup: create persona and graduate it
-        uint256 tokenId = createPersona(
+        uint256 tokenId = personaFactory.createPersona(
             user1,
             "Test Persona",
             "TEST",
-            generateDomain("test.withdraw")
+            generateDomain("test.withdraw"),
+            0, // no initial buy
+            address(0), // no agent token
+            0 // no min agent tokens
         );
 
         // Buy enough to graduate
@@ -143,7 +152,8 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         );
 
         // Verify it's graduated
-        assertPersonaGraduated(tokenId);
+        (, , , , , bool pairCreated, , , , , ) = personaFactory.personas(tokenId);
+        assertTrue(pairCreated, "Persona should be graduated");
 
         // Pause the contract
         vm.prank(factoryOwner);
