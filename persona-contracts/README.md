@@ -1,66 +1,112 @@
-## Foundry
+# Amica Protocol Deployment
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+Foundry-based deployment system for the Amica Protocol with Uniswap V4 integration.
 
-Foundry consists of:
+## Installation
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+```bash
+git clone <your-repo-url>
+cd amica-protocol
+forge install
+mkdir deployments
+```
 
-## Documentation
+## Configuration
 
-https://book.getfoundry.sh/
+Create `.env`:
 
-## Usage
+```env
+PRIVATE_KEY=your_private_key_here
+BASE_RPC_URL=https://mainnet.base.org
+BASESCAN_API_KEY=your_basescan_key
+```
+
+## Local Development
+
+### Start Local Node
+```bash
+# Fork Base mainnet
+anvil --fork-url $BASE_RPC_URL
+```
+
+### Deploy Locally
+```bash
+# Deploy to local fork
+forge script script/DeployAmicaProtocol.s.sol:DeployAmicaProtocol \
+  --rpc-url http://localhost:8545 \
+  --broadcast
+
+# Configure pairing tokens
+forge script script/DeployUtils.s.sol:DeployUtils \
+  --sig "configurePairingTokens()" \
+  --rpc-url http://localhost:8545 \
+  --broadcast
+```
+
+## Base Mainnet Deployment
+
+### Deploy
+```bash
+forge script script/DeployAmicaProtocol.s.sol:DeployAmicaProtocol \
+  --rpc-url $BASE_RPC_URL \
+  --broadcast \
+  --verify
+```
+
+### Post-Deployment Setup
+```bash
+# Configure pairing tokens (USDC, WETH)
+forge script script/DeployUtils.s.sol:DeployUtils \
+  --sig "configurePairingTokens()" \
+  --rpc-url $BASE_RPC_URL \
+  --broadcast
+
+# Set fee reduction parameters
+forge script script/DeployUtils.s.sol:DeployUtils \
+  --sig "updateFeeReduction()" \
+  --rpc-url $BASE_RPC_URL \
+  --broadcast
+
+# Check deployment
+forge script script/DeployUtils.s.sol:DeployUtils \
+  --sig "checkDeployment()" \
+  --rpc-url $BASE_RPC_URL
+```
+
+## Upgrading Contracts
+
+```bash
+# Upgrade AmicaToken (ContractType = 0)
+forge script script/UpgradeAmicaProtocol.s.sol:UpgradeAmicaProtocol \
+  --sig "upgradeContract(uint8)" 0 \
+  --rpc-url $BASE_RPC_URL \
+  --broadcast
+
+# Upgrade PersonaFactory (ContractType = 1)
+forge script script/UpgradeAmicaProtocol.s.sol:UpgradeAmicaProtocol \
+  --sig "upgradeContract(uint8)" 1 \
+  --rpc-url $BASE_RPC_URL \
+  --broadcast
+```
+
+## Foundry Commands
 
 ### Build
-
-```shell
-$ forge build
+```bash
+forge build
 ```
 
 ### Test
-
-```shell
-$ forge test
+```bash
+forge test
 ```
 
 ### Format
-
-```shell
-$ forge fmt
+```bash
+forge fmt
 ```
 
 ### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
+```bash
+forge snapshot
 ```
