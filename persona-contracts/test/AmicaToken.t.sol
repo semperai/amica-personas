@@ -34,8 +34,6 @@ contract AmicaTokenTest is Fixtures {
     function setUp() public override {
         super.setUp();
 
-        deployAmicaContracts();
-        
         // Setup users
         owner = makeAddr("owner");
         user1 = makeAddr("user1");

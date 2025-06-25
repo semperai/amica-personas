@@ -55,6 +55,7 @@ abstract contract Fixtures is Test, Deployers {
 
     function setUp() public virtual {
         deployArtifacts();
+        deployAmicaContracts();
     }
 
     function deployAmicaContracts() public {

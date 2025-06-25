@@ -7,7 +7,6 @@ import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
 contract PersonaTokenFactoryPauseTest is Fixtures {
     function setUp() public override {
         super.setUp();
-        deployAmicaContracts();
     }
 
     function test_Pause_OnlyOwner() public {
