@@ -10,7 +10,7 @@ import {UD60x18, ud} from "@prb/math/src/UD60x18.sol";
  */
 contract BondingCurve {
     // Constants in UD60x18 format
-    UD60x18 private constant LN_33 = UD60x18.wrap(3_497066402744502449e18); // ln(33)
+    UD60x18 private constant LN_33 = UD60x18.wrap(3.496507561466480235e18); // ln(33)
     UD60x18 private constant ONE = UD60x18.wrap(1e18);
 
     /**
@@ -28,38 +28,41 @@ contract BondingCurve {
         require(amountIn > 0, "Invalid input");
         require(reserveTotal > reserveSold, "Insufficient reserve");
 
-        // Use analytical solution for exponential curve
-        // Instead of binary search, we can solve directly
+        // Binary search for the correct amount of tokens
+        // We need to find X such that calculateCostBetween(reserveSold, reserveSold + X) = amountIn
 
-        UD60x18 currentProgress = ud(reserveSold).div(ud(reserveTotal));
-        UD60x18 currentExponent = currentProgress.mul(LN_33);
-        UD60x18 currentMultiplier = currentExponent.exp();
+        uint256 low = 0;
+        uint256 high = reserveTotal - reserveSold;
 
-        // For exponential curve: integral = (totalSupply / ln(33)) * (e^(progress * ln(33)) - 1)
-        // We need to find how many tokens we can buy with amountIn
-
-        // Calculate the integral constant
-        UD60x18 integralConstant = ud(reserveTotal).div(LN_33);
-
-        // Current cost basis
-        UD60x18 currentCostBasis = integralConstant.mul(currentMultiplier.sub(ONE));
-
-        // Target cost basis after purchase
-        UD60x18 targetCostBasis = currentCostBasis.add(ud(amountIn));
-
-        // Solve for new progress: (targetCostBasis / integralConstant) + 1 = e^(newProgress * ln(33))
-        UD60x18 targetMultiplier = targetCostBasis.div(integralConstant).add(ONE);
-        UD60x18 newProgress = targetMultiplier.ln().div(LN_33);
-
-        // Calculate tokens that can be bought
-        uint256 newReserveSold = newProgress.mul(ud(reserveTotal)).unwrap();
-
-        // Ensure we don't exceed available supply
-        if (newReserveSold > reserveTotal) {
+        // First, check if we can buy all remaining tokens
+        uint256 maxCost = calculateCostBetween(reserveSold, reserveTotal, reserveTotal);
+        if (amountIn >= maxCost) {
             return reserveTotal - reserveSold;
         }
 
-        return newReserveSold > reserveSold ? newReserveSold - reserveSold : 0;
+        // Binary search with precision
+        while (high - low > 1) {
+            uint256 mid = (low + high) / 2;
+
+            // Calculate cost for this amount of tokens
+            uint256 cost = calculateCostBetween(reserveSold, reserveSold + mid, reserveTotal);
+
+            if (cost <= amountIn) {
+                low = mid;
+            } else {
+                high = mid;
+            }
+        }
+
+        // If we have room for one more token, check if we can afford it
+        if (low < reserveTotal - reserveSold) {
+            uint256 highCost = calculateCostBetween(reserveSold, reserveSold + low + 1, reserveTotal);
+            if (highCost <= amountIn) {
+                return low + 1;
+            }
+        }
+
+        return low;
     }
 
     /**

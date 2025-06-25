@@ -831,116 +831,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-      * @notice Creates Uniswap V4 pool for the persona
-      * @param tokenId ID of the persona
-      * @dev Initializes the pool and adds initial liquidity
-      */
-    function _createV4Pool(uint256 tokenId) private {
-        PersonaData storage persona = personas[tokenId];
-        if (persona.pairCreated) revert NotAllowed(7);
-
-        if (persona.agentToken != address(0) && persona.minAgentTokens > 0) {
-            if (persona.totalAgentDeposited < persona.minAgentTokens) revert Insufficient(3);
-        }
-
-        TokenPurchase storage purchase = purchases[tokenId];
-        address token = persona.token;
-
-        TokenAmounts memory amounts = _getTokenAmounts(persona.agentToken != address(0));
-
-        // Send tokens to AMICA protocol
-        IERC20(token).approve(address(amicaToken), amounts.amica);
-        IAmicaToken(address(amicaToken)).deposit(token, amounts.amica);
-
-        if (persona.agentToken != address(0) && persona.totalAgentDeposited > 0) {
-            IERC20(persona.agentToken).approve(address(amicaToken), persona.totalAgentDeposited);
-            IAmicaToken(address(amicaToken)).deposit(persona.agentToken, persona.totalAgentDeposited);
-        }
-
-        uint256 pairingTokenForLiquidity = purchase.totalDeposited;
-        uint256 personaTokensForMainPool = amounts.liquidity;
-        uint256 personaTokensForAgentPool = 0;
-
-        if (persona.agentToken != address(0)) {
-            personaTokensForMainPool = amounts.liquidity / 2;
-            personaTokensForAgentPool = amounts.liquidity - personaTokensForMainPool;
-        }
-
-        // Initialize pool using internal function
-        (PoolId poolId, PoolKey memory poolKey) = _initializePool(
-            token,
-            persona.pairToken,
-            SQRT_RATIO_1_1
-        );
-        persona.poolId = poolId;
-
-        // Approve poolManager for liquidity
-        IERC20(token).approve(address(poolManager), personaTokensForMainPool);
-        IERC20(persona.pairToken).approve(address(poolManager), pairingTokenForLiquidity);
-
-        bool zeroForOne = uint160(token) < uint160(persona.pairToken);
-        uint256 liquidityAmount = zeroForOne ? personaTokensForMainPool : pairingTokenForLiquidity;
-
-        ModifyLiquidityParams memory params = ModifyLiquidityParams({
-            tickLower: -887200,
-            tickUpper: 887200,
-            liquidityDelta: int256(liquidityAmount),
-            salt: bytes32(tokenId)
-        });
-
-        poolManager.modifyLiquidity(poolKey, params, abi.encode(tokenId));
-
-        // Create agent pool if needed
-        if (persona.agentToken != address(0) && personaTokensForAgentPool > 0) {
-            _createAgentPersonaPool(tokenId, personaTokensForAgentPool);
-        }
-
-        persona.pairCreated = true;
-
-        emit V4PoolCreated(tokenId, persona.poolId, personaTokensForMainPool);
-    }
-
-    /**
-     * @notice Creates agent pool for a persona
-     * @param tokenId ID of the persona
-     * @param personaTokenAmount Amount of persona tokens to provide
-     * @dev Initializes the agent pool and adds initial liquidity
-     */
-    function _createAgentPersonaPool(uint256 tokenId, uint256 personaTokenAmount) private {
-        PersonaData storage persona = personas[tokenId];
-
-        bool personaIsToken0 = uint160(persona.token) < uint160(persona.agentToken);
-        uint160 initialPrice = _getAgentPoolInitialPrice(personaIsToken0);
-
-        // Initialize pool
-        (PoolId agentPoolId, PoolKey memory poolKey) = _initializePool(
-            persona.token,
-            persona.agentToken,
-            initialPrice
-        );
-        persona.agentPoolId = agentPoolId;
-
-        // Add liquidity directly to poolManager
-        IERC20(persona.token).approve(address(poolManager), personaTokenAmount);
-
-        (int24 tickLower, int24 tickUpper) = _getTickRangeForSingleSided(
-            initialPrice,
-            personaIsToken0
-        );
-
-        ModifyLiquidityParams memory params = ModifyLiquidityParams({
-            tickLower: tickLower,
-            tickUpper: tickUpper,
-            liquidityDelta: int256(personaTokenAmount),
-            salt: bytes32(tokenId)
-        });
-
-        poolManager.modifyLiquidity(poolKey, params, abi.encode(tokenId));
-
-        emit V4AgentPoolCreated(tokenId, agentPoolId, personaTokenAmount, initialPrice);
-    }
-
-    /**
      * @notice Internal pool initialization
      * @param token0 First token address
      * @param token1 Second token address
@@ -984,6 +874,225 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
+     * @notice Creates Uniswap V4 pool for the persona
+     * @param tokenId ID of the persona
+     * @dev Initializes the pool and adds initial liquidity
+     */
+    function _createV4Pool(uint256 tokenId) private {
+        PersonaData storage persona = personas[tokenId];
+        if (persona.pairCreated) revert NotAllowed(7);
+
+        // Check agent token requirements
+        if (persona.agentToken != address(0) && persona.minAgentTokens > 0) {
+            if (persona.totalAgentDeposited < persona.minAgentTokens) revert Insufficient(3);
+        }
+
+        // Process token distributions
+        _processTokenDistributions(tokenId);
+
+        // Create main pool
+        _createMainPool(tokenId);
+
+        // Create agent pool if needed
+        if (persona.agentToken != address(0)) {
+            TokenAmounts memory amounts = _getTokenAmounts(true);
+            uint256 agentPoolTokens = amounts.liquidity / 2;
+            _createAgentPersonaPool(tokenId, agentPoolTokens);
+        }
+
+        persona.pairCreated = true;
+    }
+
+    /**
+     * @notice Process token distributions to AMICA and other recipients
+     * @param tokenId ID of the persona
+     */
+    function _processTokenDistributions(uint256 tokenId) private {
+        PersonaData storage persona = personas[tokenId];
+        TokenAmounts memory amounts = _getTokenAmounts(persona.agentToken != address(0));
+
+        // Send tokens to AMICA protocol
+        IERC20(persona.token).approve(address(amicaToken), amounts.amica);
+        IAmicaToken(address(amicaToken)).deposit(persona.token, amounts.amica);
+
+        // Send agent tokens to AMICA if applicable
+        if (persona.agentToken != address(0) && persona.totalAgentDeposited > 0) {
+            IERC20(persona.agentToken).approve(address(amicaToken), persona.totalAgentDeposited);
+            IAmicaToken(address(amicaToken)).deposit(persona.agentToken, persona.totalAgentDeposited);
+        }
+    }
+
+    /**
+     * @notice Creates the main persona/pairing token pool
+     * @param tokenId ID of the persona
+     */
+    function _createMainPool(uint256 tokenId) private {
+        PersonaData storage persona = personas[tokenId];
+        TokenPurchase storage purchase = purchases[tokenId];
+
+        // Calculate liquidity amounts
+        TokenAmounts memory amounts = _getTokenAmounts(persona.agentToken != address(0));
+        uint256 personaTokensForPool = persona.agentToken != address(0) ?
+            amounts.liquidity / 2 : amounts.liquidity;
+
+        // Initialize pool
+        (PoolId poolId, PoolKey memory poolKey) = _initializePool(
+            persona.token,
+            persona.pairToken,
+            SQRT_RATIO_1_1
+        );
+        persona.poolId = poolId;
+
+        // IMPORTANT: Token ordering matters for V4
+        // We need to ensure we're passing amounts in the correct order
+        bool isToken0 = uint160(persona.token) < uint160(persona.pairToken);
+
+        if (isToken0) {
+            // persona.token is token0
+            _addLiquidityToPool(
+                poolKey,
+                persona.token,      // token0
+                persona.pairToken,  // token1
+                personaTokensForPool,
+                purchase.totalDeposited,
+                tokenId
+            );
+        } else {
+            // persona.pairToken is token0
+            _addLiquidityToPool(
+                poolKey,
+                persona.pairToken,  // token0
+                persona.token,      // token1
+                purchase.totalDeposited,
+                personaTokensForPool,
+                tokenId
+            );
+        }
+
+        emit V4PoolCreated(tokenId, poolId, personaTokensForPool);
+    }
+
+    /**
+     * @notice Creates agent pool for a persona
+     * @param tokenId ID of the persona
+     * @param personaTokenAmount Amount of persona tokens to provide
+     */
+    function _createAgentPersonaPool(uint256 tokenId, uint256 personaTokenAmount) private {
+        PersonaData storage persona = personas[tokenId];
+
+        // Calculate initial price based on token ordering
+        bool personaIsToken0 = uint160(persona.token) < uint160(persona.agentToken);
+        uint160 initialPrice = personaIsToken0 ?
+            250541478223274320632946051840 : // sqrt(10) * 2^96
+            25054147822327432063294605184;   // sqrt(0.1) * 2^96
+
+        // Initialize pool
+        (PoolId agentPoolId, PoolKey memory poolKey) = _initializePool(
+            persona.token,
+            persona.agentToken,
+            initialPrice
+        );
+        persona.agentPoolId = agentPoolId;
+
+        // Add single-sided liquidity
+        _addSingleSidedLiquidity(
+            poolKey,
+            persona.token,
+            personaTokenAmount,
+            initialPrice,
+            personaIsToken0,
+            tokenId
+        );
+
+        emit V4AgentPoolCreated(tokenId, agentPoolId, personaTokenAmount, initialPrice);
+    }
+
+    /**
+     * @notice Adds liquidity to a pool
+     * @param poolKey Pool key
+     * @param token0 First token
+     * @param token1 Second token
+     * @param amount0 Amount of token0
+     * @param amount1 Amount of token1
+     * @param salt Salt for the position
+     */
+    function _addLiquidityToPool(
+        PoolKey memory poolKey,
+        address token0,
+        address token1,
+        uint256 amount0,
+        uint256 amount1,
+        uint256 salt
+    ) private {
+        // Approve poolManager for both tokens
+        IERC20(token0).approve(address(poolManager), amount0);
+        IERC20(token1).approve(address(poolManager), amount1);
+
+        // IMPORTANT: For V4, we need to use the minimum of both amounts for liquidity
+        // at a 1:1 price ratio (SQRT_RATIO_1_1)
+        uint256 liquidityAmount = amount0 < amount1 ? amount0 : amount1;
+
+        // Full range liquidity position
+        ModifyLiquidityParams memory params = ModifyLiquidityParams({
+            tickLower: -887200,  // Min tick for full range
+            tickUpper: 887200,   // Max tick for full range
+            liquidityDelta: int256(liquidityAmount),
+            salt: bytes32(salt)
+        });
+
+        // V4 expects hook data in the last parameter
+        poolManager.modifyLiquidity(poolKey, params, abi.encode(salt));
+    }
+
+    /**
+     * @notice Adds single-sided liquidity to a pool
+     * @param poolKey Pool key
+     * @param token Token to add
+     * @param amount Amount to add
+     * @param sqrtPriceX96 Current sqrt price
+     * @param tokenIsToken0 Whether the token is token0
+     * @param salt Salt for the position
+     */
+    function _addSingleSidedLiquidity(
+        PoolKey memory poolKey,
+        address token,
+        uint256 amount,
+        uint160 sqrtPriceX96,
+        bool tokenIsToken0,
+        uint256 salt
+    ) private {
+        // Approve token
+        IERC20(token).approve(address(poolManager), amount);
+
+        // Calculate tick range
+        int24 currentTick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
+        currentTick = (currentTick / TICK_SPACING) * TICK_SPACING;
+
+        int24 tickLower;
+        int24 tickUpper;
+
+        if (tokenIsToken0) {
+            // Provide liquidity above current price
+            tickLower = currentTick + TICK_SPACING;
+            tickUpper = 887200;
+        } else {
+            // Provide liquidity below current price
+            tickLower = -887200;
+            tickUpper = currentTick - TICK_SPACING;
+        }
+
+        ModifyLiquidityParams memory params = ModifyLiquidityParams({
+            tickLower: tickLower,
+            tickUpper: tickUpper,
+            liquidityDelta: int256(amount),
+            salt: bytes32(salt)
+        });
+
+        poolManager.modifyLiquidity(poolKey, params, abi.encode(salt));
+    }
+
+
+    /**
      * @notice Helper to get pool key for a persona
      * @param persona Persona data
      * @return poolKey The pool key
@@ -1020,53 +1129,6 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             return account.balance;
         } else {
             return IERC20(Currency.unwrap(currency)).balanceOf(account);
-        }
-    }
-
-    /**
-     * @notice Get initial price for agent pool
-     * @param personaIsToken0 Whether persona token is token0
-     * @return initialPrice The initial sqrt price
-     */
-    function _getAgentPoolInitialPrice(bool personaIsToken0) private pure returns (uint160) {
-        // Price ratio of 10:1 (agent:persona)
-        if (personaIsToken0) {
-            // persona is token0, agent is token1
-            // Price = agent/persona = 10/1 = 10
-            // sqrtPrice = sqrt(10) * 2^96
-            return 250541478223274320632946051840; // sqrt(10) * 2^96
-        } else {
-            // agent is token0, persona is token1
-            // Price = persona/agent = 1/10 = 0.1
-            // sqrtPrice = sqrt(0.1) * 2^96
-            return 25054147822327432063294605184; // sqrt(0.1) * 2^96
-        }
-    }
-
-    /**
-     * @notice Get tick range for single-sided liquidity
-     * @param sqrtPriceX96 Current sqrt price
-     * @param personaIsToken0 Whether persona token is token0
-     * @return tickLower Lower tick
-     * @return tickUpper Upper tick
-     */
-    function _getTickRangeForSingleSided(
-        uint160 sqrtPriceX96,
-        bool personaIsToken0
-    ) private pure returns (int24 tickLower, int24 tickUpper) {
-        int24 currentTick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
-
-        // Round to nearest tick spacing
-        currentTick = (currentTick / TICK_SPACING) * TICK_SPACING;
-
-        if (personaIsToken0) {
-            // Provide liquidity above current price (persona token only)
-            tickLower = currentTick + TICK_SPACING;
-            tickUpper = 887200; // Max tick
-        } else {
-            // Provide liquidity below current price (persona token only)
-            tickLower = -887200; // Min tick
-            tickUpper = currentTick - TICK_SPACING;
         }
     }
 }

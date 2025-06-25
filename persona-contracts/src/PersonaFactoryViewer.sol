@@ -38,40 +38,6 @@ contract PersonaFactoryViewer {
     // ============================================================================
 
     /**
-     * @notice Gets persona information
-     * @param tokenId ID of the persona
-     * @return name Persona name
-     * @return symbol Persona token symbol
-     * @return erc20Token Address of persona's ERC20 token
-     * @return pairToken Address of pairing token
-     * @return agentToken Address of agent token (if any)
-     * @return pairCreated Whether Uniswap pair exists
-     * @return createdAt Creation timestamp
-     * @return totalAgentDeposited Total agent tokens deposited
-     * @return minAgentTokens Minimum agent tokens for graduation
-     */
-    function getPersona(uint256 tokenId)
-        external
-        view
-        returns (
-            string memory name,
-            string memory symbol,
-            address erc20Token,
-            address pairToken,
-            address agentToken,
-            bool pairCreated,
-            uint256 createdAt,
-            uint256 totalAgentDeposited,
-            uint256 minAgentTokens,
-            PoolId poolId,
-            PoolId agentPoolId
-        )
-    {
-        (name, symbol, erc20Token, pairToken, agentToken, pairCreated, createdAt, totalAgentDeposited, minAgentTokens, poolId, agentPoolId) = factory.personas(tokenId);
-        return (name, symbol, erc20Token, pairToken, agentToken, pairCreated, createdAt, totalAgentDeposited, minAgentTokens, poolId, agentPoolId);
-    }
-
-    /**
      * @notice Gets persona metadata values
      * @param tokenId ID of the persona
      * @param keys Array of metadata keys to retrieve
