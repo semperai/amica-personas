@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import "./shared/Fixtures.sol";
+import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
+
+import {Fixtures} from "./shared/Fixtures.sol";
 import {
     PersonaToken,
     InvalidOwner,
@@ -14,9 +18,6 @@ import {
     TransferFailed,
     NoTokensToClaim
 } from "../src/PersonaToken.sol";
-import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 
 contract PersonaTokenTest is Fixtures {
     PersonaToken public testToken;

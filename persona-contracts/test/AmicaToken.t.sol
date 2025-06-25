@@ -3,9 +3,9 @@ pragma solidity ^0.8.26;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
-import {Fixtures} from "./shared/Fixtures.sol";
-import "../src/AmicaToken.sol";
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
+import {Fixtures} from "./shared/Fixtures.sol";
+import {AmicaToken} from "../src/AmicaToken.sol";
 
 contract AmicaTokenTest is Fixtures {
     // Constants

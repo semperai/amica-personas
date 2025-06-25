@@ -108,7 +108,7 @@ contract FeeReductionSystem is Ownable {
      */
     function getFee(address user) external view returns (uint24) {
         uint256 effectiveBalance = _getEffectiveBalance(user);
-        
+
         // If below minimum threshold, return base fee
         if (effectiveBalance < feeReductionConfig.minAmicaForReduction) {
             return feeReductionConfig.baseFee;
@@ -122,17 +122,17 @@ contract FeeReductionSystem is Ownable {
         // Calculate fee reduction using quadratic curve
         uint256 range = feeReductionConfig.maxAmicaForReduction - feeReductionConfig.minAmicaForReduction;
         uint256 userPosition = effectiveBalance - feeReductionConfig.minAmicaForReduction;
-        
+
         // Calculate progress (0 to 1e18)
         uint256 progress = (userPosition * PRECISION) / range;
-        
+
         // Apply quadratic curve for smoother reduction
         uint256 quadraticProgress = (progress * progress) / PRECISION;
-        
+
         // Calculate fee interpolation
         uint256 feeRange = uint256(feeReductionConfig.baseFee) - uint256(feeReductionConfig.maxDiscountedFee);
         uint256 feeReduction = (feeRange * quadraticProgress) / PRECISION;
-        
+
         return uint24(uint256(feeReductionConfig.baseFee) - feeReduction);
     }
 
@@ -142,7 +142,7 @@ contract FeeReductionSystem is Ownable {
      */
     function updateSnapshot() external {
         uint256 currentBalance = amicaToken.balanceOf(msg.sender);
-        
+
         // Clear snapshot if below minimum
         if (currentBalance < feeReductionConfig.minAmicaForReduction) {
             delete userSnapshots[msg.sender];
@@ -207,7 +207,7 @@ contract FeeReductionSystem is Ownable {
      */
     function _getEffectiveBalance(address user) private view returns (uint256) {
         UserSnapshot memory snapshot = userSnapshots[user];
-        
+
         // Determine which balance is active
         uint256 snapshotBalance;
         if (snapshot.pendingBlock > 0 && block.number >= snapshot.pendingBlock + SNAPSHOT_DELAY) {
@@ -230,14 +230,14 @@ contract FeeReductionSystem is Ownable {
      */
     function getBlocksUntilActive(address user) external view returns (uint256) {
         UserSnapshot memory snapshot = userSnapshots[user];
-        
+
         if (snapshot.pendingBlock > 0) {
             uint256 activationBlock = snapshot.pendingBlock + SNAPSHOT_DELAY;
             if (block.number < activationBlock) {
                 return activationBlock - block.number;
             }
         }
-        
+
         return 0;
     }
 

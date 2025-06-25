@@ -11,6 +11,7 @@ import {AmicaToken} from "../../src/AmicaToken.sol";
 import {PersonaToken} from "../../src/PersonaToken.sol";
 import {DynamicFeeHook} from "../../src/DynamicFeeHook.sol";
 import {FeeReductionSystem} from "../../src/FeeReductionSystem.sol";
+import {BondingCurve} from "../../src/BondingCurve.sol";
 
 import {IPoolManager} from "v4-core/src/interfaces/IPoolManager.sol";
 import {Hooks} from "v4-core/src/libraries/Hooks.sol";
@@ -47,6 +48,7 @@ abstract contract Fixtures is Test, Deployers {
     PersonaToken public personaToken;
     DynamicFeeHook public dynamicFeeHook;
     FeeReductionSystem public feeReductionSystem;
+    BondingCurve public bondingCurve;
 
     address public factoryOwner;
     address public user1;
@@ -70,6 +72,7 @@ abstract contract Fixtures is Test, Deployers {
 
         // Deploy all contracts in order
         _deployCore();
+        _deployBondingCurve();
         _deployHook();
         _deployFactory();
         _deployFeeReductionSystem();
@@ -90,6 +93,11 @@ abstract contract Fixtures is Test, Deployers {
 
         // Deploy PersonaToken implementation
         personaToken = new PersonaToken();
+    }
+
+    function _deployBondingCurve() internal {
+        // Deploy the bonding curve contract
+        bondingCurve = new BondingCurve();
     }
 
     function _deployHook() internal {
@@ -115,7 +123,8 @@ abstract contract Fixtures is Test, Deployers {
                     address(poolManager), // Use the actual PoolManager
                     address(positionManager),
                     address(dynamicFeeHook),
-                    address(personaToken)
+                    address(personaToken),
+                    address(bondingCurve) // Add bonding curve address
                 )
             )
         );

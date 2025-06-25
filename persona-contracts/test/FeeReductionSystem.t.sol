@@ -3,9 +3,7 @@ pragma solidity ^0.8.26;
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
-import "../test/shared/Fixtures.sol";
-import {FeeReductionSystem} from "../src/FeeReductionSystem.sol";
-import {DynamicFeeHook} from "../src/DynamicFeeHook.sol";
+
 import {PoolKey} from "v4-core/src/types/PoolKey.sol";
 import {PoolId, PoolIdLibrary} from "v4-core/src/types/PoolId.sol";
 import {Currency, CurrencyLibrary} from "v4-core/src/types/Currency.sol";
@@ -16,6 +14,10 @@ import {SwapParams} from "v4-core/src/types/PoolOperation.sol";
 import {BeforeSwapDelta, BeforeSwapDeltaLibrary} from "v4-core/src/types/BeforeSwapDelta.sol";
 import {IPoolManager} from "v4-core/src/interfaces/IPoolManager.sol";
 
+import {Fixtures} from "../test/shared/Fixtures.sol";
+import {FeeReductionSystem} from "../src/FeeReductionSystem.sol";
+import {DynamicFeeHook} from "../src/DynamicFeeHook.sol";
+
 contract FeeReductionSystemTest is Fixtures {
     using PoolIdLibrary for PoolKey;
     using CurrencyLibrary for Currency;
@@ -23,10 +25,7 @@ contract FeeReductionSystemTest is Fixtures {
     // Events
     event SnapshotUpdated(address indexed user, uint256 balance, uint256 blockNumber);
     event FeeReductionConfigUpdated(
-        uint256 minAmicaForReduction,
-        uint256 maxAmicaForReduction,
-        uint24 baseFee,
-        uint24 maxDiscountedFee
+        uint256 minAmicaForReduction, uint256 maxAmicaForReduction, uint24 baseFee, uint24 maxDiscountedFee
     );
     event FeeReductionSystemUpdated(address newFeeReductionSystem);
 
@@ -41,7 +40,7 @@ contract FeeReductionSystemTest is Fixtures {
 
     function setUp() public override {
         super.setUp();
-        
+
         // Setup test pool for integration tests
         (currency0, currency1) = deployCurrencyPair();
         testPoolKey = PoolKey({
@@ -77,17 +76,17 @@ contract FeeReductionSystemTest is Fixtures {
     function test_BasicSetup() public {
         // Verify hook is deployed
         assertTrue(address(dynamicFeeHook) != address(0), "Hook should be deployed");
-        
+
         // Verify fee reduction system is deployed
         assertTrue(address(feeReductionSystem) != address(0), "FeeReductionSystem should be deployed");
-        
+
         // Verify hook has fee reduction system set
         assertEq(
-            address(dynamicFeeHook.feeReductionSystem()), 
+            address(dynamicFeeHook.feeReductionSystem()),
             address(feeReductionSystem),
             "Hook should have FeeReductionSystem set"
         );
-        
+
         // Verify ownership
         assertEq(dynamicFeeHook.owner(), factoryOwner, "Hook owner should be factoryOwner");
         assertEq(feeReductionSystem.owner(), factoryOwner, "FeeReductionSystem owner should be factoryOwner");
@@ -95,19 +94,15 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_Constructor_FeeReductionSystem() public {
         FeeReductionSystem newSystem = new FeeReductionSystem(amicaToken, personaFactory);
-        
+
         assertEq(address(newSystem.amicaToken()), address(amicaToken));
         assertEq(address(newSystem.factory()), address(personaFactory));
         assertEq(newSystem.owner(), address(this));
-        
+
         // Check default config
-        (
-            uint256 minAmicaForReduction,
-            uint256 maxAmicaForReduction,
-            uint24 baseFee,
-            uint24 maxDiscountedFee
-        ) = newSystem.feeReductionConfig();
-        
+        (uint256 minAmicaForReduction, uint256 maxAmicaForReduction, uint24 baseFee, uint24 maxDiscountedFee) =
+            newSystem.feeReductionConfig();
+
         assertEq(minAmicaForReduction, 1000 ether);
         assertEq(maxAmicaForReduction, 1_000_000 ether);
         assertEq(baseFee, 10000);
@@ -125,15 +120,11 @@ contract FeeReductionSystemTest is Fixtures {
         vm.prank(factoryOwner);
         vm.expectEmit(true, true, true, true);
         emit FeeReductionConfigUpdated(newMin, newMax, newBaseFee, newMaxDiscountedFee);
-        
+
         feeReductionSystem.configureFeeReduction(newMin, newMax, newBaseFee, newMaxDiscountedFee);
 
-        (
-            uint256 minAmicaForReduction,
-            uint256 maxAmicaForReduction,
-            uint24 baseFee,
-            uint24 maxDiscountedFee
-        ) = feeReductionSystem.feeReductionConfig();
+        (uint256 minAmicaForReduction, uint256 maxAmicaForReduction, uint24 baseFee, uint24 maxDiscountedFee) =
+            feeReductionSystem.feeReductionConfig();
 
         assertEq(minAmicaForReduction, newMin);
         assertEq(maxAmicaForReduction, newMax);
@@ -173,7 +164,7 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_UpdateSnapshot_WithSufficientBalance() public {
         clearUserBalance(user1);
-        
+
         // Give user AMICA tokens
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 5000 ether);
@@ -183,12 +174,8 @@ contract FeeReductionSystemTest is Fixtures {
         emit SnapshotUpdated(user1, 5000 ether, block.number);
         feeReductionSystem.updateSnapshot();
 
-        (
-            uint256 activeBalance,
-            uint256 activeBlock,
-            uint256 pendingBalance,
-            uint256 pendingBlock
-        ) = feeReductionSystem.userSnapshots(user1);
+        (uint256 activeBalance, uint256 activeBlock, uint256 pendingBalance, uint256 pendingBlock) =
+            feeReductionSystem.userSnapshots(user1);
 
         assertEq(activeBalance, 0);
         assertEq(activeBlock, 0);
@@ -198,11 +185,11 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_UpdateSnapshot_BelowMinimumClearsSnapshot() public {
         clearUserBalance(user1);
-        
+
         // First create a snapshot
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 5000 ether);
-        
+
         vm.prank(user1);
         feeReductionSystem.updateSnapshot();
 
@@ -216,12 +203,8 @@ contract FeeReductionSystemTest is Fixtures {
         emit SnapshotUpdated(user1, 0, block.number);
         feeReductionSystem.updateSnapshot();
 
-        (
-            uint256 activeBalance,
-            uint256 activeBlock,
-            uint256 pendingBalance,
-            uint256 pendingBlock
-        ) = feeReductionSystem.userSnapshots(user1);
+        (uint256 activeBalance, uint256 activeBlock, uint256 pendingBalance, uint256 pendingBlock) =
+            feeReductionSystem.userSnapshots(user1);
 
         assertEq(activeBalance, 0);
         assertEq(activeBlock, 0);
@@ -231,7 +214,7 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_UpdateSnapshot_PromotesPendingToActive() public {
         clearUserBalance(user1);
-        
+
         // Give user AMICA tokens
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 5000 ether);
@@ -239,7 +222,7 @@ contract FeeReductionSystemTest is Fixtures {
         // First snapshot
         vm.prank(user1);
         feeReductionSystem.updateSnapshot();
-        
+
         uint256 firstBlock = block.number;
 
         // Wait for delay
@@ -253,12 +236,8 @@ contract FeeReductionSystemTest is Fixtures {
         vm.prank(user1);
         feeReductionSystem.updateSnapshot();
 
-        (
-            uint256 activeBalance,
-            uint256 activeBlock,
-            uint256 pendingBalance,
-            uint256 pendingBlock
-        ) = feeReductionSystem.userSnapshots(user1);
+        (uint256 activeBalance, uint256 activeBlock, uint256 pendingBalance, uint256 pendingBlock) =
+            feeReductionSystem.userSnapshots(user1);
 
         assertEq(activeBalance, 5000 ether);
         assertEq(activeBlock, firstBlock);
@@ -270,30 +249,30 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_SimpleFeeCalculation() public {
         clearUserBalance(user1);
-        
+
         // Test with no AMICA balance
         uint24 fee = feeReductionSystem.getFee(user1);
         assertEq(fee, 10000, "Should return base fee for user with no AMICA");
-        
+
         // Give user some AMICA (above minimum threshold)
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 10_000 ether);
-        
+
         // Update snapshot
         vm.prank(user1);
         feeReductionSystem.updateSnapshot();
-        
+
         // Fee should still be base fee (snapshot not active yet)
         fee = feeReductionSystem.getFee(user1);
         assertEq(fee, 10000, "Should still be base fee before snapshot delay");
-        
+
         // Wait for snapshot to become active
         vm.roll(block.number + feeReductionSystem.SNAPSHOT_DELAY() + 1);
-        
+
         // Now fee should be reduced
         fee = feeReductionSystem.getFee(user1);
         assertTrue(fee < 10000, "Fee should be reduced after snapshot is active");
-        
+
         // With 10k AMICA, fee should be very close to base
         assertTrue(fee >= 9990, "Fee should be close to base with small balance");
         assertTrue(fee <= 10000, "Fee should not exceed base");
@@ -307,7 +286,7 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_GetFee_SnapshotNotYetActive() public {
         clearUserBalance(user1);
-        
+
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 5000 ether);
 
@@ -321,7 +300,7 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_GetFee_BelowMinimum() public {
         clearUserBalance(user1);
-        
+
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 500 ether);
 
@@ -336,7 +315,7 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_GetFee_AtMinimum() public {
         clearUserBalance(user1);
-        
+
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 1000 ether);
 
@@ -351,7 +330,7 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_GetFee_AboveMinimum() public {
         clearUserBalance(user1);
-        
+
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 10_000 ether);
 
@@ -367,7 +346,7 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_GetFee_AtMaximum() public {
         clearUserBalance(user1);
-        
+
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 1_000_000 ether);
 
@@ -382,7 +361,7 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_GetFee_AboveMaximum() public {
         clearUserBalance(user1);
-        
+
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 2_000_000 ether);
 
@@ -397,7 +376,7 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_GetFee_UsesMinimumOfSnapshotAndCurrent() public {
         clearUserBalance(user1);
-        
+
         // Give user initial balance
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 100_000 ether);
@@ -437,7 +416,7 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_GetBlocksUntilActive_WithPendingSnapshot() public {
         clearUserBalance(user1);
-        
+
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 5000 ether);
 
@@ -455,7 +434,7 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_GetBlocksUntilActive_AlreadyActive() public {
         clearUserBalance(user1);
-        
+
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 5000 ether);
 
@@ -476,7 +455,7 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_GetEffectiveBalance_PendingNotActive() public {
         clearUserBalance(user1);
-        
+
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 5000 ether);
 
@@ -489,7 +468,7 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_GetEffectiveBalance_ActiveSnapshot() public {
         clearUserBalance(user1);
-        
+
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 5000 ether);
 
@@ -498,7 +477,7 @@ contract FeeReductionSystemTest is Fixtures {
 
         // Wait for pending to become active
         vm.roll(block.number + feeReductionSystem.SNAPSHOT_DELAY() + 1);
-        
+
         // Update again to promote pending to active
         vm.prank(user1);
         feeReductionSystem.updateSnapshot();
@@ -513,21 +492,21 @@ contract FeeReductionSystemTest is Fixtures {
         // Ensure test contract has enough tokens
         vm.prank(factoryOwner);
         amicaToken.transfer(address(this), 10_000_000 ether);
-        
+
         // Test that fee reduction follows quadratic curve
         uint256[] memory testAmounts = new uint256[](5);
-        testAmounts[0] = 100_000 ether;  // 10% of range
-        testAmounts[1] = 250_000 ether;  // 25% of range
-        testAmounts[2] = 500_000 ether;  // 50% of range
-        testAmounts[3] = 750_000 ether;  // 75% of range
-        testAmounts[4] = 900_000 ether;  // 90% of range
+        testAmounts[0] = 100_000 ether; // 10% of range
+        testAmounts[1] = 250_000 ether; // 25% of range
+        testAmounts[2] = 500_000 ether; // 50% of range
+        testAmounts[3] = 750_000 ether; // 75% of range
+        testAmounts[4] = 900_000 ether; // 90% of range
 
         uint24[] memory fees = new uint24[](5);
 
         for (uint256 i = 0; i < testAmounts.length; i++) {
             // Clear user1 balance
             clearUserBalance(user1);
-            
+
             // Transfer from test contract
             amicaToken.transfer(user1, testAmounts[i]);
 
@@ -547,9 +526,9 @@ contract FeeReductionSystemTest is Fixtures {
         uint256 reduction5 = 10000 - fees[4]; // 90% progress
 
         // Due to quadratic curve, later reductions should be proportionally larger
-        assertTrue(reduction2 > (reduction1 * 25) / 10);  // reduction2 > reduction1 * 2.5
+        assertTrue(reduction2 > (reduction1 * 25) / 10); // reduction2 > reduction1 * 2.5
         assertTrue(reduction3 > reduction1 * 5);
-        assertTrue(reduction4 > (reduction1 * 75) / 10);  // reduction4 > reduction1 * 7.5
+        assertTrue(reduction4 > (reduction1 * 75) / 10); // reduction4 > reduction1 * 7.5
         assertTrue(reduction5 > reduction1 * 9);
     }
 
@@ -557,7 +536,7 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_EdgeCase_MultipleSnapshotUpdates() public {
         clearUserBalance(user1);
-        
+
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 5000 ether);
 
@@ -575,7 +554,7 @@ contract FeeReductionSystemTest is Fixtures {
 
         // Wait and update again
         vm.roll(block.number + feeReductionSystem.SNAPSHOT_DELAY() + 1);
-        
+
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 3000 ether);
 
@@ -588,7 +567,7 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_EdgeCase_TransferAllTokensAfterSnapshot() public {
         clearUserBalance(user1);
-        
+
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 100_000 ether);
 
@@ -608,48 +587,48 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_EdgeCase_ZeroToMaxBalance() public {
         clearUserBalance(user1);
-        
+
         // Give max balance
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 1_000_000 ether);
-        
+
         vm.prank(user1);
         feeReductionSystem.updateSnapshot();
         vm.roll(block.number + feeReductionSystem.SNAPSHOT_DELAY() + 1);
-        
+
         uint24 fee = feeReductionSystem.getFee(user1);
         assertEq(fee, 0, "Max balance should give zero fee");
-        
+
         // Lose all tokens
         vm.prank(user1);
         amicaToken.transfer(factoryOwner, 1_000_000 ether);
-        
+
         fee = feeReductionSystem.getFee(user1);
         assertEq(fee, 10000, "Zero balance should give base fee");
     }
 
     function test_EdgeCase_PrecisionAtBoundaries() public {
         clearUserBalance(user1);
-        
+
         // Test fee calculation precision at exact boundaries
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 1000 ether); // Exact minimum
-        
+
         vm.prank(user1);
         feeReductionSystem.updateSnapshot();
         vm.roll(block.number + feeReductionSystem.SNAPSHOT_DELAY() + 1);
-        
+
         uint24 fee = feeReductionSystem.getFee(user1);
         assertEq(fee, 10000, "At minimum threshold should still have base fee");
-        
+
         // Just above minimum
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 1 ether);
-        
+
         vm.prank(user1);
         feeReductionSystem.updateSnapshot();
         vm.roll(block.number + feeReductionSystem.SNAPSHOT_DELAY() + 1);
-        
+
         fee = feeReductionSystem.getFee(user1);
         assertTrue(fee < 10000, "Just above minimum should have reduced fee");
     }
@@ -658,10 +637,10 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_HookPermissions() public {
         Hooks.Permissions memory perms = dynamicFeeHook.getHookPermissions();
-        
+
         // Only beforeSwap should be enabled
         assertTrue(perms.beforeSwap, "beforeSwap should be enabled");
-        
+
         // All others should be disabled
         assertFalse(perms.beforeInitialize, "beforeInitialize should be disabled");
         assertFalse(perms.afterInitialize, "afterInitialize should be disabled");
@@ -677,18 +656,18 @@ contract FeeReductionSystemTest is Fixtures {
     function test_SetFeeReductionSystem_Success() public {
         // Deploy new fee reduction system
         FeeReductionSystem newSystem = new FeeReductionSystem(amicaToken, personaFactory);
-        
+
         vm.prank(factoryOwner);
         vm.expectEmit(true, false, false, true);
         emit FeeReductionSystemUpdated(address(newSystem));
         dynamicFeeHook.setFeeReductionSystem(address(newSystem));
-        
+
         assertEq(address(dynamicFeeHook.feeReductionSystem()), address(newSystem));
     }
 
     function test_SetFeeReductionSystem_RevertNotOwner() public {
         FeeReductionSystem newSystem = new FeeReductionSystem(amicaToken, personaFactory);
-        
+
         vm.prank(user1);
         vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", user1));
         dynamicFeeHook.setFeeReductionSystem(address(newSystem));
@@ -718,10 +697,10 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_Integration_MultipleUsersWithDifferentFees() public {
         clearAllUserBalances();
-        
+
         // Give users different amounts of AMICA
         vm.startPrank(factoryOwner);
-        amicaToken.transfer(user2, 50_000 ether);   // Mid-tier
+        amicaToken.transfer(user2, 50_000 ether); // Mid-tier
         amicaToken.transfer(user3, 1_000_000 ether); // Max tier
         // user1 gets nothing
         vm.stopPrank();
@@ -748,7 +727,7 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_Integration_FeeChangesAfterSnapshotUpdate() public {
         clearUserBalance(user1);
-        
+
         // Give user initial AMICA balance
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 10_000 ether);
@@ -783,14 +762,14 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_Integration_SnapshotDelayPreventsImmediateFeeReduction() public {
         clearUserBalance(user1);
-        
+
         // User starts with no AMICA
         uint24 feeBefore = feeReductionSystem.getFee(user1);
 
         // Give user AMICA and immediately update snapshot
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 100_000 ether);
-        
+
         vm.prank(user1);
         feeReductionSystem.updateSnapshot();
 
@@ -810,7 +789,7 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_Integration_LosingAmicaIncreasesFeesAgain() public {
         clearUserBalance(user1);
-        
+
         // Give user AMICA
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 100_000 ether);
@@ -837,14 +816,14 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_Integration_FeeReductionWithDifferentConfigurations() public {
         clearUserBalance(user1);
-        
+
         // Test changing fee reduction configuration
         vm.prank(factoryOwner);
         feeReductionSystem.configureFeeReduction(
-            100 ether,    // Lower minimum
-            10_000 ether, // Lower maximum  
-            30000,        // 3% base fee
-            10000         // 1% minimum fee
+            100 ether, // Lower minimum
+            10_000 ether, // Lower maximum
+            30000, // 3% base fee
+            10000 // 1% minimum fee
         );
 
         // Give user amount that would be mid-tier in new config
@@ -858,7 +837,7 @@ contract FeeReductionSystemTest is Fixtures {
 
         // Get fee
         uint24 fee = feeReductionSystem.getFee(user1);
-        
+
         // Should be between 1% and 3%
         assertTrue(fee > 10000, "Fee should be above minimum");
         assertTrue(fee < 30000, "Fee should be below base");
@@ -869,15 +848,15 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_Integration_HookUpdatesFeeReductionSystem() public {
         clearUserBalance(user1);
-        
+
         // Create a new fee reduction system with different config
         FeeReductionSystem newSystem = new FeeReductionSystem(amicaToken, personaFactory);
-        
+
         newSystem.configureFeeReduction(
-            1 ether,      // Very low minimum
-            1000 ether,   // Very low maximum
-            50000,        // 5% base fee
-            0             // 0% minimum fee
+            1 ether, // Very low minimum
+            1000 ether, // Very low maximum
+            50000, // 5% base fee
+            0 // 0% minimum fee
         );
 
         // Give user some AMICA
@@ -898,9 +877,7 @@ contract FeeReductionSystemTest is Fixtures {
 
         // Verify hook now uses new system
         assertEq(
-            address(dynamicFeeHook.feeReductionSystem()),
-            address(newSystem),
-            "Hook should use new fee reduction system"
+            address(dynamicFeeHook.feeReductionSystem()), address(newSystem), "Hook should use new fee reduction system"
         );
 
         // The hook would now use the new fee calculation in actual swaps
@@ -909,22 +886,22 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_Integration_MultiplePoolsUseSameFeeReduction() public {
         clearUserBalance(user1);
-        
+
         // Give user AMICA for fee reduction
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 100_000 ether);
-        
+
         // Update snapshot
         vm.prank(user1);
         feeReductionSystem.updateSnapshot();
         vm.roll(block.number + feeReductionSystem.SNAPSHOT_DELAY() + 1);
-        
+
         // Get fee for user
         uint24 userFee = feeReductionSystem.getFee(user1);
-        
+
         // Verify user has reduced fee
         assertTrue(userFee < 10000, "User should have reduced fee");
-        
+
         // The same fee would apply to any pool using this hook
         console.log("User fee across all pools:", userFee);
     }
@@ -933,7 +910,7 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_GasUsage_UpdateSnapshot() public {
         clearUserBalance(user1);
-        
+
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 100_000 ether);
 
@@ -943,18 +920,18 @@ contract FeeReductionSystemTest is Fixtures {
         uint256 gasUsed = gasBefore - gasleft();
 
         console.log("Gas used for snapshot update:", gasUsed);
-        
+
         // Ensure reasonable gas usage (less than 100k)
         assertTrue(gasUsed < 100_000, "Snapshot update should use reasonable gas");
     }
 
     function test_GasUsage_GetFee() public {
         clearUserBalance(user1);
-        
+
         // Setup user with AMICA and active snapshot
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 100_000 ether);
-        
+
         vm.prank(user1);
         feeReductionSystem.updateSnapshot();
         vm.roll(block.number + feeReductionSystem.SNAPSHOT_DELAY() + 1);
@@ -965,33 +942,33 @@ contract FeeReductionSystemTest is Fixtures {
         uint256 gasUsed = gasBefore - gasleft();
 
         console.log("Gas used for fee calculation:", gasUsed);
-        
+
         // Ensure reasonable gas usage (less than 50k)
         assertTrue(gasUsed < 50_000, "Fee calculation should use reasonable gas");
     }
 
     function test_GasUsage_MultipleSnapshots() public {
         clearUserBalance(user1);
-        
+
         // Test gas usage when updating snapshot multiple times
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 50_000 ether);
-        
+
         // First snapshot
         vm.prank(user1);
         feeReductionSystem.updateSnapshot();
-        
+
         // Wait and get more tokens
         vm.roll(block.number + 50);
         vm.prank(factoryOwner);
         amicaToken.transfer(user1, 50_000 ether);
-        
+
         // Second snapshot (should promote pending to active)
         vm.prank(user1);
         uint256 gasBefore = gasleft();
         feeReductionSystem.updateSnapshot();
         uint256 gasUsed = gasBefore - gasleft();
-        
+
         console.log("Gas used for snapshot update with promotion:", gasUsed);
         assertTrue(gasUsed < 100_000, "Snapshot promotion should use reasonable gas");
     }

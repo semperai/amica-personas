@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import "./shared/Fixtures.sol";
+import {Fixtures} from "./shared/Fixtures.sol";
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
 
 contract PersonaTokenFactoryPauseTest is Fixtures {

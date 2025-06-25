@@ -50,13 +50,13 @@ error AmountExceedsExcess();
  * @author Kasumi
  * @notice Facilitates seamless conversion between bridged AMICA tokens from Ethereum and native AMICA tokens on the destination chain
  * @dev Implements upgradeable pattern using OpenZeppelin's upgradeable contracts
- * 
+ *
  * This contract serves as a bridge wrapper that:
  * - Accepts bridged AMICA tokens and mints equivalent native AMICA tokens (wrap)
  * - Burns native AMICA tokens and returns equivalent bridged AMICA tokens (unwrap)
  * - Maintains security through reentrancy guards and pausability
  * - Tracks total inflows and outflows for accounting and security purposes
- * 
+ *
  * @custom:security-contact kasumi-null@yandex.com
  */
 contract AmicaBridgeWrapper is
@@ -170,12 +170,12 @@ contract AmicaBridgeWrapper is
      * @notice Wraps bridged AMICA tokens to receive native AMICA tokens
      * @dev User must approve this contract to spend their bridged tokens before calling
      * @param amount The amount of bridged tokens to wrap (must be greater than 0)
-     * 
+     *
      * Process:
      * 1. Transfers bridged tokens from user to this contract
      * 2. Mints equivalent amount of native tokens to user
      * 3. Updates total bridged in counter
-     * 
+     *
      * @custom:requirement User must have sufficient bridged token balance
      * @custom:requirement User must have approved this contract for the amount
      * @custom:emits TokensWrapped
@@ -200,12 +200,12 @@ contract AmicaBridgeWrapper is
      * @notice Unwraps native AMICA tokens to receive bridged AMICA tokens
      * @dev User must approve the native token contract to burn their tokens
      * @param amount The amount of native tokens to unwrap (must be greater than 0)
-     * 
+     *
      * Process:
      * 1. Burns native tokens from user's balance
      * 2. Transfers equivalent bridged tokens from contract to user
      * 3. Updates total bridged out counter
-     * 
+     *
      * @custom:requirement User must have sufficient native token balance
      * @custom:requirement User must have approved native token for burning
      * @custom:requirement Contract must have sufficient bridged tokens
@@ -245,14 +245,14 @@ contract AmicaBridgeWrapper is
      * @param token The address of the token to withdraw
      * @param to The address to receive the withdrawn tokens
      * @param amount The amount of tokens to withdraw
-     * 
+     *
      * For bridged AMICA tokens:
      * - Can only withdraw excess beyond (totalBridgedIn - totalBridgedOut)
      * - This ensures user funds remain protected
-     * 
+     *
      * For other tokens:
      * - Can withdraw any amount (useful for recovering accidentally sent tokens)
-     * 
+     *
      * @custom:requirement `to` cannot be zero address
      * @custom:requirement For bridged AMICA, amount cannot exceed excess balance
      * @custom:callable-when-paused Emergency function remains accessible when paused
@@ -285,7 +285,7 @@ contract AmicaBridgeWrapper is
      * such as token contract migrations or critical security updates
      * @param _bridgedAmicaToken New address for the bridged AMICA token
      * @param _nativeAmicaToken New address for the native AMICA token
-     * 
+     *
      * @custom:requirement Contract must be paused before calling
      * @custom:requirement New addresses must be non-zero and different from each other
      * @custom:security Critical function - ensure proper governance/timelock controls

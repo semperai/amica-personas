@@ -11,6 +11,7 @@ import {PersonaTokenFactory} from "../src/PersonaTokenFactory.sol";
 import {DynamicFeeHook} from "../src/DynamicFeeHook.sol";
 import {FeeReductionSystem} from "../src/FeeReductionSystem.sol";
 import {PersonaFactoryViewer} from "../src/PersonaFactoryViewer.sol";
+import {BondingCurve} from "../src/BondingCurve.sol";
 
 // Import OpenZeppelin upgrades
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
@@ -41,6 +42,7 @@ contract DeployAmicaProtocol is DeployConfig {
     DynamicFeeHook public dynamicFeeHook;
     FeeReductionSystem public feeReductionSystem;
     PersonaFactoryViewer public personaFactoryViewer;
+    BondingCurve public bondingCurve;
 
     // ============ Deployment Addresses ============
 
@@ -54,6 +56,7 @@ contract DeployAmicaProtocol is DeployConfig {
         address personaToken;
         address feeReductionSystem;
         address dynamicFeeHook;
+        address bondingCurve;
     }
 
     DeploymentAddresses public addresses;
@@ -92,6 +95,7 @@ contract DeployAmicaProtocol is DeployConfig {
         // Deploy in correct order
         _deployAmicaToken(deployer, config);
         _deployPersonaTokenImplementation();
+        _deployBondingCurve();
         _deployDynamicFeeHook(config);
         _deployPersonaFactory(deployer, config);
         _deployFeeReductionSystem();
@@ -146,6 +150,16 @@ contract DeployAmicaProtocol is DeployConfig {
         console2.log("");
     }
 
+    function _deployBondingCurve() internal {
+        console2.log("Deploying BondingCurve...");
+
+        bondingCurve = new BondingCurve();
+        addresses.bondingCurve = address(bondingCurve);
+
+        console2.log("  BondingCurve:", address(bondingCurve));
+        console2.log("");
+    }
+
     function _deployDynamicFeeHook(NetworkConfig memory config) internal {
         console2.log("Deploying DynamicFeeHook...");
 
@@ -190,7 +204,8 @@ contract DeployAmicaProtocol is DeployConfig {
                     config.poolManager,
                     config.positionManager,
                     address(dynamicFeeHook),
-                    address(personaTokenImpl)
+                    address(personaTokenImpl),
+                    address(bondingCurve)
                 )
             ),
             opts
@@ -243,6 +258,7 @@ contract DeployAmicaProtocol is DeployConfig {
         console2.log("========================================");
         console2.log("AmicaToken:", addresses.amicaToken);
         console2.log("PersonaFactory:", addresses.personaFactory);
+        console2.log("BondingCurve:", addresses.bondingCurve);
         console2.log("FeeReductionSystem:", addresses.feeReductionSystem);
         console2.log("DynamicFeeHook:", addresses.dynamicFeeHook);
         console2.log("PersonaFactoryViewer:", addresses.personaFactoryViewer);
@@ -289,7 +305,8 @@ contract DeployAmicaProtocol is DeployConfig {
         vm.serializeAddress(addressObj, "proxyAdmin", addresses.proxyAdmin);
         vm.serializeAddress(addressObj, "personaToken", addresses.personaToken);
         vm.serializeAddress(addressObj, "feeReductionSystem", addresses.feeReductionSystem);
-        string memory finalAddressObj = vm.serializeAddress(addressObj, "dynamicFeeHook", addresses.dynamicFeeHook);
+        vm.serializeAddress(addressObj, "dynamicFeeHook", addresses.dynamicFeeHook);
+        string memory finalAddressObj = vm.serializeAddress(addressObj, "bondingCurve", addresses.bondingCurve);
 
         // Combine all objects
         vm.serializeString(obj, "config", finalConfigObj);

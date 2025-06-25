@@ -8,6 +8,8 @@ import {PersonaTokenFactory} from "../src/PersonaTokenFactory.sol";
 import {AmicaToken} from "../src/AmicaToken.sol";
 import {FeeReductionSystem} from "../src/FeeReductionSystem.sol";
 import {DynamicFeeHook} from "../src/DynamicFeeHook.sol";
+import {BondingCurve} from "../src/BondingCurve.sol";
+import {IBondingCurve} from "../src/interfaces/IBondingCurve.sol";
 import {DeployConfig} from "./DeployConfig.s.sol";
 
 /**
@@ -214,6 +216,7 @@ contract DeployUtils is DeployConfig {
         address factoryAddress = vm.parseJsonAddress(json, ".addresses.personaFactory");
         address feeSystemAddress = vm.parseJsonAddress(json, ".addresses.feeReductionSystem");
         address hookAddress = vm.parseJsonAddress(json, ".addresses.dynamicFeeHook");
+        address bondingCurveAddress = vm.parseJsonAddress(json, ".addresses.bondingCurve");
 
         console2.log("=== Deployment Health Check ===");
         console2.log("");
@@ -224,6 +227,7 @@ contract DeployUtils is DeployConfig {
         console2.log("  PersonaFactory:", factoryAddress.code.length, "bytes");
         console2.log("  FeeReductionSystem:", feeSystemAddress.code.length, "bytes");
         console2.log("  DynamicFeeHook:", hookAddress.code.length, "bytes");
+        console2.log("  BondingCurve:", bondingCurveAddress.code.length, "bytes");
         console2.log("");
 
         // Check key configurations
@@ -236,6 +240,7 @@ contract DeployUtils is DeployConfig {
         console2.log("  AMICA circulating:", amica.circulatingSupply() / 1e18);
         console2.log("  Factory owner:", factory.owner());
         console2.log("  Factory paused:", factory.paused());
+        console2.log("  Bonding curve:", address(factory.bondingCurve()));
 
         (uint256 minAmica, uint256 maxAmica, uint24 baseFee, uint24 discountFee) = feeSystem.feeReductionConfig();
         console2.log("  Fee reduction:");
