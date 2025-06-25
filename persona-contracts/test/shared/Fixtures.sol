@@ -6,11 +6,11 @@ import "forge-std/console.sol";
 
 import {Deployers} from "./Deployers.sol";
 
-import {PersonaTokenFactory} from "../src/PersonaTokenFactory.sol";
-import {AmicaToken} from "../src/AmicaToken.sol";
-import {PersonaToken} from "../src/PersonaToken.sol";
-import {DynamicFeeHook} from "../src/DynamicFeeHook.sol";
-import {FeeReductionSystem} from "../src/FeeReductionSystem.sol";
+import {PersonaTokenFactory} from "../../src/PersonaTokenFactory.sol";
+import {AmicaToken} from "../../src/AmicaToken.sol";
+import {PersonaToken} from "../../src/PersonaToken.sol";
+import {DynamicFeeHook} from "../../src/DynamicFeeHook.sol";
+import {FeeReductionSystem} from "../../src/FeeReductionSystem.sol";
 
 import {IPoolManager} from "v4-core/src/interfaces/IPoolManager.sol";
 import {Hooks} from "v4-core/src/libraries/Hooks.sol";
@@ -25,7 +25,6 @@ import {PosmTestSetup} from "@uniswap/v4-periphery/test/shared/PosmTestSetup.sol
 import {HookMiner} from "@uniswap/v4-periphery/src/utils/HookMiner.sol";
 
 import {IAllowanceTransfer} from "permit2/src/interfaces/IAllowanceTransfer.sol";
-import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
 
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
@@ -53,32 +52,26 @@ abstract contract Fixtures is Test, Deployers {
     address public user1;
     address public user2;
     address public user3;
-    
 
     function setUp() public virtual {
-        console.log("Setting up fixtures...");
         deployArtifacts();
-        console.log("Manager deployed at:", address(poolManager));
-        // deployAndApprovePosm(poolManager);
-        // console.log("PositionManager deployed at:", address(positionManager));
-        
+    }
+    
+
+    function deployAmicaContracts() public {
         // Setup users
         factoryOwner = makeAddr("factoryOwner");
         user1 = makeAddr("user1");
         user2 = makeAddr("user2");
         user3 = makeAddr("user3");
-        console.log("Factory owner:", factoryOwner);
         
         // Start deployment as factory owner
         vm.startPrank(factoryOwner);
         
         // Deploy all contracts in order
         _deployCore();
-        console.log("Core contracts deployed");
         _deployHook();
-        console.log("DynamicFeeHook deployed at:", address(dynamicFeeHook));
         _deployFactory();
-        console.log("PersonaTokenFactory deployed at:", address(personaFactory));
         _deployFeeReductionSystem();
         _distributeTokens();
         

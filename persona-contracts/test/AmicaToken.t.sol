@@ -1,29 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import "forge-std/Test.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
+import {Fixtures} from "./shared/Fixtures.sol";
 import "../src/AmicaToken.sol";
-import "./TestERC20.sol";
+import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
 
-contract AmicaTokenTest is Test {
+contract AmicaTokenTest is Fixtures {
     // Constants
     uint256 constant TOTAL_SUPPLY = 1_000_000_000 ether;
     uint256 constant PRECISION = 1 ether;
     
     // Contracts
-    AmicaToken public amicaToken;
-    TestERC20 public usdc;
-    TestERC20 public weth;
-    TestERC20 public dai;
+    MockERC20 public usdc;
+    MockERC20 public weth;
+    MockERC20 public dai;
     
     // Users
     address public owner;
-    address public user1;
-    address public user2;
-    address public user3;
-    address public user4;
     
     // Events
     event TokensWithdrawn(address indexed recipient, uint256 amount);
@@ -36,13 +31,16 @@ contract AmicaTokenTest is Test {
     );
     event TokensRecovered(address indexed recipient, address indexed token, uint256 amount);
     
-    function setUp() public {
+    function setUp() public override {
+        super.setUp();
+
+        deployAmicaContracts();
+        
         // Setup users
         owner = makeAddr("owner");
         user1 = makeAddr("user1");
         user2 = makeAddr("user2");
         user3 = makeAddr("user3");
-        user4 = makeAddr("user4");
         
         // Deploy AmicaToken using OpenZeppelin Upgrades
         vm.startPrank(owner);
@@ -61,23 +59,22 @@ contract AmicaTokenTest is Test {
         amicaToken.transfer(user1, 10_000 ether);
         amicaToken.transfer(user2, 10_000 ether);
         amicaToken.transfer(user3, 10_000 ether);
-        amicaToken.transfer(user4, 10_000 ether);
         
         vm.stopPrank();
         
         // Deploy test tokens
-        usdc = new TestERC20("USD Coin", "USDC", 10_000_000 ether);
-        weth = new TestERC20("Wrapped Ether", "WETH", 100_000 ether);
-        dai = new TestERC20("Dai Stablecoin", "DAI", 10_000_000 ether);
+        usdc = new MockERC20("USD Coin", "USDC", 18);
+        weth = new MockERC20("Wrapped Ether", "WETH", 18);
+        dai = new MockERC20("Dai Stablecoin", "DAI",18);
         
         // Distribute test tokens
-        usdc.transfer(owner, 1_000_000 ether);
-        weth.transfer(owner, 10_000 ether);
-        dai.transfer(owner, 1_000_000 ether);
+        usdc.mint(owner, 1_000_000 ether);
+        weth.mint(owner, 10_000 ether);
+        dai.mint(owner, 1_000_000 ether);
         
-        usdc.transfer(user1, 100_000 ether);
-        weth.transfer(user1, 1_000 ether);
-        dai.transfer(user1, 100_000 ether);
+        usdc.mint(user1, 100_000 ether);
+        weth.mint(user1, 1_000 ether);
+        dai.mint(user1, 100_000 ether);
     }
     
     // Deployment Tests
@@ -275,14 +272,12 @@ contract AmicaTokenTest is Test {
     
     function test_Deposit_TokensWithDifferentDecimals() public {
         // Deploy a 6-decimal token (like USDC on mainnet)
-        TestERC20 sixDecimalToken = new TestERC20("Six Decimal", "SIX", 1_000_000e6);
+        MockERC20 sixDecimalToken = new MockERC20("Six Decimal", "SIX", 6);
+        sixDecimalToken.mint(owner, 1_000_000e6);
         
         uint256 depositAmount = 1_000e6;
         
-        // Transfer tokens to owner if TestERC20 doesn't mint to deployer
-        if (sixDecimalToken.balanceOf(owner) == 0) {
-            sixDecimalToken.transfer(owner, depositAmount);
-        }
+        sixDecimalToken.mint(owner, depositAmount);
         
         vm.startPrank(owner);
         sixDecimalToken.approve(address(amicaToken), depositAmount);
@@ -467,7 +462,6 @@ contract AmicaTokenTest is Test {
         uint256 ownerBalance = amicaToken.balanceOf(owner);
         uint256 user2Balance = amicaToken.balanceOf(user2);
         uint256 user3Balance = amicaToken.balanceOf(user3);
-        uint256 user4Balance = amicaToken.balanceOf(user4);
         
         // Transfer most tokens back to contract to reduce circulating supply
         // Owner keeps only 1M tokens
@@ -483,9 +477,6 @@ contract AmicaTokenTest is Test {
         
         vm.prank(user3);
         amicaToken.transfer(address(amicaToken), user3Balance);
-        
-        vm.prank(user4);
-        amicaToken.transfer(address(amicaToken), user4Balance);
         
         uint256 lowCirculating = amicaToken.circulatingSupply();
         assertLt(lowCirculating, 10_000_000 ether);
@@ -513,7 +504,7 @@ contract AmicaTokenTest is Test {
         // Send tokens directly to contract (simulating accidental transfer)
         uint256 accidentalAmount = 5_000 ether;
         vm.prank(owner);
-        usdc.transfer(address(amicaToken), accidentalAmount);
+        usdc.mint(address(amicaToken), accidentalAmount);
         
         // After transfer, owner balance is reduced
         uint256 balanceAfterTransfer = usdc.balanceOf(owner);
@@ -539,7 +530,7 @@ contract AmicaTokenTest is Test {
         
         // Then send some accidentally
         uint256 accidentalAmount = 3_000 ether;
-        usdc.transfer(address(amicaToken), accidentalAmount);
+        usdc.mint(address(amicaToken), accidentalAmount);
         
         vm.expectEmit(true, true, false, true);
         emit TokensRecovered(owner, address(usdc), accidentalAmount);
@@ -570,7 +561,7 @@ contract AmicaTokenTest is Test {
     }
     
     function test_RecoverToken_RevertWhen_ZeroAddress() public {
-        usdc.transfer(address(amicaToken), 1_000 ether);
+        usdc.mint(address(amicaToken), 1_000 ether);
         
         vm.prank(owner);
         vm.expectRevert(abi.encodeWithSignature("InvalidRecipient()"));
@@ -578,7 +569,7 @@ contract AmicaTokenTest is Test {
     }
     
     function test_RecoverToken_RevertWhen_NonOwner() public {
-        usdc.transfer(address(amicaToken), 1_000 ether);
+        usdc.mint(address(amicaToken), 1_000 ether);
         
         vm.prank(user1);
         vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, user1));
@@ -587,11 +578,11 @@ contract AmicaTokenTest is Test {
     
     function test_RecoverToken_ZeroDepositedBalance() public {
         // Deploy new token
-        TestERC20 newToken = new TestERC20("New", "NEW", 10_000 ether);
+        MockERC20 newToken = new MockERC20("New", "NEW", 18);
         
         // Send tokens directly without deposit
         uint256 amount = 1_000 ether;
-        newToken.transfer(address(amicaToken), amount);
+        newToken.mint(address(amicaToken), amount);
         
         // Should recover all tokens since depositedBalance is 0
         vm.expectEmit(true, true, false, true);
@@ -603,11 +594,11 @@ contract AmicaTokenTest is Test {
     
     // Edge Cases
     function test_Deposit_ConcurrentDepositsOfSameToken() public {
-        TestERC20 testToken = new TestERC20("Test", "TEST", 10_000 ether);
+        MockERC20 testToken = new MockERC20("Test", "TEST", 18);
         
         // Give both users tokens
-        testToken.transfer(user1, 1_000 ether);
-        testToken.transfer(user2, 1_000 ether);
+        testToken.mint(user1, 1_000 ether);
+        testToken.mint(user2, 1_000 ether);
         
         // Both approve
         vm.prank(user1);
@@ -638,11 +629,11 @@ contract AmicaTokenTest is Test {
     }
     
     function test_RecoverToken_WhenDepositedEqualsBalance() public {
-        TestERC20 testToken = new TestERC20("Test", "TEST", 10_000 ether);
+        MockERC20 testToken = new MockERC20("Test", "TEST", 18);
         
         // Ensure owner has tokens
         if (testToken.balanceOf(owner) == 0) {
-            testToken.transfer(owner, 1_000 ether);
+            testToken.mint(owner, 1_000 ether);
         }
         
         // Deposit exact amount
@@ -693,8 +684,8 @@ contract AmicaTokenTest is Test {
         amount = bound(amount, 1, 1_000_000 ether);
         
         // Mint tokens for test
-        TestERC20 testToken = new TestERC20("Test", "TEST", amount * 2);
-        testToken.transfer(owner, amount);
+        MockERC20 testToken = new MockERC20("Test", "TEST", 18);
+        testToken.mint(owner, amount);
         
         vm.startPrank(owner);
         testToken.approve(address(amicaToken), amount);
