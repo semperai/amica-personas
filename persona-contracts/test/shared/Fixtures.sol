@@ -56,7 +56,6 @@ abstract contract Fixtures is Test, Deployers {
     function setUp() public virtual {
         deployArtifacts();
     }
-    
 
     function deployAmicaContracts() public {
         // Setup users
@@ -136,11 +135,12 @@ abstract contract Fixtures is Test, Deployers {
     
     function _distributeTokens() internal {
         // Give users some AMICA tokens
-        amicaToken.transfer(user1, 10_000_000 ether);
-        amicaToken.transfer(user2, 10_000_000 ether);
-        amicaToken.transfer(user3, 5_000_000 ether);
+        amicaToken.transfer(user1, 10_000 ether);
+        amicaToken.transfer(user2, 10_000 ether);
+        amicaToken.transfer(user3, 10_000 ether);
         
         // Give users some ETH for gas
+        vm.deal(factoryOwner, 100 ether);
         vm.deal(user1, 100 ether);
         vm.deal(user2, 100 ether);
         vm.deal(user3, 100 ether);

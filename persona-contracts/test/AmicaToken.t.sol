@@ -42,26 +42,6 @@ contract AmicaTokenTest is Fixtures {
         user2 = makeAddr("user2");
         user3 = makeAddr("user3");
         
-        // Deploy AmicaToken using OpenZeppelin Upgrades
-        vm.startPrank(owner);
-        
-        AmicaToken amicaTokenImpl = new AmicaToken();
-        // Deploy as upgradeable proxy
-        address proxy = UnsafeUpgrades.deployTransparentProxy(
-            address(amicaTokenImpl),
-            owner,
-            abi.encodeCall(AmicaToken.initialize, (owner, TOTAL_SUPPLY))
-        );
-        
-        amicaToken = AmicaToken(proxy);
-        
-        // Distribute tokens to users
-        amicaToken.transfer(user1, 10_000 ether);
-        amicaToken.transfer(user2, 10_000 ether);
-        amicaToken.transfer(user3, 10_000 ether);
-        
-        vm.stopPrank();
-        
         // Deploy test tokens
         usdc = new MockERC20("USD Coin", "USDC", 18);
         weth = new MockERC20("Wrapped Ether", "WETH", 18);
