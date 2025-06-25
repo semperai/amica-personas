@@ -29,11 +29,7 @@ contract MockWETH9 is IWETH9 {
         return _transferFrom(src, dst, wad);
     }
 
-    function _transferFrom(
-        address src,
-        address dst,
-        uint256 wad
-    ) internal returns (bool) {
+    function _transferFrom(address src, address dst, uint256 wad) internal returns (bool) {
         require(balanceOf[src] >= wad);
         if (src != msg.sender && allowance[src][msg.sender] != type(uint256).max) {
             require(allowance[src][msg.sender] >= wad);

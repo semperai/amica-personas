@@ -18,7 +18,7 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         // Owner can pause
         vm.prank(factoryOwner);
         personaFactory.pause();
-        
+
         assertTrue(personaFactory.paused());
     }
 
@@ -35,7 +35,7 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         // Owner can unpause
         vm.prank(factoryOwner);
         personaFactory.unpause();
-        
+
         assertFalse(personaFactory.paused());
     }
 
@@ -47,13 +47,13 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         // Try to create persona when paused
         vm.prank(user1);
         amicaToken.approve(address(personaFactory), DEFAULT_MINT_COST);
-        
+
         vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
         personaFactory.createPersona(
             address(amicaToken),
             "Test Persona",
             "TEST",
-            generateDomain("test.persona"),
+            "test.persona",
             0, // no initial buy
             address(0), // no agent token
             0 // no min agent tokens
@@ -62,11 +62,13 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
 
     function test_SwapExactTokensForTokens_WhenPaused() public {
         // First create a persona
+        vm.prank(user1);
+        amicaToken.approve(address(personaFactory), DEFAULT_MINT_COST);
         uint256 tokenId = personaFactory.createPersona(
-            user1,
+            address(amicaToken),
             "Test Persona",
             "TEST",
-            generateDomain("test.swap"),
+            "test",
             0, // no initial buy
             address(0), // no agent token
             0 // no min agent tokens
@@ -79,24 +81,20 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         // Try to swap when paused
         vm.prank(user2);
         amicaToken.approve(address(personaFactory), 1000 ether);
-        
+
         vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
-        personaFactory.swapExactTokensForTokens(
-            tokenId,
-            1000 ether,
-            0,
-            user2,
-            block.timestamp + 300
-        );
+        personaFactory.swapExactTokensForTokens(tokenId, 1000 ether, 0, user2, block.timestamp + 300);
     }
 
     function test_SwapExactTokensForPairingTokens_WhenPaused() public {
         // First create a persona and buy some tokens
+        vm.prank(user1);
+        amicaToken.approve(address(personaFactory), DEFAULT_MINT_COST);
         uint256 tokenId = personaFactory.createPersona(
-            user1,
+            address(amicaToken),
             "Test Persona",
             "TEST",
-            generateDomain("test.sell"),
+            "testsell",
             0, // no initial buy
             address(0), // no agent token
             0 // no min agent tokens
@@ -105,13 +103,7 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         // Buy some tokens first
         vm.prank(user2);
         amicaToken.approve(address(personaFactory), 1000 ether);
-        personaFactory.swapExactTokensForTokens(
-            tokenId,
-            1000 ether,
-            0,
-            user2,
-            block.timestamp + 300
-        );
+        personaFactory.swapExactTokensForTokens(tokenId, 1000 ether, 0, user2, block.timestamp + 300);
 
         // Pause the contract
         vm.prank(factoryOwner);
@@ -120,22 +112,18 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         // Try to sell when paused
         vm.prank(user2);
         vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
-        personaFactory.swapExactTokensForPairingTokens(
-            tokenId,
-            100 ether,
-            0,
-            user2,
-            block.timestamp + 300
-        );
+        personaFactory.swapExactTokensForPairingTokens(tokenId, 100 ether, 0, user2, block.timestamp + 300);
     }
 
     function test_WithdrawTokens_WhenPaused() public {
         // Setup: create persona and graduate it
+        vm.prank(user1);
+        amicaToken.approve(address(personaFactory), DEFAULT_MINT_COST);
         uint256 tokenId = personaFactory.createPersona(
-            user1,
+            address(amicaToken),
             "Test Persona",
             "TEST",
-            generateDomain("test.withdraw"),
+            "testwithdraw",
             0, // no initial buy
             address(0), // no agent token
             0 // no min agent tokens
@@ -144,16 +132,10 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         // Buy enough to graduate
         vm.prank(user2);
         amicaToken.approve(address(personaFactory), DEFAULT_GRADUATION_THRESHOLD);
-        personaFactory.swapExactTokensForTokens(
-            tokenId,
-            DEFAULT_GRADUATION_THRESHOLD,
-            0,
-            user2,
-            block.timestamp + 300
-        );
+        personaFactory.swapExactTokensForTokens(tokenId, DEFAULT_GRADUATION_THRESHOLD, 0, user2, block.timestamp + 300);
 
         // Verify it's graduated
-        (, , , , , bool pairCreated, , , , , ) = personaFactory.personas(tokenId);
+        (,,,,, bool pairCreated,,,,,) = personaFactory.personas(tokenId);
         assertTrue(pairCreated, "Persona should be graduated");
 
         // Pause the contract
@@ -178,7 +160,7 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
             address(amicaToken),
             "Test Persona",
             "TEST",
-            keccak256("test.agent"),
+            "testagent",
             0,
             address(agentToken),
             1000 ether // min agent tokens
@@ -191,7 +173,7 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         // Try to deposit agent tokens when paused
         vm.prank(user2);
         agentToken.approve(address(personaFactory), 1000 ether);
-        
+
         vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
         personaFactory.depositAgentTokens(tokenId, 1000 ether);
     }
@@ -205,13 +187,7 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         vm.prank(user1);
         amicaToken.approve(address(personaFactory), DEFAULT_MINT_COST);
         uint256 tokenId = personaFactory.createPersona(
-            address(amicaToken),
-            "Test Persona",
-            "TEST",
-            keccak256("test.agent2"),
-            0,
-            address(agentToken),
-            1000 ether
+            address(amicaToken), "Test Persona", "TEST", "testagent2", 0, address(agentToken), 1000 ether
         );
 
         // Deposit some agent tokens first
@@ -238,15 +214,7 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         vm.prank(user1);
         amicaToken.approve(address(personaFactory), DEFAULT_MINT_COST);
         vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
-        personaFactory.createPersona(
-            address(amicaToken),
-            "Test Persona",
-            "TEST",
-            keccak256("test.unpause"),
-            0,
-            address(0),
-            0
-        );
+        personaFactory.createPersona(address(amicaToken), "Test Persona", "TEST", "testunpause", 0, address(0), 0);
 
         // Unpause the contract
         vm.prank(factoryOwner);
@@ -254,18 +222,11 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
 
         // Now operations should work
         vm.prank(user1);
-        uint256 tokenId = personaFactory.createPersona(
-            address(amicaToken),
-            "Test Persona",
-            "TEST",
-            keccak256("test.unpause"),
-            0,
-            address(0),
-            0
-        );
+        uint256 tokenId =
+            personaFactory.createPersona(address(amicaToken), "Test Persona", "TEST", "testunpause", 0, address(0), 0);
 
         // Verify persona was created
-        (string memory name, , address token, , , , , , , , ) = personaFactory.personas(tokenId);
+        (string memory name,, address token,,,,,,,,) = personaFactory.personas(tokenId);
         assertEq(name, "Test Persona");
         assertTrue(token != address(0));
     }

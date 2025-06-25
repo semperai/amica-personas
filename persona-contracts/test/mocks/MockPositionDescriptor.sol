@@ -9,24 +9,24 @@ contract MockPositionDescriptor is IPositionDescriptor {
     IPoolManager public immutable poolManager;
     address public immutable wrappedNative;
     string public constant nativeCurrencyLabel = "ETH";
-    
+
     constructor(IPoolManager _poolManager, address _wrappedNative) {
         poolManager = _poolManager;
         wrappedNative = _wrappedNative;
     }
-    
+
     function tokenURI(IPositionManager, uint256 tokenId) external pure override returns (string memory) {
         return string(abi.encodePacked("https://example.com/token/", toString(tokenId)));
     }
-    
+
     function flipRatio(address, address) external pure override returns (bool) {
         return false;
     }
-    
+
     function currencyRatioPriority(address) external pure override returns (int256) {
         return 0;
     }
-    
+
     // Helper function to convert uint256 to string
     function toString(uint256 value) internal pure returns (string memory) {
         if (value == 0) {

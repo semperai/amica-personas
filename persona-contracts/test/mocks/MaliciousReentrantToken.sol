@@ -38,12 +38,7 @@ contract MaliciousReentrantToken is ERC20 {
             attacking = true;
             // Try to reenter
             try IPersonaTokenFactory(target).createPersona(
-                address(this),
-                "Reentrant",
-                "REENT",
-                new string[](0),
-                new string[](0),
-                0
+                address(this), "Reentrant", "REENT", new string[](0), new string[](0), 0
             ) {
                 // If this succeeds, reentrancy protection failed
             } catch {

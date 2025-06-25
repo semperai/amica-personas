@@ -12,11 +12,7 @@ contract MaliciousReturnFalseToken is ERC20 {
         _mint(msg.sender, 1000000 ether);
     }
 
-    function transferFrom(
-        address from,
-        address to,
-        uint256 amount
-    ) public override returns (bool) {
+    function transferFrom(address from, address to, uint256 amount) public override returns (bool) {
         // Simulate insufficient balance by returning false
         if (amount > balanceOf(from)) {
             return false; // Should revert, but returns false instead

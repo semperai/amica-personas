@@ -85,7 +85,7 @@ contract DynamicFeeHook is BaseHook, Ownable {
         PoolKey calldata,
         SwapParams calldata,
         bytes calldata
-    ) internal override returns (bytes4, BeforeSwapDelta, uint24) {
+    ) internal view override returns (bytes4, BeforeSwapDelta, uint24) {
         uint24 dynamicFee = feeReductionSystem.getFee(sender)
             | LPFeeLibrary.OVERRIDE_FEE_FLAG;
 

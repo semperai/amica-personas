@@ -38,16 +38,16 @@ abstract contract Fixtures is Test, Deployers {
     uint256 constant DEFAULT_MINT_COST = 1000 ether;
     uint256 constant DEFAULT_GRADUATION_THRESHOLD = 1_000_000 ether;
     uint256 constant UNSUBSCRIBE_GAS_LIMIT = 300_000;
-    
+
     // For hook deployment
     address constant CREATE2_DEPLOYER = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
-    
+
     PersonaTokenFactory public personaFactory;
     AmicaToken public amicaToken;
     PersonaToken public personaToken;
     DynamicFeeHook public dynamicFeeHook;
     FeeReductionSystem public feeReductionSystem;
-    
+
     address public factoryOwner;
     address public user1;
     address public user2;
@@ -64,35 +64,34 @@ abstract contract Fixtures is Test, Deployers {
         user1 = makeAddr("user1");
         user2 = makeAddr("user2");
         user3 = makeAddr("user3");
-        
+
         // Start deployment as factory owner
         vm.startPrank(factoryOwner);
-        
+
         // Deploy all contracts in order
         _deployCore();
         _deployHook();
         _deployFactory();
         _deployFeeReductionSystem();
         _distributeTokens();
-        
+
         vm.stopPrank();
     }
-    
+
     // ==================== Internal Deployment Functions ====================
-    
+
     function _deployCore() internal {
         // Deploy AmicaToken as upgradeable proxy
         address amicaImpl = address(new AmicaToken());
         address amicaProxy = UnsafeUpgrades.deployUUPSProxy(
-            amicaImpl,
-            abi.encodeCall(AmicaToken.initialize, (factoryOwner, AMICA_TOTAL_SUPPLY))
+            amicaImpl, abi.encodeCall(AmicaToken.initialize, (factoryOwner, AMICA_TOTAL_SUPPLY))
         );
         amicaToken = AmicaToken(amicaProxy);
-        
+
         // Deploy PersonaToken implementation
         personaToken = new PersonaToken();
     }
-    
+
     function _deployHook() internal {
         uint160 flags = uint160(Hooks.BEFORE_SWAP_FLAG);
         address addr = address(flags ^ (0x4444 << 144));
@@ -103,7 +102,7 @@ abstract contract Fixtures is Test, Deployers {
         // Cast to our hook interface
         dynamicFeeHook = DynamicFeeHook(addr);
     }
-    
+
     function _deployFactory() internal {
         // Deploy PersonaTokenFactory as upgradeable proxy
         address factoryImpl = address(new PersonaTokenFactory());
@@ -120,49 +119,27 @@ abstract contract Fixtures is Test, Deployers {
                 )
             )
         );
-        
+
         personaFactory = PersonaTokenFactory(factoryProxy);
     }
-    
+
     function _deployFeeReductionSystem() internal {
-        feeReductionSystem = new FeeReductionSystem(
-            amicaToken,
-            personaFactory
-        );
-        
+        feeReductionSystem = new FeeReductionSystem(amicaToken, personaFactory);
+
         // Set the fee reduction system in the dynamic fee hook
         dynamicFeeHook.setFeeReductionSystem(address(feeReductionSystem));
     }
-    
+
     function _distributeTokens() internal {
         // Give users some AMICA tokens
         amicaToken.transfer(user1, 10_000 ether);
         amicaToken.transfer(user2, 10_000 ether);
         amicaToken.transfer(user3, 10_000 ether);
-        
+
         // Give users some ETH for gas
         vm.deal(factoryOwner, 100 ether);
         vm.deal(user1, 100 ether);
         vm.deal(user2, 100 ether);
         vm.deal(user3, 100 ether);
-    }
-    
-    /**
-     * @notice Approves AMICA tokens for the factory
-     * @param user User address to approve from
-     * @param amount Amount to approve
-     */
-    function approveAmicaForFactory(address user, uint256 amount) internal {
-        vm.prank(user);
-        amicaToken.approve(address(personaFactory), amount);
-    }
-    
-    /**
-     * @notice Generates a unique domain from a string
-     * @param domainString The domain string
-     * @return domain The hashed domain
-     */
-    function generateDomain(string memory domainString) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(domainString));
     }
 }
