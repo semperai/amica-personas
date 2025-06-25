@@ -49,12 +49,8 @@ contract AmicaTokenTest is Fixtures {
         weth.mint(user1, 1_000 ether);
         dai.mint(user1, 100_000 ether);
 
-        // Give users some AMICA tokens for tests
-        vm.startPrank(owner);
-        amicaToken.transfer(user1, 10_000 ether);
-        amicaToken.transfer(user2, 10_000 ether);
-        amicaToken.transfer(user3, 10_000 ether);
-        vm.stopPrank();
+        // REMOVED: Duplicate AMICA token distribution
+        // Users already receive tokens in Fixtures._distributeTokens()
     }
 
     // Deployment Tests
@@ -438,8 +434,10 @@ contract AmicaTokenTest is Fixtures {
 
         // Get actual balances
         uint256 ownerBalance = amicaToken.balanceOf(owner);
+        uint256 user1Balance = amicaToken.balanceOf(user1);
         uint256 user2Balance = amicaToken.balanceOf(user2);
         uint256 user3Balance = amicaToken.balanceOf(user3);
+        uint256 testContractBalance = amicaToken.balanceOf(address(this));
 
         // Transfer most tokens back to contract to reduce circulating supply
         // Owner transfers most of their tokens to contract, keeping only 1 million
@@ -453,13 +451,15 @@ contract AmicaTokenTest is Fixtures {
         vm.prank(user3);
         amicaToken.transfer(address(amicaToken), user3Balance);
 
+        // Test contract also transfers its tokens
+        amicaToken.transfer(address(amicaToken), testContractBalance);
+
         uint256 lowCirculating = amicaToken.circulatingSupply();
-        // The circulating supply should be around 1,010,000 ether (owner's 1M + user1's 10k)
-        assertLt(lowCirculating, 2_000_000 ether); // Assert less than 2 million
-        assertGt(lowCirculating, 1_000_000 ether); // Assert greater than 1 million
+        // The circulating supply should be owner's 1M + user1's 10M = 11M
+        assertLt(lowCirculating, 12_000_000 ether); // Assert less than 12 million
+        assertGt(lowCirculating, 10_000_000 ether); // Assert greater than 10 million
 
         // User1 burns half their tokens
-        uint256 user1Balance = amicaToken.balanceOf(user1);
         uint256 burnAmount = user1Balance / 2;
         uint256[] memory tokenIndexes = new uint256[](1);
         tokenIndexes[0] = 1;

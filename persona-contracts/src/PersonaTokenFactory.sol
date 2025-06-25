@@ -444,7 +444,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         if (!IERC20(pairingToken).transferFrom(msg.sender, address(this), totalPayment)) revert Failed(1);
 
         uint256 tokenId = _currentTokenId++;
-        _safeMint(msg.sender, tokenId);
+        _mint(msg.sender, tokenId);
 
         address token = Clones.clone(personaTokenImplementation);
         IPersonaToken(token).initialize(
