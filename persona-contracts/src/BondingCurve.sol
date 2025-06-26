@@ -4,14 +4,18 @@ pragma solidity ^0.8.26;
 import {UD60x18, ud} from "@prb/math/src/UD60x18.sol";
 
 /**
- * @title Bonding Curve Implementation
- * @notice Exponential bonding curve using PRBMath for precise calculations
+ * @title Bonding Curve with Minimal Sell Fee
+ * @notice Exponential bonding curve with ultra-minimal sell fee to prevent arbitrage
  * @dev price = startPrice * e^((tokensSold / totalSupply) * ln(33))
  */
 contract BondingCurve {
     // Constants in UD60x18 format
     UD60x18 private constant LN_33 = UD60x18.wrap(3.496507561466480235e18); // ln(33)
     UD60x18 private constant ONE = UD60x18.wrap(1e18);
+    
+    // Ultra-minimal fee configuration
+    uint256 public constant SELL_FEE_BPS = 1; // 0.01% fee on sells (1 basis point)
+    uint256 private constant BPS_DIVISOR = 10000;
 
     /**
      * @notice Calculates token output for buying using exponential bonding curve
@@ -70,7 +74,7 @@ contract BondingCurve {
      * @param amountIn Persona tokens to sell
      * @param reserveSold Current tokens sold
      * @param reserveTotal Total tokens in bonding curve
-     * @return pairingTokenOut Pairing token output amount
+     * @return pairingTokenOut Pairing token output amount (after fee)
      */
     function calculateAmountOutForSell(
         uint256 amountIn,
@@ -82,7 +86,26 @@ contract BondingCurve {
 
         // Calculate the refund using exact integral
         uint256 newReserveSold = reserveSold - amountIn;
+        uint256 refundBeforeFee = calculateCostBetween(newReserveSold, reserveSold, reserveTotal);
+        
+        // Apply minimal sell fee (0.01%)
+        uint256 fee = (refundBeforeFee * SELL_FEE_BPS) / BPS_DIVISOR;
+        pairingTokenOut = refundBeforeFee - fee;
+    }
 
+    /**
+     * @notice Calculates pairing token output for selling WITHOUT fee
+     * @dev Used for testing to verify base calculations are symmetric
+     */
+    function calculateAmountOutForSellNoFee(
+        uint256 amountIn,
+        uint256 reserveSold,
+        uint256 reserveTotal
+    ) public pure returns (uint256 pairingTokenOut) {
+        require(amountIn > 0, "Invalid input");
+        require(amountIn <= reserveSold, "Insufficient tokens sold");
+
+        uint256 newReserveSold = reserveSold - amountIn;
         return calculateCostBetween(newReserveSold, reserveSold, reserveTotal);
     }
 
