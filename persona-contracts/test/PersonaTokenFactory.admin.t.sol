@@ -3,7 +3,7 @@ pragma solidity ^0.8.26;
 
 import {Fixtures} from "./shared/Fixtures.sol";
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
-import {PersonaTokenFactory} from "../../src/PersonaTokenFactory.sol";
+import {PersonaTokenFactory} from "../src/PersonaTokenFactory.sol";
 
 contract PersonaTokenFactoryAdminTest is Fixtures {
     function setUp() public override {

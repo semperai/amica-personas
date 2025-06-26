@@ -367,7 +367,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         pairingConfigs[amicaToken_] = PairingConfig({
             enabled: true,
             mintCost: 1000 ether,
-            liquidityMultiplier: 1e18 // 1x multiplier for AMICA token
+            liquidityMultiplier: 333 ether
         });
 
     }
