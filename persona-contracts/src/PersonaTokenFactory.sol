@@ -31,7 +31,7 @@ interface IPersonaToken {
 
 /**
  * @notice Consolidated error for invalid inputs
- * @param code Error code: 0=Token, 1=Amount, 2=Recipient, 3=Name, 4=Symbol, 5=Metadata, 6=Configuration, 7=Index, 8=Share, 9=Multiplier, 10=NonRegisteredDomain, 11=AlreadyRegisteredDomain, 12=Address
+ * @param code Error code: 0=Token, 1=Amount, 2=Recipient, 3=Name, 4=Symbol, 5=Metadata, 6=Configuration, 7=Index, 8=Share, 9=Multiplier, 10=NonRegisteredDomain, 11=AlreadyRegisteredDomain, 12=Address, 13=DomainFormat
  */
 error Invalid(uint8 code);
 
@@ -450,14 +450,14 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         if (bytes(symbol).length == 0 || bytes(symbol).length > 10) revert Invalid(4);
 
         if (domain == bytes32(0)) revert Invalid(10);
+        if (!isValidSubdomain(domain)) revert Invalid(13);
         if (domains[domain] != 0) revert Invalid(11);
-
 
         uint256 totalPayment = config.mintCost + initialBuyAmount;
         if (IERC20(pairingToken).balanceOf(msg.sender) < totalPayment) revert Insufficient(0);
         if (!IERC20(pairingToken).transferFrom(msg.sender, address(this), totalPayment)) revert Failed(1);
 
-        uint256 tokenId = _currentTokenId++;
+        uint256 tokenId = ++_currentTokenId;
         _mint(msg.sender, tokenId);
 
         address token = Clones.clone(personaTokenImplementation);
@@ -498,6 +498,65 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         }
 
         return tokenId;
+    }
+
+    /**
+     * @dev Validates a subdomain from bytes32
+     * Requirements:
+     * - Must start with a letter (a-z)
+     * - Must end with a letter (a-z) or digit (0-9)
+     * - Interior characters can be letters (a-z), numbers (0-9), or hyphens (-)
+     * - Cannot start or end with a hyphen
+     * - Must have at least 1 character
+     * - Null bytes (0x00) mark the end of the string
+     * @param subdomain The subdomain as bytes32 to validate
+     * @return bool True if valid, false otherwise
+     */
+    function isValidSubdomain(bytes32 subdomain) public pure returns (bool) {
+        // Find the actual length by looking for null terminator
+        uint256 length = 0;
+        for (uint256 i = 0; i < 32; i++) {
+            if (subdomain[i] == 0x00) {
+                break;
+            }
+            length++;
+        }
+        
+        // Check if empty
+        if (length == 0) {
+            return false;
+        }
+        
+        // Check first character - must be a letter (a-z)
+        bytes1 firstChar = subdomain[0];
+        if (!(firstChar >= 0x61 && firstChar <= 0x7A)) {
+            return false;
+        }
+        
+        // Check last character - must be a letter (a-z) or digit (0-9)
+        bytes1 lastChar = subdomain[length - 1];
+        if (!((lastChar >= 0x61 && lastChar <= 0x7A) || (lastChar >= 0x30 && lastChar <= 0x39))) {
+            return false;
+        }
+        
+        // Check all characters
+        for (uint256 i = 0; i < length; i++) {
+            bytes1 char = subdomain[i];
+            
+            // Check if character is valid:
+            // - lowercase letters: 0x61-0x7A (a-z)
+            // - numbers: 0x30-0x39 (0-9)  
+            // - hyphen: 0x2D (-)
+            if (!(
+                (char >= 0x61 && char <= 0x7A) || // a-z
+                (char >= 0x30 && char <= 0x39) || // 0-9
+                (char == 0x2D)                     // -
+            )) {
+                return false;
+            }
+        }
+        
+        return true;
     }
 
     /**

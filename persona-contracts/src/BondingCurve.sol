@@ -4,16 +4,17 @@ pragma solidity ^0.8.26;
 /**
  * @title Bonding Curve with Virtual Reserves
  * @notice Implements a virtual reserves bonding curve model similar to pump.fun
- * @dev Uses constant product AMM formula with virtual reserves to achieve 33x price multiplier at graduation
+ * @dev Uses constant product AMM formula with virtual reserves to achieve 66x price multiplier at graduation
  * 
  * The virtual reserves model works by:
  * 1. Starting with virtual token and ETH reserves
  * 2. Using x * y = k constant product formula
- * 3. Calibrating initial virtual reserves to achieve exactly 33x price at graduation
+ * 3. Calibrating initial virtual reserves to achieve exactly 66x price at graduation
  */
 contract BondingCurve {
     uint256 private constant PRECISION = 1e18;
-    uint256 public constant CURVE_MULTIPLIER = 33;
+    uint256 public constant CURVE_MULTIPLIER = 66;
+    uint256 private constant SQRT66_MINUS_1 = 1053; // Approximation of sqrt(133) - 1 * 1000 for precision
     
     // Fee configuration to prevent rounding exploit
     uint256 public constant SELL_FEE_BPS = 10; // 0.1% fee on sells
@@ -150,22 +151,22 @@ contract BondingCurve {
         uint256 reserveSold,
         uint256 reserveTotal
     ) public pure returns (uint256 virtualToken, uint256 virtualETH) {
-        // To achieve exactly 1x starting price and 33x ending price:
-        // We need virtualETH/virtualToken to go from 1 to 33
+        // To achieve exactly 1x starting price and 66x ending price:
+        // We need virtualETH/virtualToken to go from 1 to 66
         // 
         // Math derivation:
         // At start: (T + b) / (T + b) = 1 (where T = reserveTotal, b = virtual buffer)
-        // At end: virtualETH_end / b = 33
+        // At end: virtualETH_end / b = 66
         // With constant k = (T + b)²
         // 
-        // Solving: virtualETH_end = k / b = (T + b)² / b = 33 * b
-        // Therefore: (T + b)² = 33 * b²
-        // T + b = b * sqrt(33)
-        // b = T / (sqrt(33) - 1) ≈ T / 4.745
+        // Solving: virtualETH_end = k / b = (T + b)² / b = 66 * b
+        // Therefore: (T + b)² = 66 * b²
+        // T + b = b * sqrt(66)
+        // b = T / (sqrt(66) - 1) ≈ T / 4.745
         
-        // Using a precise approximation for sqrt(33) - 1 ≈ 4.745
-        // We use b = T * 1000 / 4745 for precision
-        uint256 virtualBuffer = (reserveTotal * 1000) / 4745;
+        // Using a precise approximation for sqrt(66) - 1 ≈ 4.745
+        // We use b = T * 1000 / 7124 for precision
+        uint256 virtualBuffer = (reserveTotal * 1000) / SQRT66_MINUS_1;
         
         // Virtual token reserve decreases as tokens are sold
         virtualToken = reserveTotal - reserveSold + virtualBuffer;

@@ -11,6 +11,7 @@ contract BondingCurveTest_Security is Test {
     uint256 constant SUPPLY_222M = 222_222_222 ether;
     uint256 constant SUPPLY_333M = 333_333_333 ether;
     uint256 constant PRECISION = 1e18;
+    uint256 constant CURVE_MULTIPLIER = 66; // Updated from 33 to 66
 
     function setUp() public {
         bondingCurve = new BondingCurve();
@@ -344,6 +345,7 @@ contract BondingCurveTest_Security is Test {
             // Price at key points
             console.log("  Price at 0%:", bondingCurve.getCurrentPrice(0, supply) / 1e18);
             console.log("  Price at 50%:", bondingCurve.getCurrentPrice(supply / 2, supply) / 1e18);
+            console.log("  Price at 85%:", bondingCurve.getCurrentPrice((supply * 85) / 100, supply) / 1e18);
             console.log("  Price at 100%:", bondingCurve.getCurrentPrice(supply, supply) / 1e18);
         }
     }
