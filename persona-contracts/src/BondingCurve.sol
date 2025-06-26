@@ -1,27 +1,29 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {UD60x18, ud} from "@prb/math/src/UD60x18.sol";
-
 /**
- * @title Bonding Curve with Minimal Sell Fee
- * @notice Exponential bonding curve with ultra-minimal sell fee to prevent arbitrage
- * @dev price = startPrice * e^((tokensSold / totalSupply) * ln(33))
+ * @title Bonding Curve with Virtual Reserves
+ * @notice Implements a virtual reserves bonding curve model similar to pump.fun
+ * @dev Uses constant product AMM formula with virtual reserves to achieve 33x price multiplier at graduation
+ * 
+ * The virtual reserves model works by:
+ * 1. Starting with virtual token and ETH reserves
+ * 2. Using x * y = k constant product formula
+ * 3. Calibrating initial virtual reserves to achieve exactly 33x price at graduation
  */
 contract BondingCurve {
-    // Constants in UD60x18 format
-    UD60x18 private constant LN_33 = UD60x18.wrap(3.496507561466480235e18); // ln(33)
-    UD60x18 private constant ONE = UD60x18.wrap(1e18);
+    uint256 private constant PRECISION = 1e18;
+    uint256 public constant CURVE_MULTIPLIER = 33;
     
-    // Ultra-minimal fee configuration
-    uint256 public constant SELL_FEE_BPS = 1; // 0.01% fee on sells (1 basis point)
+    // Fee configuration to prevent rounding exploit
+    uint256 public constant SELL_FEE_BPS = 10; // 0.1% fee on sells
     uint256 private constant BPS_DIVISOR = 10000;
 
     /**
-     * @notice Calculates token output for buying using exponential bonding curve
-     * @param amountIn Input amount of pairing tokens
-     * @param reserveSold Tokens already sold
-     * @param reserveTotal Total tokens in bonding curve
+     * @notice Calculates token output for buying using virtual reserves model
+     * @param amountIn Input amount of ETH
+     * @param reserveSold Tokens already sold from the curve
+     * @param reserveTotal Total tokens available in bonding curve
      * @return tokenOut Token output amount
      */
     function calculateAmountOut(
@@ -32,49 +34,27 @@ contract BondingCurve {
         require(amountIn > 0, "Invalid input");
         require(reserveTotal > reserveSold, "Insufficient reserve");
 
-        // Binary search for the correct amount of tokens
-        // We need to find X such that calculateCostBetween(reserveSold, reserveSold + X) = amountIn
-
-        uint256 low = 0;
-        uint256 high = reserveTotal - reserveSold;
-
-        // First, check if we can buy all remaining tokens
-        uint256 maxCost = calculateCostBetween(reserveSold, reserveTotal, reserveTotal);
-        if (amountIn >= maxCost) {
-            return reserveTotal - reserveSold;
-        }
-
-        // Binary search with precision
-        while (high - low > 1) {
-            uint256 mid = (low + high) / 2;
-
-            // Calculate cost for this amount of tokens
-            uint256 cost = calculateCostBetween(reserveSold, reserveSold + mid, reserveTotal);
-
-            if (cost <= amountIn) {
-                low = mid;
-            } else {
-                high = mid;
-            }
-        }
-
-        // If we have room for one more token, check if we can afford it
-        if (low < reserveTotal - reserveSold) {
-            uint256 highCost = calculateCostBetween(reserveSold, reserveSold + low + 1, reserveTotal);
-            if (highCost <= amountIn) {
-                return low + 1;
-            }
-        }
-
-        return low;
+        // Calculate virtual reserves
+        (uint256 virtualToken, uint256 virtualETH) = getVirtualReserves(reserveSold, reserveTotal);
+        
+        // Calculate output using constant product formula
+        // When buying tokens: dx = (x * dy) / (y + dy)
+        // where x = virtualToken, y = virtualETH, dy = amountIn
+        uint256 numerator = virtualToken * amountIn;
+        uint256 denominator = virtualETH + amountIn;
+        uint256 virtualTokenOut = numerator / denominator;
+        
+        // Ensure we don't exceed available tokens
+        uint256 tokensRemaining = reserveTotal - reserveSold;
+        tokenOut = virtualTokenOut > tokensRemaining ? tokensRemaining : virtualTokenOut;
     }
 
     /**
-     * @notice Calculates pairing token output for selling
-     * @param amountIn Persona tokens to sell
-     * @param reserveSold Current tokens sold
+     * @notice Calculates ETH output for selling tokens
+     * @param amountIn Tokens to sell
+     * @param reserveSold Current tokens sold from the curve
      * @param reserveTotal Total tokens in bonding curve
-     * @return pairingTokenOut Pairing token output amount (after fee)
+     * @return pairingTokenOut ETH output amount (after fee)
      */
     function calculateAmountOutForSell(
         uint256 amountIn,
@@ -84,18 +64,16 @@ contract BondingCurve {
         require(amountIn > 0, "Invalid input");
         require(amountIn <= reserveSold, "Insufficient tokens sold");
 
-        // Calculate the refund using exact integral
-        uint256 newReserveSold = reserveSold - amountIn;
-        uint256 refundBeforeFee = calculateCostBetween(newReserveSold, reserveSold, reserveTotal);
+        uint256 ethBeforeFee = calculateAmountOutForSellNoFee(amountIn, reserveSold, reserveTotal);
         
-        // Apply minimal sell fee (0.01%)
-        uint256 fee = (refundBeforeFee * SELL_FEE_BPS) / BPS_DIVISOR;
-        pairingTokenOut = refundBeforeFee - fee;
+        // Apply fee to prevent rounding exploits
+        uint256 fee = (ethBeforeFee * SELL_FEE_BPS) / BPS_DIVISOR;
+        pairingTokenOut = ethBeforeFee - fee;
     }
 
     /**
-     * @notice Calculates pairing token output for selling WITHOUT fee
-     * @dev Used for testing to verify base calculations are symmetric
+     * @notice Calculates ETH output for selling WITHOUT fee
+     * @dev Internal calculation for testing and fee application
      */
     function calculateAmountOutForSellNoFee(
         uint256 amountIn,
@@ -105,8 +83,19 @@ contract BondingCurve {
         require(amountIn > 0, "Invalid input");
         require(amountIn <= reserveSold, "Insufficient tokens sold");
 
-        uint256 newReserveSold = reserveSold - amountIn;
-        return calculateCostBetween(newReserveSold, reserveSold, reserveTotal);
+        // When selling tokens back, we calculate using the AMM formula
+        // Current state
+        (uint256 virtualToken, uint256 virtualETH) = getVirtualReserves(reserveSold, reserveTotal);
+        
+        // After selling, virtual token reserve increases
+        uint256 newVirtualToken = virtualToken + amountIn;
+        
+        // Calculate new virtual ETH to maintain constant k
+        uint256 k = virtualToken * virtualETH;
+        uint256 newVirtualETH = k / newVirtualToken;
+        
+        // ETH output is the difference
+        pairingTokenOut = virtualETH - newVirtualETH;
     }
 
     /**
@@ -114,7 +103,7 @@ contract BondingCurve {
      * @param fromTokens Starting point (tokens sold)
      * @param toTokens Ending point (tokens sold)
      * @param totalSupply Total supply available for bonding
-     * @return cost The cost in pairing tokens
+     * @return cost The cost in ETH
      */
     function calculateCostBetween(
         uint256 fromTokens,
@@ -122,38 +111,70 @@ contract BondingCurve {
         uint256 totalSupply
     ) public pure returns (uint256 cost) {
         if (fromTokens >= toTokens) return 0;
-
-        UD60x18 progressFrom = ud(fromTokens).div(ud(totalSupply));
-        UD60x18 progressTo = ud(toTokens).div(ud(totalSupply));
-
-        // Calculate exponentials
-        UD60x18 expFrom = progressFrom.mul(LN_33).exp();
-        UD60x18 expTo = progressTo.mul(LN_33).exp();
-
-        // Integral of exponential bonding curve
-        // ∫ e^(progress * ln(33)) d(progress) = (1/ln(33)) * e^(progress * ln(33))
-        // Cost = totalSupply * (integral at 'to' - integral at 'from')
-
-        UD60x18 integralDiff = expTo.sub(expFrom).div(LN_33);
-        UD60x18 costUD = ud(totalSupply).mul(integralDiff);
-
-        return costUD.unwrap();
+        
+        // Get virtual ETH at the starting point
+        (, uint256 virtualETHStart) = getVirtualReserves(fromTokens, totalSupply);
+        
+        // Get virtual ETH at the ending point
+        (, uint256 virtualETHEnd) = getVirtualReserves(toTokens, totalSupply);
+        
+        // The cost is the difference in virtual ETH reserves
+        cost = virtualETHEnd - virtualETHStart;
     }
 
     /**
      * @notice Gets the current price at a given reserve level
      * @param reserveSold Current tokens sold
      * @param reserveTotal Total tokens in bonding curve
-     * @return price Current price multiplier
+     * @return price Current price in ETH per token (with 18 decimals)
      */
     function getCurrentPrice(
         uint256 reserveSold,
         uint256 reserveTotal
     ) public pure returns (uint256 price) {
-        UD60x18 progress = ud(reserveSold).div(ud(reserveTotal));
-        UD60x18 exponent = progress.mul(LN_33);
-        UD60x18 multiplier = exponent.exp();
+        (uint256 virtualToken, uint256 virtualETH) = getVirtualReserves(reserveSold, reserveTotal);
+        
+        // Price = virtualETH / virtualToken (with 18 decimal precision)
+        price = (virtualETH * PRECISION) / virtualToken;
+    }
 
-        return multiplier.unwrap();
+    /**
+     * @notice Calculates virtual reserves based on tokens sold
+     * @dev Virtual reserves maintain constant k while achieving price targets
+     * @param reserveSold Tokens sold from the curve
+     * @param reserveTotal Total tokens in the curve
+     * @return virtualToken Virtual token reserve
+     * @return virtualETH Virtual ETH reserve
+     */
+    function getVirtualReserves(
+        uint256 reserveSold,
+        uint256 reserveTotal
+    ) public pure returns (uint256 virtualToken, uint256 virtualETH) {
+        // To achieve exactly 1x starting price and 33x ending price:
+        // We need virtualETH/virtualToken to go from 1 to 33
+        // 
+        // Math derivation:
+        // At start: (T + b) / (T + b) = 1 (where T = reserveTotal, b = virtual buffer)
+        // At end: virtualETH_end / b = 33
+        // With constant k = (T + b)²
+        // 
+        // Solving: virtualETH_end = k / b = (T + b)² / b = 33 * b
+        // Therefore: (T + b)² = 33 * b²
+        // T + b = b * sqrt(33)
+        // b = T / (sqrt(33) - 1) ≈ T / 4.745
+        
+        // Using a precise approximation for sqrt(33) - 1 ≈ 4.745
+        // We use b = T * 1000 / 4745 for precision
+        uint256 virtualBuffer = (reserveTotal * 1000) / 4745;
+        
+        // Virtual token reserve decreases as tokens are sold
+        virtualToken = reserveTotal - reserveSold + virtualBuffer;
+        
+        // Calculate k from initial state
+        uint256 initialReserve = reserveTotal + virtualBuffer;
+        uint256 k = initialReserve * initialReserve;
+        
+        // Maintain constant k
+        virtualETH = k / virtualToken;
     }
 }
