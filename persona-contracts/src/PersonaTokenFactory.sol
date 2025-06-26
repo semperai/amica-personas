@@ -31,7 +31,7 @@ interface IPersonaToken {
 
 /**
  * @notice Consolidated error for invalid inputs
- * @param code Error code: 0=Token, 1=Amount, 2=Recipient, 3=Name, 4=Symbol, 5=Metadata, 6=Configuration, 7=Index, 8=Share, 9=Multiplier, 10=NonRegisteredDomain, 11=AlreadyRegisteredDomain, 12=Address, 13=DomainFormat
+ * @param code Error code: 0=Token, 1=Amount, 2=Recipient, 3=Name, 4=Symbol, 5=Metadata, 6=Configuration, 7=Index, 8=Share, 9=Multiplier, 10=NonRegisteredDomain, 11=AlreadyRegisteredDomain, 12=Address, 13=DomainFormat, 14=AlreadyClaimed
  */
 error Invalid(uint8 code);
 
@@ -83,6 +83,9 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     /// @notice Precision for calculations
     uint256 private constant PRECISION = 1e18;
 
+    /// @notice Graduation threshold - 85% of bonding tokens must be sold
+    uint256 public constant GRADUATION_THRESHOLD_PERCENT = 85;
+
     /**
      * @notice Core data for each persona
      * @param name Display name of the persona
@@ -116,12 +119,12 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @notice Configuration for pairing tokens
      * @param enabled Whether this token can be used for creating personas
      * @param mintCost Cost to mint a persona with this token
-     * @param graduationThreshold Amount needed to create Uniswap pair
+     * @param liquidityMultiplier Multiplier to ensure proper liquidity ratio at graduation (1e18 = 1x)
      */
     struct PairingConfig {
         bool enabled;
         uint256 mintCost;
-        uint256 graduationThreshold;
+        uint256 liquidityMultiplier;
     }
 
     /**
@@ -184,6 +187,9 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     /// @notice Mapping from token ID to user address to tokens purchased
     mapping(uint256 => mapping(address => uint256)) public userPurchases;
 
+    /// @notice Mapping from token ID to user address to whether they claimed
+    mapping(uint256 => mapping(address => bool)) public hasClaimed;
+
     /// @notice Mapping from token ID to user address to agent tokens deposited
     mapping(uint256 => mapping(address => uint256)) public agentDeposits;
 
@@ -234,12 +240,14 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     event TokensSold(uint256 indexed tokenId, address indexed seller, uint256 tokensSold, uint256 amountReceived);
 
     /**
-     * @notice Emitted when tokens are withdrawn
+     * @notice Emitted when tokens are claimed after graduation
      * @param tokenId Persona token ID
      * @param user User address
-     * @param amount Amount withdrawn
+     * @param purchasedAmount Amount from purchases
+     * @param bonusAmount Amount from unsold tokens
+     * @param totalAmount Total amount claimed
      */
-    event TokensWithdrawn(uint256 indexed tokenId, address indexed user, uint256 amount);
+    event TokensClaimed(uint256 indexed tokenId, address indexed user, uint256 purchasedAmount, uint256 bonusAmount, uint256 totalAmount);
 
     /**
      * @notice Emitted when agent token is associated with persona
@@ -359,7 +367,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         pairingConfigs[amicaToken_] = PairingConfig({
             enabled: true,
             mintCost: 1000 ether,
-            graduationThreshold: 1_000_000 ether
+            liquidityMultiplier: 1e18 // 1x multiplier for AMICA token
         });
 
     }
@@ -384,6 +392,15 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
+     * @notice Calculates the graduation threshold based on bonding amount
+     * @param bondingAmount Total tokens available in bonding curve
+     * @return threshold Amount of tokens that need to be sold for graduation
+     */
+    function _getGraduationThreshold(uint256 bondingAmount) private pure returns (uint256) {
+        return (bondingAmount * GRADUATION_THRESHOLD_PERCENT) / 100;
+    }
+
+    /**
      * @notice Pauses all contract operations
      * @dev Only callable by owner
      */
@@ -403,13 +420,13 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
      * @notice Configures a pairing token
      * @param token Address of the token to configure
      * @param mintCost Cost to mint a persona with this token
-     * @param graduationThreshold Amount needed for graduation
+     * @param liquidityMultiplier Multiplier to ensure proper liquidity ratio (1e18 = 1x)
      * @dev Only callable by owner
      */
     function configurePairingToken(
         address token,
         uint256 mintCost,
-        uint256 graduationThreshold,
+        uint256 liquidityMultiplier,
         bool enabled
     ) external onlyOwner {
         if (token == address(0)) revert Invalid(0);
@@ -417,7 +434,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         pairingConfigs[token] = PairingConfig({
             enabled: enabled,
             mintCost: mintCost,
-            graduationThreshold: graduationThreshold
+            liquidityMultiplier: liquidityMultiplier
         });
 
         emit PairingConfigUpdated(token);
@@ -579,7 +596,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Sells persona tokens for pairing tokens
+     * @notice Sells persona tokens for pairing tokens (only before graduation)
      * @param tokenId ID of the persona
      * @param amountIn Amount of persona tokens to sell
      * @param amountOutMin Minimum pairing tokens to receive
@@ -617,6 +634,10 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
             purchase.tokensSold,
             amounts.bonding
         );
+
+        // Apply multiplier to the output amount (reverse of buy)
+        PairingConfig memory config = pairingConfigs[persona.pairToken];
+        amountOut = (amountOut * PRECISION) / config.liquidityMultiplier;
 
         if (amountOut < amountOutMin) revert Insufficient(1);
 
@@ -661,9 +682,13 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
 
         TokenAmounts memory amounts = _getTokenAmounts(persona.agentToken != address(0));
 
-        // Call external bonding curve contract
+        // Apply multiplier to the input amount
+        PairingConfig memory config = pairingConfigs[persona.pairToken];
+        uint256 adjustedAmountIn = (amountIn * config.liquidityMultiplier) / PRECISION;
+
+        // Call external bonding curve contract with adjusted amount
         amountOut = bondingCurve.calculateAmountOut(
-            amountIn,
+            adjustedAmountIn,
             purchase.tokensSold,
             amounts.bonding
         );
@@ -679,33 +704,128 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         purchase.tokensSold += amountOut;
         userPurchases[tokenId][to] += amountOut;
 
-        // Don't transfer tokens - they stay in contract until withdrawn or sold back
+        // Don't transfer tokens - they stay in contract until claimed after graduation
         emit TokensPurchased(tokenId, to, amountIn, amountOut);
 
-        if (purchase.totalDeposited >= pairingConfigs[persona.pairToken].graduationThreshold) {
-            _createV4Pool(tokenId);
+        // Check graduation requirements
+        uint256 graduationThreshold = _getGraduationThreshold(amounts.bonding);
+        bool tokenThresholdMet = purchase.tokensSold >= graduationThreshold;
+        
+        // Check agent token requirement if applicable
+        bool agentRequirementMet = true;
+        if (persona.agentToken != address(0) && persona.minAgentTokens > 0) {
+            agentRequirementMet = persona.totalAgentDeposited >= persona.minAgentTokens;
+        }
+        
+        // Graduate if both requirements are met
+        if (tokenThresholdMet && agentRequirementMet) {
+            _graduate(tokenId);
         }
     }
 
     /**
-     * @notice Withdraws purchased tokens after graduation
+     * @notice Claims all rewards after graduation (purchased tokens + bonus + agent rewards)
      * @param tokenId ID of the persona
-     * @dev Only available after graduation to Uniswap
+     * @dev Combines token claims and agent rewards into one transaction
      */
-    function withdrawTokens(uint256 tokenId) external nonReentrant whenNotPaused {
+    function claimRewards(uint256 tokenId) external nonReentrant whenNotPaused {
         PersonaData storage persona = personas[tokenId];
         if (persona.token == address(0)) revert Invalid(0);
 
-        // Can only withdraw after graduation
+        // Can only claim after graduation
         if (!persona.pairCreated) revert NotAllowed(3); // 3 = NotGraduated
 
-        uint256 totalToWithdraw = userPurchases[tokenId][msg.sender];
-        if (totalToWithdraw == 0) revert NotAllowed(9);
-        userPurchases[tokenId][msg.sender] = 0;
+        // Check if already claimed tokens
+        if (hasClaimed[tokenId][msg.sender]) revert Invalid(14); // 14 = AlreadyClaimed
 
-        if (!IERC20(persona.token).transfer(msg.sender, totalToWithdraw)) revert Failed(0);
+        uint256 totalPersonaTokens = 0;
+        uint256 purchasedAmount = userPurchases[tokenId][msg.sender];
+        uint256 bonusAmount = 0;
+        uint256 agentRewardAmount = 0;
 
-        emit TokensWithdrawn(tokenId, msg.sender, totalToWithdraw);
+        // Calculate purchased tokens + bonus
+        if (purchasedAmount > 0) {
+            TokenPurchase storage purchase = purchases[tokenId];
+            TokenAmounts memory amounts = _getTokenAmounts(persona.agentToken != address(0));
+            uint256 unsoldTokens = amounts.bonding > purchase.tokensSold ? amounts.bonding - purchase.tokensSold : 0;
+            
+            if (unsoldTokens > 0 && purchase.tokensSold > 0) {
+                bonusAmount = (unsoldTokens * purchasedAmount) / purchase.tokensSold;
+            }
+            
+            totalPersonaTokens = purchasedAmount + bonusAmount;
+            hasClaimed[tokenId][msg.sender] = true;
+        }
+
+        // Calculate agent rewards if applicable
+        uint256 userAgentAmount = agentDeposits[tokenId][msg.sender];
+        if (persona.agentToken != address(0) && userAgentAmount > 0) {
+            agentDeposits[tokenId][msg.sender] = 0;
+            
+            if (persona.totalAgentDeposited > 0) {
+                TokenAmounts memory amounts = _getTokenAmounts(true);
+                agentRewardAmount = (amounts.agentRewards * userAgentAmount) / persona.totalAgentDeposited;
+                totalPersonaTokens += agentRewardAmount;
+            }
+        }
+
+        // Require at least something to claim
+        if (totalPersonaTokens == 0) revert NotAllowed(9); // No tokens to claim
+
+        // Transfer all persona tokens in one go
+        if (!IERC20(persona.token).transfer(msg.sender, totalPersonaTokens)) revert Failed(0);
+
+        // Emit appropriate events
+        if (purchasedAmount > 0) {
+            emit TokensClaimed(tokenId, msg.sender, purchasedAmount, bonusAmount, purchasedAmount + bonusAmount);
+        }
+        if (agentRewardAmount > 0) {
+            emit AgentRewardsDistributed(tokenId, msg.sender, agentRewardAmount, userAgentAmount);
+        }
+    }
+
+    /**
+     * @notice Gets all claimable rewards for a user
+     * @param tokenId ID of the persona
+     * @param user Address to check
+     * @return purchasedAmount Amount from purchases
+     * @return bonusAmount Amount from unsold tokens
+     * @return agentRewardAmount Amount from agent staking
+     * @return totalClaimable Total claimable amount
+     * @return claimed Whether the user has already claimed tokens
+     */
+    function getClaimableRewards(uint256 tokenId, address user) public view returns (
+        uint256 purchasedAmount,
+        uint256 bonusAmount,
+        uint256 agentRewardAmount,
+        uint256 totalClaimable,
+        bool claimed
+    ) {
+        PersonaData storage persona = personas[tokenId];
+        if (!persona.pairCreated) return (0, 0, 0, 0, false);
+
+        // Check token claims
+        purchasedAmount = userPurchases[tokenId][user];
+        claimed = hasClaimed[tokenId][user];
+
+        if (purchasedAmount > 0 && !claimed) {
+            TokenPurchase storage purchase = purchases[tokenId];
+            TokenAmounts memory amounts = _getTokenAmounts(persona.agentToken != address(0));
+            uint256 unsoldTokens = amounts.bonding > purchase.tokensSold ? amounts.bonding - purchase.tokensSold : 0;
+            
+            if (unsoldTokens > 0 && purchase.tokensSold > 0) {
+                bonusAmount = (unsoldTokens * purchasedAmount) / purchase.tokensSold;
+            }
+        }
+
+        // Check agent rewards
+        uint256 userAgentAmount = agentDeposits[tokenId][user];
+        if (persona.agentToken != address(0) && userAgentAmount > 0 && persona.totalAgentDeposited > 0) {
+            TokenAmounts memory amounts = _getTokenAmounts(true);
+            agentRewardAmount = (amounts.agentRewards * userAgentAmount) / persona.totalAgentDeposited;
+        }
+
+        totalClaimable = purchasedAmount + bonusAmount + agentRewardAmount;
     }
 
     /**
@@ -748,32 +868,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         emit AgentTokensWithdrawn(tokenId, msg.sender, amount);
     }
 
-    /**
-     * @notice Claims agent rewards after graduation
-     * @param tokenId ID of the persona
-     * @dev Distributes persona tokens proportional to agent token deposits
-     */
-    function claimAgentRewards(uint256 tokenId) external nonReentrant {
-        PersonaData storage persona = personas[tokenId];
-        if (!persona.pairCreated) revert NotAllowed(3);
-        if (persona.agentToken == address(0)) revert NotAllowed(6);
 
-        uint256 userAgentAmount = agentDeposits[tokenId][msg.sender];
-        if (userAgentAmount == 0) revert NotAllowed(9);
-        agentDeposits[tokenId][msg.sender] = 0;
-
-        uint256 personaReward = 0;
-        if (persona.totalAgentDeposited > 0) {
-            TokenAmounts memory amounts = _getTokenAmounts(true);
-            personaReward = (amounts.agentRewards * userAgentAmount) / persona.totalAgentDeposited;
-        }
-
-        if (personaReward > 0) {
-            if (!IERC20(persona.token).transfer(msg.sender, personaReward)) revert Failed(0);
-        }
-
-        emit AgentRewardsDistributed(tokenId, msg.sender, personaReward, userAgentAmount);
-    }
 
     /**
      * @notice Collects accumulated fees from pools (integrated from UniswapV4Manager)
@@ -874,20 +969,7 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
         ));
     }
 
-    /**
-     * @notice Gets available tokens in bonding curve
-     * @param tokenId ID of the persona
-     * @return Amount of tokens still available for purchase
-     */
-    function getAvailableTokens(uint256 tokenId) public view returns (uint256) {
-        PersonaData storage persona = personas[tokenId];
-        if (persona.pairCreated || persona.token == address(0)) return 0;
 
-        TokenAmounts memory amounts = _getTokenAmounts(persona.agentToken != address(0));
-        uint256 sold = purchases[tokenId].tokensSold;
-
-        return sold >= amounts.bonding ? 0 : amounts.bonding - sold;
-    }
 
     /**
      * @notice Internal pool initialization
@@ -933,18 +1015,13 @@ contract PersonaTokenFactory is ERC721Upgradeable, OwnableUpgradeable, Reentranc
     }
 
     /**
-     * @notice Creates Uniswap V4 pool for the persona
+     * @notice Graduates the persona by creating Uniswap V4 pools and distributing tokens
      * @param tokenId ID of the persona
-     * @dev Initializes the pool and adds initial liquidity
+     * @dev Processes distributions, creates pools, and marks as graduated
      */
-    function _createV4Pool(uint256 tokenId) private {
+    function _graduate(uint256 tokenId) private {
         PersonaData storage persona = personas[tokenId];
         if (persona.pairCreated) revert NotAllowed(7);
-
-        // Check agent token requirements
-        if (persona.agentToken != address(0) && persona.minAgentTokens > 0) {
-            if (persona.totalAgentDeposited < persona.minAgentTokens) revert Insufficient(3);
-        }
 
         // Process token distributions
         _processTokenDistributions(tokenId);
