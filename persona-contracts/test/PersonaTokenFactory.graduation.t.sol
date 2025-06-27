@@ -57,16 +57,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         );
 
         // Get persona data
-        (
-            address token,
-            address pairToken,
-            address agentToken,
-            bool graduated,
-            uint256 totalAgentDeposited,
-            uint256 agentTokenThreshold,
-            PoolId poolId,
-            PoolId agentPoolId
-        ) = personaFactory.personas(tokenId);
+        (address token,,,,,,,) = personaFactory.personas(tokenId);
 
         personaToken = token;
     }
@@ -373,9 +364,6 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         personaFactory.swapExactTokensForTokens(
             tokenId, user3Amount, 0, user3, block.timestamp + 1
         );
-
-        uint256 user2Purchased = personaFactory.bondingBalances(tokenId, user2);
-        uint256 user3Purchased = personaFactory.bondingBalances(tokenId, user3);
 
         // Trigger graduation with remaining amount
         uint256 totalRaisedSoFar = user2Amount + user3Amount;

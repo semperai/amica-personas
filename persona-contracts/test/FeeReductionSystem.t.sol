@@ -81,7 +81,7 @@ contract FeeReductionSystemTest is Fixtures {
 
     // ==================== Basic Setup Tests ====================
 
-    function test_BasicSetup() public {
+    function test_BasicSetup() public view {
         // Verify hook is deployed
         assertTrue(
             address(dynamicFeeHook) != address(0), "Hook should be deployed"
@@ -609,7 +609,6 @@ contract FeeReductionSystemTest is Fixtures {
         // First update
         vm.prank(user1);
         feeReductionSystem.updateSnapshot();
-        uint256 firstBlock = block.number;
 
         // Immediate second update (should overwrite pending)
         vm.prank(user1);
@@ -701,7 +700,7 @@ contract FeeReductionSystemTest is Fixtures {
 
     // ==================== Hook Tests ====================
 
-    function test_HookPermissions() public {
+    function test_HookPermissions() public view {
         Hooks.Permissions memory perms = dynamicFeeHook.getHookPermissions();
 
         // Only beforeSwap should be enabled
@@ -767,7 +766,10 @@ contract FeeReductionSystemTest is Fixtures {
 
     // ==================== Integration Tests ====================
 
-    function test_Integration_DynamicFeeHookWithFeeReductionSystem() public {
+    function test_Integration_DynamicFeeHookWithFeeReductionSystem()
+        public
+        view
+    {
         // Verify hook is properly connected to fee reduction system
         assertEq(
             address(dynamicFeeHook.feeReductionSystem()),

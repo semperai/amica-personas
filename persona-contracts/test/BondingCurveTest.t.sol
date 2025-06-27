@@ -19,7 +19,7 @@ contract BondingCurveTest is Test {
 
     // ==================== Price Target Tests ====================
 
-    function test_GetCurrentPrice_AtStart() public {
+    function test_GetCurrentPrice_AtStart() public view {
         uint256 price = bondingCurve.getCurrentPrice(0, TOTAL_SUPPLY);
         // Price should be approximately 1x at start
         assertApproxEqRel(
@@ -31,7 +31,7 @@ contract BondingCurveTest is Test {
         console.log("Starting price:", price);
     }
 
-    function test_GetCurrentPrice_AtEnd() public {
+    function test_GetCurrentPrice_AtEnd() public view {
         uint256 price = bondingCurve.getCurrentPrice(TOTAL_SUPPLY, TOTAL_SUPPLY);
         // Price should be approximately 66x at the end
         assertApproxEqRel(
@@ -45,7 +45,7 @@ contract BondingCurveTest is Test {
 
     // ==================== Buy/Sell Symmetry Test ====================
 
-    function test_PerfectSymmetryRequired() public {
+    function test_PerfectSymmetryRequired() public view {
         // Without fees, buy-sell must be perfectly symmetric
 
         // Test case 1: Small amount at start
@@ -80,7 +80,7 @@ contract BondingCurveTest is Test {
 
     // ==================== Basic Calculation Tests ====================
 
-    function test_CalculateAmountOut_FirstPurchase() public {
+    function test_CalculateAmountOut_FirstPurchase() public view {
         // First purchase should get tokens at starting price (~1x)
         uint256 amountIn = 1000 ether;
         uint256 tokensOut =
@@ -96,7 +96,7 @@ contract BondingCurveTest is Test {
         );
     }
 
-    function test_CalculateAmountOut_NearEndOfCurve() public {
+    function test_CalculateAmountOut_NearEndOfCurve() public view {
         // When almost all tokens are sold, price should be near 66x
         uint256 amountIn = 1000 ether;
         uint256 almostAllSold = TOTAL_SUPPLY - 1000 ether; // Only 1000 tokens left
@@ -114,7 +114,7 @@ contract BondingCurveTest is Test {
         assertGt(tokensOut, 0, "Should still receive some tokens");
     }
 
-    function test_CalculateAmountOutForSell_SellAll() public {
+    function test_CalculateAmountOutForSell_SellAll() public view {
         // If tokens were bought for X amount, selling all back should return X minus fee
         uint256 buyAmount = 10000 ether;
 
@@ -149,7 +149,7 @@ contract BondingCurveTest is Test {
         );
     }
 
-    function test_CalculateCostBetween_FullRange() public {
+    function test_CalculateCostBetween_FullRange() public view {
         // Cost to buy entire supply
         uint256 totalCost =
             bondingCurve.calculateCostBetween(0, TOTAL_SUPPLY, TOTAL_SUPPLY);
@@ -176,7 +176,7 @@ contract BondingCurveTest is Test {
 
     // ==================== Integration Test ====================
 
-    function test_Integration_FullCycle() public {
+    function test_Integration_FullCycle() public view {
         // Simulate buying and selling in chunks
         uint256 totalSpent = 0;
         uint256 totalTokensBought = 0;
@@ -217,7 +217,7 @@ contract BondingCurveTest is Test {
 
     // ==================== Gas Efficiency Test ====================
 
-    function test_GasEfficiency() public {
+    function test_GasEfficiency() public view {
         // Measure gas for various operations
         uint256 gasBefore;
         uint256 gasAfter;
@@ -247,7 +247,7 @@ contract BondingCurveTest is Test {
 
     // ==================== Fee Protection Test ====================
 
-    function test_FeePreventsDrainExploit() public {
+    function test_FeePreventsDrainExploit() public view {
         // Test that fee prevents profitable round-trip exploits
         uint256 startAmount = 1000 ether;
 
@@ -281,6 +281,7 @@ contract BondingCurveTest is Test {
 
     function testFuzz_BuySellSymmetry(uint256 buyAmount, uint256 initialSold)
         public
+        view
     {
         buyAmount = bound(buyAmount, 1 ether, 10000 ether);
         initialSold = bound(initialSold, 0, TOTAL_SUPPLY / 2);

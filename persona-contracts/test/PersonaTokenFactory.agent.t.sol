@@ -822,9 +822,6 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         (, uint256 tokensPurchased) = personaFactory.bondingStates(tokenId);
         assertEq(tokensPurchased, 0);
 
-        // Verify graduation happens at 85% of 222,222,222
-        uint256 expectedGraduation = (222_222_222 ether * 85) / 100;
-
         // Buy just under graduation threshold
         vm.prank(user2);
         personaFactory.swapExactTokensForTokens(
@@ -852,9 +849,6 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         // Check bonding amount for non-agent personas (1/3 of supply)
         (, uint256 tokensPurchased) = personaFactory.bondingStates(tokenId);
         assertEq(tokensPurchased, 0);
-
-        // Verify graduation happens at 85% of 333,333,333
-        uint256 expectedGraduation = (333_333_333 ether * 85) / 100;
 
         // Buy just under graduation threshold
         vm.prank(user2);

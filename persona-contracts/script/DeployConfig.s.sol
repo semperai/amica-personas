@@ -306,7 +306,7 @@ contract DeployAmicaWithConfig is DeployConfig {
 
         // For local networks, deploy Uniswap V4 first
         if (block.chainid == 31337) {
-            _deployLocalUniswapV4(config);
+            _deployLocalUniswapV4();
         }
 
         // Validate configuration
@@ -324,7 +324,7 @@ contract DeployAmicaWithConfig is DeployConfig {
         deployScript.run();
     }
 
-    function _deployLocalUniswapV4(NetworkConfig memory config) internal {
+    function _deployLocalUniswapV4() internal pure {
         console2.log("Deploying Uniswap V4 for local testing...");
 
         // Deploy PoolManager and PositionManager for local testing

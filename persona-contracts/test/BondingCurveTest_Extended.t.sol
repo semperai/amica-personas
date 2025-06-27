@@ -35,7 +35,7 @@ contract BondingCurveTest_Extended is Test {
 
     // ==================== Price Target Analysis ====================
 
-    function test_FindPriceTargets() public {
+    function test_FindPriceTargets() public view {
         uint256 supply = SUPPLY_222M;
         console.log("\n=== Finding where price reaches specific targets ===");
 
@@ -79,7 +79,7 @@ contract BondingCurveTest_Extended is Test {
 
     // ==================== 222M Supply Tests ====================
 
-    function test_222M_PriceProgression() public {
+    function test_222M_PriceProgression() public view {
         uint256 supply = SUPPLY_222M;
 
         // Test price at various points
@@ -121,7 +121,7 @@ contract BondingCurveTest_Extended is Test {
         );
     }
 
-    function test_222M_TotalCostCalculation() public {
+    function test_222M_TotalCostCalculation() public view {
         uint256 supply = SUPPLY_222M;
 
         // Calculate total cost to buy entire supply
@@ -142,7 +142,7 @@ contract BondingCurveTest_Extended is Test {
         );
     }
 
-    function test_222M_ChunkedPurchases() public {
+    function test_222M_ChunkedPurchases() public view {
         uint256 supply = SUPPLY_222M;
         uint256 chunkSize = supply / 10; // Buy in 10% chunks
         uint256 totalSpent = 0;
@@ -175,7 +175,7 @@ contract BondingCurveTest_Extended is Test {
 
     // ==================== 333M Supply Tests ====================
 
-    function test_333M_PriceProgression() public {
+    function test_333M_PriceProgression() public view {
         uint256 supply = SUPPLY_333M;
 
         // Test price at various points
@@ -217,7 +217,7 @@ contract BondingCurveTest_Extended is Test {
         );
     }
 
-    function test_333M_TotalCostCalculation() public {
+    function test_333M_TotalCostCalculation() public view {
         uint256 supply = SUPPLY_333M;
 
         // Calculate total cost to buy entire supply
@@ -238,7 +238,7 @@ contract BondingCurveTest_Extended is Test {
         );
     }
 
-    function test_333M_BuySellSymmetry() public {
+    function test_333M_BuySellSymmetry() public view {
         uint256 supply = SUPPLY_333M;
 
         // Test at different points along the curve
@@ -276,7 +276,7 @@ contract BondingCurveTest_Extended is Test {
 
     // ==================== Comparative Tests ====================
 
-    function test_Compare_SupplyScaling() public {
+    function test_Compare_SupplyScaling() public view {
         // Both curves should have same shape, just different total supply
 
         // Compare prices at equivalent progress points
@@ -300,7 +300,7 @@ contract BondingCurveTest_Extended is Test {
         }
     }
 
-    function test_Compare_CostPerToken() public {
+    function test_Compare_CostPerToken() public view {
         // Cost per token should be same at equivalent progress
         uint256 testAmount = 1000 ether;
 
@@ -326,7 +326,7 @@ contract BondingCurveTest_Extended is Test {
 
     // ==================== Edge Cases & Stress Tests ====================
 
-    function test_EdgeCase_BuyEntireSupply() public {
+    function test_EdgeCase_BuyEntireSupply() public view {
         // Test buying entire supply in one go
         uint256[] memory supplies = new uint256[](2);
         supplies[0] = SUPPLY_222M;
@@ -353,7 +353,7 @@ contract BondingCurveTest_Extended is Test {
         }
     }
 
-    function test_EdgeCase_MinimumPurchase() public {
+    function test_EdgeCase_MinimumPurchase() public view {
         // Test reasonable minimum purchase amounts
         uint256[] memory supplies = new uint256[](2);
         supplies[0] = SUPPLY_222M;
@@ -382,7 +382,7 @@ contract BondingCurveTest_Extended is Test {
         }
     }
 
-    function test_EdgeCase_LargePurchaseNearEnd() public {
+    function test_EdgeCase_LargePurchaseNearEnd() public view {
         // Test large purchase when little supply remains
         uint256 supply = SUPPLY_222M;
         uint256 almostSold = supply - 1000 ether;
@@ -406,7 +406,7 @@ contract BondingCurveTest_Extended is Test {
         );
     }
 
-    function test_EdgeCase_SellEntirePosition() public {
+    function test_EdgeCase_SellEntirePosition() public view {
         // Test selling large position at once
         uint256 supply = SUPPLY_333M;
         uint256 position = supply / 3; // Own 1/3 of supply
@@ -426,7 +426,7 @@ contract BondingCurveTest_Extended is Test {
 
     // ==================== Fee Impact Tests ====================
 
-    function test_FeeImpact_RoundTrip() public {
+    function test_FeeImpact_RoundTrip() public view {
         uint256[] memory supplies = new uint256[](2);
         supplies[0] = SUPPLY_222M;
         supplies[1] = SUPPLY_333M;
@@ -480,7 +480,7 @@ contract BondingCurveTest_Extended is Test {
 
     // ==================== Gas Benchmarks ====================
 
-    function test_GasBenchmark_Operations() public {
+    function test_GasBenchmark_Operations() public view {
         uint256[] memory supplies = new uint256[](2);
         supplies[0] = SUPPLY_222M;
         supplies[1] = SUPPLY_333M;
@@ -523,7 +523,7 @@ contract BondingCurveTest_Extended is Test {
 
     // ==================== Virtual Reserves Validation ====================
 
-    function test_VirtualReserves_Consistency() public {
+    function test_VirtualReserves_Consistency() public view {
         uint256[] memory supplies = new uint256[](2);
         supplies[0] = SUPPLY_222M;
         supplies[1] = SUPPLY_333M;
@@ -571,7 +571,7 @@ contract BondingCurveTest_Extended is Test {
     function testFuzz_BuySellSymmetry_222M(
         uint256 buyAmount,
         uint256 initialSold
-    ) public {
+    ) public view {
         buyAmount = bound(buyAmount, 1 ether, 50000 ether);
         initialSold = bound(initialSold, 0, SUPPLY_222M / 2);
 
@@ -581,7 +581,7 @@ contract BondingCurveTest_Extended is Test {
     function testFuzz_BuySellSymmetry_333M(
         uint256 buyAmount,
         uint256 initialSold
-    ) public {
+    ) public view {
         buyAmount = bound(buyAmount, 1 ether, 50000 ether);
         initialSold = bound(initialSold, 0, SUPPLY_333M / 2);
 
@@ -592,7 +592,7 @@ contract BondingCurveTest_Extended is Test {
         uint256 supply,
         uint256 buyAmount,
         uint256 initialSold
-    ) private {
+    ) private view {
         // Buy tokens
         uint256 tokensBought =
             bondingCurve.calculateAmountOut(buyAmount, initialSold, supply);
@@ -618,6 +618,7 @@ contract BondingCurveTest_Extended is Test {
 
     function testFuzz_MonotonicPriceIncrease(uint256 sold1, uint256 sold2)
         public
+        view
     {
         uint256 supply = SUPPLY_333M;
 
@@ -658,7 +659,7 @@ contract BondingCurveTest_Extended is Test {
         uint256 start,
         uint256 middle,
         uint256 end
-    ) public {
+    ) public view {
         uint256 supply = SUPPLY_222M;
         start = bound(start, 0, supply / 3);
         middle = bound(middle, start + 1, (supply * 2) / 3);

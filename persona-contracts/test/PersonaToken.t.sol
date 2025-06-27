@@ -335,7 +335,7 @@ contract PersonaTokenTest is Fixtures {
         }
     }
 
-    function test_PreviewBurnAndClaim_ZeroForNoBalance() public {
+    function test_PreviewBurnAndClaim_ZeroForNoBalance() public view {
         address[] memory tokens = new address[](1);
         tokens[0] = address(mockToken1);
 

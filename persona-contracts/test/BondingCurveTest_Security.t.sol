@@ -19,7 +19,7 @@ contract BondingCurveTest_Security is Test {
 
     // ==================== Overflow/Underflow Tests ====================
 
-    function test_Overflow_LargeAmounts() public {
+    function test_Overflow_LargeAmounts() public view {
         uint256 supply = SUPPLY_333M;
 
         // Test with very large amounts (but still reasonable for ETH)
@@ -32,7 +32,7 @@ contract BondingCurveTest_Security is Test {
         assertLt(tokensOut, supply, "Should not exceed supply");
     }
 
-    function test_Underflow_SmallAmounts() public {
+    function test_Underflow_SmallAmounts() public view {
         uint256 supply = SUPPLY_222M;
 
         // Test with reasonable minimum amounts (not 1 wei)
@@ -56,7 +56,7 @@ contract BondingCurveTest_Security is Test {
 
     // ==================== Precision Loss Tests ====================
 
-    function test_PrecisionLoss_RoundingErrors() public {
+    function test_PrecisionLoss_RoundingErrors() public view {
         uint256 supply = SUPPLY_333M;
 
         // Test many small trades to check for cumulative rounding errors
@@ -94,7 +94,7 @@ contract BondingCurveTest_Security is Test {
 
     // ==================== Exploit Prevention Tests ====================
 
-    function test_ExploitPrevention_SandwichAttack() public {
+    function test_ExploitPrevention_SandwichAttack() public view {
         uint256 supply = SUPPLY_222M;
 
         // Simulate sandwich attack scenario
@@ -128,7 +128,7 @@ contract BondingCurveTest_Security is Test {
         );
     }
 
-    function test_ExploitPrevention_RoundingExploit() public {
+    function test_ExploitPrevention_RoundingExploit() public view {
         uint256 supply = SUPPLY_333M;
 
         // Try to exploit rounding with many micro trades
@@ -184,7 +184,7 @@ contract BondingCurveTest_Security is Test {
 
     // ==================== Boundary Tests ====================
 
-    function test_Boundary_ExactSupplyPurchase() public {
+    function test_Boundary_ExactSupplyPurchase() public view {
         uint256[] memory supplies = new uint256[](2);
         supplies[0] = SUPPLY_222M;
         supplies[1] = SUPPLY_333M;
@@ -226,7 +226,7 @@ contract BondingCurveTest_Security is Test {
 
     // ==================== State Consistency Tests ====================
 
-    function test_StateConsistency_VirtualReserves() public {
+    function test_StateConsistency_VirtualReserves() public view {
         uint256 supply = SUPPLY_333M;
 
         // Verify that k = x * y remains constant
@@ -253,7 +253,7 @@ contract BondingCurveTest_Security is Test {
 
     // ==================== Gas Attack Tests ====================
 
-    function test_GasAttack_DeepRecursion() public {
+    function test_GasAttack_DeepRecursion() public view {
         // Ensure no functions can cause excessive gas consumption
         uint256 supply = SUPPLY_222M;
 
@@ -268,7 +268,7 @@ contract BondingCurveTest_Security is Test {
 
     // ==================== Mathematical Properties Tests ====================
 
-    function test_MathProperties_Monotonicity() public {
+    function test_MathProperties_Monotonicity() public view {
         uint256 supply = SUPPLY_333M;
 
         // Price should always increase as more tokens are sold
@@ -284,7 +284,7 @@ contract BondingCurveTest_Security is Test {
         }
     }
 
-    function test_MathProperties_Convexity() public {
+    function test_MathProperties_Convexity() public view {
         uint256 supply = SUPPLY_222M;
         uint256 amount = 10000 ether;
 
@@ -319,7 +319,7 @@ contract BondingCurveTest_Security is Test {
 
     // ==================== Integration Consistency Tests ====================
 
-    function test_Integration_CalculateCostBetween() public {
+    function test_Integration_CalculateCostBetween() public view {
         uint256 supply = SUPPLY_333M;
 
         // Verify calculateCostBetween matches integration of price function
@@ -345,7 +345,7 @@ contract BondingCurveTest_Security is Test {
 
     // ==================== Comparative Analysis ====================
 
-    function test_Comparative_222M_vs_333M_Economics() public {
+    function test_Comparative_222M_vs_333M_Economics() public view {
         // Compare the economics of both supply amounts
         console.log("\n=== Economic Comparison ===");
 

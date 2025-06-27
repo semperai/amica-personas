@@ -179,12 +179,11 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
         );
     }
 
-    function _step4_checkPool() internal {
+    function _step4_checkPool() internal view {
         console.log("\n--- Step 4: Checking Uniswap V4 Pool ---", "");
 
         // Get pool info
-        (, address pairToken,,,,, PoolId poolId,) =
-            personaFactory.personas(testTokenId);
+        (,,,,,, PoolId poolId,) = personaFactory.personas(testTokenId);
 
         // Check pool state
         (uint160 sqrtPrice, int24 tick,,) = poolManager.getSlot0(poolId);
@@ -363,8 +362,7 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
 
     function _executeUniswapSwap(uint256 swapAmount) internal {
         // Get pool info
-        (, address pairToken,,,,, PoolId poolId,) =
-            personaFactory.personas(testTokenId);
+        (, address pairToken,,,,,,) = personaFactory.personas(testTokenId);
 
         // Setup pool key
         bool personaIsToken0 = uint160(testPersonaToken) < uint160(pairToken);
@@ -427,25 +425,22 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
             0
         );
 
-        _analyzeCheckpoint(tokenId, 100_000 ether, 0);
-        _analyzeCheckpoint(tokenId, 150_000 ether, 100_000 ether);
-        _analyzeCheckpoint(tokenId, 250_000 ether, 250_000 ether);
-        _analyzeCheckpoint(tokenId, 250_000 ether, 500_000 ether);
-        _analyzeCheckpoint(tokenId, 250_000 ether, 750_000 ether);
+        _analyzeCheckpoint(tokenId, 100_000 ether);
+        _analyzeCheckpoint(tokenId, 150_000 ether);
+        _analyzeCheckpoint(tokenId, 250_000 ether);
+        _analyzeCheckpoint(tokenId, 250_000 ether);
+        _analyzeCheckpoint(tokenId, 250_000 ether);
     }
 
-    function _analyzeCheckpoint(
-        uint256 tokenId,
-        uint256 spendAmount,
-        uint256 previousTotal
-    ) internal {
+    function _analyzeCheckpoint(uint256 tokenId, uint256 spendAmount)
+        internal
+    {
         vm.prank(user2);
         personaFactory.swapExactTokensForTokens(
             tokenId, spendAmount, 0, user2, block.timestamp + 1
         );
 
         (uint256 total, uint256 sold) = personaFactory.bondingStates(tokenId);
-        uint256 newTotal = previousTotal + spendAmount;
 
         console.log("\nCheckpoint - Total spent:", total / 1e18);
         console.log("Tokens sold:", sold / 1e18);

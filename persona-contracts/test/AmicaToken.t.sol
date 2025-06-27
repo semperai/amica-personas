@@ -59,16 +59,16 @@ contract AmicaTokenTest is Fixtures {
     }
 
     // Deployment Tests
-    function test_Deployment_NameAndSymbol() public {
+    function test_Deployment_NameAndSymbol() public view {
         assertEq(amicaToken.name(), "Amica");
         assertEq(amicaToken.symbol(), "AMICA");
     }
 
-    function test_Deployment_TotalSupply() public {
+    function test_Deployment_TotalSupply() public view {
         assertEq(amicaToken.totalSupply(), TOTAL_SUPPLY);
     }
 
-    function test_Deployment_Owner() public {
+    function test_Deployment_Owner() public view {
         assertEq(amicaToken.owner(), owner);
     }
 
@@ -404,13 +404,11 @@ contract AmicaTokenTest is Fixtures {
         // We need to burn all the supply
         // First, let's collect all tokens to one account
 
-        // Get initial balances
-        uint256 ownerBal = amicaToken.balanceOf(owner);
+        // Have users send their tokens to owner
         uint256 user1Bal = amicaToken.balanceOf(user1);
         uint256 user2Bal = amicaToken.balanceOf(user2);
         uint256 user3Bal = amicaToken.balanceOf(user3);
 
-        // Have users send their tokens to owner
         if (user1Bal > 0) {
             vm.prank(user1);
             amicaToken.transfer(owner, user1Bal);

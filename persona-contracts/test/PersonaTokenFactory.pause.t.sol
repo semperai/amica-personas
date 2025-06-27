@@ -83,9 +83,6 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
             0 // no min agent tokens
         );
 
-        // Get the persona token address
-        (address personaToken,,,,,,,) = personaFactory.personas(tokenId);
-
         // Pause the contract
         vm.prank(factoryOwner);
         personaFactory.pause();
@@ -118,9 +115,6 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         personaFactory.swapExactTokensForTokens(
             tokenId, 1000 ether, 0, user2, block.timestamp + 300
         );
-
-        // Get the persona token address
-        (address personaToken,,,,,,,) = personaFactory.personas(tokenId);
 
         // Pause the contract
         vm.prank(factoryOwner);
