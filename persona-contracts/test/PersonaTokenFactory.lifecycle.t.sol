@@ -17,6 +17,7 @@ import {IPositionManager} from
     "@uniswap/v4-periphery/src/interfaces/IPositionManager.sol";
 import {Actions} from "@uniswap/v4-periphery/src/libraries/Actions.sol";
 import {console} from "forge-std/console.sol";
+import {NotAllowed} from "../src/PersonaTokenFactory.sol";
 
 contract PersonaTokenFactoryLifecycleTest is Fixtures {
     using PoolIdLibrary for bytes32;
@@ -24,8 +25,9 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
     using StateLibrary for IPoolManager;
 
     uint256 constant PERSONA_SUPPLY = 1_000_000_000 ether;
-    uint256 constant LIQUIDITY_AMOUNT = 333_333_334 ether; // 1/3 of supply
+    uint256 constant LIQUIDITY_AMOUNT = 333_333_333 ether; // 1/3 of supply
     uint256 constant BONDING_AMOUNT = 333_333_333 ether; // 1/3 of supply
+    uint256 constant AMICA_AMOUNT = 333_333_334 ether; // 1/3 of supply
     uint256 constant GRADUATION_THRESHOLD = 85; // 85%
     uint256 constant EXPECTED_GRADUATION_AMOUNT = 1_000_000 ether; // ~1M AMICA
 
@@ -73,7 +75,7 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
         // Step 4: Check pool state
         _step4_checkPool();
 
-        // Step 5: Claim tokens
+        // Step 5: Wait for claim delay then claim tokens
         _step5_claimTokens();
 
         // Step 6: Trade on Uniswap
@@ -107,7 +109,7 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
         assertEq(creationCost, 1000 ether, "Creation cost should be 1000 AMICA");
 
         // Get persona token address
-        (address token,,,,,,,) = personaFactory.personas(testTokenId);
+        (address token,,,,,) = personaFactory.personas(testTokenId);
         testPersonaToken = token;
         console.log("Persona token address:", testPersonaToken);
     }
@@ -143,8 +145,8 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
     function _step3_graduation() internal {
         console.log("\n--- Step 3: Triggering Graduation ---", "");
 
-        (uint256 totalPairingTokensCollected, uint256 tokensPurchased) =
-            personaFactory.bondingStates(testTokenId);
+        (uint256 totalPairingTokensCollected, uint256 tokensPurchased,) =
+            personaFactory.preGraduationStates(testTokenId);
         uint256 graduationTarget = (BONDING_AMOUNT * GRADUATION_THRESHOLD) / 100;
 
         console.log("Graduation target (Persona):", graduationTarget / 1e18);
@@ -162,15 +164,16 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
         }
 
         // Check graduation
-        (,,, bool graduated,,,,) = personaFactory.personas(testTokenId);
-        assertTrue(graduated, "Persona should have graduated");
-        console.log("Persona graduated!", "");
+        (,,, uint256 graduationTimestamp,,) =
+            personaFactory.personas(testTokenId);
+        assertTrue(graduationTimestamp > 0, "Persona should have graduated");
+        console.log("Persona graduated at timestamp:", graduationTimestamp);
 
         _logBondingState();
 
         // Verify collection amount
-        (totalPairingTokensCollected,) =
-            personaFactory.bondingStates(testTokenId);
+        (totalPairingTokensCollected,,) =
+            personaFactory.preGraduationStates(testTokenId);
         assertApproxEqRel(
             totalPairingTokensCollected,
             EXPECTED_GRADUATION_AMOUNT,
@@ -183,7 +186,7 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
         console.log("\n--- Step 4: Checking Uniswap V4 Pool ---", "");
 
         // Get pool info
-        (,,,,,, PoolId poolId,) = personaFactory.personas(testTokenId);
+        (,,,,, PoolId poolId) = personaFactory.personas(testTokenId);
 
         // Check pool state
         (uint160 sqrtPrice, int24 tick,,) = poolManager.getSlot0(poolId);
@@ -218,7 +221,7 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
         console.log("AMICA protocol received:", amicaProtocolBalance / 1e18);
         assertApproxEqRel(
             amicaProtocolBalance,
-            LIQUIDITY_AMOUNT,
+            AMICA_AMOUNT,
             0.01e18,
             "AMICA should receive ~333M Persona"
         );
@@ -226,6 +229,10 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
 
     function _step5_claimTokens() internal {
         console.log("\n--- Step 5: Claiming Tokens ---", "");
+
+        // Wait for claim delay
+        console.log("Waiting for 24 hour claim delay...", "");
+        vm.warp(block.timestamp + 1 days + 1);
 
         // Track total claimed
         uint256 totalClaimedBefore = IERC20(testPersonaToken).balanceOf(user1)
@@ -256,11 +263,14 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
     }
 
     function _claimForUser(address user) internal {
-        (uint256 purchased, uint256 bonus,, uint256 total,) =
+        (uint256 purchased, uint256 bonus,, uint256 total,, bool claimable) =
             personaFactory.getClaimableRewards(testTokenId, user);
 
         console.log("User claimable (purchased):", purchased / 1e18);
         console.log("User claimable (bonus):", bonus / 1e18);
+        console.log("Can claim now:", claimable);
+
+        assertTrue(claimable, "Should be able to claim after delay");
 
         vm.prank(user);
         personaFactory.claimRewards(testTokenId);
@@ -324,7 +334,7 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
         // Verify distributions match expected amounts
         console.log("\n=== Distribution Verification ===", "");
         console.log("Expected pool:", LIQUIDITY_AMOUNT / 1e18);
-        console.log("Expected AMICA:", LIQUIDITY_AMOUNT / 1e18);
+        console.log("Expected AMICA:", AMICA_AMOUNT / 1e18);
         console.log("Expected users:", BONDING_AMOUNT / 1e18);
 
         // Pool should have ~333M (1/3)
@@ -338,7 +348,7 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
         // AMICA protocol should have ~333M (1/3)
         assertApproxEqRel(
             amicaProtocolBalance,
-            LIQUIDITY_AMOUNT,
+            AMICA_AMOUNT,
             0.01e18,
             "AMICA should have 1/3 of supply"
         );
@@ -362,7 +372,7 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
 
     function _executeUniswapSwap(uint256 swapAmount) internal {
         // Get pool info
-        (, address pairToken,,,,,,) = personaFactory.personas(testTokenId);
+        (, address pairToken,,,,) = personaFactory.personas(testTokenId);
 
         // Setup pool key
         bool personaIsToken0 = uint160(testPersonaToken) < uint160(pairToken);
@@ -405,8 +415,8 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
     }
 
     function _logBondingState() internal view {
-        (uint256 totalPairingTokensCollected, uint256 tokensPurchased) =
-            personaFactory.bondingStates(testTokenId);
+        (uint256 totalPairingTokensCollected, uint256 tokensPurchased,) =
+            personaFactory.preGraduationStates(testTokenId);
         console.log("Total AMICA raised:", totalPairingTokensCollected / 1e18);
         console.log("Total Persona sold:", tokensPurchased / 1e18);
     }
@@ -440,7 +450,8 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
             tokenId, spendAmount, 0, user2, block.timestamp + 1
         );
 
-        (uint256 total, uint256 sold) = personaFactory.bondingStates(tokenId);
+        (uint256 total, uint256 sold,) =
+            personaFactory.preGraduationStates(tokenId);
 
         console.log("\nCheckpoint - Total spent:", total / 1e18);
         console.log("Tokens sold:", sold / 1e18);
@@ -450,9 +461,53 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
             console.log("Avg price:", avgPrice / 1e18);
         }
 
-        (,,, bool graduated,,,,) = personaFactory.personas(tokenId);
-        if (graduated) {
-            console.log("GRADUATED!", "");
+        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        if (graduationTimestamp > 0) {
+            console.log("GRADUATED at timestamp:", graduationTimestamp);
         }
+    }
+
+    function test_ClaimDelayEnforced() public {
+        // Create and graduate persona
+        vm.prank(user1);
+        uint256 tokenId = personaFactory.createPersona(
+            address(amicaToken),
+            "Delay Test",
+            "DELAY",
+            bytes32("delaytest"),
+            0,
+            address(0),
+            0
+        );
+
+        // Buy enough to graduate
+        vm.prank(user2);
+        personaFactory.swapExactTokensForTokens(
+            tokenId, 1_000_000 ether, 0, user2, block.timestamp + 1
+        );
+
+        // Check graduated
+        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        assertTrue(graduationTimestamp > 0, "Should be graduated");
+
+        // Try to claim immediately - should fail
+        vm.prank(user2);
+        vm.expectRevert(abi.encodeWithSelector(NotAllowed.selector, 12));
+        personaFactory.claimRewards(tokenId);
+
+        // Wait almost 24 hours - should still fail
+        vm.warp(block.timestamp + 23 hours + 59 minutes);
+        vm.prank(user2);
+        vm.expectRevert(abi.encodeWithSelector(NotAllowed.selector, 12));
+        personaFactory.claimRewards(tokenId);
+
+        // Wait full 24 hours - should succeed
+        vm.warp(block.timestamp + 1 minutes + 1);
+        vm.prank(user2);
+        personaFactory.claimRewards(tokenId);
+
+        (address token,,,,,) = personaFactory.personas(tokenId);
+        uint256 balance = IERC20(token).balanceOf(user2);
+        assertGt(balance, 0, "Should have claimed tokens");
     }
 }

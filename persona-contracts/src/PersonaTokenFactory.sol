@@ -57,7 +57,7 @@ error Failed(uint8 code);
 
 /**
  * @notice Consolidated error for permission/state issues
- * @param code Error code: 0=NotOwner, 1=NotEnabled, 2=AlreadyGraduated, 3=NotGraduated, 4=TradingOnUniswap, 5=ExpiredDeadline, 6=NoAgentToken, 7=PairExists, 8=FeeTooHigh, 9=NoTokens, 10=FeeRange, 11=Unauthorized
+ * @param code Error code: 0=NotOwner, 1=NotEnabled, 2=AlreadyGraduated, 3=NotGraduated, 4=TradingOnUniswap, 5=ExpiredDeadline, 6=NoAgentToken, 7=PairExists, 8=FeeTooHigh, 9=NoTokens, 10=FeeRange, 11=Unauthorized, 12=ClaimTooEarly
  */
 error NotAllowed(uint8 code);
 
@@ -80,9 +80,9 @@ contract PersonaTokenFactory is
     /// @notice Total supply for each persona token (1 billion with 18 decimals)
     uint256 public constant PERSONA_TOKEN_SUPPLY = 1_000_000_000 ether;
 
-    /// @dev Simplified to just two base amounts instead of 7 constants
+    /// @notice Token distribution fractions
     uint256 private constant THIRD_SUPPLY = 333_333_333 ether;
-    uint256 private constant NINTH_SUPPLY = 222_222_222 ether;
+    uint256 private constant SIXTH_SUPPLY = 166_666_666 ether;
 
     /// @notice V4 tick spacing for standard pools
     int24 public constant TICK_SPACING = 60;
@@ -90,35 +90,31 @@ contract PersonaTokenFactory is
     /// @notice Initial price sqrt ratio for 1:1 pools
     uint160 public constant SQRT_RATIO_1_1 = 79228162514264337593543950336;
 
-    /// @notice Bonding curve multiplier (33x from start to end)
-    uint256 public constant CURVE_MULTIPLIER = 33;
-
     /// @notice Precision for calculations
     uint256 private constant PRECISION = 1e18;
 
     /// @notice Graduation threshold - 85% of bonding tokens must be sold
     uint256 public constant GRADUATION_THRESHOLD_PERCENT = 85;
 
+    /// @notice Time delay after graduation before claims can be made (24 hours)
+    uint256 public constant CLAIM_DELAY = 1 days;
+
     /**
      * @notice Core data for each persona
      * @param token Address of the persona's ERC20 token
      * @param pairToken Address of the token paired for bonding/liquidity
      * @param agentToken Optional token for agent staking
-     * @param graduated Whether the persona has graduated to Uniswap pools
-     * @param totalAgentDeposited Total amount of agent tokens deposited
+     * @param graduationTimestamp Timestamp when graduated (0 = not graduated)
      * @param agentTokenThreshold Agent token threshold required for graduation
      * @param poolId Uniswap V4 pool ID for persona/pairToken
-     * @param agentPoolId Uniswap V4 pool ID for persona/agentToken (if exists)
      */
     struct PersonaData {
         address token;
         address pairToken;
         address agentToken;
-        bool graduated;
-        uint256 totalAgentDeposited;
+        uint256 graduationTimestamp;
         uint256 agentTokenThreshold;
         PoolId poolId;
-        PoolId agentPoolId;
     }
 
     /**
@@ -134,13 +130,15 @@ contract PersonaTokenFactory is
     }
 
     /**
-     * @notice Tracks bonding curve state
+     * @notice Tracks all state before graduation
      * @param totalPairingTokensCollected Total pairing tokens collected through bonding curve
      * @param tokensPurchased Total persona tokens purchased through bonding curve
+     * @param totalAgentDeposited Total amount of agent tokens deposited
      */
-    struct BondingCurveState {
+    struct PreGraduationState {
         uint256 totalPairingTokensCollected;
         uint256 tokensPurchased;
+        uint256 totalAgentDeposited;
     }
 
     /**
@@ -148,13 +146,13 @@ contract PersonaTokenFactory is
      * @param liquidity Amount for Uniswap liquidity
      * @param bondingSupply Amount available in bonding curve
      * @param amica Amount sent to AMICA protocol
-     * @param agentStakerRewards Amount reserved for agent stakers
+     * @param agentRewards Amount reserved for agent stakers
      */
     struct TokenAmounts {
         uint256 liquidity;
         uint256 bondingSupply;
         uint256 amica;
-        uint256 agentStakerRewards;
+        uint256 agentRewards;
     }
 
     /// @notice AMICA token contract
@@ -181,14 +179,15 @@ contract PersonaTokenFactory is
     /// @notice Mapping from token ID to persona data
     mapping(uint256 => PersonaData) public personas;
 
-    /// @notice Mapping from token ID to metadata list
+    /// @notice Mapping from token ID to metadata map
     mapping(uint256 => mapping(bytes32 => string)) public metadata;
 
     /// @notice So we can check if a domain is registered / unique
+    /// @dev references tokenId as index
     mapping(bytes32 => uint256) public domains;
 
-    /// @notice Mapping from token ID to bonding curve state
-    mapping(uint256 => BondingCurveState) public bondingStates;
+    /// @notice Mapping from token ID to pre-graduation state
+    mapping(uint256 => PreGraduationState) public preGraduationStates;
 
     /// @notice Mapping from token ID to user address to token balance in bonding curve
     mapping(uint256 => mapping(address => uint256)) public bondingBalances;
@@ -331,20 +330,6 @@ contract PersonaTokenFactory is
     );
 
     /**
-     * @notice Emitted when V4 agent pool is created for a persona
-     * @param tokenId Persona token ID
-     * @param agentPoolId V4 agent pool ID
-     * @param personaTokenAmount Amount of persona tokens provided
-     * @param initialPrice Initial price ratio (sqrtPriceX96)
-     */
-    event V4AgentPoolCreated(
-        uint256 indexed tokenId,
-        PoolId indexed agentPoolId,
-        uint256 personaTokenAmount,
-        uint160 initialPrice
-    );
-
-    /**
      * @notice Emitted when fees are collected (from UniswapV4Manager)
      * @param nftTokenId NFT token ID
      * @param poolId Pool ID
@@ -362,16 +347,16 @@ contract PersonaTokenFactory is
      * @notice Emitted when a persona graduates to Uniswap V4
      * @param tokenId Persona token ID
      * @param mainPoolId Main pool ID (persona/pairToken)
-     * @param agentPoolId Agent pool ID (0 if no agent pool)
      * @param totalDeposited Total pairing tokens collected
      * @param tokensSold Total persona tokens sold
+     * @param graduationTimestamp Timestamp of graduation
      */
     event Graduated(
         uint256 indexed tokenId,
         PoolId indexed mainPoolId,
-        PoolId agentPoolId,
         uint256 totalDeposited,
-        uint256 tokensSold
+        uint256 tokensSold,
+        uint256 graduationTimestamp
     );
 
     /**
@@ -448,14 +433,14 @@ contract PersonaTokenFactory is
     {
         if (hasAgent) {
             amounts.liquidity = THIRD_SUPPLY; // 1/3
-            amounts.bondingSupply = NINTH_SUPPLY; // 2/9
-            amounts.amica = NINTH_SUPPLY; // 2/9
-            amounts.agentStakerRewards = NINTH_SUPPLY + 1 ether; // 2/9 + rounding
+            amounts.bondingSupply = SIXTH_SUPPLY; // 1/6
+            amounts.amica = THIRD_SUPPLY; // 1/3
+            amounts.agentRewards = SIXTH_SUPPLY + 2 ether; // 1/6 + rounding
         } else {
             amounts.liquidity = THIRD_SUPPLY; // 1/3
             amounts.bondingSupply = THIRD_SUPPLY; // 1/3
             amounts.amica = THIRD_SUPPLY + 1 ether; // 1/3 + rounding
-            amounts.agentStakerRewards = 0;
+            amounts.agentRewards = 0;
         }
     }
 
@@ -694,10 +679,10 @@ contract PersonaTokenFactory is
         if (amountIn == 0) revert Invalid(1);
 
         PersonaData storage persona = personas[tokenId];
-        if (persona.graduated) revert NotAllowed(4);
+        if (persona.graduationTimestamp > 0) revert NotAllowed(4);
         if (persona.token == address(0)) revert Invalid(0);
 
-        BondingCurveState storage bondingState = bondingStates[tokenId];
+        PreGraduationState storage preGradState = preGraduationStates[tokenId];
 
         // Check user has enough tokens
         uint256 userBalance = bondingBalances[tokenId][msg.sender];
@@ -709,7 +694,7 @@ contract PersonaTokenFactory is
 
         // Call external bonding curve contract
         amountOut = bondingCurve.calculateAmountOutForSell(
-            amountIn, bondingState.tokensPurchased, amounts.bondingSupply
+            amountIn, preGradState.tokensPurchased, amounts.bondingSupply
         );
 
         // Apply multiplier to the output amount (reverse of buy)
@@ -719,13 +704,13 @@ contract PersonaTokenFactory is
         if (amountOut < amountOutMin) revert Insufficient(1);
 
         // Ensure we don't exceed total deposited
-        if (amountOut > bondingState.totalPairingTokensCollected) {
-            amountOut = bondingState.totalPairingTokensCollected;
+        if (amountOut > preGradState.totalPairingTokensCollected) {
+            amountOut = preGradState.totalPairingTokensCollected;
         }
 
         // Update state
-        bondingState.tokensPurchased -= amountIn;
-        bondingState.totalPairingTokensCollected -= amountOut;
+        preGradState.tokensPurchased -= amountIn;
+        preGradState.totalPairingTokensCollected -= amountOut;
         bondingBalances[tokenId][msg.sender] -= amountIn;
 
         // Transfer pairing tokens to user
@@ -754,10 +739,10 @@ contract PersonaTokenFactory is
         if (to == address(0)) revert Invalid(2);
 
         PersonaData storage persona = personas[tokenId];
-        if (persona.graduated) revert NotAllowed(4);
+        if (persona.graduationTimestamp > 0) revert NotAllowed(4);
         if (persona.token == address(0)) revert Invalid(0);
 
-        BondingCurveState storage bondingState = bondingStates[tokenId];
+        PreGraduationState storage preGradState = preGraduationStates[tokenId];
 
         TokenAmounts memory amounts =
             _getTokenAmounts(persona.agentToken != address(0));
@@ -770,12 +755,12 @@ contract PersonaTokenFactory is
         // Call external bonding curve contract with adjusted amount
         amountOut = bondingCurve.calculateAmountOut(
             adjustedAmountIn,
-            bondingState.tokensPurchased,
+            preGradState.tokensPurchased,
             amounts.bondingSupply
         );
 
         if (amountOut < amountOutMin) revert Insufficient(1);
-        if (amountOut > amounts.bondingSupply - bondingState.tokensPurchased) {
+        if (amountOut > amounts.bondingSupply - preGradState.tokensPurchased) {
             revert Insufficient(2);
         }
 
@@ -787,8 +772,8 @@ contract PersonaTokenFactory is
             ) revert Failed(0);
         }
 
-        bondingState.totalPairingTokensCollected += amountIn;
-        bondingState.tokensPurchased += amountOut;
+        preGradState.totalPairingTokensCollected += amountIn;
+        preGradState.tokensPurchased += amountOut;
         bondingBalances[tokenId][to] += amountOut;
 
         // Don't transfer tokens - they stay in contract until claimed after graduation
@@ -798,14 +783,14 @@ contract PersonaTokenFactory is
         uint256 graduationThreshold =
             (amounts.bondingSupply * GRADUATION_THRESHOLD_PERCENT) / 100;
         bool tokenThresholdMet =
-            bondingState.tokensPurchased >= graduationThreshold;
+            preGradState.tokensPurchased >= graduationThreshold;
 
         // Check agent token requirement if applicable
         bool agentRequirementMet = true;
         if (persona.agentToken != address(0) && persona.agentTokenThreshold > 0)
         {
             agentRequirementMet =
-                persona.totalAgentDeposited >= persona.agentTokenThreshold;
+                preGradState.totalAgentDeposited >= persona.agentTokenThreshold;
         }
 
         // Graduate if both requirements are met
@@ -828,7 +813,12 @@ contract PersonaTokenFactory is
         if (persona.token == address(0)) revert Invalid(0);
 
         // Can only claim after graduation
-        if (!persona.graduated) revert NotAllowed(3); // 3 = NotGraduated
+        if (persona.graduationTimestamp == 0) revert NotAllowed(3); // 3 = NotGraduated
+
+        // Check claim delay
+        if (block.timestamp < persona.graduationTimestamp + CLAIM_DELAY) {
+            revert NotAllowed(12); // 12 = ClaimTooEarly
+        }
 
         // Check if already claimed tokens
         if (hasClaimedTokens[tokenId][msg.sender]) revert Invalid(14); // 14 = AlreadyClaimed
@@ -840,17 +830,18 @@ contract PersonaTokenFactory is
 
         // Calculate purchased tokens + bonus
         if (purchasedAmount > 0) {
-            BondingCurveState storage bondingState = bondingStates[tokenId];
+            PreGraduationState storage preGradState =
+                preGraduationStates[tokenId];
             TokenAmounts memory amounts =
                 _getTokenAmounts(persona.agentToken != address(0));
             uint256 unsoldTokens = amounts.bondingSupply
-                > bondingState.tokensPurchased
-                ? amounts.bondingSupply - bondingState.tokensPurchased
+                > preGradState.tokensPurchased
+                ? amounts.bondingSupply - preGradState.tokensPurchased
                 : 0;
 
-            if (unsoldTokens > 0 && bondingState.tokensPurchased > 0) {
+            if (unsoldTokens > 0 && preGradState.tokensPurchased > 0) {
                 bonusAmount = (unsoldTokens * purchasedAmount)
-                    / bondingState.tokensPurchased;
+                    / preGradState.tokensPurchased;
             }
 
             totalPersonaTokens = purchasedAmount + bonusAmount;
@@ -862,12 +853,20 @@ contract PersonaTokenFactory is
         if (persona.agentToken != address(0) && userAgentAmount > 0) {
             agentDeposits[tokenId][msg.sender] = 0;
 
-            if (persona.totalAgentDeposited > 0) {
+            PreGraduationState storage preGradState =
+                preGraduationStates[tokenId];
+            if (preGradState.totalAgentDeposited > 0) {
                 TokenAmounts memory amounts = _getTokenAmounts(true);
-                agentRewardAmount = (
-                    amounts.agentStakerRewards * userAgentAmount
-                ) / persona.totalAgentDeposited;
+                agentRewardAmount = (amounts.agentRewards * userAgentAmount)
+                    / preGradState.totalAgentDeposited;
                 totalPersonaTokens += agentRewardAmount;
+            }
+
+            // Return agent tokens to user
+            if (
+                !IERC20(persona.agentToken).transfer(msg.sender, userAgentAmount)
+            ) {
+                revert Failed(0);
             }
         }
 
@@ -905,6 +904,7 @@ contract PersonaTokenFactory is
      * @return agentRewardAmount Amount from agent staking
      * @return totalClaimable Total claimable amount
      * @return claimed Whether the user has already claimed tokens
+     * @return claimable Whether claims are currently allowed (after delay)
      */
     function getClaimableRewards(uint256 tokenId, address user)
         public
@@ -914,40 +914,47 @@ contract PersonaTokenFactory is
             uint256 bonusAmount,
             uint256 agentRewardAmount,
             uint256 totalClaimable,
-            bool claimed
+            bool claimed,
+            bool claimable
         )
     {
         PersonaData storage persona = personas[tokenId];
-        if (!persona.graduated) return (0, 0, 0, 0, false);
+        if (persona.graduationTimestamp == 0) return (0, 0, 0, 0, false, false);
+
+        // Check if claim delay has passed
+        claimable = block.timestamp >= persona.graduationTimestamp + CLAIM_DELAY;
+
+        // Get token amounts once
+        TokenAmounts memory amounts =
+            _getTokenAmounts(persona.agentToken != address(0));
 
         // Check token claims
         purchasedAmount = bondingBalances[tokenId][user];
         claimed = hasClaimedTokens[tokenId][user];
 
         if (purchasedAmount > 0 && !claimed) {
-            BondingCurveState storage bondingState = bondingStates[tokenId];
-            TokenAmounts memory amounts =
-                _getTokenAmounts(persona.agentToken != address(0));
+            PreGraduationState storage preGradState =
+                preGraduationStates[tokenId];
             uint256 unsoldTokens = amounts.bondingSupply
-                > bondingState.tokensPurchased
-                ? amounts.bondingSupply - bondingState.tokensPurchased
+                > preGradState.tokensPurchased
+                ? amounts.bondingSupply - preGradState.tokensPurchased
                 : 0;
 
-            if (unsoldTokens > 0 && bondingState.tokensPurchased > 0) {
+            if (unsoldTokens > 0 && preGradState.tokensPurchased > 0) {
                 bonusAmount = (unsoldTokens * purchasedAmount)
-                    / bondingState.tokensPurchased;
+                    / preGradState.tokensPurchased;
             }
         }
 
         // Check agent rewards
         uint256 userAgentAmount = agentDeposits[tokenId][user];
-        if (
-            persona.agentToken != address(0) && userAgentAmount > 0
-                && persona.totalAgentDeposited > 0
-        ) {
-            TokenAmounts memory amounts = _getTokenAmounts(true);
-            agentRewardAmount = (amounts.agentStakerRewards * userAgentAmount)
-                / persona.totalAgentDeposited;
+        if (persona.agentToken != address(0) && userAgentAmount > 0) {
+            PreGraduationState storage preGradState =
+                preGraduationStates[tokenId];
+            if (preGradState.totalAgentDeposited > 0) {
+                agentRewardAmount = (amounts.agentRewards * userAgentAmount)
+                    / preGradState.totalAgentDeposited;
+            }
         }
 
         totalClaimable = purchasedAmount + bonusAmount + agentRewardAmount;
@@ -966,7 +973,7 @@ contract PersonaTokenFactory is
     {
         PersonaData storage persona = personas[tokenId];
         if (persona.agentToken == address(0)) revert NotAllowed(6);
-        if (persona.graduated) revert NotAllowed(2);
+        if (persona.graduationTimestamp > 0) revert NotAllowed(2);
         if (amount == 0) revert Invalid(1);
 
         if (
@@ -976,11 +983,27 @@ contract PersonaTokenFactory is
         ) revert Failed(0);
 
         agentDeposits[tokenId][msg.sender] += amount;
-        persona.totalAgentDeposited += amount;
+
+        PreGraduationState storage preGradState = preGraduationStates[tokenId];
+        preGradState.totalAgentDeposited += amount;
 
         emit AgentTokensDeposited(
-            tokenId, msg.sender, amount, persona.totalAgentDeposited
+            tokenId, msg.sender, amount, preGradState.totalAgentDeposited
         );
+
+        // Check if this deposit triggers graduation
+        TokenAmounts memory amounts = _getTokenAmounts(true);
+        uint256 graduationThreshold =
+            (amounts.bondingSupply * GRADUATION_THRESHOLD_PERCENT) / 100;
+        bool tokenThresholdMet =
+            preGradState.tokensPurchased >= graduationThreshold;
+
+        if (
+            tokenThresholdMet
+                && preGradState.totalAgentDeposited >= persona.agentTokenThreshold
+        ) {
+            _graduate(tokenId);
+        }
     }
 
     /**
@@ -995,19 +1018,21 @@ contract PersonaTokenFactory is
         whenNotPaused
     {
         PersonaData storage persona = personas[tokenId];
-        if (persona.graduated) revert NotAllowed(2);
+        if (persona.graduationTimestamp > 0) revert NotAllowed(2);
 
         if (agentDeposits[tokenId][msg.sender] < amount) revert Insufficient(4);
 
         agentDeposits[tokenId][msg.sender] -= amount;
-        persona.totalAgentDeposited -= amount;
+
+        PreGraduationState storage preGradState = preGraduationStates[tokenId];
+        preGradState.totalAgentDeposited -= amount;
 
         if (!IERC20(persona.agentToken).transfer(msg.sender, amount)) {
             revert Failed(0);
         }
 
         emit AgentTokensWithdrawn(
-            tokenId, msg.sender, amount, persona.totalAgentDeposited
+            tokenId, msg.sender, amount, preGradState.totalAgentDeposited
         );
     }
 
@@ -1179,30 +1204,26 @@ contract PersonaTokenFactory is
      */
     function _graduate(uint256 tokenId) private {
         PersonaData storage persona = personas[tokenId];
-        if (persona.graduated) revert NotAllowed(7);
+        if (persona.graduationTimestamp > 0) revert NotAllowed(7);
+
+        // Set graduation timestamp
+        persona.graduationTimestamp = block.timestamp;
 
         // Process token distributions
         _processTokenDistributions(tokenId);
 
-        // Create main pool
-        _createMainPool(tokenId);
+        // Create liquidity pool
+        _createLiquidityPool(tokenId);
 
-        // Create agent pool if needed
-        if (persona.agentToken != address(0)) {
-            TokenAmounts memory amounts = _getTokenAmounts(true);
-            uint256 agentPoolTokens = amounts.liquidity / 2;
-            _createAgentPersonaPool(tokenId, agentPoolTokens);
-        }
-
-        persona.graduated = true;
+        PreGraduationState storage preGradState = preGraduationStates[tokenId];
 
         // Emit graduation event
         emit Graduated(
             tokenId,
             persona.poolId,
-            persona.agentPoolId,
-            bondingStates[tokenId].totalPairingTokensCollected,
-            bondingStates[tokenId].tokensPurchased
+            preGradState.totalPairingTokensCollected,
+            preGradState.tokensPurchased,
+            persona.graduationTimestamp
         );
     }
 
@@ -1218,37 +1239,35 @@ contract PersonaTokenFactory is
         // Send tokens to AMICA protocol
         IERC20(persona.token).transfer(address(amicaToken), amounts.amica);
 
-        // Send agent tokens to AMICA if applicable
-        if (persona.agentToken != address(0) && persona.totalAgentDeposited > 0)
-        {
+        // If there are agent tokens, send them to persona token contract
+        PreGraduationState storage preGradState = preGraduationStates[tokenId];
+        if (
+            persona.agentToken != address(0)
+                && preGradState.totalAgentDeposited > 0
+        ) {
             IERC20(persona.agentToken).transfer(
-                address(amicaToken), persona.totalAgentDeposited
+                persona.token, preGradState.totalAgentDeposited
             );
         }
 
         // Emit token distribution event
         emit TokensDistributed(
-            tokenId,
-            amounts.amica,
-            amounts.liquidity,
-            amounts.agentStakerRewards
+            tokenId, amounts.amica, amounts.liquidity, amounts.agentRewards
         );
     }
 
     /**
-     * @notice Creates the main persona/pairing token pool
+     * @notice Creates the persona/pairing token liquidity pool
      * @param tokenId ID of the persona
      */
-    function _createMainPool(uint256 tokenId) private {
+    function _createLiquidityPool(uint256 tokenId) private {
         PersonaData storage persona = personas[tokenId];
-        BondingCurveState storage bondingState = bondingStates[tokenId];
+        PreGraduationState storage preGradState = preGraduationStates[tokenId];
 
         // Calculate liquidity amounts
         TokenAmounts memory amounts =
             _getTokenAmounts(persona.agentToken != address(0));
-        uint256 personaTokensForPool = persona.agentToken != address(0)
-            ? amounts.liquidity / 2
-            : amounts.liquidity;
+        uint256 personaTokensForPool = amounts.liquidity;
 
         // Initialize pool
         (PoolId poolId, PoolKey memory poolKey) =
@@ -1266,7 +1285,7 @@ contract PersonaTokenFactory is
                 persona.token, // token0
                 persona.pairToken, // token1
                 personaTokensForPool,
-                bondingState.totalPairingTokensCollected,
+                preGradState.totalPairingTokensCollected,
                 tokenId
             );
         } else {
@@ -1275,51 +1294,13 @@ contract PersonaTokenFactory is
                 poolKey,
                 persona.pairToken, // token0
                 persona.token, // token1
-                bondingState.totalPairingTokensCollected,
+                preGradState.totalPairingTokensCollected,
                 personaTokensForPool,
                 tokenId
             );
         }
 
         emit V4PoolCreated(tokenId, poolId, personaTokensForPool);
-    }
-
-    /**
-     * @notice Creates agent pool for a persona
-     * @param tokenId ID of the persona
-     * @param personaTokenAmount Amount of persona tokens to provide
-     */
-    function _createAgentPersonaPool(
-        uint256 tokenId,
-        uint256 personaTokenAmount
-    ) private {
-        PersonaData storage persona = personas[tokenId];
-
-        // Calculate initial price based on token ordering
-        bool personaIsToken0 =
-            uint160(persona.token) < uint160(persona.agentToken);
-        uint160 initialPrice = personaIsToken0
-            ? 250541478223274320632946051840 // sqrt(10) * 2^96
-            : 25054147822327432063294605184; // sqrt(0.1) * 2^96
-
-        // Initialize pool
-        (PoolId agentPoolId, PoolKey memory poolKey) =
-            _initializePool(persona.token, persona.agentToken, initialPrice);
-        persona.agentPoolId = agentPoolId;
-
-        // Add single-sided liquidity
-        _addSingleSidedLiquidity(
-            poolKey,
-            persona.token,
-            personaTokenAmount,
-            initialPrice,
-            personaIsToken0,
-            tokenId
-        );
-
-        emit V4AgentPoolCreated(
-            tokenId, agentPoolId, personaTokenAmount, initialPrice
-        );
     }
 
     /**
@@ -1356,53 +1337,6 @@ contract PersonaTokenFactory is
         });
 
         // V4 expects hook data in the last parameter
-        poolManager.modifyLiquidity(poolKey, params, abi.encode(salt));
-    }
-
-    /**
-     * @notice Adds single-sided liquidity to a pool
-     * @param poolKey Pool key
-     * @param token Token to add
-     * @param amount Amount to add
-     * @param sqrtPriceX96 Current sqrt price
-     * @param tokenIsToken0 Whether the token is token0
-     * @param salt Salt for the position
-     */
-    function _addSingleSidedLiquidity(
-        PoolKey memory poolKey,
-        address token,
-        uint256 amount,
-        uint160 sqrtPriceX96,
-        bool tokenIsToken0,
-        uint256 salt
-    ) private {
-        // Approve token
-        IERC20(token).approve(address(poolManager), amount);
-
-        // Calculate tick range
-        int24 currentTick = TickMath.getTickAtSqrtPrice(sqrtPriceX96);
-        currentTick = (currentTick / TICK_SPACING) * TICK_SPACING;
-
-        int24 tickLower;
-        int24 tickUpper;
-
-        if (tokenIsToken0) {
-            // Provide liquidity above current price
-            tickLower = currentTick + TICK_SPACING;
-            tickUpper = 887200;
-        } else {
-            // Provide liquidity below current price
-            tickLower = -887200;
-            tickUpper = currentTick - TICK_SPACING;
-        }
-
-        ModifyLiquidityParams memory params = ModifyLiquidityParams({
-            tickLower: tickLower,
-            tickUpper: tickUpper,
-            liquidityDelta: int256(amount),
-            salt: bytes32(salt)
-        });
-
         poolManager.modifyLiquidity(poolKey, params, abi.encode(salt));
     }
 

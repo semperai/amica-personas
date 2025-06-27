@@ -265,7 +265,7 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         );
 
         // Verify persona was created
-        (address token,,,,,,,) = personaFactory.personas(tokenId);
+        (address token,,,,,) = personaFactory.personas(tokenId);
         assertTrue(token != address(0));
     }
 }

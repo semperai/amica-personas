@@ -53,7 +53,7 @@ contract PersonaFactoryViewer {
      * @return liquidityAmount Tokens allocated for Uniswap liquidity
      * @return bondingSupplyAmount Tokens available in bonding curve
      * @return amicaAmount Tokens sent to AMICA protocol
-     * @return agentStakerRewardsAmount Tokens reserved for agent stakers
+     * @return agentRewardsAmount Tokens reserved for agent stakers
      */
     function getTokenDistribution(uint256 tokenId)
         external
@@ -62,28 +62,28 @@ contract PersonaFactoryViewer {
             uint256 liquidityAmount,
             uint256 bondingSupplyAmount,
             uint256 amicaAmount,
-            uint256 agentStakerRewardsAmount
+            uint256 agentRewardsAmount
         )
     {
-        (,, address agentToken,,,,,) = factory.personas(tokenId);
+        (,, address agentToken,,,) = factory.personas(tokenId);
 
         if (agentToken != address(0)) {
-            // With agent token: 1/3, 2/9, 2/9, 2/9
+            // With agent token: 1/3, 1/6, 1/3, 1/6
             liquidityAmount = 333_333_333 ether;
-            bondingSupplyAmount = 222_222_222 ether;
-            amicaAmount = 222_222_222 ether;
-            agentStakerRewardsAmount = 222_222_223 ether;
+            bondingSupplyAmount = 166_666_666 ether;
+            amicaAmount = 333_333_333 ether;
+            agentRewardsAmount = 166_666_668 ether;
         } else {
             // Without agent token: 1/3, 1/3, 1/3, 0
             liquidityAmount = 333_333_333 ether;
             bondingSupplyAmount = 333_333_333 ether;
             amicaAmount = 333_333_334 ether;
-            agentStakerRewardsAmount = 0;
+            agentRewardsAmount = 0;
         }
     }
 
     /**
-     * @notice Gets current bonding curve state
+     * @notice Gets current pre-graduation state
      * @param tokenId ID of the persona
      * @return totalPairingTokensCollected Total pairing tokens collected
      * @return tokensPurchased Total persona tokens purchased
@@ -98,17 +98,17 @@ contract PersonaFactoryViewer {
             uint256 availableTokens
         )
     {
-        (totalPairingTokensCollected, tokensPurchased) =
-            factory.bondingStates(tokenId);
+        (totalPairingTokensCollected, tokensPurchased,) =
+            factory.preGraduationStates(tokenId);
 
         // Calculate available tokens
-        (address token,, address agentToken, bool graduated,,,,) =
+        (address token,, address agentToken, uint256 graduationTimestamp,,) =
             factory.personas(tokenId);
-        if (graduated || token == address(0)) {
+        if (graduationTimestamp > 0 || token == address(0)) {
             availableTokens = 0;
         } else {
             uint256 bondingSupplyAmount =
-                agentToken != address(0) ? 222_222_222 ether : 333_333_333 ether;
+                agentToken != address(0) ? 166_666_666 ether : 333_333_333 ether;
             availableTokens = tokensPurchased >= bondingSupplyAmount
                 ? 0
                 : bondingSupplyAmount - tokensPurchased;
@@ -145,18 +145,16 @@ contract PersonaFactoryViewer {
             address token,
             address pairToken,
             address agentToken,
-            bool graduated,
-            ,
-            ,
+            uint256 graduationTimestamp,
             ,
         ) = factory.personas(tokenId);
-        if (graduated || token == address(0)) return 0;
+        if (graduationTimestamp > 0 || token == address(0)) return 0;
 
-        (, uint256 tokensPurchased) = factory.bondingStates(tokenId);
+        (, uint256 tokensPurchased,) = factory.preGraduationStates(tokenId);
 
         // Get token distribution to determine bonding supply
         uint256 bondingSupplyAmount =
-            agentToken != address(0) ? 222_222_222 ether : 333_333_333 ether;
+            agentToken != address(0) ? 166_666_666 ether : 333_333_333 ether;
 
         // Get bonding curve contract and calculate current price
         IBondingCurve bondingCurve = factory.bondingCurve();
@@ -183,19 +181,19 @@ contract PersonaFactoryViewer {
             ,
             ,
             address agentToken,
-            bool graduated,
-            uint256 totalAgentDeposited,
+            uint256 graduationTimestamp,
             uint256 agentTokenThreshold,
-            ,
         ) = factory.personas(tokenId);
 
-        if (graduated) {
+        if (graduationTimestamp > 0) {
             return (false, "Already graduated");
         }
 
-        (, uint256 tokensPurchased) = factory.bondingStates(tokenId);
+        (, uint256 tokensPurchased, uint256 totalAgentDeposited) =
+            factory.preGraduationStates(tokenId);
+
         uint256 bondingSupplyAmount =
-            agentToken != address(0) ? 222_222_222 ether : 333_333_333 ether;
+            agentToken != address(0) ? 166_666_666 ether : 333_333_333 ether;
         uint256 graduationThreshold = (bondingSupplyAmount * 85) / 100; // 85% threshold
 
         if (tokensPurchased < graduationThreshold) {
@@ -227,19 +225,14 @@ contract PersonaFactoryViewer {
             uint256 agentRequired
         )
     {
-        (
-            ,
-            ,
-            address agentToken,
-            ,
-            uint256 totalAgentDeposited,
-            uint256 agentTokenThreshold,
-            ,
-        ) = factory.personas(tokenId);
-        (, uint256 tokensPurchased) = factory.bondingStates(tokenId);
+        (,, address agentToken,, uint256 agentTokenThreshold,) =
+            factory.personas(tokenId);
+
+        (, uint256 tokensPurchased, uint256 totalAgentDeposited) =
+            factory.preGraduationStates(tokenId);
 
         uint256 bondingSupplyAmount =
-            agentToken != address(0) ? 222_222_222 ether : 333_333_333 ether;
+            agentToken != address(0) ? 166_666_666 ether : 333_333_333 ether;
         tokensPurchasedPercent = bondingSupplyAmount > 0
             ? (tokensPurchased * 100) / bondingSupplyAmount
             : 0;
@@ -258,6 +251,7 @@ contract PersonaFactoryViewer {
      * @return agentRewardAmount Amount from agent staking
      * @return totalClaimable Total claimable amount
      * @return claimed Whether the user has already claimed
+     * @return claimable Whether claims are currently allowed (after delay)
      */
     function getClaimableRewards(uint256 tokenId, address user)
         external
@@ -267,7 +261,8 @@ contract PersonaFactoryViewer {
             uint256 bonusAmount,
             uint256 agentRewardAmount,
             uint256 totalClaimable,
-            bool claimed
+            bool claimed,
+            bool claimable
         )
     {
         return factory.getClaimableRewards(tokenId, user);
@@ -331,16 +326,14 @@ contract PersonaFactoryViewer {
             address token,
             address pairToken,
             address agentToken,
-            bool graduated,
-            ,
-            ,
+            uint256 graduationTimestamp,
             ,
         ) = factory.personas(tokenId);
-        if (graduated || token == address(0)) return 0;
+        if (graduationTimestamp > 0 || token == address(0)) return 0;
 
-        (, uint256 tokensPurchased) = factory.bondingStates(tokenId);
+        (, uint256 tokensPurchased,) = factory.preGraduationStates(tokenId);
         uint256 bondingSupplyAmount =
-            agentToken != address(0) ? 222_222_222 ether : 333_333_333 ether;
+            agentToken != address(0) ? 166_666_666 ether : 333_333_333 ether;
 
         // Apply multiplier to input
         (,, uint256 pricingMultiplier) = factory.pairingConfigs(pairToken);
@@ -367,16 +360,14 @@ contract PersonaFactoryViewer {
             address token,
             address pairToken,
             address agentToken,
-            bool graduated,
-            ,
-            ,
+            uint256 graduationTimestamp,
             ,
         ) = factory.personas(tokenId);
-        if (graduated || token == address(0)) return 0;
+        if (graduationTimestamp > 0 || token == address(0)) return 0;
 
-        (, uint256 tokensPurchased) = factory.bondingStates(tokenId);
+        (, uint256 tokensPurchased,) = factory.preGraduationStates(tokenId);
         uint256 bondingSupplyAmount =
-            agentToken != address(0) ? 222_222_222 ether : 333_333_333 ether;
+            agentToken != address(0) ? 166_666_666 ether : 333_333_333 ether;
 
         IBondingCurve bondingCurve = factory.bondingCurve();
         uint256 baseAmountOut = bondingCurve.calculateAmountOutForSell(
@@ -404,15 +395,13 @@ contract PersonaFactoryViewer {
             address token,
             address pairToken,
             address agentToken,
-            bool graduated,
-            ,
-            ,
+            uint256 graduationTimestamp,
             ,
         ) = factory.personas(tokenId);
-        if (graduated || token == address(0)) return 0;
+        if (graduationTimestamp > 0 || token == address(0)) return 0;
 
         uint256 bondingSupplyAmount =
-            agentToken != address(0) ? 222_222_222 ether : 333_333_333 ether;
+            agentToken != address(0) ? 166_666_666 ether : 333_333_333 ether;
 
         IBondingCurve bondingCurve = factory.bondingCurve();
         uint256 baseCost = bondingCurve.calculateCostBetween(
@@ -428,7 +417,7 @@ contract PersonaFactoryViewer {
      * @notice Gets multiple personas in one call
      * @param tokenIds Array of token IDs
      * @return erc20Tokens Array of ERC20 addresses
-     * @return graduatedStatus Array of graduation status
+     * @return graduatedStatus Array of graduation status (true if graduated)
      */
     function getPersonaBatch(uint256[] calldata tokenIds)
         external
@@ -440,15 +429,15 @@ contract PersonaFactoryViewer {
         graduatedStatus = new bool[](length);
 
         for (uint256 i = 0; i < length; i++) {
-            (address erc20Token,,, bool _graduated,,,,) =
+            (address erc20Token,,, uint256 graduationTimestamp,,) =
                 factory.personas(tokenIds[i]);
             erc20Tokens[i] = erc20Token;
-            graduatedStatus[i] = _graduated;
+            graduatedStatus[i] = graduationTimestamp > 0;
         }
     }
 
     /**
-     * @notice Gets bonding curve state for multiple token IDs
+     * @notice Gets pre-graduation state for multiple token IDs
      * @param tokenIds Array of token IDs
      * @return totalPairingTokensCollected Array of total pairing tokens collected
      * @return tokensPurchased Array of tokens purchased
@@ -469,17 +458,17 @@ contract PersonaFactoryViewer {
         availableTokens = new uint256[](length);
 
         for (uint256 i = 0; i < length; i++) {
-            (totalPairingTokensCollected[i], tokensPurchased[i]) =
-                factory.bondingStates(tokenIds[i]);
+            (totalPairingTokensCollected[i], tokensPurchased[i],) =
+                factory.preGraduationStates(tokenIds[i]);
 
             // Calculate available tokens inline
-            (address token,, address agentToken, bool graduated,,,,) =
-                factory.personas(tokenIds[i]);
-            if (graduated || token == address(0)) {
+            (address token,, address agentToken, uint256 graduationTimestamp,,)
+            = factory.personas(tokenIds[i]);
+            if (graduationTimestamp > 0 || token == address(0)) {
                 availableTokens[i] = 0;
             } else {
                 uint256 bondingSupplyAmount = agentToken != address(0)
-                    ? 222_222_222 ether
+                    ? 166_666_666 ether
                     : 333_333_333 ether;
                 availableTokens[i] = tokensPurchased[i] >= bondingSupplyAmount
                     ? 0
@@ -533,6 +522,7 @@ contract PersonaFactoryViewer {
      * @return agentRewardAmounts Array of agent reward amounts
      * @return totalClaimables Array of total claimable amounts
      * @return hasClaimedArray Array of claim status
+     * @return claimableArray Array of claimable status (after delay)
      */
     function getClaimableRewardsBatch(uint256[] calldata tokenIds, address user)
         external
@@ -542,7 +532,8 @@ contract PersonaFactoryViewer {
             uint256[] memory bonusAmounts,
             uint256[] memory agentRewardAmounts,
             uint256[] memory totalClaimables,
-            bool[] memory hasClaimedArray
+            bool[] memory hasClaimedArray,
+            bool[] memory claimableArray
         )
     {
         uint256 length = tokenIds.length;
@@ -551,6 +542,7 @@ contract PersonaFactoryViewer {
         agentRewardAmounts = new uint256[](length);
         totalClaimables = new uint256[](length);
         hasClaimedArray = new bool[](length);
+        claimableArray = new bool[](length);
 
         for (uint256 i = 0; i < length; i++) {
             (
@@ -558,8 +550,79 @@ contract PersonaFactoryViewer {
                 bonusAmounts[i],
                 agentRewardAmounts[i],
                 totalClaimables[i],
-                hasClaimedArray[i]
+                hasClaimedArray[i],
+                claimableArray[i]
             ) = factory.getClaimableRewards(tokenIds[i], user);
         }
+    }
+
+    /**
+     * @notice Checks if claims are allowed for a persona
+     * @param tokenId ID of the persona
+     * @return allowed Whether claims are allowed
+     * @return timeRemaining Seconds until claims are allowed (0 if already allowed)
+     */
+    function isClaimAllowed(uint256 tokenId)
+        external
+        view
+        returns (bool allowed, uint256 timeRemaining)
+    {
+        (,,, uint256 graduationTimestamp,,) = factory.personas(tokenId);
+
+        if (graduationTimestamp == 0) {
+            return (false, 0); // Not graduated yet
+        }
+
+        uint256 claimTime = graduationTimestamp + 1 days;
+        if (block.timestamp >= claimTime) {
+            return (true, 0);
+        } else {
+            return (false, claimTime - block.timestamp);
+        }
+    }
+
+    /**
+     * @notice Gets the graduation timestamp for a persona
+     * @param tokenId ID of the persona
+     * @return timestamp The graduation timestamp (0 if not graduated)
+     */
+    function getGraduationTimestamp(uint256 tokenId)
+        external
+        view
+        returns (uint256 timestamp)
+    {
+        (,,, timestamp,,) = factory.personas(tokenId);
+    }
+
+    /**
+     * @notice Gets the total agent tokens deposited for a persona
+     * @param tokenId ID of the persona
+     * @return totalDeposited Total agent tokens deposited
+     */
+    function getTotalAgentDeposited(uint256 tokenId)
+        external
+        view
+        returns (uint256 totalDeposited)
+    {
+        (,, totalDeposited) = factory.preGraduationStates(tokenId);
+    }
+
+    /**
+     * @notice Gets complete pre-graduation state
+     * @param tokenId ID of the persona
+     * @return totalPairingTokensCollected Total pairing tokens collected
+     * @return tokensPurchased Total persona tokens purchased
+     * @return totalAgentDeposited Total agent tokens deposited
+     */
+    function getPreGraduationState(uint256 tokenId)
+        external
+        view
+        returns (
+            uint256 totalPairingTokensCollected,
+            uint256 tokensPurchased,
+            uint256 totalAgentDeposited
+        )
+    {
+        return factory.preGraduationStates(tokenId);
     }
 }

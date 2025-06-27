@@ -57,7 +57,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         );
 
         // Get persona data
-        (address token,,,,,,,) = personaFactory.personas(tokenId);
+        (address token,,,,,) = personaFactory.personas(tokenId);
 
         personaToken = token;
     }
@@ -72,8 +72,8 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         );
 
         // Verify graduation
-        (,,, bool graduated,,,,) = personaFactory.personas(tokenId);
-        assertTrue(graduated);
+        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        assertTrue(graduationTimestamp > 0);
     }
 
     function test_Graduation_SendsTokensToAmica() public {
@@ -107,8 +107,8 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         );
 
         // Verify graduated
-        (,,, bool graduated,,,,) = personaFactory.personas(tokenId);
-        assertTrue(graduated);
+        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        assertTrue(graduationTimestamp > 0);
     }
 
     function test_Graduation_ExactThreshold() public {
@@ -121,8 +121,8 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         );
 
         // Verify graduated
-        (,,, bool graduated,,,,) = personaFactory.personas(tokenId);
-        assertTrue(graduated);
+        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        assertTrue(graduationTimestamp > 0);
     }
 
     function test_CannotTradeAfterGraduation() public {
@@ -158,6 +158,9 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
             tokenId, TARGET_RAISE, 0, user3, block.timestamp + 1
         );
 
+        // Wait for claim delay
+        vm.warp(block.timestamp + 1 days + 1);
+
         // User2 claims their rewards
         vm.prank(user2);
         personaFactory.claimRewards(tokenId);
@@ -187,19 +190,24 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
             tokenId, TARGET_RAISE, 0, user3, block.timestamp + 1
         );
 
+        // Wait for claim delay
+        vm.warp(block.timestamp + 1 days + 1);
+
         // Get claimable rewards for user2
         (
             uint256 purchasedAmount,
             uint256 bonusAmount,
             uint256 agentRewardAmount,
             uint256 totalClaimable,
-            bool claimed
+            bool claimed,
+            bool claimable
         ) = personaFactory.getClaimableRewards(tokenId, user2);
 
         assertEq(purchasedAmount, user2Purchased);
         assertGt(bonusAmount, 0); // Should receive bonus from unsold tokens
         assertEq(agentRewardAmount, 0); // No agent tokens
         assertFalse(claimed);
+        assertTrue(claimable); // Should be claimable after delay
 
         // Claim and verify
         uint256 balanceBefore = IERC20(personaToken).balanceOf(user2);
@@ -256,8 +264,8 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         vm.stopPrank();
 
         // Verify graduated
-        (,,, bool graduated,,,,) = personaFactory.personas(tokenId);
-        assertTrue(graduated);
+        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        assertTrue(graduationTimestamp > 0);
     }
 
     function test_Graduation_WithAgentToken() public {
@@ -279,10 +287,10 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         );
 
         // Try to graduate without meeting agent requirement
-        // For agent personas, bonding amount is 222,222,222 (2/9 of supply)
-        // Graduation threshold = 188,888,888 (85% of 222,222,222)
-        // With 283.33 multiplier: amicaNeeded = 188,888,888 / 283.33 ≈ 666,667 AMICA
-        uint256 agentGraduationAmount = 666_667 ether;
+        // For agent personas, bonding amount is 166,666,666 (1/6 of supply)
+        // Graduation threshold = 141,666,666 (85% of 166,666,666)
+        // With 283.33 multiplier: amicaNeeded = 141,666,666 / 283.33 ≈ 500,000 AMICA
+        uint256 agentGraduationAmount = 500_000 ether;
 
         vm.prank(user2);
         personaFactory.swapExactTokensForTokens(
@@ -290,8 +298,8 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         );
 
         // Should not be graduated yet
-        (,,, bool graduated,,,,) = personaFactory.personas(tokenId);
-        assertFalse(graduated);
+        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        assertFalse(graduationTimestamp > 0);
 
         // Deposit agent tokens to meet requirement
         vm.startPrank(user1);
@@ -300,12 +308,12 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         vm.stopPrank();
 
         // Now it should graduate automatically
-        (,,, graduated,,,,) = personaFactory.personas(tokenId);
-        assertTrue(graduated);
+        (,,, graduationTimestamp,,) = personaFactory.personas(tokenId);
+        assertTrue(graduationTimestamp > 0);
 
-        // Verify agent pool was created
-        (,,,,,,, PoolId agentPoolId) = personaFactory.personas(tokenId);
-        assertTrue(PoolId.unwrap(agentPoolId) != bytes32(0));
+        // Verify pool was created
+        (,,,,, PoolId poolId) = personaFactory.personas(tokenId);
+        assertTrue(PoolId.unwrap(poolId) != bytes32(0));
     }
 
     function test_GetClaimableRewards_BeforeGraduation() public {
@@ -323,7 +331,8 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
             uint256 bonusAmount,
             uint256 agentRewardAmount,
             uint256 totalClaimable,
-            bool claimed
+            bool claimed,
+            bool claimable
         ) = personaFactory.getClaimableRewards(tokenId, user2);
 
         assertEq(purchasedAmount, 0); // Can't claim before graduation
@@ -331,6 +340,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         assertEq(agentRewardAmount, 0);
         assertEq(totalClaimable, 0);
         assertFalse(claimed);
+        assertFalse(claimable);
     }
 
     function test_CannotClaimBeforeGraduation() public {
@@ -345,6 +355,21 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         // Try to claim before graduation
         vm.prank(user2);
         vm.expectRevert(abi.encodeWithSignature("NotAllowed(uint8)", 3)); // NotGraduated = 3
+        personaFactory.claimRewards(tokenId);
+    }
+
+    function test_CannotClaimBeforeDelay() public {
+        (uint256 tokenId,,) = createPersonaFixture();
+
+        // Graduate the persona
+        vm.prank(user2);
+        personaFactory.swapExactTokensForTokens(
+            tokenId, TARGET_RAISE, 0, user2, block.timestamp + 1
+        );
+
+        // Try to claim immediately after graduation (before 24 hour delay)
+        vm.prank(user2);
+        vm.expectRevert(abi.encodeWithSignature("NotAllowed(uint8)", 12)); // ClaimTooEarly = 12
         personaFactory.claimRewards(tokenId);
     }
 
@@ -381,6 +406,9 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
                 block.timestamp + 1
             );
         }
+
+        // Wait for claim delay
+        vm.warp(block.timestamp + 1 days + 1);
 
         // Both users claim
         vm.prank(user2);
