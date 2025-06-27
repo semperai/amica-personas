@@ -106,7 +106,7 @@ contract PersonaTokenFactory is
      * @param token Address of the persona's ERC20 token
      * @param pairToken Address of the token paired for bonding/liquidity
      * @param agentToken Optional token for agent staking
-     * @param pairCreated Whether Uniswap pair has been created (graduated)
+     * @param graduated Whether the persona has graduated to Uniswap pools
      * @param createdAt Timestamp of persona creation
      * @param totalAgentDeposited Total amount of agent tokens deposited
      * @param minAgentTokens Minimum agent tokens required for graduation
@@ -120,7 +120,7 @@ contract PersonaTokenFactory is
         address token;
         address pairToken;
         address agentToken;
-        bool pairCreated;
+        bool graduated;
         uint256 createdAt;
         uint256 totalAgentDeposited;
         uint256 minAgentTokens;
@@ -702,7 +702,7 @@ contract PersonaTokenFactory is
         if (amountIn == 0) revert Invalid(1);
 
         PersonaData storage persona = personas[tokenId];
-        if (persona.pairCreated) revert NotAllowed(4);
+        if (persona.graduated) revert NotAllowed(4);
         if (persona.token == address(0)) revert Invalid(0);
 
         TokenPurchase storage purchase = purchases[tokenId];
@@ -762,7 +762,7 @@ contract PersonaTokenFactory is
         if (to == address(0)) revert Invalid(2);
 
         PersonaData storage persona = personas[tokenId];
-        if (persona.pairCreated) revert NotAllowed(4);
+        if (persona.graduated) revert NotAllowed(4);
         if (persona.token == address(0)) revert Invalid(0);
 
         TokenPurchase storage purchase = purchases[tokenId];
@@ -832,7 +832,7 @@ contract PersonaTokenFactory is
         if (persona.token == address(0)) revert Invalid(0);
 
         // Can only claim after graduation
-        if (!persona.pairCreated) revert NotAllowed(3); // 3 = NotGraduated
+        if (!persona.graduated) revert NotAllowed(3); // 3 = NotGraduated
 
         // Check if already claimed tokens
         if (hasClaimed[tokenId][msg.sender]) revert Invalid(14); // 14 = AlreadyClaimed
@@ -920,7 +920,7 @@ contract PersonaTokenFactory is
         )
     {
         PersonaData storage persona = personas[tokenId];
-        if (!persona.pairCreated) return (0, 0, 0, 0, false);
+        if (!persona.graduated) return (0, 0, 0, 0, false);
 
         // Check token claims
         purchasedAmount = userPurchases[tokenId][user];
@@ -967,7 +967,7 @@ contract PersonaTokenFactory is
     {
         PersonaData storage persona = personas[tokenId];
         if (persona.agentToken == address(0)) revert NotAllowed(6);
-        if (persona.pairCreated) revert NotAllowed(2);
+        if (persona.graduated) revert NotAllowed(2);
         if (amount == 0) revert Invalid(1);
 
         if (
@@ -996,7 +996,7 @@ contract PersonaTokenFactory is
         whenNotPaused
     {
         PersonaData storage persona = personas[tokenId];
-        if (persona.pairCreated) revert NotAllowed(2);
+        if (persona.graduated) revert NotAllowed(2);
 
         if (agentDeposits[tokenId][msg.sender] < amount) revert Insufficient(4);
 
@@ -1184,7 +1184,7 @@ contract PersonaTokenFactory is
      */
     function _graduate(uint256 tokenId) private {
         PersonaData storage persona = personas[tokenId];
-        if (persona.pairCreated) revert NotAllowed(7);
+        if (persona.graduated) revert NotAllowed(7);
 
         // Process token distributions
         _processTokenDistributions(tokenId);
@@ -1199,7 +1199,7 @@ contract PersonaTokenFactory is
             _createAgentPersonaPool(tokenId, agentPoolTokens);
         }
 
-        persona.pairCreated = true;
+        persona.graduated = true;
 
         // Emit graduation event
         emit Graduated(

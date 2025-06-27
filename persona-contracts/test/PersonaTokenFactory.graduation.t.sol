@@ -63,7 +63,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
             address token,
             address pairToken,
             address agentToken,
-            bool pairCreated,
+            bool graduated,
             uint256 createdAt,
             uint256 totalAgentDeposited,
             uint256 minAgentTokens,
@@ -84,8 +84,8 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         );
 
         // Verify graduation
-        (,,,,, bool pairCreated,,,,,) = personaFactory.personas(tokenId);
-        assertTrue(pairCreated);
+        (,,,,, bool graduated,,,,,) = personaFactory.personas(tokenId);
+        assertTrue(graduated);
     }
 
     function test_Graduation_SendsTokensToAmica() public {
@@ -119,8 +119,8 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         );
 
         // Verify graduated
-        (,,,,, bool pairCreated,,,,,) = personaFactory.personas(tokenId);
-        assertTrue(pairCreated);
+        (,,,,, bool graduated,,,,,) = personaFactory.personas(tokenId);
+        assertTrue(graduated);
     }
 
     function test_Graduation_ExactThreshold() public {
@@ -133,8 +133,8 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         );
 
         // Verify graduated
-        (,,,,, bool pairCreated,,,,,) = personaFactory.personas(tokenId);
-        assertTrue(pairCreated);
+        (,,,,, bool graduated,,,,,) = personaFactory.personas(tokenId);
+        assertTrue(graduated);
     }
 
     function test_CannotTradeAfterGraduation() public {
@@ -268,8 +268,8 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         vm.stopPrank();
 
         // Verify graduated
-        (,,,,, bool pairCreated,,,,,) = personaFactory.personas(tokenId);
-        assertTrue(pairCreated);
+        (,,,,, bool graduated,,,,,) = personaFactory.personas(tokenId);
+        assertTrue(graduated);
     }
 
     function test_Graduation_WithAgentToken() public {
@@ -302,8 +302,8 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         );
 
         // Should not be graduated yet
-        (,,,,, bool pairCreated,,,,,) = personaFactory.personas(tokenId);
-        assertFalse(pairCreated);
+        (,,,,, bool graduated,,,,,) = personaFactory.personas(tokenId);
+        assertFalse(graduated);
 
         // Deposit agent tokens to meet requirement
         vm.startPrank(user1);
@@ -312,8 +312,8 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         vm.stopPrank();
 
         // Now it should graduate automatically
-        (,,,,, pairCreated,,,,,) = personaFactory.personas(tokenId);
-        assertTrue(pairCreated);
+        (,,,,, graduated,,,,,) = personaFactory.personas(tokenId);
+        assertTrue(graduated);
 
         // Verify agent pool was created
         (,,,,,,,,,, PoolId agentPoolId) = personaFactory.personas(tokenId);

@@ -117,9 +117,9 @@ contract PersonaFactoryViewer {
         (totalDeposited, tokensSold) = factory.purchases(tokenId);
 
         // Calculate available tokens
-        (,, address token,, address agentToken, bool pairCreated,,,,,) =
+        (,, address token,, address agentToken, bool graduated,,,,,) =
             factory.personas(tokenId);
-        if (pairCreated || token == address(0)) {
+        if (graduated || token == address(0)) {
             availableTokens = 0;
         } else {
             uint256 bondingAmount =
@@ -161,13 +161,13 @@ contract PersonaFactoryViewer {
             address token,
             address pairToken,
             address agentToken,
-            bool pairCreated,
+            bool graduated,
             ,
             ,
             ,
             ,
         ) = factory.personas(tokenId);
-        if (pairCreated || token == address(0)) return 0;
+        if (graduated || token == address(0)) return 0;
 
         (, uint256 tokensSold) = factory.purchases(tokenId);
 
@@ -206,14 +206,14 @@ contract PersonaFactoryViewer {
             ,
             ,
             address agentToken,
-            bool pairCreated,
+            bool graduated,
             ,
             uint256 totalAgentDeposited,
             uint256 minAgentTokens,
             ,
         ) = factory.personas(tokenId);
 
-        if (pairCreated) {
+        if (graduated) {
             return (false, "Already graduated");
         }
 
@@ -371,13 +371,13 @@ contract PersonaFactoryViewer {
             address token,
             address pairToken,
             address agentToken,
-            bool pairCreated,
+            bool graduated,
             ,
             ,
             ,
             ,
         ) = factory.personas(tokenId);
-        if (pairCreated || token == address(0)) return 0;
+        if (graduated || token == address(0)) return 0;
 
         (, uint256 tokensSold) = factory.purchases(tokenId);
         uint256 bondingAmount =
@@ -410,13 +410,13 @@ contract PersonaFactoryViewer {
             address token,
             address pairToken,
             address agentToken,
-            bool pairCreated,
+            bool graduated,
             ,
             ,
             ,
             ,
         ) = factory.personas(tokenId);
-        if (pairCreated || token == address(0)) return 0;
+        if (graduated || token == address(0)) return 0;
 
         (, uint256 tokensSold) = factory.purchases(tokenId);
         uint256 bondingAmount =
@@ -450,13 +450,13 @@ contract PersonaFactoryViewer {
             address token,
             address pairToken,
             address agentToken,
-            bool pairCreated,
+            bool graduated,
             ,
             ,
             ,
             ,
         ) = factory.personas(tokenId);
-        if (pairCreated || token == address(0)) return 0;
+        if (graduated || token == address(0)) return 0;
 
         uint256 bondingAmount =
             agentToken != address(0) ? 222_222_222 ether : 333_333_333 ether;
@@ -497,11 +497,11 @@ contract PersonaFactoryViewer {
         graduated = new bool[](length);
 
         for (uint256 i = 0; i < length; i++) {
-            (string memory name,, address erc20Token,,, bool pairCreated,,,,,) =
+            (string memory name,, address erc20Token,,, bool _graduated,,,,,) =
                 factory.personas(tokenIds[i]);
             names[i] = name;
             erc20Tokens[i] = erc20Token;
-            graduated[i] = pairCreated;
+            graduated[i] = _graduated;
         }
     }
 
@@ -530,9 +530,9 @@ contract PersonaFactoryViewer {
             (totalDeposited[i], tokensSold[i]) = factory.purchases(tokenIds[i]);
 
             // Calculate available tokens inline
-            (,, address token,, address agentToken, bool pairCreated,,,,,) =
+            (,, address token,, address agentToken, bool graduated,,,,,) =
                 factory.personas(tokenIds[i]);
-            if (pairCreated || token == address(0)) {
+            if (graduated || token == address(0)) {
                 availableTokens[i] = 0;
             } else {
                 uint256 bondingAmount = agentToken != address(0)

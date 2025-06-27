@@ -109,7 +109,7 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
             address token,
             address pairToken,
             address agentTokenAddr,
-            bool pairCreated,
+            bool graduated,
             uint256 createdAt,
             uint256 totalAgentDeposited,
             uint256 minAgentTokens,
@@ -121,7 +121,7 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
         assertTrue(token != address(0));
         assertEq(pairToken, address(amicaToken));
         assertEq(agentTokenAddr, address(0));
-        assertFalse(pairCreated);
+        assertFalse(graduated);
         assertEq(createdAt, block.timestamp);
         assertEq(totalAgentDeposited, 0);
         assertEq(minAgentTokens, 0);
@@ -168,7 +168,7 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
             address token,
             address pairToken,
             address agentTokenAddr,
-            bool pairCreated,
+            bool graduated,
             ,
             ,
             uint256 minAgentTokens,
@@ -179,7 +179,7 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
         assertEq(symbol, "AGENT");
         assertEq(agentTokenAddr, address(agentToken));
         assertEq(minAgentTokens, minAgentAmount);
-        assertFalse(pairCreated);
+        assertFalse(graduated);
     }
 
     function test_CreatePersona_WithInitialBuy() public {
@@ -404,8 +404,8 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
         vm.stopPrank();
 
         // Verify graduation
-        (,,,,, bool pairCreated,,,,,) = personaFactory.personas(tokenId);
-        assertTrue(pairCreated, "Should have graduated");
+        (,,,,, bool graduated,,,,,) = personaFactory.personas(tokenId);
+        assertTrue(graduated, "Should have graduated");
     }
 
     function test_Graduation_InsufficientAgentTokens_NoGraduation() public {
@@ -438,8 +438,8 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
         );
 
         // Verify NOT graduated due to insufficient agent tokens
-        (,,,,, bool pairCreated,,,,,) = personaFactory.personas(tokenId);
-        assertFalse(pairCreated, "Should not have graduated");
+        (,,,,, bool graduated,,,,,) = personaFactory.personas(tokenId);
+        assertFalse(graduated, "Should not have graduated");
     }
 
     // ==================== Agent Rewards Tests ====================
@@ -835,8 +835,8 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
         );
 
         // Verify graduated
-        (,,,,, bool pairCreated,,,,,) = personaFactory.personas(tokenId);
-        assertTrue(pairCreated, "Should have graduated");
+        (,,,,, bool graduated,,,,,) = personaFactory.personas(tokenId);
+        assertTrue(graduated, "Should have graduated");
 
         // Get persona token
         (,, address personaTokenAddr,,,,,,,,) = personaFactory.personas(tokenId);

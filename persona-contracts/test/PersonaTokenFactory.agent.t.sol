@@ -90,7 +90,7 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
             address token,
             address pairToken,
             address storedAgentToken,
-            bool pairCreated,
+            bool graduated,
             uint256 createdAt,
             uint256 totalAgentDeposited,
             uint256 minAgentTokens,
@@ -102,7 +102,7 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         assertEq(storedAgentToken, address(agentToken));
         assertEq(minAgentTokens, 0);
         assertEq(totalAgentDeposited, 0);
-        assertFalse(pairCreated);
+        assertFalse(graduated);
     }
 
     function test_CreatePersonaWithoutAgentToken() public {
@@ -470,8 +470,8 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         );
 
         // Verify NOT graduated
-        (,,,,, bool pairCreated,,,,,) = personaFactory.personas(tokenId);
-        assertFalse(pairCreated);
+        (,,,,, bool graduated,,,,,) = personaFactory.personas(tokenId);
+        assertFalse(graduated);
     }
 
     function test_Graduation_ExactlyMinAgentTokens_Succeeds() public {
@@ -505,8 +505,8 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         );
 
         // Verify graduated
-        (,,,,, bool pairCreated,,,,,) = personaFactory.personas(tokenId);
-        assertTrue(pairCreated);
+        (,,,,, bool graduated,,,,,) = personaFactory.personas(tokenId);
+        assertTrue(graduated);
     }
 
     function test_Graduation_WithdrawBelowMin_DoesNotGraduate() public {
@@ -540,8 +540,8 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         );
 
         // Verify NOT graduated
-        (,,,,, bool pairCreated,,,,,) = personaFactory.personas(tokenId);
-        assertFalse(pairCreated);
+        (,,,,, bool graduated,,,,,) = personaFactory.personas(tokenId);
+        assertFalse(graduated);
 
         // Deposit again to meet minimum
         vm.startPrank(user2);
@@ -560,8 +560,8 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         );
 
         // Verify graduated
-        (,,,,, bool pairCreated2,,,,,) = personaFactory.personas(tokenId);
-        assertTrue(pairCreated2);
+        (,,,,, bool graduated2,,,,,) = personaFactory.personas(tokenId);
+        assertTrue(graduated2);
     }
 
     // ==================== Agent Rewards Distribution Tests ====================
@@ -836,8 +836,8 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         );
 
         // Check not graduated
-        (,,,,, bool pairCreated,,,,,) = personaFactory.personas(tokenId);
-        assertFalse(pairCreated);
+        (,,,,, bool graduated,,,,,) = personaFactory.personas(tokenId);
+        assertFalse(graduated);
     }
 
     function test_TokenDistribution_WithoutAgent() public {
@@ -867,8 +867,8 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         );
 
         // Check not graduated
-        (,,,,, bool pairCreated,,,,,) = personaFactory.personas(tokenId);
-        assertFalse(pairCreated);
+        (,,,,, bool graduated,,,,,) = personaFactory.personas(tokenId);
+        assertFalse(graduated);
     }
 
     // ==================== Integration Tests ====================
@@ -1007,8 +1007,8 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         );
 
         // Should graduate successfully
-        (,,,,, bool pairCreated,,,,,) = personaFactory.personas(tokenId);
-        assertTrue(pairCreated);
+        (,,,,, bool graduated,,,,,) = personaFactory.personas(tokenId);
+        assertTrue(graduated);
 
         // No agent tokens sent to AMICA (since none were deposited)
         // Just verify it doesn't revert
