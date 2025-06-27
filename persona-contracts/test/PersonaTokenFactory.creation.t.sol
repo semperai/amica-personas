@@ -612,6 +612,12 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
             pToken.balanceOf(address(personaFactory)), PERSONA_TOKEN_SUPPLY
         );
 
+        // Get balances before graduation
+        uint256 amicaPersonaBalanceBefore =
+            IERC20(personaTokenAddr).balanceOf(address(amicaToken));
+        uint256 amicaAgentBalanceBefore =
+            IERC20(address(agentToken)).balanceOf(address(amicaToken));
+
         // Deposit agent tokens and graduate
         vm.startPrank(user2);
         agentToken.approve(address(personaFactory), 10_000 ether);
@@ -626,13 +632,17 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
         );
         vm.stopPrank();
 
-        // Check AMICA received deposit
+        // Check AMICA received tokens
+        uint256 amicaPersonaBalanceAfter =
+            IERC20(personaTokenAddr).balanceOf(address(amicaToken));
+        uint256 amicaAgentBalanceAfter =
+            IERC20(address(agentToken)).balanceOf(address(amicaToken));
+
         assertEq(
-            amicaToken.depositedBalances(personaTokenAddr), AMICA_DEPOSIT_AMOUNT
+            amicaPersonaBalanceAfter - amicaPersonaBalanceBefore,
+            AMICA_DEPOSIT_AMOUNT
         );
-        assertEq(
-            amicaToken.depositedBalances(address(agentToken)), 10_000 ether
-        );
+        assertEq(amicaAgentBalanceAfter - amicaAgentBalanceBefore, 10_000 ether);
     }
 
     function test_TokenDistribution_WithoutAgent() public {
@@ -650,6 +660,10 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
         // Get persona token address
         (,, address personaTokenAddr,,,,,,,,) = personaFactory.personas(tokenId);
 
+        // Get balance before graduation
+        uint256 amicaPersonaBalanceBefore =
+            IERC20(personaTokenAddr).balanceOf(address(amicaToken));
+
         // Graduate (85% of 333,333,333 for non-agent personas)
         vm.prank(user2);
         personaFactory.swapExactTokensForTokens(
@@ -661,8 +675,10 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
         );
 
         // Check AMICA received correct amount (1/3 for non-agent personas)
+        uint256 amicaPersonaBalanceAfter =
+            IERC20(personaTokenAddr).balanceOf(address(amicaToken));
         assertEq(
-            amicaToken.depositedBalances(personaTokenAddr),
+            amicaPersonaBalanceAfter - amicaPersonaBalanceBefore,
             STANDARD_AMICA_AMOUNT
         );
     }

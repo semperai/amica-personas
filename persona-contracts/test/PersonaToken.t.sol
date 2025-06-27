@@ -86,19 +86,6 @@ contract PersonaTokenTest is Fixtures {
         newToken.initialize("Another Token", "ANOTHER", 2000 ether, user2);
     }
 
-    function test_CirculatingSupply() public {
-        assertEq(testToken.circulatingSupply(), INITIAL_SUPPLY);
-
-        // Transfer some tokens
-        testToken.transfer(user1, 1000 ether);
-        assertEq(testToken.circulatingSupply(), INITIAL_SUPPLY);
-
-        // Burn some tokens
-        vm.prank(user1);
-        testToken.burn(500 ether);
-        assertEq(testToken.circulatingSupply(), INITIAL_SUPPLY - 500 ether);
-    }
-
     // ==================== Burn and Claim Tests ====================
 
     function test_BurnAndClaim_SingleToken() public {

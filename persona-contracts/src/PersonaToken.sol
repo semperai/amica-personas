@@ -71,12 +71,6 @@ contract PersonaToken is
     );
 
     /**
-     * @notice Emitted when graduation status is updated
-     * @param graduated New graduation status
-     */
-    event GraduationStatusSet(bool graduated);
-
-    /**
      * @notice Disables initializers to prevent implementation contract initialization
      * @dev This is a security measure for upgradeable contracts used as implementations
      */
@@ -109,15 +103,6 @@ contract PersonaToken is
         __ReentrancyGuard_init();
 
         _mint(owner_, initialSupply_);
-    }
-
-    /**
-     * @notice Returns the circulating supply of tokens
-     * @dev Currently returns total supply as the contract can hold its own tokens
-     * @return The total supply of tokens in circulation
-     */
-    function circulatingSupply() public view returns (uint256) {
-        return totalSupply();
     }
 
     /**

@@ -28,10 +28,6 @@ import {IPositionManager} from
 import {Actions} from "@uniswap/v4-periphery/src/libraries/Actions.sol";
 import {IBondingCurve} from "./interfaces/IBondingCurve.sol";
 
-interface IAmicaToken {
-    function deposit(address token, uint256 amount) external;
-}
-
 interface IPersonaToken {
     function initialize(
         string memory name,
@@ -193,7 +189,7 @@ contract PersonaTokenFactory is
     mapping(uint256 => PersonaData) public personas;
 
     /// @notice Mapping from token ID to metadata list
-    mapping(uint256 => mapping(string => string)) public metadata;
+    mapping(uint256 => mapping(bytes32 => string)) public metadata;
 
     /// @notice So we can check if a domain is registered / unique
     mapping(bytes32 => uint256) public domains;
@@ -233,8 +229,11 @@ contract PersonaTokenFactory is
      * @notice Emitted when persona metadata is updated
      * @param tokenId Persona token ID
      * @param key Metadata key that was updated
+     * @param timestamp Timestamp of the update
      */
-    event MetadataUpdated(uint256 indexed tokenId, string indexed key);
+    event MetadataUpdated(
+        uint256 indexed tokenId, bytes32 indexed key, uint256 timestamp
+    );
 
     /**
      * @notice Emitted when tokens are purchased through bonding curve
@@ -612,9 +611,9 @@ contract PersonaTokenFactory is
             // - numbers: 0x30-0x39 (0-9)
             // - hyphen: 0x2D (-)
             if (
-                ! // a-z
+                // a-z
                     // 0-9
-                (
+                !(
                     (char >= 0x61 && char <= 0x7A)
                         || (char >= 0x30 && char <= 0x39) || (char == 0x2D)
                 ) // -
@@ -767,7 +766,8 @@ contract PersonaTokenFactory is
         emit TokensPurchased(tokenId, to, amountIn, amountOut);
 
         // Check graduation requirements
-        uint256 graduationThreshold = (amounts.bonding * GRADUATION_THRESHOLD_PERCENT) / 100;
+        uint256 graduationThreshold =
+            (amounts.bonding * GRADUATION_THRESHOLD_PERCENT) / 100;
         bool tokenThresholdMet = purchase.tokensSold >= graduationThreshold;
 
         // Check agent token requirement if applicable
@@ -1053,7 +1053,7 @@ contract PersonaTokenFactory is
      */
     function updateMetadata(
         uint256 tokenId,
-        string[] memory keys,
+        bytes32[] memory keys,
         string[] memory values
     ) external {
         if (ownerOf(tokenId) != msg.sender) revert NotAllowed(0);
@@ -1061,7 +1061,7 @@ contract PersonaTokenFactory is
 
         for (uint256 i = 0; i < keys.length; i++) {
             metadata[tokenId][keys[i]] = values[i];
-            emit MetadataUpdated(tokenId, keys[i]);
+            emit MetadataUpdated(tokenId, keys[i], block.timestamp);
         }
     }
 
@@ -1173,17 +1173,13 @@ contract PersonaTokenFactory is
             _getTokenAmounts(persona.agentToken != address(0));
 
         // Send tokens to AMICA protocol
-        IERC20(persona.token).approve(address(amicaToken), amounts.amica);
-        IAmicaToken(address(amicaToken)).deposit(persona.token, amounts.amica);
+        IERC20(persona.token).transfer(address(amicaToken), amounts.amica);
 
         // Send agent tokens to AMICA if applicable
         if (persona.agentToken != address(0) && persona.totalAgentDeposited > 0)
         {
-            IERC20(persona.agentToken).approve(
+            IERC20(persona.agentToken).transfer(
                 address(amicaToken), persona.totalAgentDeposited
-            );
-            IAmicaToken(address(amicaToken)).deposit(
-                persona.agentToken, persona.totalAgentDeposited
             );
         }
     }

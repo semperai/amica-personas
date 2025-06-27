@@ -91,7 +91,8 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
     function test_Graduation_SendsTokensToAmica() public {
         (uint256 tokenId, address personaToken,) = createPersonaFixture();
 
-        uint256 amicaBalanceBefore = amicaToken.depositedBalances(personaToken);
+        uint256 amicaBalanceBefore =
+            IERC20(personaToken).balanceOf(address(amicaToken));
 
         // Trigger graduation with 1M AMICA
         vm.prank(user2);
@@ -101,10 +102,9 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
 
         // Check AMICA received tokens (1/3 of supply when no agent token)
         uint256 expectedAmicaAmount = 333_333_334 ether; // THIRD_SUPPLY + 1
-        assertEq(
-            amicaToken.depositedBalances(personaToken),
-            amicaBalanceBefore + expectedAmicaAmount
-        );
+        uint256 amicaBalanceAfter =
+            IERC20(personaToken).balanceOf(address(amicaToken));
+        assertEq(amicaBalanceAfter - amicaBalanceBefore, expectedAmicaAmount);
     }
 
     function test_Graduation_WithExcessFunds() public {

@@ -39,19 +39,23 @@ contract PersonaTokenFactoryMetadataTest is Fixtures {
         // User1 owns the token, so they can update metadata
         vm.prank(user1);
 
-        string[] memory keys = new string[](2);
-        keys[0] = "description";
-        keys[1] = "twitter";
+        bytes32[] memory keys = new bytes32[](2);
+        keys[0] = bytes32("description");
+        keys[1] = bytes32("twitter");
 
         string[] memory values = new string[](2);
         values[0] = "Updated description";
         values[1] = "@coolpersona";
 
         // Expect both MetadataUpdated events
-        vm.expectEmit(true, true, false, false);
-        emit PersonaTokenFactory.MetadataUpdated(testTokenId, "description");
-        vm.expectEmit(true, true, false, false);
-        emit PersonaTokenFactory.MetadataUpdated(testTokenId, "twitter");
+        vm.expectEmit(true, true, true, false);
+        emit PersonaTokenFactory.MetadataUpdated(
+            testTokenId, bytes32("description"), block.timestamp
+        );
+        vm.expectEmit(true, true, true, false);
+        emit PersonaTokenFactory.MetadataUpdated(
+            testTokenId, bytes32("twitter"), block.timestamp
+        );
 
         personaFactory.updateMetadata(testTokenId, keys, values);
 
@@ -65,8 +69,8 @@ contract PersonaTokenFactoryMetadataTest is Fixtures {
         // User2 doesn't own the token
         vm.prank(user2);
 
-        string[] memory keys = new string[](1);
-        keys[0] = "description";
+        bytes32[] memory keys = new bytes32[](1);
+        keys[0] = bytes32("description");
 
         string[] memory values = new string[](1);
         values[0] = "Hacked!";
@@ -78,9 +82,9 @@ contract PersonaTokenFactoryMetadataTest is Fixtures {
     function test_UpdateMetadata_RevertMismatchedArrays() public {
         vm.prank(user1);
 
-        string[] memory keys = new string[](2);
-        keys[0] = "key1";
-        keys[1] = "key2";
+        bytes32[] memory keys = new bytes32[](2);
+        keys[0] = bytes32("key1");
+        keys[1] = bytes32("key2");
 
         string[] memory values = new string[](1);
         values[0] = "value1"; // Missing value2
@@ -90,8 +94,8 @@ contract PersonaTokenFactoryMetadataTest is Fixtures {
     }
 
     function test_GetMetadata_NonExistentKeys() public view {
-        string[] memory keys = new string[](1);
-        keys[0] = "nonexistent";
+        bytes32[] memory keys = new bytes32[](1);
+        keys[0] = bytes32("nonexistent");
 
         // Use viewer to get metadata
         string[] memory metadata = viewer.getMetadata(testTokenId, keys);
@@ -103,18 +107,20 @@ contract PersonaTokenFactoryMetadataTest is Fixtures {
 
         // Update multiple metadata keys at once
         uint256 numKeys = 10;
-        string[] memory keys = new string[](numKeys);
+        bytes32[] memory keys = new bytes32[](numKeys);
         string[] memory values = new string[](numKeys);
 
         for (uint256 i = 0; i < numKeys; i++) {
-            keys[i] = string(abi.encodePacked("key", vm.toString(i)));
+            keys[i] = keccak256(abi.encodePacked("key", vm.toString(i)));
             values[i] = string(abi.encodePacked("value", vm.toString(i)));
         }
 
         // We expect 10 events to be emitted
         for (uint256 i = 0; i < numKeys; i++) {
-            vm.expectEmit(true, true, false, false);
-            emit PersonaTokenFactory.MetadataUpdated(testTokenId, keys[i]);
+            vm.expectEmit(true, true, true, false);
+            emit PersonaTokenFactory.MetadataUpdated(
+                testTokenId, keys[i], block.timestamp
+            );
         }
 
         personaFactory.updateMetadata(testTokenId, keys, values);
@@ -159,8 +165,8 @@ contract PersonaTokenFactoryMetadataTest is Fixtures {
     }
 
     function test_UpdateMetadata_RevertNonExistentToken() public {
-        string[] memory keys = new string[](1);
-        keys[0] = "key";
+        bytes32[] memory keys = new bytes32[](1);
+        keys[0] = bytes32("key");
 
         string[] memory values = new string[](1);
         values[0] = "value";
@@ -182,14 +188,16 @@ contract PersonaTokenFactoryMetadataTest is Fixtures {
         }
         string memory longValue = string(longBytes);
 
-        string[] memory keys = new string[](1);
-        keys[0] = "longData";
+        bytes32[] memory keys = new bytes32[](1);
+        keys[0] = bytes32("longData");
 
         string[] memory values = new string[](1);
         values[0] = longValue;
 
-        vm.expectEmit(true, true, false, false);
-        emit PersonaTokenFactory.MetadataUpdated(testTokenId, "longData");
+        vm.expectEmit(true, true, true, false);
+        emit PersonaTokenFactory.MetadataUpdated(
+            testTokenId, bytes32("longData"), block.timestamp
+        );
 
         personaFactory.updateMetadata(testTokenId, keys, values);
 
@@ -201,10 +209,10 @@ contract PersonaTokenFactoryMetadataTest is Fixtures {
     function test_SpecialCharactersMetadata() public {
         vm.prank(user1);
 
-        string[] memory keys = new string[](3);
-        keys[0] = "emoji";
-        keys[1] = "unicode";
-        keys[2] = "special";
+        bytes32[] memory keys = new bytes32[](3);
+        keys[0] = bytes32("emoji");
+        keys[1] = bytes32("unicode");
+        keys[2] = bytes32("special");
 
         string[] memory values = new string[](3);
         values[0] = unicode"🚀🌟💎 Rocket to the moon!";
@@ -223,8 +231,8 @@ contract PersonaTokenFactoryMetadataTest is Fixtures {
     function test_EmptyMetadataValues() public {
         vm.prank(user1);
 
-        string[] memory keys = new string[](1);
-        keys[0] = "empty";
+        bytes32[] memory keys = new bytes32[](1);
+        keys[0] = bytes32("empty");
 
         string[] memory values = new string[](1);
         values[0] = "";
@@ -247,8 +255,8 @@ contract PersonaTokenFactoryMetadataTest is Fixtures {
 
         // Verify user1 can no longer update metadata
         vm.prank(user1);
-        string[] memory keys = new string[](1);
-        keys[0] = "owner";
+        bytes32[] memory keys = new bytes32[](1);
+        keys[0] = bytes32("owner");
         string[] memory values = new string[](1);
         values[0] = "user1";
 
@@ -259,8 +267,10 @@ contract PersonaTokenFactoryMetadataTest is Fixtures {
         vm.prank(user2);
         values[0] = "user2";
 
-        vm.expectEmit(true, true, false, false);
-        emit PersonaTokenFactory.MetadataUpdated(testTokenId, "owner");
+        vm.expectEmit(true, true, true, false);
+        emit PersonaTokenFactory.MetadataUpdated(
+            testTokenId, bytes32("owner"), block.timestamp
+        );
 
         personaFactory.updateMetadata(testTokenId, keys, values);
 
@@ -270,8 +280,8 @@ contract PersonaTokenFactoryMetadataTest is Fixtures {
     }
 
     function test_UpdateSameKeyMultipleTimes() public {
-        string[] memory keys = new string[](1);
-        keys[0] = "version";
+        bytes32[] memory keys = new bytes32[](1);
+        keys[0] = bytes32("version");
         string[] memory values = new string[](1);
 
         // Update 1
@@ -294,6 +304,56 @@ contract PersonaTokenFactoryMetadataTest is Fixtures {
         personaFactory.updateMetadata(testTokenId, keys, values);
         metadata = viewer.getMetadata(testTokenId, keys);
         assertEq(metadata[0], "v3");
+    }
+
+    function test_DifferentBytes32Keys() public {
+        vm.prank(user1);
+
+        // Test with various types of bytes32 keys
+        bytes32[] memory keys = new bytes32[](5);
+        keys[0] = bytes32(uint256(1)); // Numeric key
+        keys[1] = keccak256("hashed_key"); // Hashed string
+        keys[2] = bytes32("short"); // Short string converted to bytes32
+        keys[3] = bytes32(0); // Zero key
+        keys[4] = bytes32(type(uint256).max); // Max value key
+
+        string[] memory values = new string[](5);
+        values[0] = "numeric key value";
+        values[1] = "hashed key value";
+        values[2] = "short key value";
+        values[3] = "zero key value";
+        values[4] = "max key value";
+
+        personaFactory.updateMetadata(testTokenId, keys, values);
+
+        // Verify all were set
+        string[] memory retrieved = viewer.getMetadata(testTokenId, keys);
+        for (uint256 i = 0; i < 5; i++) {
+            assertEq(retrieved[i], values[i]);
+        }
+    }
+
+    function test_CollisionResistantKeys() public {
+        vm.prank(user1);
+
+        // Create keys that might collide if not handled properly
+        bytes32[] memory keys = new bytes32[](3);
+        keys[0] = keccak256(abi.encodePacked("key1"));
+        keys[1] = keccak256(abi.encodePacked("key2"));
+        keys[2] = keccak256(abi.encodePacked("key3"));
+
+        string[] memory values = new string[](3);
+        values[0] = "value1";
+        values[1] = "value2";
+        values[2] = "value3";
+
+        personaFactory.updateMetadata(testTokenId, keys, values);
+
+        // Verify each key maps to its own value
+        string[] memory retrieved = viewer.getMetadata(testTokenId, keys);
+        assertEq(retrieved[0], "value1");
+        assertEq(retrieved[1], "value2");
+        assertEq(retrieved[2], "value3");
     }
 
     // Helper functions for string operations

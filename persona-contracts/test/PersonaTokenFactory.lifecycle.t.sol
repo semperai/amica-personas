@@ -213,7 +213,7 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
 
         // Also check AMICA protocol received its share
         uint256 amicaProtocolBalance =
-            amicaToken.depositedBalances(testPersonaToken);
+            IERC20(testPersonaToken).balanceOf(address(amicaToken));
         console.log("AMICA protocol received:", amicaProtocolBalance / 1e18);
         assertApproxEqRel(
             amicaProtocolBalance,
@@ -300,7 +300,7 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
         uint256 poolBalance =
             IERC20(testPersonaToken).balanceOf(address(poolManager));
         uint256 amicaProtocolBalance =
-            amicaToken.depositedBalances(testPersonaToken);
+            IERC20(testPersonaToken).balanceOf(address(amicaToken));
         uint256 user1Balance = IERC20(testPersonaToken).balanceOf(user1);
         uint256 user2Balance = IERC20(testPersonaToken).balanceOf(user2);
         uint256 user3Balance = IERC20(testPersonaToken).balanceOf(user3);

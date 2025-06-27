@@ -45,7 +45,7 @@ contract PersonaFactoryViewer {
      * @param keys Array of metadata keys to retrieve
      * @return Array of metadata values
      */
-    function getMetadata(uint256 tokenId, string[] memory keys)
+    function getMetadata(uint256 tokenId, bytes32[] memory keys)
         external
         view
         returns (string[] memory)
