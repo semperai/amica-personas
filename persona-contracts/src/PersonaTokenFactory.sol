@@ -229,11 +229,8 @@ contract PersonaTokenFactory is
      * @notice Emitted when persona metadata is updated
      * @param tokenId Persona token ID
      * @param key Metadata key that was updated
-     * @param timestamp Timestamp of the update
      */
-    event MetadataUpdated(
-        uint256 indexed tokenId, bytes32 indexed key, uint256 timestamp
-    );
+    event MetadataUpdated(uint256 indexed tokenId, bytes32 indexed key);
 
     /**
      * @notice Emitted when tokens are purchased through bonding curve
@@ -1061,7 +1058,7 @@ contract PersonaTokenFactory is
 
         for (uint256 i = 0; i < keys.length; i++) {
             metadata[tokenId][keys[i]] = values[i];
-            emit MetadataUpdated(tokenId, keys[i], block.timestamp);
+            emit MetadataUpdated(tokenId, keys[i]);
         }
     }
 

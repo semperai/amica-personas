@@ -22,17 +22,17 @@ error TransferFailed();
  */
 interface IBurnAndClaim {
     /**
-     * @notice Emitted when tokens are burned and other tokens are claimed
-     * @param user Address of the user who burned tokens and received claims
-     * @param amountBurned Amount of tokens burned by the user
-     * @param tokens Array of token addresses that were claimed
-     * @param amounts Array of amounts claimed for each token (same order as tokens array)
+     * @notice Emitted for each token claimed when burning
+     * @param user Address that burned tokens and received claims
+     * @param claimedToken Address of the token being claimed
+     * @param amountBurned Amount of tokens burned for this claim
+     * @param amountClaimed Amount of claimedToken received
      */
-    event TokensBurnedAndClaimed(
+    event TokenClaimed(
         address indexed user,
+        address indexed claimedToken,
         uint256 amountBurned,
-        address[] tokens,
-        uint256[] amounts
+        uint256 amountClaimed
     );
 
     /**

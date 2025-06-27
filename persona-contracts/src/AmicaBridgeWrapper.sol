@@ -124,6 +124,16 @@ contract AmicaBridgeWrapper is
     );
 
     /**
+     * @notice Emitted when bridge metrics are updated
+     * @param totalBridgedIn Total amount of bridged tokens wrapped
+     * @param totalBridgedOut Total amount of bridged tokens unwrapped
+     * @param netBridged Net amount currently bridged (in - out)
+     */
+    event BridgeMetricsUpdated(
+        uint256 totalBridgedIn, uint256 totalBridgedOut, uint256 netBridged
+    );
+
+    /**
      * @dev Prevents implementation contract from being initialized.
      * @custom:oz-upgrades-unsafe-allow constructor
      */
@@ -205,6 +215,9 @@ contract AmicaBridgeWrapper is
         nativeAmicaToken.mint(msg.sender, amount);
 
         totalBridgedIn += amount;
+        emit BridgeMetricsUpdated(
+            totalBridgedIn, totalBridgedOut, totalBridgedIn - totalBridgedOut
+        );
 
         emit TokensWrapped(msg.sender, amount);
     }
@@ -240,6 +253,9 @@ contract AmicaBridgeWrapper is
         }
 
         totalBridgedOut += amount;
+        emit BridgeMetricsUpdated(
+            totalBridgedIn, totalBridgedOut, totalBridgedIn - totalBridgedOut
+        );
 
         emit TokensUnwrapped(msg.sender, amount);
     }

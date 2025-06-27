@@ -50,11 +50,11 @@ contract PersonaTokenFactoryMetadataTest is Fixtures {
         // Expect both MetadataUpdated events
         vm.expectEmit(true, true, true, false);
         emit PersonaTokenFactory.MetadataUpdated(
-            testTokenId, bytes32("description"), block.timestamp
+            testTokenId, bytes32("description")
         );
         vm.expectEmit(true, true, true, false);
         emit PersonaTokenFactory.MetadataUpdated(
-            testTokenId, bytes32("twitter"), block.timestamp
+            testTokenId, bytes32("twitter")
         );
 
         personaFactory.updateMetadata(testTokenId, keys, values);
@@ -118,9 +118,7 @@ contract PersonaTokenFactoryMetadataTest is Fixtures {
         // We expect 10 events to be emitted
         for (uint256 i = 0; i < numKeys; i++) {
             vm.expectEmit(true, true, true, false);
-            emit PersonaTokenFactory.MetadataUpdated(
-                testTokenId, keys[i], block.timestamp
-            );
+            emit PersonaTokenFactory.MetadataUpdated(testTokenId, keys[i]);
         }
 
         personaFactory.updateMetadata(testTokenId, keys, values);
@@ -196,7 +194,7 @@ contract PersonaTokenFactoryMetadataTest is Fixtures {
 
         vm.expectEmit(true, true, true, false);
         emit PersonaTokenFactory.MetadataUpdated(
-            testTokenId, bytes32("longData"), block.timestamp
+            testTokenId, bytes32("longData")
         );
 
         personaFactory.updateMetadata(testTokenId, keys, values);
@@ -268,9 +266,7 @@ contract PersonaTokenFactoryMetadataTest is Fixtures {
         values[0] = "user2";
 
         vm.expectEmit(true, true, true, false);
-        emit PersonaTokenFactory.MetadataUpdated(
-            testTokenId, bytes32("owner"), block.timestamp
-        );
+        emit PersonaTokenFactory.MetadataUpdated(testTokenId, bytes32("owner"));
 
         personaFactory.updateMetadata(testTokenId, keys, values);
 

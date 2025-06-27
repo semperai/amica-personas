@@ -115,6 +115,8 @@ abstract contract BurnAndClaimBase is
             claimedTokens[validClaims] = token;
             claimedAmounts[validClaims] = claimAmount;
             validClaims++;
+
+            emit TokenClaimed(msg.sender, token, amountToBurn, claimAmount);
         }
 
         if (validClaims == 0) revert NoTokensToClaim();
@@ -124,11 +126,6 @@ abstract contract BurnAndClaimBase is
             mstore(claimedTokens, validClaims)
             mstore(claimedAmounts, validClaims)
         }
-
-        // Emit event before transfers (CEI pattern)
-        emit TokensBurnedAndClaimed(
-            msg.sender, amountToBurn, claimedTokens, claimedAmounts
-        );
 
         // Perform all transfers
         for (uint256 i = 0; i < validClaims; i++) {

@@ -88,6 +88,16 @@ contract FeeReductionSystem is Ownable {
         uint24 maxDiscountedFee
     );
 
+    /**
+     * @notice Emitted when a snapshot becomes active
+     * @param user Address whose snapshot activated
+     * @param activeBalance The newly active balance
+     * @param activationBlock Block number when it became active
+     */
+    event SnapshotActivated(
+        address indexed user, uint256 activeBalance, uint256 activationBlock
+    );
+
     constructor(IERC20 _amicaToken, PersonaTokenFactory _factory)
         Ownable(msg.sender)
     {
@@ -165,6 +175,10 @@ contract FeeReductionSystem is Ownable {
             snapshot.activeBlock = snapshot.pendingBlock;
             snapshot.pendingBalance = 0;
             snapshot.pendingBlock = 0;
+
+            emit SnapshotActivated(
+                msg.sender, snapshot.pendingBalance, block.number
+            );
         }
 
         // Set new pending snapshot
