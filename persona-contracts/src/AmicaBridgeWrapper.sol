@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {OwnableUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {PausableUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {Initializable} from
+    "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /**
  * @title IAmicaToken
@@ -103,7 +107,9 @@ contract AmicaBridgeWrapper is
      * @param to The recipient of the withdrawn tokens
      * @param amount The amount of tokens withdrawn
      */
-    event EmergencyWithdraw(address indexed token, address indexed to, uint256 amount);
+    event EmergencyWithdraw(
+        address indexed token, address indexed to, uint256 amount
+    );
 
     /**
      * @notice Emitted when bridge token addresses are updated
@@ -111,7 +117,11 @@ contract AmicaBridgeWrapper is
      * @param newBridgedToken The new bridged token address
      * @param newNativeToken The new native token address
      */
-    event BridgeTokensUpdated(address indexed oldBridgedToken, address indexed newBridgedToken, address indexed newNativeToken);
+    event BridgeTokensUpdated(
+        address indexed oldBridgedToken,
+        address indexed newBridgedToken,
+        address indexed newNativeToken
+    );
 
     /**
      * @dev Prevents implementation contract from being initialized.
@@ -138,7 +148,9 @@ contract AmicaBridgeWrapper is
     ) public initializer {
         if (_bridgedAmicaToken == address(0)) revert InvalidBridgedToken();
         if (_nativeAmicaToken == address(0)) revert InvalidNativeToken();
-        if (_bridgedAmicaToken == _nativeAmicaToken) revert TokensMustBeDifferent();
+        if (_bridgedAmicaToken == _nativeAmicaToken) {
+            revert TokensMustBeDifferent();
+        }
         if (_owner == address(0)) revert InvalidOwner();
 
         __Ownable_init(_owner);
@@ -184,7 +196,8 @@ contract AmicaBridgeWrapper is
         if (amount == 0) revert InvalidAmount();
 
         // Transfer bridged tokens from user to this contract
-        if (!bridgedAmicaToken.transferFrom(msg.sender, address(this), amount)) {
+        if (!bridgedAmicaToken.transferFrom(msg.sender, address(this), amount))
+        {
             revert TransferFailed();
         }
 
@@ -258,11 +271,10 @@ contract AmicaBridgeWrapper is
      * @custom:callable-when-paused Emergency function remains accessible when paused
      * @custom:emits EmergencyWithdraw
      */
-    function emergencyWithdraw(
-        address token,
-        address to,
-        uint256 amount
-    ) external onlyOwner {
+    function emergencyWithdraw(address token, address to, uint256 amount)
+        external
+        onlyOwner
+    {
         if (to == address(0)) revert InvalidRecipient();
 
         if (token == address(bridgedAmicaToken)) {
@@ -297,13 +309,17 @@ contract AmicaBridgeWrapper is
     ) external onlyOwner whenPaused {
         if (_bridgedAmicaToken == address(0)) revert InvalidBridgedToken();
         if (_nativeAmicaToken == address(0)) revert InvalidNativeToken();
-        if (_bridgedAmicaToken == _nativeAmicaToken) revert TokensMustBeDifferent();
+        if (_bridgedAmicaToken == _nativeAmicaToken) {
+            revert TokensMustBeDifferent();
+        }
 
         address oldBridgedToken = address(bridgedAmicaToken);
 
         bridgedAmicaToken = IERC20(_bridgedAmicaToken);
         nativeAmicaToken = IAmicaToken(_nativeAmicaToken);
 
-        emit BridgeTokensUpdated(oldBridgedToken, _bridgedAmicaToken, _nativeAmicaToken);
+        emit BridgeTokensUpdated(
+            oldBridgedToken, _bridgedAmicaToken, _nativeAmicaToken
+        );
     }
 }

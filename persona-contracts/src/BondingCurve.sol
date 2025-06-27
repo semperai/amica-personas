@@ -36,7 +36,8 @@ contract BondingCurve {
         require(reserveTotal > reserveSold, "Insufficient reserve");
 
         // Calculate virtual reserves
-        (uint256 virtualToken, uint256 virtualETH) = getVirtualReserves(reserveSold, reserveTotal);
+        (uint256 virtualToken, uint256 virtualETH) =
+            getVirtualReserves(reserveSold, reserveTotal);
 
         // Calculate output using constant product formula
         // When buying tokens: dx = (x * dy) / (y + dy)
@@ -47,7 +48,9 @@ contract BondingCurve {
 
         // Ensure we don't exceed available tokens
         uint256 tokensRemaining = reserveTotal - reserveSold;
-        tokenOut = virtualTokenOut > tokensRemaining ? tokensRemaining : virtualTokenOut;
+        tokenOut = virtualTokenOut > tokensRemaining
+            ? tokensRemaining
+            : virtualTokenOut;
     }
 
     /**
@@ -65,7 +68,8 @@ contract BondingCurve {
         require(amountIn > 0, "Invalid input");
         require(amountIn <= reserveSold, "Insufficient tokens sold");
 
-        uint256 ethBeforeFee = calculateAmountOutForSellNoFee(amountIn, reserveSold, reserveTotal);
+        uint256 ethBeforeFee =
+            calculateAmountOutForSellNoFee(amountIn, reserveSold, reserveTotal);
 
         // Apply fee to prevent rounding exploits
         uint256 fee = (ethBeforeFee * SELL_FEE_BPS) / BPS_DIVISOR;
@@ -86,7 +90,8 @@ contract BondingCurve {
 
         // When selling tokens back, we calculate using the AMM formula
         // Current state
-        (uint256 virtualToken, uint256 virtualETH) = getVirtualReserves(reserveSold, reserveTotal);
+        (uint256 virtualToken, uint256 virtualETH) =
+            getVirtualReserves(reserveSold, reserveTotal);
 
         // After selling, virtual token reserve increases
         uint256 newVirtualToken = virtualToken + amountIn;
@@ -114,7 +119,8 @@ contract BondingCurve {
         if (fromTokens >= toTokens) return 0;
 
         // Get virtual ETH at the starting point
-        (, uint256 virtualETHStart) = getVirtualReserves(fromTokens, totalSupply);
+        (, uint256 virtualETHStart) =
+            getVirtualReserves(fromTokens, totalSupply);
 
         // Get virtual ETH at the ending point
         (, uint256 virtualETHEnd) = getVirtualReserves(toTokens, totalSupply);
@@ -129,11 +135,13 @@ contract BondingCurve {
      * @param reserveTotal Total tokens in bonding curve
      * @return price Current price in ETH per token (with 18 decimals)
      */
-    function getCurrentPrice(
-        uint256 reserveSold,
-        uint256 reserveTotal
-    ) public pure returns (uint256 price) {
-        (uint256 virtualToken, uint256 virtualETH) = getVirtualReserves(reserveSold, reserveTotal);
+    function getCurrentPrice(uint256 reserveSold, uint256 reserveTotal)
+        public
+        pure
+        returns (uint256 price)
+    {
+        (uint256 virtualToken, uint256 virtualETH) =
+            getVirtualReserves(reserveSold, reserveTotal);
 
         // Price = virtualETH / virtualToken (with 18 decimal precision)
         price = (virtualETH * PRECISION) / virtualToken;
@@ -147,10 +155,11 @@ contract BondingCurve {
      * @return virtualToken Virtual token reserve
      * @return virtualETH Virtual ETH reserve
      */
-    function getVirtualReserves(
-        uint256 reserveSold,
-        uint256 reserveTotal
-    ) public pure returns (uint256 virtualToken, uint256 virtualETH) {
+    function getVirtualReserves(uint256 reserveSold, uint256 reserveTotal)
+        public
+        pure
+        returns (uint256 virtualToken, uint256 virtualETH)
+    {
         // To achieve exactly 1x starting price and 133x ending price:
         // We need virtualETH/virtualToken to go from 1 to 133
         //

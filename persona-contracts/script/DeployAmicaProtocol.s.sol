@@ -19,7 +19,8 @@ import {Options} from "openzeppelin-foundry-upgrades/Options.sol";
 
 // Import Uniswap V4 interfaces
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
-import {IPositionManager} from "@uniswap/v4-periphery/src/interfaces/IPositionManager.sol";
+import {IPositionManager} from
+    "@uniswap/v4-periphery/src/interfaces/IPositionManager.sol";
 
 // For hook deployment
 import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
@@ -63,7 +64,12 @@ contract DeployAmicaProtocol is DeployConfig {
 
     // ============ Events ============
 
-    event DeploymentCompleted(uint256 chainId, address deployer, DeploymentAddresses addresses, uint256 blockNumber);
+    event DeploymentCompleted(
+        uint256 chainId,
+        address deployer,
+        DeploymentAddresses addresses,
+        uint256 blockNumber
+    );
 
     // ============ Main Deployment Function ============
 
@@ -87,7 +93,11 @@ contract DeployAmicaProtocol is DeployConfig {
         console2.log("  Pool Manager:", config.poolManager);
         console2.log("  Position Manager:", config.positionManager);
         console2.log("  Mint Cost:", config.defaultMintCost / 1e18, "AMICA");
-        console2.log("  Graduation Threshold:", config.defaultGraduationThreshold / 1e18, "AMICA");
+        console2.log(
+            "  Graduation Threshold:",
+            config.defaultGraduationThreshold / 1e18,
+            "AMICA"
+        );
         console2.log("");
 
         vm.startBroadcast(deployerPrivateKey);
@@ -108,7 +118,9 @@ contract DeployAmicaProtocol is DeployConfig {
         _logDeploymentSummary();
 
         // Emit deployment event
-        emit DeploymentCompleted(block.chainid, deployer, addresses, block.number);
+        emit DeploymentCompleted(
+            block.chainid, deployer, addresses, block.number
+        );
 
         // Save deployment JSON
         _saveDeploymentJson(deployer, config);
@@ -118,7 +130,9 @@ contract DeployAmicaProtocol is DeployConfig {
 
     // ============ Individual Deployment Functions ============
 
-    function _deployAmicaToken(address deployer, NetworkConfig memory config) internal {
+    function _deployAmicaToken(address deployer, NetworkConfig memory config)
+        internal
+    {
         console2.log("Deploying AmicaToken...");
 
         // Deploy using OpenZeppelin Upgrades plugin
@@ -126,7 +140,11 @@ contract DeployAmicaProtocol is DeployConfig {
         opts.defender.useDefenderDeploy = false; // Set to true if using Defender
 
         address proxy = Upgrades.deployUUPSProxy(
-            "AmicaToken.sol", abi.encodeCall(AmicaToken.initialize, (deployer, config.amicaTotalSupply)), opts
+            "AmicaToken.sol",
+            abi.encodeCall(
+                AmicaToken.initialize, (deployer, config.amicaTotalSupply)
+            ),
+            opts
         );
 
         amicaToken = AmicaToken(proxy);
@@ -167,8 +185,12 @@ contract DeployAmicaProtocol is DeployConfig {
         uint160 flags = uint160(Hooks.BEFORE_SWAP_FLAG);
         bytes memory constructorArgs = abi.encode(config.poolManager);
 
-        (address hookAddress, bytes32 salt) =
-            HookMiner.find(config.create2Deployer, flags, type(DynamicFeeHook).creationCode, constructorArgs);
+        (address hookAddress, bytes32 salt) = HookMiner.find(
+            config.create2Deployer,
+            flags,
+            type(DynamicFeeHook).creationCode,
+            constructorArgs
+        );
 
         // Check if already deployed
         if (hookAddress.code.length > 0) {
@@ -179,7 +201,8 @@ contract DeployAmicaProtocol is DeployConfig {
         }
 
         // Deploy the hook using CREATE2
-        dynamicFeeHook = new DynamicFeeHook{salt: salt}(IPoolManager(config.poolManager));
+        dynamicFeeHook =
+            new DynamicFeeHook{salt: salt}(IPoolManager(config.poolManager));
 
         require(address(dynamicFeeHook) == hookAddress, "Hook address mismatch");
         addresses.dynamicFeeHook = hookAddress;
@@ -189,7 +212,10 @@ contract DeployAmicaProtocol is DeployConfig {
         console2.log("");
     }
 
-    function _deployPersonaFactory(address, /* deployer */ NetworkConfig memory config) internal {
+    function _deployPersonaFactory(
+        address, /* deployer */
+        NetworkConfig memory config
+    ) internal {
         console2.log("Deploying PersonaTokenFactory...");
 
         Options memory opts;
@@ -266,18 +292,28 @@ contract DeployAmicaProtocol is DeployConfig {
         console2.log("========================================");
     }
 
-    function _saveDeploymentJson(address deployer, NetworkConfig memory config) internal {
+    function _saveDeploymentJson(address deployer, NetworkConfig memory config)
+        internal
+    {
         string memory json = _buildDeploymentJson(deployer, config);
 
-        string memory filename =
-            string.concat("deployments/", config.networkName, "-", vm.toString(block.chainid), "-latest.json");
+        string memory filename = string.concat(
+            "deployments/",
+            config.networkName,
+            "-",
+            vm.toString(block.chainid),
+            "-latest.json"
+        );
 
         vm.writeJson(json, filename);
         console2.log("");
         console2.log("Deployment saved to:", filename);
     }
 
-    function _buildDeploymentJson(address deployer, NetworkConfig memory config) internal returns (string memory) {
+    function _buildDeploymentJson(address deployer, NetworkConfig memory config)
+        internal
+        returns (string memory)
+    {
         string memory obj = "deployment";
 
         // Metadata
@@ -290,27 +326,47 @@ contract DeployAmicaProtocol is DeployConfig {
         // Configuration used
         string memory configObj = "config";
         vm.serializeAddress(configObj, "poolManager", config.poolManager);
-        vm.serializeAddress(configObj, "positionManager", config.positionManager);
+        vm.serializeAddress(
+            configObj, "positionManager", config.positionManager
+        );
         vm.serializeUint(configObj, "defaultMintCost", config.defaultMintCost);
-        string memory finalConfigObj =
-            vm.serializeUint(configObj, "defaultGraduationThreshold", config.defaultGraduationThreshold);
+        string memory finalConfigObj = vm.serializeUint(
+            configObj,
+            "defaultGraduationThreshold",
+            config.defaultGraduationThreshold
+        );
 
         // Serialize addresses
         string memory addressObj = "addresses";
         vm.serializeAddress(addressObj, "amicaToken", addresses.amicaToken);
-        vm.serializeAddress(addressObj, "amicaTokenImpl", addresses.amicaTokenImpl);
-        vm.serializeAddress(addressObj, "personaFactory", addresses.personaFactory);
-        vm.serializeAddress(addressObj, "personaFactoryImpl", addresses.personaFactoryImpl);
-        vm.serializeAddress(addressObj, "personaFactoryViewer", addresses.personaFactoryViewer);
+        vm.serializeAddress(
+            addressObj, "amicaTokenImpl", addresses.amicaTokenImpl
+        );
+        vm.serializeAddress(
+            addressObj, "personaFactory", addresses.personaFactory
+        );
+        vm.serializeAddress(
+            addressObj, "personaFactoryImpl", addresses.personaFactoryImpl
+        );
+        vm.serializeAddress(
+            addressObj, "personaFactoryViewer", addresses.personaFactoryViewer
+        );
         vm.serializeAddress(addressObj, "proxyAdmin", addresses.proxyAdmin);
         vm.serializeAddress(addressObj, "personaToken", addresses.personaToken);
-        vm.serializeAddress(addressObj, "feeReductionSystem", addresses.feeReductionSystem);
-        vm.serializeAddress(addressObj, "dynamicFeeHook", addresses.dynamicFeeHook);
-        string memory finalAddressObj = vm.serializeAddress(addressObj, "bondingCurve", addresses.bondingCurve);
+        vm.serializeAddress(
+            addressObj, "feeReductionSystem", addresses.feeReductionSystem
+        );
+        vm.serializeAddress(
+            addressObj, "dynamicFeeHook", addresses.dynamicFeeHook
+        );
+        string memory finalAddressObj = vm.serializeAddress(
+            addressObj, "bondingCurve", addresses.bondingCurve
+        );
 
         // Combine all objects
         vm.serializeString(obj, "config", finalConfigObj);
-        string memory finalJson = vm.serializeString(obj, "addresses", finalAddressObj);
+        string memory finalJson =
+            vm.serializeString(obj, "addresses", finalAddressObj);
 
         return finalJson;
     }

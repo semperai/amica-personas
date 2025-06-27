@@ -11,7 +11,10 @@ import {IHooks} from "v4-core/src/interfaces/IHooks.sol";
 import {Hooks} from "v4-core/src/libraries/Hooks.sol";
 import {LPFeeLibrary} from "v4-core/src/libraries/LPFeeLibrary.sol";
 import {SwapParams} from "v4-core/src/types/PoolOperation.sol";
-import {BeforeSwapDelta, BeforeSwapDeltaLibrary} from "v4-core/src/types/BeforeSwapDelta.sol";
+import {
+    BeforeSwapDelta,
+    BeforeSwapDeltaLibrary
+} from "v4-core/src/types/BeforeSwapDelta.sol";
 import {IPoolManager} from "v4-core/src/interfaces/IPoolManager.sol";
 
 import {Fixtures} from "../test/shared/Fixtures.sol";
@@ -23,9 +26,14 @@ contract FeeReductionSystemTest is Fixtures {
     using CurrencyLibrary for Currency;
 
     // Events
-    event SnapshotUpdated(address indexed user, uint256 balance, uint256 blockNumber);
+    event SnapshotUpdated(
+        address indexed user, uint256 balance, uint256 blockNumber
+    );
     event FeeReductionConfigUpdated(
-        uint256 minAmicaForReduction, uint256 maxAmicaForReduction, uint24 baseFee, uint24 maxDiscountedFee
+        uint256 minAmicaForReduction,
+        uint256 maxAmicaForReduction,
+        uint24 baseFee,
+        uint24 maxDiscountedFee
     );
     event FeeReductionSystemUpdated(address newFeeReductionSystem);
 
@@ -75,10 +83,15 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_BasicSetup() public {
         // Verify hook is deployed
-        assertTrue(address(dynamicFeeHook) != address(0), "Hook should be deployed");
+        assertTrue(
+            address(dynamicFeeHook) != address(0), "Hook should be deployed"
+        );
 
         // Verify fee reduction system is deployed
-        assertTrue(address(feeReductionSystem) != address(0), "FeeReductionSystem should be deployed");
+        assertTrue(
+            address(feeReductionSystem) != address(0),
+            "FeeReductionSystem should be deployed"
+        );
 
         // Verify hook has fee reduction system set
         assertEq(
@@ -88,20 +101,33 @@ contract FeeReductionSystemTest is Fixtures {
         );
 
         // Verify ownership
-        assertEq(dynamicFeeHook.owner(), factoryOwner, "Hook owner should be factoryOwner");
-        assertEq(feeReductionSystem.owner(), factoryOwner, "FeeReductionSystem owner should be factoryOwner");
+        assertEq(
+            dynamicFeeHook.owner(),
+            factoryOwner,
+            "Hook owner should be factoryOwner"
+        );
+        assertEq(
+            feeReductionSystem.owner(),
+            factoryOwner,
+            "FeeReductionSystem owner should be factoryOwner"
+        );
     }
 
     function test_Constructor_FeeReductionSystem() public {
-        FeeReductionSystem newSystem = new FeeReductionSystem(amicaToken, personaFactory);
+        FeeReductionSystem newSystem =
+            new FeeReductionSystem(amicaToken, personaFactory);
 
         assertEq(address(newSystem.amicaToken()), address(amicaToken));
         assertEq(address(newSystem.factory()), address(personaFactory));
         assertEq(newSystem.owner(), address(this));
 
         // Check default config
-        (uint256 minAmicaForReduction, uint256 maxAmicaForReduction, uint24 baseFee, uint24 maxDiscountedFee) =
-            newSystem.feeReductionConfig();
+        (
+            uint256 minAmicaForReduction,
+            uint256 maxAmicaForReduction,
+            uint24 baseFee,
+            uint24 maxDiscountedFee
+        ) = newSystem.feeReductionConfig();
 
         assertEq(minAmicaForReduction, 1000 ether);
         assertEq(maxAmicaForReduction, 1_000_000 ether);
@@ -119,12 +145,20 @@ contract FeeReductionSystemTest is Fixtures {
 
         vm.prank(factoryOwner);
         vm.expectEmit(true, true, true, true);
-        emit FeeReductionConfigUpdated(newMin, newMax, newBaseFee, newMaxDiscountedFee);
+        emit FeeReductionConfigUpdated(
+            newMin, newMax, newBaseFee, newMaxDiscountedFee
+        );
 
-        feeReductionSystem.configureFeeReduction(newMin, newMax, newBaseFee, newMaxDiscountedFee);
+        feeReductionSystem.configureFeeReduction(
+            newMin, newMax, newBaseFee, newMaxDiscountedFee
+        );
 
-        (uint256 minAmicaForReduction, uint256 maxAmicaForReduction, uint24 baseFee, uint24 maxDiscountedFee) =
-            feeReductionSystem.feeReductionConfig();
+        (
+            uint256 minAmicaForReduction,
+            uint256 maxAmicaForReduction,
+            uint24 baseFee,
+            uint24 maxDiscountedFee
+        ) = feeReductionSystem.feeReductionConfig();
 
         assertEq(minAmicaForReduction, newMin);
         assertEq(maxAmicaForReduction, newMax);
@@ -134,30 +168,46 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_ConfigureFeeReduction_RevertNotOwner() public {
         vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", user1));
-        feeReductionSystem.configureFeeReduction(500 ether, 500_000 ether, 20000, 1000);
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "OwnableUnauthorizedAccount(address)", user1
+            )
+        );
+        feeReductionSystem.configureFeeReduction(
+            500 ether, 500_000 ether, 20000, 1000
+        );
     }
 
     function test_ConfigureFeeReduction_RevertInvalidMinMax() public {
         vm.prank(factoryOwner);
         vm.expectRevert(FeeReductionSystem.InvalidConfiguration.selector);
-        feeReductionSystem.configureFeeReduction(500_000 ether, 500_000 ether, 20000, 1000);
+        feeReductionSystem.configureFeeReduction(
+            500_000 ether, 500_000 ether, 20000, 1000
+        );
 
         vm.prank(factoryOwner);
         vm.expectRevert(FeeReductionSystem.InvalidConfiguration.selector);
-        feeReductionSystem.configureFeeReduction(500_000 ether, 100 ether, 20000, 1000);
+        feeReductionSystem.configureFeeReduction(
+            500_000 ether, 100 ether, 20000, 1000
+        );
     }
 
     function test_ConfigureFeeReduction_RevertBaseFeeExceedsMax() public {
         vm.prank(factoryOwner);
         vm.expectRevert(FeeReductionSystem.InvalidConfiguration.selector);
-        feeReductionSystem.configureFeeReduction(500 ether, 500_000 ether, 1_000_001, 1000);
+        feeReductionSystem.configureFeeReduction(
+            500 ether, 500_000 ether, 1_000_001, 1000
+        );
     }
 
-    function test_ConfigureFeeReduction_RevertMaxDiscountedFeeExceedsBase() public {
+    function test_ConfigureFeeReduction_RevertMaxDiscountedFeeExceedsBase()
+        public
+    {
         vm.prank(factoryOwner);
         vm.expectRevert(FeeReductionSystem.InvalidConfiguration.selector);
-        feeReductionSystem.configureFeeReduction(500 ether, 500_000 ether, 10000, 10001);
+        feeReductionSystem.configureFeeReduction(
+            500 ether, 500_000 ether, 10000, 10001
+        );
     }
 
     // ==================== Snapshot Tests ====================
@@ -174,8 +224,12 @@ contract FeeReductionSystemTest is Fixtures {
         emit SnapshotUpdated(user1, 5000 ether, block.number);
         feeReductionSystem.updateSnapshot();
 
-        (uint256 activeBalance, uint256 activeBlock, uint256 pendingBalance, uint256 pendingBlock) =
-            feeReductionSystem.userSnapshots(user1);
+        (
+            uint256 activeBalance,
+            uint256 activeBlock,
+            uint256 pendingBalance,
+            uint256 pendingBlock
+        ) = feeReductionSystem.userSnapshots(user1);
 
         assertEq(activeBalance, 0);
         assertEq(activeBlock, 0);
@@ -203,8 +257,12 @@ contract FeeReductionSystemTest is Fixtures {
         emit SnapshotUpdated(user1, 0, block.number);
         feeReductionSystem.updateSnapshot();
 
-        (uint256 activeBalance, uint256 activeBlock, uint256 pendingBalance, uint256 pendingBlock) =
-            feeReductionSystem.userSnapshots(user1);
+        (
+            uint256 activeBalance,
+            uint256 activeBlock,
+            uint256 pendingBalance,
+            uint256 pendingBlock
+        ) = feeReductionSystem.userSnapshots(user1);
 
         assertEq(activeBalance, 0);
         assertEq(activeBlock, 0);
@@ -236,8 +294,12 @@ contract FeeReductionSystemTest is Fixtures {
         vm.prank(user1);
         feeReductionSystem.updateSnapshot();
 
-        (uint256 activeBalance, uint256 activeBlock, uint256 pendingBalance, uint256 pendingBlock) =
-            feeReductionSystem.userSnapshots(user1);
+        (
+            uint256 activeBalance,
+            uint256 activeBlock,
+            uint256 pendingBalance,
+            uint256 pendingBlock
+        ) = feeReductionSystem.userSnapshots(user1);
 
         assertEq(activeBalance, 5000 ether);
         assertEq(activeBlock, firstBlock);
@@ -271,10 +333,14 @@ contract FeeReductionSystemTest is Fixtures {
 
         // Now fee should be reduced
         fee = feeReductionSystem.getFee(user1);
-        assertTrue(fee < 10000, "Fee should be reduced after snapshot is active");
+        assertTrue(
+            fee < 10000, "Fee should be reduced after snapshot is active"
+        );
 
         // With 10k AMICA, fee should be very close to base
-        assertTrue(fee >= 9990, "Fee should be close to base with small balance");
+        assertTrue(
+            fee >= 9990, "Fee should be close to base with small balance"
+        );
         assertTrue(fee <= 10000, "Fee should not exceed base");
     }
 
@@ -642,12 +708,24 @@ contract FeeReductionSystemTest is Fixtures {
         assertTrue(perms.beforeSwap, "beforeSwap should be enabled");
 
         // All others should be disabled
-        assertFalse(perms.beforeInitialize, "beforeInitialize should be disabled");
+        assertFalse(
+            perms.beforeInitialize, "beforeInitialize should be disabled"
+        );
         assertFalse(perms.afterInitialize, "afterInitialize should be disabled");
-        assertFalse(perms.beforeAddLiquidity, "beforeAddLiquidity should be disabled");
-        assertFalse(perms.afterAddLiquidity, "afterAddLiquidity should be disabled");
-        assertFalse(perms.beforeRemoveLiquidity, "beforeRemoveLiquidity should be disabled");
-        assertFalse(perms.afterRemoveLiquidity, "afterRemoveLiquidity should be disabled");
+        assertFalse(
+            perms.beforeAddLiquidity, "beforeAddLiquidity should be disabled"
+        );
+        assertFalse(
+            perms.afterAddLiquidity, "afterAddLiquidity should be disabled"
+        );
+        assertFalse(
+            perms.beforeRemoveLiquidity,
+            "beforeRemoveLiquidity should be disabled"
+        );
+        assertFalse(
+            perms.afterRemoveLiquidity,
+            "afterRemoveLiquidity should be disabled"
+        );
         assertFalse(perms.afterSwap, "afterSwap should be disabled");
         assertFalse(perms.beforeDonate, "beforeDonate should be disabled");
         assertFalse(perms.afterDonate, "afterDonate should be disabled");
@@ -655,21 +733,29 @@ contract FeeReductionSystemTest is Fixtures {
 
     function test_SetFeeReductionSystem_Success() public {
         // Deploy new fee reduction system
-        FeeReductionSystem newSystem = new FeeReductionSystem(amicaToken, personaFactory);
+        FeeReductionSystem newSystem =
+            new FeeReductionSystem(amicaToken, personaFactory);
 
         vm.prank(factoryOwner);
         vm.expectEmit(true, false, false, true);
         emit FeeReductionSystemUpdated(address(newSystem));
         dynamicFeeHook.setFeeReductionSystem(address(newSystem));
 
-        assertEq(address(dynamicFeeHook.feeReductionSystem()), address(newSystem));
+        assertEq(
+            address(dynamicFeeHook.feeReductionSystem()), address(newSystem)
+        );
     }
 
     function test_SetFeeReductionSystem_RevertNotOwner() public {
-        FeeReductionSystem newSystem = new FeeReductionSystem(amicaToken, personaFactory);
+        FeeReductionSystem newSystem =
+            new FeeReductionSystem(amicaToken, personaFactory);
 
         vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", user1));
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "OwnableUnauthorizedAccount(address)", user1
+            )
+        );
         dynamicFeeHook.setFeeReductionSystem(address(newSystem));
     }
 
@@ -760,7 +846,9 @@ contract FeeReductionSystemTest is Fixtures {
         assertTrue(fee2 < fee1, "Fee should decrease with more AMICA");
     }
 
-    function test_Integration_SnapshotDelayPreventsImmediateFeeReduction() public {
+    function test_Integration_SnapshotDelayPreventsImmediateFeeReduction()
+        public
+    {
         clearUserBalance(user1);
 
         // User starts with no AMICA
@@ -784,7 +872,9 @@ contract FeeReductionSystemTest is Fixtures {
 
         // Now fee should be reduced
         uint24 feeAfterDelay = feeReductionSystem.getFee(user1);
-        assertTrue(feeAfterDelay < feeBefore, "Fee should be reduced after delay");
+        assertTrue(
+            feeAfterDelay < feeBefore, "Fee should be reduced after delay"
+        );
     }
 
     function test_Integration_LosingAmicaIncreasesFeesAgain() public {
@@ -810,11 +900,20 @@ contract FeeReductionSystemTest is Fixtures {
         uint24 feeWithoutAmica = feeReductionSystem.getFee(user1);
 
         // Should have base fee again
-        assertEq(feeWithoutAmica, 10000, "Fee should return to base when AMICA is lost");
-        assertTrue(feeWithoutAmica > feeWithAmica, "Fee should increase when AMICA is lost");
+        assertEq(
+            feeWithoutAmica,
+            10000,
+            "Fee should return to base when AMICA is lost"
+        );
+        assertTrue(
+            feeWithoutAmica > feeWithAmica,
+            "Fee should increase when AMICA is lost"
+        );
     }
 
-    function test_Integration_FeeReductionWithDifferentConfigurations() public {
+    function test_Integration_FeeReductionWithDifferentConfigurations()
+        public
+    {
         clearUserBalance(user1);
 
         // Test changing fee reduction configuration
@@ -850,7 +949,8 @@ contract FeeReductionSystemTest is Fixtures {
         clearUserBalance(user1);
 
         // Create a new fee reduction system with different config
-        FeeReductionSystem newSystem = new FeeReductionSystem(amicaToken, personaFactory);
+        FeeReductionSystem newSystem =
+            new FeeReductionSystem(amicaToken, personaFactory);
 
         newSystem.configureFeeReduction(
             1 ether, // Very low minimum
@@ -877,7 +977,9 @@ contract FeeReductionSystemTest is Fixtures {
 
         // Verify hook now uses new system
         assertEq(
-            address(dynamicFeeHook.feeReductionSystem()), address(newSystem), "Hook should use new fee reduction system"
+            address(dynamicFeeHook.feeReductionSystem()),
+            address(newSystem),
+            "Hook should use new fee reduction system"
         );
 
         // The hook would now use the new fee calculation in actual swaps
@@ -922,7 +1024,9 @@ contract FeeReductionSystemTest is Fixtures {
         console.log("Gas used for snapshot update:", gasUsed);
 
         // Ensure reasonable gas usage (less than 100k)
-        assertTrue(gasUsed < 100_000, "Snapshot update should use reasonable gas");
+        assertTrue(
+            gasUsed < 100_000, "Snapshot update should use reasonable gas"
+        );
     }
 
     function test_GasUsage_GetFee() public {
@@ -944,7 +1048,9 @@ contract FeeReductionSystemTest is Fixtures {
         console.log("Gas used for fee calculation:", gasUsed);
 
         // Ensure reasonable gas usage (less than 50k)
-        assertTrue(gasUsed < 50_000, "Fee calculation should use reasonable gas");
+        assertTrue(
+            gasUsed < 50_000, "Fee calculation should use reasonable gas"
+        );
     }
 
     function test_GasUsage_MultipleSnapshots() public {
@@ -970,6 +1076,8 @@ contract FeeReductionSystemTest is Fixtures {
         uint256 gasUsed = gasBefore - gasleft();
 
         console.log("Gas used for snapshot update with promotion:", gasUsed);
-        assertTrue(gasUsed < 100_000, "Snapshot promotion should use reasonable gas");
+        assertTrue(
+            gasUsed < 100_000, "Snapshot promotion should use reasonable gas"
+        );
     }
 }

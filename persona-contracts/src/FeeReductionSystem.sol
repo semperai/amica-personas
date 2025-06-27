@@ -74,7 +74,9 @@ contract FeeReductionSystem is Ownable {
      * @param balance Balance being snapshotted
      * @param blockNumber Block number of snapshot
      */
-    event SnapshotUpdated(address indexed user, uint256 balance, uint256 blockNumber);
+    event SnapshotUpdated(
+        address indexed user, uint256 balance, uint256 blockNumber
+    );
 
     /**
      * @notice Emitted when fee reduction configuration is updated
@@ -86,10 +88,9 @@ contract FeeReductionSystem is Ownable {
         uint24 maxDiscountedFee
     );
 
-    constructor(
-        IERC20 _amicaToken,
-        PersonaTokenFactory _factory
-    ) Ownable(msg.sender) {
+    constructor(IERC20 _amicaToken, PersonaTokenFactory _factory)
+        Ownable(msg.sender)
+    {
         amicaToken = _amicaToken;
         factory = _factory;
 
@@ -120,8 +121,10 @@ contract FeeReductionSystem is Ownable {
         }
 
         // Calculate fee reduction using quadratic curve
-        uint256 range = feeReductionConfig.maxAmicaForReduction - feeReductionConfig.minAmicaForReduction;
-        uint256 userPosition = effectiveBalance - feeReductionConfig.minAmicaForReduction;
+        uint256 range = feeReductionConfig.maxAmicaForReduction
+            - feeReductionConfig.minAmicaForReduction;
+        uint256 userPosition =
+            effectiveBalance - feeReductionConfig.minAmicaForReduction;
 
         // Calculate progress (0 to 1e18)
         uint256 progress = (userPosition * PRECISION) / range;
@@ -130,7 +133,8 @@ contract FeeReductionSystem is Ownable {
         uint256 quadraticProgress = (progress * progress) / PRECISION;
 
         // Calculate fee interpolation
-        uint256 feeRange = uint256(feeReductionConfig.baseFee) - uint256(feeReductionConfig.maxDiscountedFee);
+        uint256 feeRange = uint256(feeReductionConfig.baseFee)
+            - uint256(feeReductionConfig.maxDiscountedFee);
         uint256 feeReduction = (feeRange * quadraticProgress) / PRECISION;
 
         return uint24(uint256(feeReductionConfig.baseFee) - feeReduction);
@@ -153,7 +157,10 @@ contract FeeReductionSystem is Ownable {
         UserSnapshot storage snapshot = userSnapshots[msg.sender];
 
         // Promote pending to active if delay has passed
-        if (snapshot.pendingBlock > 0 && block.number >= snapshot.pendingBlock + SNAPSHOT_DELAY) {
+        if (
+            snapshot.pendingBlock > 0
+                && block.number >= snapshot.pendingBlock + SNAPSHOT_DELAY
+        ) {
             snapshot.activeBalance = snapshot.pendingBalance;
             snapshot.activeBlock = snapshot.pendingBlock;
             snapshot.pendingBalance = 0;
@@ -181,7 +188,9 @@ contract FeeReductionSystem is Ownable {
         uint24 baseFee,
         uint24 maxDiscountedFee
     ) external onlyOwner {
-        if (minAmicaForReduction >= maxAmicaForReduction) revert InvalidConfiguration();
+        if (minAmicaForReduction >= maxAmicaForReduction) {
+            revert InvalidConfiguration();
+        }
         if (baseFee > MAX_FEE) revert InvalidConfiguration();
         if (maxDiscountedFee > baseFee) revert InvalidConfiguration();
 
@@ -205,14 +214,24 @@ contract FeeReductionSystem is Ownable {
      * @param user Address to check
      * @return effectiveBalance The balance used for fee calculation
      */
-    function _getEffectiveBalance(address user) private view returns (uint256) {
+    function _getEffectiveBalance(address user)
+        private
+        view
+        returns (uint256)
+    {
         UserSnapshot memory snapshot = userSnapshots[user];
 
         // Determine which balance is active
         uint256 snapshotBalance;
-        if (snapshot.pendingBlock > 0 && block.number >= snapshot.pendingBlock + SNAPSHOT_DELAY) {
+        if (
+            snapshot.pendingBlock > 0
+                && block.number >= snapshot.pendingBlock + SNAPSHOT_DELAY
+        ) {
             snapshotBalance = snapshot.pendingBalance;
-        } else if (snapshot.activeBlock > 0 && block.number >= snapshot.activeBlock + SNAPSHOT_DELAY) {
+        } else if (
+            snapshot.activeBlock > 0
+                && block.number >= snapshot.activeBlock + SNAPSHOT_DELAY
+        ) {
             snapshotBalance = snapshot.activeBalance;
         } else {
             return 0; // No active snapshot
@@ -220,7 +239,8 @@ contract FeeReductionSystem is Ownable {
 
         // Use minimum of snapshot and current balance (prevents gaming)
         uint256 currentBalance = amicaToken.balanceOf(user);
-        return currentBalance < snapshotBalance ? currentBalance : snapshotBalance;
+        return
+            currentBalance < snapshotBalance ? currentBalance : snapshotBalance;
     }
 
     /**
@@ -228,7 +248,11 @@ contract FeeReductionSystem is Ownable {
      * @param user Address to check
      * @return blocksRemaining Blocks until snapshot is active (0 if already active)
      */
-    function getBlocksUntilActive(address user) external view returns (uint256) {
+    function getBlocksUntilActive(address user)
+        external
+        view
+        returns (uint256)
+    {
         UserSnapshot memory snapshot = userSnapshots[user];
 
         if (snapshot.pendingBlock > 0) {
@@ -246,7 +270,11 @@ contract FeeReductionSystem is Ownable {
      * @param user Address to check
      * @return balance The effective balance for fee calculation
      */
-    function getEffectiveBalance(address user) external view returns (uint256) {
+    function getEffectiveBalance(address user)
+        external
+        view
+        returns (uint256)
+    {
         return _getEffectiveBalance(user);
     }
 }

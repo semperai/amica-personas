@@ -22,9 +22,18 @@ contract AmicaTokenTest is Fixtures {
 
     // Events
     event TokensWithdrawn(address indexed recipient, uint256 amount);
-    event TokensDeposited(address indexed depositor, address indexed token, uint256 amount);
-    event TokensBurnedAndClaimed(address indexed user, uint256 amountBurned, address[] tokens, uint256[] amounts);
-    event TokensRecovered(address indexed recipient, address indexed token, uint256 amount);
+    event TokensDeposited(
+        address indexed depositor, address indexed token, uint256 amount
+    );
+    event TokensBurnedAndClaimed(
+        address indexed user,
+        uint256 amountBurned,
+        address[] tokens,
+        uint256[] amounts
+    );
+    event TokensRecovered(
+        address indexed recipient, address indexed token, uint256 amount
+    );
 
     function setUp() public override {
         super.setUp();
@@ -87,7 +96,11 @@ contract AmicaTokenTest is Fixtures {
 
     function test_Ownership_RevertWhen_NonOwnerTransfers() public {
         vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, user1));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                OwnableUpgradeable.OwnableUnauthorizedAccount.selector, user1
+            )
+        );
         amicaToken.transferOwnership(user2);
     }
 
@@ -125,7 +138,9 @@ contract AmicaTokenTest is Fixtures {
         vm.prank(owner);
         amicaToken.withdraw(user1, withdrawAmount);
 
-        assertEq(amicaToken.circulatingSupply(), initialCirculating + withdrawAmount);
+        assertEq(
+            amicaToken.circulatingSupply(), initialCirculating + withdrawAmount
+        );
     }
 
     function test_Withdraw_RevertWhen_ExceedsBalance() public {
@@ -145,7 +160,11 @@ contract AmicaTokenTest is Fixtures {
 
     function test_Withdraw_RevertWhen_NonOwner() public {
         vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, user1));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                OwnableUpgradeable.OwnableUnauthorizedAccount.selector, user1
+            )
+        );
         amicaToken.withdraw(user2, 1_000 ether);
     }
 
@@ -258,7 +277,10 @@ contract AmicaTokenTest is Fixtures {
         amicaToken.deposit(address(sixDecimalToken), depositAmount);
         vm.stopPrank();
 
-        assertEq(amicaToken.depositedBalances(address(sixDecimalToken)), depositAmount);
+        assertEq(
+            amicaToken.depositedBalances(address(sixDecimalToken)),
+            depositAmount
+        );
     }
 
     // Burn and Claim Tests
@@ -282,15 +304,23 @@ contract AmicaTokenTest is Fixtures {
         tokenIndexes[2] = 3;
 
         vm.expectEmit(true, false, false, false);
-        emit TokensBurnedAndClaimed(user1, burnAmount, new address[](0), new uint256[](0));
+        emit TokensBurnedAndClaimed(
+            user1, burnAmount, new address[](0), new uint256[](0)
+        );
 
         vm.prank(user1);
         amicaToken.burnAndClaim(burnAmount, tokenIndexes);
 
         // Check token balances (with small tolerance for rounding)
-        assertApproxEqAbs(usdc.balanceOf(user1), 100_000 ether + expectedUsdc, 0.01 ether);
-        assertApproxEqAbs(weth.balanceOf(user1), 1_000 ether + expectedWeth, 0.001 ether);
-        assertApproxEqAbs(dai.balanceOf(user1), 100_000 ether + expectedDai, 0.01 ether);
+        assertApproxEqAbs(
+            usdc.balanceOf(user1), 100_000 ether + expectedUsdc, 0.01 ether
+        );
+        assertApproxEqAbs(
+            weth.balanceOf(user1), 1_000 ether + expectedWeth, 0.001 ether
+        );
+        assertApproxEqAbs(
+            dai.balanceOf(user1), 100_000 ether + expectedDai, 0.01 ether
+        );
 
         // Check AMICA balance
         assertEq(amicaToken.balanceOf(user1), userBalance - burnAmount);
@@ -332,7 +362,9 @@ contract AmicaTokenTest is Fixtures {
         vm.prank(user1);
         amicaToken.burnAndClaim(burnAmount, tokenIndexes);
 
-        assertEq(amicaToken.circulatingSupply(), initialCirculating - burnAmount);
+        assertEq(
+            amicaToken.circulatingSupply(), initialCirculating - burnAmount
+        );
     }
 
     function test_BurnAndClaim_RevertWhen_NoTokensSelected() public {
@@ -392,7 +424,9 @@ contract AmicaTokenTest is Fixtures {
         duplicateIndexes[2] = 1;
 
         vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSignature("TokenIndexesMustBeSortedAndUnique()"));
+        vm.expectRevert(
+            abi.encodeWithSignature("TokenIndexesMustBeSortedAndUnique()")
+        );
         amicaToken.burnAndClaim(burnAmount, duplicateIndexes);
     }
 
@@ -407,7 +441,9 @@ contract AmicaTokenTest is Fixtures {
         unsortedIndexes[1] = 1;
 
         vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSignature("TokenIndexesMustBeSortedAndUnique()"));
+        vm.expectRevert(
+            abi.encodeWithSignature("TokenIndexesMustBeSortedAndUnique()")
+        );
         amicaToken.burnAndClaim(burnAmount, unsortedIndexes);
     }
 
@@ -471,7 +507,9 @@ contract AmicaTokenTest is Fixtures {
         uint256 sharePercentage = (burnAmount * PRECISION) / lowCirculating;
         uint256 expectedUsdc = (100_000 ether * sharePercentage) / PRECISION;
 
-        assertApproxEqAbs(usdc.balanceOf(user1), 100_000 ether + expectedUsdc, 1 ether);
+        assertApproxEqAbs(
+            usdc.balanceOf(user1), 100_000 ether + expectedUsdc, 1 ether
+        );
     }
 
     function test_RecoverToken_Success() public {
@@ -547,7 +585,11 @@ contract AmicaTokenTest is Fixtures {
         usdc.transfer(address(amicaToken), 1_000 ether);
 
         vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, user1));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                OwnableUpgradeable.OwnableUnauthorizedAccount.selector, user1
+            )
+        );
         amicaToken.recoverToken(address(usdc), user1);
     }
 
@@ -668,7 +710,9 @@ contract AmicaTokenTest is Fixtures {
         assertEq(amicaToken.depositedBalances(address(testToken)), amount);
     }
 
-    function testFuzz_BurnAndClaim_ProportionalRewards(uint256 burnAmount) public {
+    function testFuzz_BurnAndClaim_ProportionalRewards(uint256 burnAmount)
+        public
+    {
         _setupDeposits();
 
         uint256 userBalance = amicaToken.balanceOf(user1);
@@ -699,7 +743,11 @@ contract AmicaTokenTest is Fixtures {
             uint256 tolerance = expectedUsdc / 1000;
             if (tolerance == 0) tolerance = 1;
 
-            assertApproxEqAbs(usdc.balanceOf(user1), initialUsdcBalance + expectedUsdc, tolerance);
+            assertApproxEqAbs(
+                usdc.balanceOf(user1),
+                initialUsdcBalance + expectedUsdc,
+                tolerance
+            );
         }
     }
 }

@@ -34,7 +34,9 @@ contract PersonaTokenTest is Fixtures {
         // Clone the persona token implementation from Fixtures
         address cloneAddress = Clones.clone(address(personaToken));
         testToken = PersonaToken(cloneAddress);
-        testToken.initialize("Test Token", "TEST", INITIAL_SUPPLY, address(this));
+        testToken.initialize(
+            "Test Token", "TEST", INITIAL_SUPPLY, address(this)
+        );
 
         // Deploy mock tokens for burn and claim tests
         mockToken1 = new MockERC20("Mock Token 1", "MOCK1", 18);
@@ -108,20 +110,26 @@ contract PersonaTokenTest is Fixtures {
         testToken.transfer(user1, 100 ether);
 
         uint256 burnAmount = 50 ether;
-        uint256 expectedClaim = (depositAmount * burnAmount) / testToken.totalSupply();
+        uint256 expectedClaim =
+            (depositAmount * burnAmount) / testToken.totalSupply();
 
         address[] memory tokens = new address[](1);
         tokens[0] = address(mockToken1);
 
         vm.prank(user1);
         vm.expectEmit(true, true, false, true);
-        emit PersonaToken.TokensBurnedAndClaimed(user1, burnAmount, tokens, _toArray(expectedClaim));
+        emit PersonaToken.TokensBurnedAndClaimed(
+            user1, burnAmount, tokens, _toArray(expectedClaim)
+        );
         testToken.burnAndClaim(burnAmount, tokens);
 
         // Check balances
         assertEq(testToken.balanceOf(user1), 50 ether);
         assertEq(mockToken1.balanceOf(user1), expectedClaim);
-        assertEq(mockToken1.balanceOf(address(testToken)), depositAmount - expectedClaim);
+        assertEq(
+            mockToken1.balanceOf(address(testToken)),
+            depositAmount - expectedClaim
+        );
     }
 
     function test_BurnAndClaim_MultipleTokens() public {
@@ -136,7 +144,9 @@ contract PersonaTokenTest is Fixtures {
         uint256 burnAmount = 10 ether;
 
         // Sort tokens by address
-        address[] memory tokens = _sortAddresses(address(mockToken1), address(mockToken2), address(mockToken3));
+        address[] memory tokens = _sortAddresses(
+            address(mockToken1), address(mockToken2), address(mockToken3)
+        );
 
         vm.prank(user1);
         testToken.burnAndClaim(burnAmount, tokens);
@@ -251,7 +261,9 @@ contract PersonaTokenTest is Fixtures {
         // Create a new token
         address cloneAddress = Clones.clone(address(personaToken));
         PersonaToken zeroSupplyToken = PersonaToken(cloneAddress);
-        zeroSupplyToken.initialize("Zero Supply", "ZERO", 100 ether, address(this));
+        zeroSupplyToken.initialize(
+            "Zero Supply", "ZERO", 100 ether, address(this)
+        );
 
         // Burn all supply
         zeroSupplyToken.burn(100 ether);
@@ -274,14 +286,16 @@ contract PersonaTokenTest is Fixtures {
 
         uint256 burnAmount = 50 ether;
 
-        address[] memory tokens = _sortAddresses(address(mockToken1), address(mockToken2));
+        address[] memory tokens =
+            _sortAddresses(address(mockToken1), address(mockToken2));
 
         // Get user's initial balances
         uint256 user1Mock1Before = mockToken1.balanceOf(user1);
         uint256 user1Mock2Before = mockToken2.balanceOf(user1);
 
         // Preview the burn
-        uint256[] memory preview = testToken.previewBurnAndClaim(burnAmount, tokens);
+        uint256[] memory preview =
+            testToken.previewBurnAndClaim(burnAmount, tokens);
 
         // Calculate expected amounts based on burn proportion
         uint256 totalSupply = testToken.totalSupply();
@@ -305,11 +319,27 @@ contract PersonaTokenTest is Fixtures {
 
         // Check actual amounts received match preview
         if (tokens[0] == address(mockToken1)) {
-            assertEq(mockToken1.balanceOf(user1) - user1Mock1Before, preview[0], "Actual mock1 != preview");
-            assertEq(mockToken2.balanceOf(user1) - user1Mock2Before, preview[1], "Actual mock2 != preview");
+            assertEq(
+                mockToken1.balanceOf(user1) - user1Mock1Before,
+                preview[0],
+                "Actual mock1 != preview"
+            );
+            assertEq(
+                mockToken2.balanceOf(user1) - user1Mock2Before,
+                preview[1],
+                "Actual mock2 != preview"
+            );
         } else {
-            assertEq(mockToken2.balanceOf(user1) - user1Mock2Before, preview[0], "Actual mock2 != preview");
-            assertEq(mockToken1.balanceOf(user1) - user1Mock1Before, preview[1], "Actual mock1 != preview");
+            assertEq(
+                mockToken2.balanceOf(user1) - user1Mock2Before,
+                preview[0],
+                "Actual mock2 != preview"
+            );
+            assertEq(
+                mockToken1.balanceOf(user1) - user1Mock1Before,
+                preview[1],
+                "Actual mock1 != preview"
+            );
         }
     }
 
@@ -317,7 +347,8 @@ contract PersonaTokenTest is Fixtures {
         address[] memory tokens = new address[](1);
         tokens[0] = address(mockToken1);
 
-        uint256[] memory preview = testToken.previewBurnAndClaim(100 ether, tokens);
+        uint256[] memory preview =
+            testToken.previewBurnAndClaim(100 ether, tokens);
         assertEq(preview[0], 0);
     }
 
@@ -334,7 +365,9 @@ contract PersonaTokenTest is Fixtures {
     function test_PreviewBurnAndClaim_ZeroSupply() public {
         address cloneAddress = Clones.clone(address(personaToken));
         PersonaToken zeroSupplyToken = PersonaToken(cloneAddress);
-        zeroSupplyToken.initialize("Zero Supply", "ZERO", 100 ether, address(this));
+        zeroSupplyToken.initialize(
+            "Zero Supply", "ZERO", 100 ether, address(this)
+        );
         zeroSupplyToken.burn(100 ether);
 
         mockToken1.transfer(address(zeroSupplyToken), 1000 ether);
@@ -342,7 +375,8 @@ contract PersonaTokenTest is Fixtures {
         address[] memory tokens = new address[](1);
         tokens[0] = address(mockToken1);
 
-        uint256[] memory preview = zeroSupplyToken.previewBurnAndClaim(10 ether, tokens);
+        uint256[] memory preview =
+            zeroSupplyToken.previewBurnAndClaim(10 ether, tokens);
         assertEq(preview[0], 0);
     }
 
@@ -408,7 +442,8 @@ contract PersonaTokenTest is Fixtures {
     function test_BurnAndClaim_DifferentDecimals() public {
         // Deploy tokens with different decimals
         MockERC20 token6Decimals = new MockERC20("Six Decimals", "SIX", 6);
-        MockERC20 token18Decimals = new MockERC20("Eighteen Decimals", "EIGHTEEN", 18);
+        MockERC20 token18Decimals =
+            new MockERC20("Eighteen Decimals", "EIGHTEEN", 18);
 
         token6Decimals.mint(address(this), 1_000_000 * 10 ** 6);
         token18Decimals.mint(address(this), 1_000_000 ether);
@@ -419,7 +454,8 @@ contract PersonaTokenTest is Fixtures {
 
         testToken.transfer(user1, 100 ether);
 
-        address[] memory tokens = _sortAddresses(address(token6Decimals), address(token18Decimals));
+        address[] memory tokens =
+            _sortAddresses(address(token6Decimals), address(token18Decimals));
 
         vm.prank(user1);
         testToken.burnAndClaim(50 ether, tokens);
@@ -435,7 +471,9 @@ contract PersonaTokenTest is Fixtures {
         // Deploy and setup 10 tokens
         for (uint256 i = 0; i < 10; i++) {
             manyTokens[i] = new MockERC20(
-                string(abi.encodePacked("Token", vm.toString(i))), string(abi.encodePacked("TK", vm.toString(i))), 18
+                string(abi.encodePacked("Token", vm.toString(i))),
+                string(abi.encodePacked("TK", vm.toString(i))),
+                18
             );
             manyTokens[i].mint(address(this), 1_000_000 ether);
             manyTokens[i].transfer(address(testToken), (i + 1) * 100 ether);
@@ -517,7 +555,11 @@ contract PersonaTokenTest is Fixtures {
 
     // ==================== Helper Functions ====================
 
-    function _sortAddresses(address a, address b) private pure returns (address[] memory) {
+    function _sortAddresses(address a, address b)
+        private
+        pure
+        returns (address[] memory)
+    {
         address[] memory sorted = new address[](2);
         if (uint160(a) < uint160(b)) {
             sorted[0] = a;
@@ -529,7 +571,11 @@ contract PersonaTokenTest is Fixtures {
         return sorted;
     }
 
-    function _sortAddresses(address a, address b, address c) private pure returns (address[] memory) {
+    function _sortAddresses(address a, address b, address c)
+        private
+        pure
+        returns (address[] memory)
+    {
         address[] memory addrs = new address[](3);
         addrs[0] = a;
         addrs[1] = b;
@@ -537,7 +583,11 @@ contract PersonaTokenTest is Fixtures {
         return _sortAddressArray(addrs);
     }
 
-    function _sortAddressArray(address[] memory addrs) private pure returns (address[] memory) {
+    function _sortAddressArray(address[] memory addrs)
+        private
+        pure
+        returns (address[] memory)
+    {
         uint256 length = addrs.length;
         for (uint256 i = 0; i < length - 1; i++) {
             for (uint256 j = 0; j < length - i - 1; j++) {

@@ -16,22 +16,39 @@ contract MockWETH9 is IWETH9 {
         payable(msg.sender).transfer(wad);
     }
 
-    function approve(address guy, uint256 wad) external override returns (bool) {
+    function approve(address guy, uint256 wad)
+        external
+        override
+        returns (bool)
+    {
         allowance[msg.sender][guy] = wad;
         return true;
     }
 
-    function transfer(address dst, uint256 wad) external override returns (bool) {
+    function transfer(address dst, uint256 wad)
+        external
+        override
+        returns (bool)
+    {
         return _transferFrom(msg.sender, dst, wad);
     }
 
-    function transferFrom(address src, address dst, uint256 wad) external override returns (bool) {
+    function transferFrom(address src, address dst, uint256 wad)
+        external
+        override
+        returns (bool)
+    {
         return _transferFrom(src, dst, wad);
     }
 
-    function _transferFrom(address src, address dst, uint256 wad) internal returns (bool) {
+    function _transferFrom(address src, address dst, uint256 wad)
+        internal
+        returns (bool)
+    {
         require(balanceOf[src] >= wad);
-        if (src != msg.sender && allowance[src][msg.sender] != type(uint256).max) {
+        if (
+            src != msg.sender && allowance[src][msg.sender] != type(uint256).max
+        ) {
             require(allowance[src][msg.sender] >= wad);
             allowance[src][msg.sender] -= wad;
         }

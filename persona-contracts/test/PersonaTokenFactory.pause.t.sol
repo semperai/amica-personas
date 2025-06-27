@@ -15,7 +15,11 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
     function test_Pause_OnlyOwner() public {
         // Non-owner cannot pause
         vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", user1));
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "OwnableUnauthorizedAccount(address)", user1
+            )
+        );
         personaFactory.pause();
 
         // Owner can pause
@@ -32,7 +36,11 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
 
         // Non-owner cannot unpause
         vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", user1));
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "OwnableUnauthorizedAccount(address)", user1
+            )
+        );
         personaFactory.unpause();
 
         // Owner can unpause
@@ -87,7 +95,9 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         amicaToken.approve(address(personaFactory), 1000 ether);
 
         vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
-        personaFactory.swapExactTokensForTokens(tokenId, 1000 ether, 0, user2, block.timestamp + 300);
+        personaFactory.swapExactTokensForTokens(
+            tokenId, 1000 ether, 0, user2, block.timestamp + 300
+        );
     }
 
     function test_SwapExactTokensForPairingTokens_WhenPaused() public {
@@ -105,7 +115,9 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         // Buy some tokens first
         vm.prank(user2);
         amicaToken.approve(address(personaFactory), 1000 ether);
-        personaFactory.swapExactTokensForTokens(tokenId, 1000 ether, 0, user2, block.timestamp + 300);
+        personaFactory.swapExactTokensForTokens(
+            tokenId, 1000 ether, 0, user2, block.timestamp + 300
+        );
 
         // Get the persona token address
         (,, address personaToken,,,,,,,,) = personaFactory.personas(tokenId);
@@ -117,7 +129,9 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         // Try to sell when paused
         vm.prank(user2);
         vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
-        personaFactory.swapExactTokensForPairingTokens(tokenId, 100 ether, 0, user2, block.timestamp + 300);
+        personaFactory.swapExactTokensForPairingTokens(
+            tokenId, 100 ether, 0, user2, block.timestamp + 300
+        );
     }
 
     function test_WithdrawTokens_WhenPaused() public {
@@ -139,7 +153,9 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         // User buys some tokens
         vm.prank(user2);
         amicaToken.approve(address(personaFactory), 100 ether);
-        personaFactory.swapExactTokensForTokens(tokenId, 100 ether, 0, user2, block.timestamp + 300);
+        personaFactory.swapExactTokensForTokens(
+            tokenId, 100 ether, 0, user2, block.timestamp + 300
+        );
 
         // Pause the contract
         vm.prank(factoryOwner);
@@ -154,7 +170,9 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         vm.prank(user2);
         amicaToken.approve(address(personaFactory), 100 ether);
         vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
-        personaFactory.swapExactTokensForTokens(tokenId, 100 ether, 0, user2, block.timestamp + 300);
+        personaFactory.swapExactTokensForTokens(
+            tokenId, 100 ether, 0, user2, block.timestamp + 300
+        );
     }
 
     function test_DepositAgentTokens_WhenPaused() public {
@@ -192,7 +210,13 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
 
         // Create persona with agent token
         uint256 tokenId = personaFactory.createPersona(
-            address(amicaToken), "Test Persona", "TEST", bytes32("testagent2"), 0, address(agentToken), 1000 ether
+            address(amicaToken),
+            "Test Persona",
+            "TEST",
+            bytes32("testagent2"),
+            0,
+            address(agentToken),
+            1000 ether
         );
 
         // Deposit some agent tokens first
@@ -221,7 +245,13 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         amicaToken.approve(address(personaFactory), DEFAULT_MINT_COST);
         vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
         personaFactory.createPersona(
-            address(amicaToken), "Test Persona", "TEST", bytes32("testunpause"), 0, address(0), 0
+            address(amicaToken),
+            "Test Persona",
+            "TEST",
+            bytes32("testunpause"),
+            0,
+            address(0),
+            0
         );
 
         // Unpause the contract
@@ -231,11 +261,18 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         // Now operations should work
         vm.prank(user1);
         uint256 tokenId = personaFactory.createPersona(
-            address(amicaToken), "Test Persona", "TEST", bytes32("testunpause2"), 0, address(0), 0
+            address(amicaToken),
+            "Test Persona",
+            "TEST",
+            bytes32("testunpause2"),
+            0,
+            address(0),
+            0
         );
 
         // Verify persona was created
-        (string memory name,, address token,,,,,,,,) = personaFactory.personas(tokenId);
+        (string memory name,, address token,,,,,,,,) =
+            personaFactory.personas(tokenId);
         assertEq(name, "Test Persona");
         assertTrue(token != address(0));
     }

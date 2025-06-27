@@ -19,10 +19,13 @@ import {PoolManager} from "v4-core/src/PoolManager.sol";
 import {Currency} from "v4-core/src/types/Currency.sol";
 
 import {HookMiner} from "@uniswap/v4-periphery/src/utils/HookMiner.sol";
-import {IPositionManager} from "@uniswap/v4-periphery/src/interfaces/IPositionManager.sol";
+import {IPositionManager} from
+    "@uniswap/v4-periphery/src/interfaces/IPositionManager.sol";
 import {PositionManager} from "@uniswap/v4-periphery/src/PositionManager.sol";
-import {IPositionDescriptor} from "@uniswap/v4-periphery/src/interfaces/IPositionDescriptor.sol";
-import {PosmTestSetup} from "@uniswap/v4-periphery/test/shared/PosmTestSetup.sol";
+import {IPositionDescriptor} from
+    "@uniswap/v4-periphery/src/interfaces/IPositionDescriptor.sol";
+import {PosmTestSetup} from
+    "@uniswap/v4-periphery/test/shared/PosmTestSetup.sol";
 import {HookMiner} from "@uniswap/v4-periphery/src/utils/HookMiner.sol";
 
 import {IAllowanceTransfer} from "permit2/src/interfaces/IAllowanceTransfer.sol";
@@ -41,7 +44,8 @@ abstract contract Fixtures is Test, Deployers {
     uint256 constant UNSUBSCRIBE_GAS_LIMIT = 300_000;
 
     // For hook deployment
-    address constant CREATE2_DEPLOYER = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
+    address constant CREATE2_DEPLOYER =
+        0x4e59b44847b379578588920cA78FbF26c0B4956C;
 
     PersonaTokenFactory public personaFactory;
     AmicaToken public amicaToken;
@@ -87,7 +91,10 @@ abstract contract Fixtures is Test, Deployers {
         // Deploy AmicaToken as upgradeable proxy
         address amicaImpl = address(new AmicaToken());
         address amicaProxy = UnsafeUpgrades.deployUUPSProxy(
-            amicaImpl, abi.encodeCall(AmicaToken.initialize, (factoryOwner, AMICA_TOTAL_SUPPLY))
+            amicaImpl,
+            abi.encodeCall(
+                AmicaToken.initialize, (factoryOwner, AMICA_TOTAL_SUPPLY)
+            )
         );
         amicaToken = AmicaToken(amicaProxy);
 

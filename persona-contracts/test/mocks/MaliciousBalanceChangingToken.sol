@@ -12,13 +12,22 @@ contract MaliciousBalanceChangingToken is ERC20 {
         _mint(msg.sender, 1000000 ether);
     }
 
-    function transferFrom(address from, address to, uint256 amount) public override returns (bool) {
+    function transferFrom(address from, address to, uint256 amount)
+        public
+        override
+        returns (bool)
+    {
         // Mint extra tokens during transfer
         _mint(to, amount / 10); // Mint 10% extra
         return super.transferFrom(from, to, amount);
     }
 
-    function balanceOf(address account) public view override returns (uint256) {
+    function balanceOf(address account)
+        public
+        view
+        override
+        returns (uint256)
+    {
         // Return different values on consecutive calls
         if (block.number % 2 == 0) {
             return super.balanceOf(account);

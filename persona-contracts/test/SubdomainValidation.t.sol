@@ -21,7 +21,11 @@ contract SubdomainValidationTest is Fixtures {
     function test_ValidSubdomain_Letters() public {
         assertTrue(personaFactory.isValidSubdomain(bytes32("hello")));
         assertTrue(personaFactory.isValidSubdomain(bytes32("world")));
-        assertTrue(personaFactory.isValidSubdomain(bytes32("abcdefghijklmnopqrstuvwxyz")));
+        assertTrue(
+            personaFactory.isValidSubdomain(
+                bytes32("abcdefghijklmnopqrstuvwxyz")
+            )
+        );
     }
 
     function test_ValidSubdomain_MixedAlphanumeric() public {
@@ -35,7 +39,9 @@ contract SubdomainValidationTest is Fixtures {
         assertTrue(personaFactory.isValidSubdomain(bytes32("hello-world")));
         assertTrue(personaFactory.isValidSubdomain(bytes32("test-123")));
         assertTrue(personaFactory.isValidSubdomain(bytes32("a-b-c")));
-        assertTrue(personaFactory.isValidSubdomain(bytes32("multi-word-subdomain")));
+        assertTrue(
+            personaFactory.isValidSubdomain(bytes32("multi-word-subdomain"))
+        );
     }
 
     function test_ValidSubdomain_MaxLength() public {
@@ -147,7 +153,7 @@ contract SubdomainValidationTest is Fixtures {
 
     function testFuzz_ValidCharacters(bytes32 domain) public {
         bool result = personaFactory.isValidSubdomain(domain);
-        
+
         // Verify the result matches our expectations
         bool expectedValid = _isValidByOurRules(domain);
         assertEq(result, expectedValid, "Validation mismatch");
@@ -156,13 +162,13 @@ contract SubdomainValidationTest is Fixtures {
     function testFuzz_SingleCharacter(uint8 charCode) public {
         bytes32 domain = bytes32(0);
         domain = bytes32(uint256(charCode) << 248); // Put char in first position
-        
+
         bool result = personaFactory.isValidSubdomain(domain);
-        
+
         // Valid ONLY if: lowercase letter (97-122)
         // Single hyphens and numbers are invalid as they don't meet start/end requirements
         bool shouldBeValid = (charCode >= 97 && charCode <= 122);
-        
+
         assertEq(result, shouldBeValid, "Single character validation incorrect");
     }
 
@@ -171,24 +177,30 @@ contract SubdomainValidationTest is Fixtures {
     function test_GasUsage() public view {
         uint256 gasBefore;
         uint256 gasAfter;
-        
+
         // Short domain
         gasBefore = gasleft();
         personaFactory.isValidSubdomain(bytes32("hello"));
         gasAfter = gasleft();
         console.log("Gas for short domain (5 chars):", gasBefore - gasAfter);
-        
+
         // Long domain
         gasBefore = gasleft();
-        personaFactory.isValidSubdomain(bytes32("this-is-a-very-long-subdomain"));
+        personaFactory.isValidSubdomain(
+            bytes32("this-is-a-very-long-subdomain")
+        );
         gasAfter = gasleft();
         console.log("Gas for long domain (29 chars):", gasBefore - gasAfter);
-        
+
         // Max length domain
         gasBefore = gasleft();
-        personaFactory.isValidSubdomain(bytes32("abcdefghijklmnopqrstuvwxyz123456"));
+        personaFactory.isValidSubdomain(
+            bytes32("abcdefghijklmnopqrstuvwxyz123456")
+        );
         gasAfter = gasleft();
-        console.log("Gas for max length domain (32 chars):", gasBefore - gasAfter);
+        console.log(
+            "Gas for max length domain (32 chars):", gasBefore - gasAfter
+        );
     }
 
     // ==================== Helper Functions ====================
@@ -200,28 +212,39 @@ contract SubdomainValidationTest is Fixtures {
             if (domain[i] == 0x00) break;
             length++;
         }
-        
+
         if (length == 0) return false;
-        
+
         // Check first character - must be a letter
         if (!(domain[0] >= 0x61 && domain[0] <= 0x7A)) return false;
-        
+
         // Check last character - must be a letter or digit
         bytes1 lastChar = domain[length - 1];
-        if (!((lastChar >= 0x61 && lastChar <= 0x7A) || (lastChar >= 0x30 && lastChar <= 0x39))) {
+        if (
+            !(
+                (lastChar >= 0x61 && lastChar <= 0x7A)
+                    || (lastChar >= 0x30 && lastChar <= 0x39)
+            )
+        ) {
             return false;
         }
-        
+
         // Check all characters
         for (uint256 i = 0; i < length; i++) {
             bytes1 char = domain[i];
-            if (!((char >= 0x61 && char <= 0x7A) || // a-z
-                  (char >= 0x30 && char <= 0x39) || // 0-9
-                  (char == 0x2D))) {                // -
+            if (
+                // a-z
+                // 0-9
+                !(
+                    (char >= 0x61 && char <= 0x7A)
+                        || (char >= 0x30 && char <= 0x39) || (char == 0x2D)
+                )
+            ) {
+                // -
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -230,7 +253,7 @@ contract SubdomainValidationTest is Fixtures {
     function test_BugCheck_NullByteHandling() public {
         // Create "hello" with proper byte ordering
         bytes32 domain = bytes32("hello");
-        
+
         // Should be valid because it reads as "hello"
         assertTrue(personaFactory.isValidSubdomain(domain));
     }
@@ -246,7 +269,7 @@ contract SubdomainValidationTest is Fixtures {
         // First, create a persona with a valid domain
         vm.startPrank(user1);
         amicaToken.approve(address(personaFactory), DEFAULT_MINT_COST);
-        
+
         bytes32 domain = bytes32("test-domain");
         uint256 tokenId = personaFactory.createPersona(
             address(amicaToken),
@@ -257,10 +280,10 @@ contract SubdomainValidationTest is Fixtures {
             address(0),
             0
         );
-        
+
         // Verify domain is registered
         assertEq(personaFactory.domains(domain), tokenId);
-        
+
         // Try to create another persona with the same domain
         amicaToken.approve(address(personaFactory), DEFAULT_MINT_COST);
         vm.expectRevert(abi.encodeWithSelector(Invalid.selector, 11)); // Already registered
@@ -279,7 +302,7 @@ contract SubdomainValidationTest is Fixtures {
     function test_Integration_InvalidDomainRejection() public {
         vm.startPrank(user1);
         amicaToken.approve(address(personaFactory), DEFAULT_MINT_COST);
-        
+
         // Try invalid domains
         bytes32[] memory invalidDomains = new bytes32[](5);
         invalidDomains[0] = bytes32("Test-Domain"); // uppercase
@@ -287,10 +310,12 @@ contract SubdomainValidationTest is Fixtures {
         invalidDomains[2] = bytes32("invalid-"); // ends with hyphen
         invalidDomains[3] = bytes32("test_domain"); // underscore
         invalidDomains[4] = bytes32(0); // empty
-        
-        for (uint i = 0; i < invalidDomains.length; i++) {
+
+        for (uint256 i = 0; i < invalidDomains.length; i++) {
             uint8 expectedError = invalidDomains[i] == bytes32(0) ? 10 : 13; // Empty vs format error
-            vm.expectRevert(abi.encodeWithSelector(Invalid.selector, expectedError));
+            vm.expectRevert(
+                abi.encodeWithSelector(Invalid.selector, expectedError)
+            );
             personaFactory.createPersona(
                 address(amicaToken),
                 "Test Persona",
@@ -301,7 +326,7 @@ contract SubdomainValidationTest is Fixtures {
                 0
             );
         }
-        
+
         vm.stopPrank();
     }
 }

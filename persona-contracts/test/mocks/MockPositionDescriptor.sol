@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {IPositionDescriptor} from "@uniswap/v4-periphery/src/interfaces/IPositionDescriptor.sol";
-import {IPositionManager} from "@uniswap/v4-periphery/src/interfaces/IPositionManager.sol";
+import {IPositionDescriptor} from
+    "@uniswap/v4-periphery/src/interfaces/IPositionDescriptor.sol";
+import {IPositionManager} from
+    "@uniswap/v4-periphery/src/interfaces/IPositionManager.sol";
 import {IPoolManager} from "v4-core/src/interfaces/IPoolManager.sol";
 
 contract MockPositionDescriptor is IPositionDescriptor {
@@ -15,15 +17,32 @@ contract MockPositionDescriptor is IPositionDescriptor {
         wrappedNative = _wrappedNative;
     }
 
-    function tokenURI(IPositionManager, uint256 tokenId) external pure override returns (string memory) {
-        return string(abi.encodePacked("https://example.com/token/", toString(tokenId)));
+    function tokenURI(IPositionManager, uint256 tokenId)
+        external
+        pure
+        override
+        returns (string memory)
+    {
+        return string(
+            abi.encodePacked("https://example.com/token/", toString(tokenId))
+        );
     }
 
-    function flipRatio(address, address) external pure override returns (bool) {
+    function flipRatio(address, address)
+        external
+        pure
+        override
+        returns (bool)
+    {
         return false;
     }
 
-    function currencyRatioPriority(address) external pure override returns (int256) {
+    function currencyRatioPriority(address)
+        external
+        pure
+        override
+        returns (int256)
+    {
         return 0;
     }
 

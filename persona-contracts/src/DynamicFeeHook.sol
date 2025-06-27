@@ -8,7 +8,10 @@ import {LPFeeLibrary} from "v4-core/src/libraries/LPFeeLibrary.sol";
 import {IPoolManager} from "v4-core/src/interfaces/IPoolManager.sol";
 import {PoolKey} from "v4-core/src/types/PoolKey.sol";
 import {PoolId, PoolIdLibrary} from "v4-core/src/types/PoolId.sol";
-import {BeforeSwapDelta, BeforeSwapDeltaLibrary} from "v4-core/src/types/BeforeSwapDelta.sol";
+import {
+    BeforeSwapDelta,
+    BeforeSwapDeltaLibrary
+} from "v4-core/src/types/BeforeSwapDelta.sol";
 import {BalanceDelta} from "v4-core/src/types/BalanceDelta.sol";
 import {Currency, CurrencyLibrary} from "v4-core/src/types/Currency.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -42,7 +45,10 @@ contract DynamicFeeHook is BaseHook, Ownable {
     /// @param newFeeReductionSystem The new FeeReductionSystem address
     event FeeReductionSystemUpdated(address newFeeReductionSystem);
 
-    constructor(IPoolManager _poolManager) BaseHook(_poolManager) Ownable(msg.sender) {
+    constructor(IPoolManager _poolManager)
+        BaseHook(_poolManager)
+        Ownable(msg.sender)
+    {
         if (address(_poolManager) == address(0)) revert InvalidPoolManager();
     }
 
@@ -50,15 +56,25 @@ contract DynamicFeeHook is BaseHook, Ownable {
     /// @param _feeReductionSystem The new FeeReductionSystem address
     /// @dev Can only be called by the contract owner
     /// @dev Reverts if the address is zero
-    function setFeeReductionSystem(address _feeReductionSystem) external onlyOwner {
-        if (address(_feeReductionSystem) == address(0)) revert InvalidFeeReductionSystem();
+    function setFeeReductionSystem(address _feeReductionSystem)
+        external
+        onlyOwner
+    {
+        if (address(_feeReductionSystem) == address(0)) {
+            revert InvalidFeeReductionSystem();
+        }
         feeReductionSystem = IFeeReductionSystem(_feeReductionSystem);
         emit FeeReductionSystemUpdated(_feeReductionSystem);
     }
 
     /// @notice Gets the hook permissions for this contract
     /// @return The permissions for this hook
-    function getHookPermissions() public pure override returns (Hooks.Permissions memory) {
+    function getHookPermissions()
+        public
+        pure
+        override
+        returns (Hooks.Permissions memory)
+    {
         return Hooks.Permissions({
             beforeInitialize: false,
             afterInitialize: false,
@@ -86,9 +102,13 @@ contract DynamicFeeHook is BaseHook, Ownable {
         SwapParams calldata,
         bytes calldata
     ) internal view override returns (bytes4, BeforeSwapDelta, uint24) {
-        uint24 dynamicFee = feeReductionSystem.getFee(sender)
-            | LPFeeLibrary.OVERRIDE_FEE_FLAG;
+        uint24 dynamicFee =
+            feeReductionSystem.getFee(sender) | LPFeeLibrary.OVERRIDE_FEE_FLAG;
 
-        return (BaseHook.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, dynamicFee);
+        return (
+            BaseHook.beforeSwap.selector,
+            BeforeSwapDeltaLibrary.ZERO_DELTA,
+            dynamicFee
+        );
     }
 }

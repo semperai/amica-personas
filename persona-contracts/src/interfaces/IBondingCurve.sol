@@ -52,8 +52,8 @@ interface IBondingCurve {
      * @param reserveTotal Total tokens in bonding curve
      * @return price Current price multiplier
      */
-    function getCurrentPrice(
-        uint256 reserveSold,
-        uint256 reserveTotal
-    ) external pure returns (uint256 price);
+    function getCurrentPrice(uint256 reserveSold, uint256 reserveTotal)
+        external
+        pure
+        returns (uint256 price);
 }

@@ -1,5 +1,5 @@
 [profile.default]
-src = 'contracts'
+src = 'src'
 out = 'out'
 libs = ['lib']
 solc = '0.8.26'
@@ -14,3 +14,6 @@ extra_output = ["storageLayout"]
 evm_version = "cancun"
 optimizer = true
 optimizer_runs = 1
+
+[fmt]
+line_length = 80

@@ -1,11 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import {ERC20BurnableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {ERC20Upgradeable} from
+    "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {ERC20BurnableUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {OwnableUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Initializable} from
+    "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // Custom errors
@@ -58,7 +63,12 @@ contract PersonaToken is
      * @param tokens Array of token addresses that were claimed
      * @param amounts Array of amounts claimed for each token
      */
-    event TokensBurnedAndClaimed(address indexed user, uint256 amountBurned, address[] tokens, uint256[] amounts);
+    event TokensBurnedAndClaimed(
+        address indexed user,
+        uint256 amountBurned,
+        address[] tokens,
+        uint256[] amounts
+    );
 
     /**
      * @notice Emitted when graduation status is updated
@@ -138,7 +148,9 @@ contract PersonaToken is
 
         // Verify tokens array is sorted and contains no duplicates
         for (uint256 i = 1; i < tokens.length; i++) {
-            if (uint160(tokens[i]) <= uint160(tokens[i - 1])) revert TokensMustBeSortedAndUnique();
+            if (uint160(tokens[i]) <= uint160(tokens[i - 1])) {
+                revert TokensMustBeSortedAndUnique();
+            }
         }
 
         uint256 currentSupply = totalSupply();
@@ -189,11 +201,10 @@ contract PersonaToken is
      * @param tokens Array of token addresses to check claimable amounts for
      * @return amounts Array of token amounts that would be received, in same order as tokens parameter
      */
-    function previewBurnAndClaim(uint256 amountToBurn, address[] calldata tokens)
-        external
-        view
-        returns (uint256[] memory amounts)
-    {
+    function previewBurnAndClaim(
+        uint256 amountToBurn,
+        address[] calldata tokens
+    ) external view returns (uint256[] memory amounts) {
         uint256 currentSupply = totalSupply();
         if (currentSupply == 0 || amountToBurn == 0) {
             return new uint256[](tokens.length);

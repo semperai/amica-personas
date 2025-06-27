@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {ERC20Upgradeable} from
+    "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {OwnableUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {PausableUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // Custom errors
@@ -79,20 +83,29 @@ contract AmicaToken is
     /// @param to Recipient address
     /// @param token Address of the recovered token
     /// @param amount Amount of tokens recovered
-    event TokensRecovered(address indexed to, address indexed token, uint256 amount);
+    event TokensRecovered(
+        address indexed to, address indexed token, uint256 amount
+    );
 
     /// @notice Emitted when tokens are deposited for distribution
     /// @param depositor Address that deposited the tokens
     /// @param token Address of the deposited token
     /// @param amount Amount of tokens deposited
-    event TokensDeposited(address indexed depositor, address indexed token, uint256 amount);
+    event TokensDeposited(
+        address indexed depositor, address indexed token, uint256 amount
+    );
 
     /// @notice Emitted when a user burns AMICA and claims deposited tokens
     /// @param user Address of the user who burned and claimed
     /// @param amountBurned Amount of AMICA tokens burned
     /// @param tokens Array of token addresses that were claimed
     /// @param amounts Array of amounts claimed for each token
-    event TokensBurnedAndClaimed(address indexed user, uint256 amountBurned, address[] tokens, uint256[] amounts);
+    event TokensBurnedAndClaimed(
+        address indexed user,
+        uint256 amountBurned,
+        address[] tokens,
+        uint256[] amounts
+    );
 
     /// @notice Emitted when the bridge wrapper address is set or updated
     /// @param wrapper New bridge wrapper address
@@ -111,7 +124,11 @@ contract AmicaToken is
      * @custom:requirement initialOwner must not be the zero address
      * @custom:requirement Can only be called once due to initializer modifier
      */
-    function initialize(address initialOwner, uint256 initialSupply) external initializer virtual {
+    function initialize(address initialOwner, uint256 initialSupply)
+        external
+        virtual
+        initializer
+    {
         __ERC20_init("Amica", "AMICA");
         __Ownable_init(initialOwner);
         __ReentrancyGuard_init();
@@ -171,7 +188,11 @@ contract AmicaToken is
      * @custom:requirement Contract must have sufficient balance
      * @custom:emits TokensWithdrawn
      */
-    function withdraw(address to, uint256 amount) external onlyOwner whenNotPaused {
+    function withdraw(address to, uint256 amount)
+        external
+        onlyOwner
+        whenNotPaused
+    {
         if (to == address(0)) revert InvalidRecipient();
         if (amount > balanceOf(address(this))) revert InsufficientBalance();
 
@@ -215,7 +236,11 @@ contract AmicaToken is
      * @custom:requirement Caller must have approved this contract for the token amount
      * @custom:emits TokensDeposited
      */
-    function deposit(address token, uint256 amount) external nonReentrant whenNotPaused {
+    function deposit(address token, uint256 amount)
+        external
+        nonReentrant
+        whenNotPaused
+    {
         if (amount == 0) revert InvalidAmount();
         if (token == address(0)) revert InvalidToken();
 
@@ -265,14 +290,17 @@ contract AmicaToken is
 
         // Verify tokenIndexes are sorted and unique
         for (uint256 i = 1; i < tokenIndexes.length; i++) {
-            if (tokenIndexes[i] <= tokenIndexes[i - 1]) revert TokenIndexesMustBeSortedAndUnique();
+            if (tokenIndexes[i] <= tokenIndexes[i - 1]) {
+                revert TokenIndexesMustBeSortedAndUnique();
+            }
         }
 
         uint256 currentCirculating = circulatingSupply();
         if (currentCirculating == 0) revert NoCirculatingSupply();
 
         // Calculate share (with precision scaling)
-        uint256 sharePercentage = (amountToBurn * PRECISION) / currentCirculating;
+        uint256 sharePercentage =
+            (amountToBurn * PRECISION) / currentCirculating;
 
         // First, burn AMICA tokens (state change)
         _burn(msg.sender, amountToBurn);
@@ -284,7 +312,9 @@ contract AmicaToken is
 
         // Calculate all claim amounts and update ALL state BEFORE any transfers
         for (uint256 i = 0; i < tokenIndexes.length; i++) {
-            if (tokenIndexes[i] >= _depositedTokens.length) revert InvalidTokenIndex();
+            if (tokenIndexes[i] >= _depositedTokens.length) {
+                revert InvalidTokenIndex();
+            }
 
             address tokenAddress = _depositedTokens[tokenIndexes[i]];
             if (tokenAddress == address(0)) continue;
@@ -312,11 +342,15 @@ contract AmicaToken is
         }
 
         // Emit event before transfers (all state is already updated)
-        emit TokensBurnedAndClaimed(msg.sender, amountToBurn, claimedTokens, claimedAmounts);
+        emit TokensBurnedAndClaimed(
+            msg.sender, amountToBurn, claimedTokens, claimedAmounts
+        );
 
         // Now perform all external transfers (state is already fully updated)
         for (uint256 i = 0; i < validClaims; i++) {
-            if (!IERC20(claimedTokens[i]).transfer(msg.sender, claimedAmounts[i])) {
+            if (
+                !IERC20(claimedTokens[i]).transfer(msg.sender, claimedAmounts[i])
+            ) {
                 revert TransferFailed();
             }
         }
@@ -330,7 +364,13 @@ contract AmicaToken is
      * @return success True if the transfer succeeded
      * @custom:requirement Contract must not be paused
      */
-    function transfer(address to, uint256 amount) public virtual override whenNotPaused returns (bool) {
+    function transfer(address to, uint256 amount)
+        public
+        virtual
+        override
+        whenNotPaused
+        returns (bool)
+    {
         return super.transfer(to, amount);
     }
 
@@ -344,7 +384,13 @@ contract AmicaToken is
      * @custom:requirement Contract must not be paused
      * @custom:requirement Caller must have sufficient allowance from 'from' address
      */
-    function transferFrom(address from, address to, uint256 amount) public virtual override whenNotPaused returns (bool) {
+    function transferFrom(address from, address to, uint256 amount)
+        public
+        virtual
+        override
+        whenNotPaused
+        returns (bool)
+    {
         return super.transferFrom(from, to, amount);
     }
 }

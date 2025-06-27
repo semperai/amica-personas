@@ -25,10 +25,16 @@ contract DeployUtils is DeployConfig {
         NetworkConfig memory config = getNetworkConfig();
 
         // Load deployment
-        string memory filename =
-            string.concat("deployments/", config.networkName, "-", vm.toString(block.chainid), "-latest.json");
+        string memory filename = string.concat(
+            "deployments/",
+            config.networkName,
+            "-",
+            vm.toString(block.chainid),
+            "-latest.json"
+        );
         string memory json = vm.readFile(filename);
-        address factoryAddress = vm.parseJsonAddress(json, ".addresses.personaFactory");
+        address factoryAddress =
+            vm.parseJsonAddress(json, ".addresses.personaFactory");
         PersonaTokenFactory factory = PersonaTokenFactory(factoryAddress);
 
         vm.startBroadcast(deployerPrivateKey);
@@ -72,10 +78,16 @@ contract DeployUtils is DeployConfig {
         NetworkConfig memory config = getNetworkConfig();
 
         // Load deployment
-        string memory filename =
-            string.concat("deployments/", config.networkName, "-", vm.toString(block.chainid), "-latest.json");
+        string memory filename = string.concat(
+            "deployments/",
+            config.networkName,
+            "-",
+            vm.toString(block.chainid),
+            "-latest.json"
+        );
         string memory json = vm.readFile(filename);
-        address feeSystemAddress = vm.parseJsonAddress(json, ".addresses.feeReductionSystem");
+        address feeSystemAddress =
+            vm.parseJsonAddress(json, ".addresses.feeReductionSystem");
         FeeReductionSystem feeSystem = FeeReductionSystem(feeSystemAddress);
 
         vm.startBroadcast(deployerPrivateKey);
@@ -100,10 +112,16 @@ contract DeployUtils is DeployConfig {
         NetworkConfig memory config = getNetworkConfig();
 
         // Load deployment
-        string memory filename =
-            string.concat("deployments/", config.networkName, "-", vm.toString(block.chainid), "-latest.json");
+        string memory filename = string.concat(
+            "deployments/",
+            config.networkName,
+            "-",
+            vm.toString(block.chainid),
+            "-latest.json"
+        );
         string memory json = vm.readFile(filename);
-        address amicaAddress = vm.parseJsonAddress(json, ".addresses.amicaToken");
+        address amicaAddress =
+            vm.parseJsonAddress(json, ".addresses.amicaToken");
         AmicaToken amica = AmicaToken(amicaAddress);
 
         // Define distribution
@@ -126,7 +144,9 @@ contract DeployUtils is DeployConfig {
 
         for (uint256 i = 0; i < recipients.length; i++) {
             amica.transfer(recipients[i], amounts[i]);
-            console2.log("Transferred", amounts[i] / 1e18, "AMICA to", recipients[i]);
+            console2.log(
+                "Transferred", amounts[i] / 1e18, "AMICA to", recipients[i]
+            );
         }
 
         vm.stopBroadcast();
@@ -137,8 +157,13 @@ contract DeployUtils is DeployConfig {
      */
     function _loadDeploymentJson() internal view returns (string memory) {
         NetworkConfig memory config = getNetworkConfig();
-        string memory filename =
-            string.concat("deployments/", config.networkName, "-", vm.toString(block.chainid), "-latest.json");
+        string memory filename = string.concat(
+            "deployments/",
+            config.networkName,
+            "-",
+            vm.toString(block.chainid),
+            "-latest.json"
+        );
         return vm.readFile(filename);
     }
 
@@ -150,8 +175,10 @@ contract DeployUtils is DeployConfig {
 
         // Load deployment
         string memory json = _loadDeploymentJson();
-        address amicaAddress = vm.parseJsonAddress(json, ".addresses.amicaToken");
-        address factoryAddress = vm.parseJsonAddress(json, ".addresses.personaFactory");
+        address amicaAddress =
+            vm.parseJsonAddress(json, ".addresses.amicaToken");
+        address factoryAddress =
+            vm.parseJsonAddress(json, ".addresses.personaFactory");
 
         AmicaToken amica = AmicaToken(amicaAddress);
         PersonaTokenFactory factory = PersonaTokenFactory(factoryAddress);
@@ -181,10 +208,14 @@ contract DeployUtils is DeployConfig {
 
         // Load deployment
         string memory json = _loadDeploymentJson();
-        address amicaAddress = vm.parseJsonAddress(json, ".addresses.amicaToken");
-        address factoryAddress = vm.parseJsonAddress(json, ".addresses.personaFactory");
-        address feeSystemAddress = vm.parseJsonAddress(json, ".addresses.feeReductionSystem");
-        address hookAddress = vm.parseJsonAddress(json, ".addresses.dynamicFeeHook");
+        address amicaAddress =
+            vm.parseJsonAddress(json, ".addresses.amicaToken");
+        address factoryAddress =
+            vm.parseJsonAddress(json, ".addresses.personaFactory");
+        address feeSystemAddress =
+            vm.parseJsonAddress(json, ".addresses.feeReductionSystem");
+        address hookAddress =
+            vm.parseJsonAddress(json, ".addresses.dynamicFeeHook");
 
         vm.startBroadcast(deployerPrivateKey);
 
@@ -212,11 +243,16 @@ contract DeployUtils is DeployConfig {
         // Load deployment
         string memory json = _loadDeploymentJson();
 
-        address amicaAddress = vm.parseJsonAddress(json, ".addresses.amicaToken");
-        address factoryAddress = vm.parseJsonAddress(json, ".addresses.personaFactory");
-        address feeSystemAddress = vm.parseJsonAddress(json, ".addresses.feeReductionSystem");
-        address hookAddress = vm.parseJsonAddress(json, ".addresses.dynamicFeeHook");
-        address bondingCurveAddress = vm.parseJsonAddress(json, ".addresses.bondingCurve");
+        address amicaAddress =
+            vm.parseJsonAddress(json, ".addresses.amicaToken");
+        address factoryAddress =
+            vm.parseJsonAddress(json, ".addresses.personaFactory");
+        address feeSystemAddress =
+            vm.parseJsonAddress(json, ".addresses.feeReductionSystem");
+        address hookAddress =
+            vm.parseJsonAddress(json, ".addresses.dynamicFeeHook");
+        address bondingCurveAddress =
+            vm.parseJsonAddress(json, ".addresses.bondingCurve");
 
         console2.log("=== Deployment Health Check ===");
         console2.log("");
@@ -225,9 +261,13 @@ contract DeployUtils is DeployConfig {
         console2.log("Contract sizes:");
         console2.log("  AmicaToken:", amicaAddress.code.length, "bytes");
         console2.log("  PersonaFactory:", factoryAddress.code.length, "bytes");
-        console2.log("  FeeReductionSystem:", feeSystemAddress.code.length, "bytes");
+        console2.log(
+            "  FeeReductionSystem:", feeSystemAddress.code.length, "bytes"
+        );
         console2.log("  DynamicFeeHook:", hookAddress.code.length, "bytes");
-        console2.log("  BondingCurve:", bondingCurveAddress.code.length, "bytes");
+        console2.log(
+            "  BondingCurve:", bondingCurveAddress.code.length, "bytes"
+        );
         console2.log("");
 
         // Check key configurations
@@ -242,7 +282,8 @@ contract DeployUtils is DeployConfig {
         console2.log("  Factory paused:", factory.paused());
         console2.log("  Bonding curve:", address(factory.bondingCurve()));
 
-        (uint256 minAmica, uint256 maxAmica, uint24 baseFee, uint24 discountFee) = feeSystem.feeReductionConfig();
+        (uint256 minAmica, uint256 maxAmica, uint24 baseFee, uint24 discountFee)
+        = feeSystem.feeReductionConfig();
         console2.log("  Fee reduction:");
         console2.log("    Min AMICA:", minAmica / 1e18);
         console2.log("    Max AMICA:", maxAmica / 1e18);

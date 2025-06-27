@@ -27,18 +27,33 @@ contract MaliciousReentrantToken is ERC20 {
     string public attackFunction;
     bool private attacking;
 
-    constructor(address _target, string memory _attackFunction) ERC20("Malicious", "MAL") {
+    constructor(address _target, string memory _attackFunction)
+        ERC20("Malicious", "MAL")
+    {
         target = _target;
         attackFunction = _attackFunction;
         _mint(msg.sender, 1000000 ether);
     }
 
-    function transferFrom(address from, address to, uint256 amount) public override returns (bool) {
-        if (!attacking && keccak256(bytes(attackFunction)) == keccak256(bytes("createPersona"))) {
+    function transferFrom(address from, address to, uint256 amount)
+        public
+        override
+        returns (bool)
+    {
+        if (
+            !attacking
+                && keccak256(bytes(attackFunction))
+                    == keccak256(bytes("createPersona"))
+        ) {
             attacking = true;
             // Try to reenter
             try IPersonaTokenFactory(target).createPersona(
-                address(this), "Reentrant", "REENT", new string[](0), new string[](0), 0
+                address(this),
+                "Reentrant",
+                "REENT",
+                new string[](0),
+                new string[](0),
+                0
             ) {
                 // If this succeeds, reentrancy protection failed
             } catch {

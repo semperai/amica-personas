@@ -16,15 +16,24 @@ contract VerifyAmicaProtocol is Script, DeployConfig {
         string memory networkName = config.networkName;
 
         // Load deployment from JSON
-        string memory filename =
-            string.concat("deployments/", networkName, "-", vm.toString(block.chainid), "-latest.json");
+        string memory filename = string.concat(
+            "deployments/",
+            networkName,
+            "-",
+            vm.toString(block.chainid),
+            "-latest.json"
+        );
         string memory json = vm.readFile(filename);
 
         address amicaToken = vm.parseJsonAddress(json, ".addresses.amicaToken");
-        address personaFactory = vm.parseJsonAddress(json, ".addresses.personaFactory");
-        address feeReductionSystem = vm.parseJsonAddress(json, ".addresses.feeReductionSystem");
-        address dynamicFeeHook = vm.parseJsonAddress(json, ".addresses.dynamicFeeHook");
-        address personaFactoryViewer = vm.parseJsonAddress(json, ".addresses.personaFactoryViewer");
+        address personaFactory =
+            vm.parseJsonAddress(json, ".addresses.personaFactory");
+        address feeReductionSystem =
+            vm.parseJsonAddress(json, ".addresses.feeReductionSystem");
+        address dynamicFeeHook =
+            vm.parseJsonAddress(json, ".addresses.dynamicFeeHook");
+        address personaFactoryViewer =
+            vm.parseJsonAddress(json, ".addresses.personaFactoryViewer");
 
         console2.log("Verifying contracts on", networkName, "...");
         console2.log("AmicaToken:", amicaToken);
