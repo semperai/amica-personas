@@ -58,15 +58,12 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
 
         // Get persona data
         (
-            string memory name,
-            string memory symbol,
             address token,
             address pairToken,
             address agentToken,
             bool graduated,
-            uint256 createdAt,
             uint256 totalAgentDeposited,
-            uint256 minAgentTokens,
+            uint256 agentTokenThreshold,
             PoolId poolId,
             PoolId agentPoolId
         ) = personaFactory.personas(tokenId);
@@ -84,7 +81,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         );
 
         // Verify graduation
-        (,,,,, bool graduated,,,,,) = personaFactory.personas(tokenId);
+        (,,, bool graduated,,,,) = personaFactory.personas(tokenId);
         assertTrue(graduated);
     }
 
@@ -119,7 +116,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         );
 
         // Verify graduated
-        (,,,,, bool graduated,,,,,) = personaFactory.personas(tokenId);
+        (,,, bool graduated,,,,) = personaFactory.personas(tokenId);
         assertTrue(graduated);
     }
 
@@ -133,7 +130,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         );
 
         // Verify graduated
-        (,,,,, bool graduated,,,,,) = personaFactory.personas(tokenId);
+        (,,, bool graduated,,,,) = personaFactory.personas(tokenId);
         assertTrue(graduated);
     }
 
@@ -191,7 +188,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         );
 
         // Record how many tokens user2 should have purchased
-        uint256 user2Purchased = personaFactory.userPurchases(tokenId, user2);
+        uint256 user2Purchased = personaFactory.bondingBalances(tokenId, user2);
 
         // Graduate the persona
         vm.prank(user3);
@@ -268,7 +265,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         vm.stopPrank();
 
         // Verify graduated
-        (,,,,, bool graduated,,,,,) = personaFactory.personas(tokenId);
+        (,,, bool graduated,,,,) = personaFactory.personas(tokenId);
         assertTrue(graduated);
     }
 
@@ -302,7 +299,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         );
 
         // Should not be graduated yet
-        (,,,,, bool graduated,,,,,) = personaFactory.personas(tokenId);
+        (,,, bool graduated,,,,) = personaFactory.personas(tokenId);
         assertFalse(graduated);
 
         // Deposit agent tokens to meet requirement
@@ -312,11 +309,11 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         vm.stopPrank();
 
         // Now it should graduate automatically
-        (,,,,, graduated,,,,,) = personaFactory.personas(tokenId);
+        (,,, graduated,,,,) = personaFactory.personas(tokenId);
         assertTrue(graduated);
 
         // Verify agent pool was created
-        (,,,,,,,,,, PoolId agentPoolId) = personaFactory.personas(tokenId);
+        (,,,,,,, PoolId agentPoolId) = personaFactory.personas(tokenId);
         assertTrue(PoolId.unwrap(agentPoolId) != bytes32(0));
     }
 
@@ -377,8 +374,8 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
             tokenId, user3Amount, 0, user3, block.timestamp + 1
         );
 
-        uint256 user2Purchased = personaFactory.userPurchases(tokenId, user2);
-        uint256 user3Purchased = personaFactory.userPurchases(tokenId, user3);
+        uint256 user2Purchased = personaFactory.bondingBalances(tokenId, user2);
+        uint256 user3Purchased = personaFactory.bondingBalances(tokenId, user3);
 
         // Trigger graduation with remaining amount
         uint256 totalRaisedSoFar = user2Amount + user3Amount;
@@ -435,7 +432,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
             tokenId, buyAmount, 0, user2, block.timestamp + 1
         );
 
-        uint256 tokensReceived = personaFactory.userPurchases(tokenId, user2);
+        uint256 tokensReceived = personaFactory.bondingBalances(tokenId, user2);
         uint256 balanceBefore = amicaToken.balanceOf(user2);
 
         // User2 sells half their tokens back
@@ -449,7 +446,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         uint256 balanceAfter = amicaToken.balanceOf(user2);
         assertGt(balanceAfter, balanceBefore);
         assertEq(
-            personaFactory.userPurchases(tokenId, user2),
+            personaFactory.bondingBalances(tokenId, user2),
             tokensReceived - sellAmount
         );
     }

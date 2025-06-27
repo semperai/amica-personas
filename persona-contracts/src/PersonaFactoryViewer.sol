@@ -12,19 +12,11 @@ import {IBondingCurve} from "./interfaces/IBondingCurve.sol";
  * @dev Deploy this separately after deploying the main factory contract
  */
 contract PersonaFactoryViewer {
-    // ============================================================================
-    // STORAGE
-    // ============================================================================
-
     /// @notice Reference to the main factory contract
     PersonaTokenFactory public immutable factory;
 
     /// @notice Precision for calculations
     uint256 private constant PRECISION = 1e18;
-
-    // ============================================================================
-    // CONSTRUCTOR
-    // ============================================================================
 
     /**
      * @notice Initializes the viewer with factory address
@@ -34,10 +26,6 @@ contract PersonaFactoryViewer {
         require(_factory != address(0), "Invalid factory");
         factory = PersonaTokenFactory(_factory);
     }
-
-    // ============================================================================
-    // PERSONA INFORMATION
-    // ============================================================================
 
     /**
      * @notice Gets persona metadata values
@@ -59,90 +47,88 @@ contract PersonaFactoryViewer {
         return values;
     }
 
-    // ============================================================================
-    // TRADING INFORMATION
-    // ============================================================================
-
     /**
      * @notice Gets token distribution allocations for a persona
      * @param tokenId ID of the persona
      * @return liquidityAmount Tokens allocated for Uniswap liquidity
-     * @return bondingAmount Tokens available in bonding curve
+     * @return bondingSupplyAmount Tokens available in bonding curve
      * @return amicaAmount Tokens sent to AMICA protocol
-     * @return agentRewardsAmount Tokens reserved for agent stakers
+     * @return agentStakerRewardsAmount Tokens reserved for agent stakers
      */
     function getTokenDistribution(uint256 tokenId)
         external
         view
         returns (
             uint256 liquidityAmount,
-            uint256 bondingAmount,
+            uint256 bondingSupplyAmount,
             uint256 amicaAmount,
-            uint256 agentRewardsAmount
+            uint256 agentStakerRewardsAmount
         )
     {
-        (,,,, address agentToken,,,,,,) = factory.personas(tokenId);
+        (,, address agentToken,,,,,) = factory.personas(tokenId);
 
         if (agentToken != address(0)) {
             // With agent token: 1/3, 2/9, 2/9, 2/9
             liquidityAmount = 333_333_333 ether;
-            bondingAmount = 222_222_222 ether;
+            bondingSupplyAmount = 222_222_222 ether;
             amicaAmount = 222_222_222 ether;
-            agentRewardsAmount = 222_222_223 ether;
+            agentStakerRewardsAmount = 222_222_223 ether;
         } else {
             // Without agent token: 1/3, 1/3, 1/3, 0
             liquidityAmount = 333_333_333 ether;
-            bondingAmount = 333_333_333 ether;
+            bondingSupplyAmount = 333_333_333 ether;
             amicaAmount = 333_333_334 ether;
-            agentRewardsAmount = 0;
+            agentStakerRewardsAmount = 0;
         }
     }
 
     /**
-     * @notice Gets current purchase information
+     * @notice Gets current bonding curve state
      * @param tokenId ID of the persona
-     * @return totalDeposited Total pairing tokens deposited
-     * @return tokensSold Total persona tokens sold
+     * @return totalPairingTokensCollected Total pairing tokens collected
+     * @return tokensPurchased Total persona tokens purchased
      * @return availableTokens Remaining tokens in bonding curve
      */
-    function getPurchaseInfo(uint256 tokenId)
+    function getBondingCurveState(uint256 tokenId)
         external
         view
         returns (
-            uint256 totalDeposited,
-            uint256 tokensSold,
+            uint256 totalPairingTokensCollected,
+            uint256 tokensPurchased,
             uint256 availableTokens
         )
     {
-        (totalDeposited, tokensSold) = factory.purchases(tokenId);
+        (totalPairingTokensCollected, tokensPurchased) =
+            factory.bondingStates(tokenId);
 
         // Calculate available tokens
-        (,, address token,, address agentToken, bool graduated,,,,,) =
+        (address token,, address agentToken, bool graduated,,,,) =
             factory.personas(tokenId);
         if (graduated || token == address(0)) {
             availableTokens = 0;
         } else {
-            uint256 bondingAmount =
+            uint256 bondingSupplyAmount =
                 agentToken != address(0) ? 222_222_222 ether : 333_333_333 ether;
-            availableTokens =
-                tokensSold >= bondingAmount ? 0 : bondingAmount - tokensSold;
+            availableTokens = tokensPurchased >= bondingSupplyAmount
+                ? 0
+                : bondingSupplyAmount - tokensPurchased;
         }
 
-        return (totalDeposited, tokensSold, availableTokens);
+        return (totalPairingTokensCollected, tokensPurchased, availableTokens);
     }
 
     /**
-     * @notice Gets user's purchase amount for a persona
+     * @notice Gets user's bonding balance for a persona
      * @param tokenId ID of the persona
      * @param user User address
-     * @return Amount of persona tokens purchased
+     * @return Amount of persona tokens in bonding curve
      */
-    function getUserPurchase(uint256 tokenId, address user)
+    function getUserBondingBalance(uint256 tokenId, address user)
         external
         view
         returns (uint256)
     {
-        return factory.userPurchases(tokenId, user);
+        return factory.bondingBalances(tokenId, user);
     }
 
     /**
@@ -156,8 +142,6 @@ contract PersonaFactoryViewer {
         returns (uint256 price)
     {
         (
-            ,
-            ,
             address token,
             address pairToken,
             address agentToken,
@@ -165,29 +149,24 @@ contract PersonaFactoryViewer {
             ,
             ,
             ,
-            ,
         ) = factory.personas(tokenId);
         if (graduated || token == address(0)) return 0;
 
-        (, uint256 tokensSold) = factory.purchases(tokenId);
+        (, uint256 tokensPurchased) = factory.bondingStates(tokenId);
 
-        // Get token distribution to determine bonding amount
-        uint256 bondingAmount =
+        // Get token distribution to determine bonding supply
+        uint256 bondingSupplyAmount =
             agentToken != address(0) ? 222_222_222 ether : 333_333_333 ether;
 
         // Get bonding curve contract and calculate current price
         IBondingCurve bondingCurve = factory.bondingCurve();
         uint256 basePrice =
-            bondingCurve.getCurrentPrice(tokensSold, bondingAmount);
+            bondingCurve.getCurrentPrice(tokensPurchased, bondingSupplyAmount);
 
         // Apply multiplier from pairing config
-        (,, uint256 liquidityMultiplier) = factory.pairingConfigs(pairToken);
-        return (basePrice * liquidityMultiplier) / PRECISION;
+        (,, uint256 pricingMultiplier) = factory.pairingConfigs(pairToken);
+        return (basePrice * pricingMultiplier) / PRECISION;
     }
-
-    // ============================================================================
-    // GRADUATION STATUS
-    // ============================================================================
 
     /**
      * @notice Checks if a persona can graduate
@@ -203,13 +182,10 @@ contract PersonaFactoryViewer {
         (
             ,
             ,
-            ,
-            ,
             address agentToken,
             bool graduated,
-            ,
             uint256 totalAgentDeposited,
-            uint256 minAgentTokens,
+            uint256 agentTokenThreshold,
             ,
         ) = factory.personas(tokenId);
 
@@ -217,17 +193,17 @@ contract PersonaFactoryViewer {
             return (false, "Already graduated");
         }
 
-        (, uint256 tokensSold) = factory.purchases(tokenId);
-        uint256 bondingAmount =
+        (, uint256 tokensPurchased) = factory.bondingStates(tokenId);
+        uint256 bondingSupplyAmount =
             agentToken != address(0) ? 222_222_222 ether : 333_333_333 ether;
-        uint256 graduationThreshold = (bondingAmount * 85) / 100; // 85% threshold
+        uint256 graduationThreshold = (bondingSupplyAmount * 85) / 100; // 85% threshold
 
-        if (tokensSold < graduationThreshold) {
+        if (tokensPurchased < graduationThreshold) {
             return (false, "Below 85% tokens sold");
         }
 
-        if (agentToken != address(0) && minAgentTokens > 0) {
-            if (totalAgentDeposited < minAgentTokens) {
+        if (agentToken != address(0) && agentTokenThreshold > 0) {
+            if (totalAgentDeposited < agentTokenThreshold) {
                 return (false, "Insufficient agent tokens deposited");
             }
         }
@@ -238,7 +214,7 @@ contract PersonaFactoryViewer {
     /**
      * @notice Gets graduation progress
      * @param tokenId ID of the persona
-     * @return tokensSoldPercent Percentage of bonding tokens sold (0-100)
+     * @return tokensPurchasedPercent Percentage of bonding tokens purchased (0-100)
      * @return currentAgentDeposited Current agent tokens deposited
      * @return agentRequired Required agent tokens
      */
@@ -246,7 +222,7 @@ contract PersonaFactoryViewer {
         external
         view
         returns (
-            uint256 tokensSoldPercent,
+            uint256 tokensPurchasedPercent,
             uint256 currentAgentDeposited,
             uint256 agentRequired
         )
@@ -254,30 +230,24 @@ contract PersonaFactoryViewer {
         (
             ,
             ,
-            ,
-            ,
             address agentToken,
             ,
-            ,
             uint256 totalAgentDeposited,
-            uint256 minAgentTokens,
+            uint256 agentTokenThreshold,
             ,
         ) = factory.personas(tokenId);
-        (, uint256 tokensSold) = factory.purchases(tokenId);
+        (, uint256 tokensPurchased) = factory.bondingStates(tokenId);
 
-        uint256 bondingAmount =
+        uint256 bondingSupplyAmount =
             agentToken != address(0) ? 222_222_222 ether : 333_333_333 ether;
-        tokensSoldPercent =
-            bondingAmount > 0 ? (tokensSold * 100) / bondingAmount : 0;
-        if (tokensSoldPercent > 100) tokensSoldPercent = 100;
+        tokensPurchasedPercent = bondingSupplyAmount > 0
+            ? (tokensPurchased * 100) / bondingSupplyAmount
+            : 0;
+        if (tokensPurchasedPercent > 100) tokensPurchasedPercent = 100;
 
         currentAgentDeposited = totalAgentDeposited;
-        agentRequired = minAgentTokens;
+        agentRequired = agentTokenThreshold;
     }
-
-    // ============================================================================
-    // CLAIMABLE REWARDS
-    // ============================================================================
 
     /**
      * @notice Gets all claimable rewards for a user
@@ -287,7 +257,7 @@ contract PersonaFactoryViewer {
      * @return bonusAmount Amount from unsold tokens
      * @return agentRewardAmount Amount from agent staking
      * @return totalClaimable Total claimable amount
-     * @return hasClaimed Whether the user has already claimed
+     * @return claimed Whether the user has already claimed
      */
     function getClaimableRewards(uint256 tokenId, address user)
         external
@@ -297,7 +267,7 @@ contract PersonaFactoryViewer {
             uint256 bonusAmount,
             uint256 agentRewardAmount,
             uint256 totalClaimable,
-            bool hasClaimed
+            bool claimed
         )
     {
         return factory.getClaimableRewards(tokenId, user);
@@ -317,21 +287,17 @@ contract PersonaFactoryViewer {
         return factory.agentDeposits(tokenId, user);
     }
 
-    // ============================================================================
-    // PAIRING TOKEN INFORMATION
-    // ============================================================================
-
     /**
      * @notice Gets pairing token configuration
      * @param token Token address
      * @return enabled Whether token is enabled
      * @return mintCost Cost to mint persona
-     * @return liquidityMultiplier Multiplier for liquidity calculations
+     * @return pricingMultiplier Multiplier for bonding curve pricing
      */
     function getPairingConfig(address token)
         external
         view
-        returns (bool enabled, uint256 mintCost, uint256 liquidityMultiplier)
+        returns (bool enabled, uint256 mintCost, uint256 pricingMultiplier)
     {
         return factory.pairingConfigs(token);
     }
@@ -350,10 +316,6 @@ contract PersonaFactoryViewer {
         return enabled;
     }
 
-    // ============================================================================
-    // TRADING ANALYSIS
-    // ============================================================================
-
     /**
      * @notice Calculates expected output for buying persona tokens
      * @param tokenId ID of the persona
@@ -366,8 +328,6 @@ contract PersonaFactoryViewer {
         returns (uint256 amountOut)
     {
         (
-            ,
-            ,
             address token,
             address pairToken,
             address agentToken,
@@ -375,21 +335,20 @@ contract PersonaFactoryViewer {
             ,
             ,
             ,
-            ,
         ) = factory.personas(tokenId);
         if (graduated || token == address(0)) return 0;
 
-        (, uint256 tokensSold) = factory.purchases(tokenId);
-        uint256 bondingAmount =
+        (, uint256 tokensPurchased) = factory.bondingStates(tokenId);
+        uint256 bondingSupplyAmount =
             agentToken != address(0) ? 222_222_222 ether : 333_333_333 ether;
 
         // Apply multiplier to input
-        (,, uint256 liquidityMultiplier) = factory.pairingConfigs(pairToken);
-        uint256 adjustedAmountIn = (amountIn * liquidityMultiplier) / PRECISION;
+        (,, uint256 pricingMultiplier) = factory.pairingConfigs(pairToken);
+        uint256 adjustedAmountIn = (amountIn * pricingMultiplier) / PRECISION;
 
         IBondingCurve bondingCurve = factory.bondingCurve();
         return bondingCurve.calculateAmountOut(
-            adjustedAmountIn, tokensSold, bondingAmount
+            adjustedAmountIn, tokensPurchased, bondingSupplyAmount
         );
     }
 
@@ -405,8 +364,6 @@ contract PersonaFactoryViewer {
         returns (uint256 amountOut)
     {
         (
-            ,
-            ,
             address token,
             address pairToken,
             address agentToken,
@@ -414,22 +371,21 @@ contract PersonaFactoryViewer {
             ,
             ,
             ,
-            ,
         ) = factory.personas(tokenId);
         if (graduated || token == address(0)) return 0;
 
-        (, uint256 tokensSold) = factory.purchases(tokenId);
-        uint256 bondingAmount =
+        (, uint256 tokensPurchased) = factory.bondingStates(tokenId);
+        uint256 bondingSupplyAmount =
             agentToken != address(0) ? 222_222_222 ether : 333_333_333 ether;
 
         IBondingCurve bondingCurve = factory.bondingCurve();
         uint256 baseAmountOut = bondingCurve.calculateAmountOutForSell(
-            amountIn, tokensSold, bondingAmount
+            amountIn, tokensPurchased, bondingSupplyAmount
         );
 
         // Apply multiplier (reverse of buy)
-        (,, uint256 liquidityMultiplier) = factory.pairingConfigs(pairToken);
-        return (baseAmountOut * PRECISION) / liquidityMultiplier;
+        (,, uint256 pricingMultiplier) = factory.pairingConfigs(pairToken);
+        return (baseAmountOut * PRECISION) / pricingMultiplier;
     }
 
     /**
@@ -445,8 +401,6 @@ contract PersonaFactoryViewer {
         uint256 toTokens
     ) external view returns (uint256 cost) {
         (
-            ,
-            ,
             address token,
             address pairToken,
             address agentToken,
@@ -454,113 +408,101 @@ contract PersonaFactoryViewer {
             ,
             ,
             ,
-            ,
         ) = factory.personas(tokenId);
         if (graduated || token == address(0)) return 0;
 
-        uint256 bondingAmount =
+        uint256 bondingSupplyAmount =
             agentToken != address(0) ? 222_222_222 ether : 333_333_333 ether;
 
         IBondingCurve bondingCurve = factory.bondingCurve();
         uint256 baseCost = bondingCurve.calculateCostBetween(
-            fromTokens, toTokens, bondingAmount
+            fromTokens, toTokens, bondingSupplyAmount
         );
 
         // Apply multiplier
-        (,, uint256 liquidityMultiplier) = factory.pairingConfigs(pairToken);
-        return (baseCost * liquidityMultiplier) / PRECISION;
+        (,, uint256 pricingMultiplier) = factory.pairingConfigs(pairToken);
+        return (baseCost * pricingMultiplier) / PRECISION;
     }
-
-    // ============================================================================
-    // BATCH GETTERS
-    // ============================================================================
 
     /**
      * @notice Gets multiple personas in one call
      * @param tokenIds Array of token IDs
-     * @return names Array of persona names
      * @return erc20Tokens Array of ERC20 addresses
-     * @return graduated Array of graduation status
+     * @return graduatedStatus Array of graduation status
      */
     function getPersonaBatch(uint256[] calldata tokenIds)
         external
         view
-        returns (
-            string[] memory names,
-            address[] memory erc20Tokens,
-            bool[] memory graduated
-        )
+        returns (address[] memory erc20Tokens, bool[] memory graduatedStatus)
     {
         uint256 length = tokenIds.length;
-        names = new string[](length);
         erc20Tokens = new address[](length);
-        graduated = new bool[](length);
+        graduatedStatus = new bool[](length);
 
         for (uint256 i = 0; i < length; i++) {
-            (string memory name,, address erc20Token,,, bool _graduated,,,,,) =
+            (address erc20Token,,, bool _graduated,,,,) =
                 factory.personas(tokenIds[i]);
-            names[i] = name;
             erc20Tokens[i] = erc20Token;
-            graduated[i] = _graduated;
+            graduatedStatus[i] = _graduated;
         }
     }
 
     /**
-     * @notice Gets purchase info for multiple token IDs
+     * @notice Gets bonding curve state for multiple token IDs
      * @param tokenIds Array of token IDs
-     * @return totalDeposited Array of total deposits
-     * @return tokensSold Array of tokens sold
+     * @return totalPairingTokensCollected Array of total pairing tokens collected
+     * @return tokensPurchased Array of tokens purchased
      * @return availableTokens Array of available tokens
      */
-    function getPurchaseInfoBatch(uint256[] calldata tokenIds)
+    function getBondingCurveStateBatch(uint256[] calldata tokenIds)
         external
         view
         returns (
-            uint256[] memory totalDeposited,
-            uint256[] memory tokensSold,
+            uint256[] memory totalPairingTokensCollected,
+            uint256[] memory tokensPurchased,
             uint256[] memory availableTokens
         )
     {
         uint256 length = tokenIds.length;
-        totalDeposited = new uint256[](length);
-        tokensSold = new uint256[](length);
+        totalPairingTokensCollected = new uint256[](length);
+        tokensPurchased = new uint256[](length);
         availableTokens = new uint256[](length);
 
         for (uint256 i = 0; i < length; i++) {
-            (totalDeposited[i], tokensSold[i]) = factory.purchases(tokenIds[i]);
+            (totalPairingTokensCollected[i], tokensPurchased[i]) =
+                factory.bondingStates(tokenIds[i]);
 
             // Calculate available tokens inline
-            (,, address token,, address agentToken, bool graduated,,,,,) =
+            (address token,, address agentToken, bool graduated,,,,) =
                 factory.personas(tokenIds[i]);
             if (graduated || token == address(0)) {
                 availableTokens[i] = 0;
             } else {
-                uint256 bondingAmount = agentToken != address(0)
+                uint256 bondingSupplyAmount = agentToken != address(0)
                     ? 222_222_222 ether
                     : 333_333_333 ether;
-                availableTokens[i] = tokensSold[i] >= bondingAmount
+                availableTokens[i] = tokensPurchased[i] >= bondingSupplyAmount
                     ? 0
-                    : bondingAmount - tokensSold[i];
+                    : bondingSupplyAmount - tokensPurchased[i];
             }
         }
     }
 
     /**
-     * @notice Gets user balances for multiple personas
+     * @notice Gets user bonding balances for multiple personas
      * @param tokenIds Array of token IDs
      * @param user User address
-     * @return balances Array of user balances
+     * @return balances Array of user bonding balances
      */
-    function getUserBalancesBatch(uint256[] calldata tokenIds, address user)
-        external
-        view
-        returns (uint256[] memory balances)
-    {
+    function getUserBondingBalancesBatch(
+        uint256[] calldata tokenIds,
+        address user
+    ) external view returns (uint256[] memory balances) {
         uint256 length = tokenIds.length;
         balances = new uint256[](length);
 
         for (uint256 i = 0; i < length; i++) {
-            balances[i] = factory.userPurchases(tokenIds[i], user);
+            balances[i] = factory.bondingBalances(tokenIds[i], user);
         }
     }
 

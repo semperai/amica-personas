@@ -84,7 +84,7 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         );
 
         // Get the persona token address
-        (,, address personaToken,,,,,,,,) = personaFactory.personas(tokenId);
+        (address personaToken,,,,,,,) = personaFactory.personas(tokenId);
 
         // Pause the contract
         vm.prank(factoryOwner);
@@ -120,7 +120,7 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         );
 
         // Get the persona token address
-        (,, address personaToken,,,,,,,,) = personaFactory.personas(tokenId);
+        (address personaToken,,,,,,,) = personaFactory.personas(tokenId);
 
         // Pause the contract
         vm.prank(factoryOwner);
@@ -134,17 +134,17 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         );
     }
 
-    function test_WithdrawTokens_WhenPaused() public {
-        // This test verifies that withdrawTokens respects the pause
+    function test_ClaimRewards_WhenPaused() public {
+        // This test verifies that claimRewards respects the pause
         // We'll create a scenario where a user has purchased tokens
-        // but the contract gets paused before they can withdraw
+        // but the contract gets paused before they can claim
 
         // Setup: create persona
         uint256 tokenId = personaFactory.createPersona(
             address(amicaToken),
             "Test Persona",
             "TEST",
-            bytes32("testwithdraw"),
+            bytes32("testclaim"),
             0, // no initial buy
             address(0), // no agent token
             0 // no min agent tokens
@@ -161,7 +161,7 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         vm.prank(factoryOwner);
         personaFactory.pause();
 
-        // Since withdrawTokens requires graduation, and we can't graduate in tests due to pool manager issues,
+        // Since claimRewards requires graduation, and we can't graduate in tests due to pool manager issues,
         // we'll verify that the function would be paused by checking a different error
         // The function will fail with NotGraduated error before reaching the pause check
         // So let's test a different paused function instead to maintain test coverage
@@ -271,9 +271,7 @@ contract PersonaTokenFactoryPauseTest is Fixtures {
         );
 
         // Verify persona was created
-        (string memory name,, address token,,,,,,,,) =
-            personaFactory.personas(tokenId);
-        assertEq(name, "Test Persona");
+        (address token,,,,,,,) = personaFactory.personas(tokenId);
         assertTrue(token != address(0));
     }
 }

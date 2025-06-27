@@ -107,7 +107,7 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
         assertEq(creationCost, 1000 ether, "Creation cost should be 1000 AMICA");
 
         // Get persona token address
-        (,, address token,,,,,,,,) = personaFactory.personas(testTokenId);
+        (address token,,,,,,,) = personaFactory.personas(testTokenId);
         testPersonaToken = token;
         console.log("Persona token address:", testPersonaToken);
     }
@@ -122,7 +122,7 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
         );
 
         uint256 user1Purchased =
-            personaFactory.userPurchases(testTokenId, user1);
+            personaFactory.bondingBalances(testTokenId, user1);
         console.log("User1 spent: 200k AMICA", "");
         console.log("User1 received (Persona):", user1Purchased / 1e18);
 
@@ -133,7 +133,7 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
         );
 
         uint256 user2Purchased =
-            personaFactory.userPurchases(testTokenId, user2);
+            personaFactory.bondingBalances(testTokenId, user2);
         console.log("User2 spent: 300k AMICA", "");
         console.log("User2 received (Persona):", user2Purchased / 1e18);
 
@@ -143,14 +143,15 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
     function _step3_graduation() internal {
         console.log("\n--- Step 3: Triggering Graduation ---", "");
 
-        (uint256 totalDeposited, uint256 tokensSold) =
-            personaFactory.purchases(testTokenId);
+        (uint256 totalPairingTokensCollected, uint256 tokensPurchased) =
+            personaFactory.bondingStates(testTokenId);
         uint256 graduationTarget = (BONDING_AMOUNT * GRADUATION_THRESHOLD) / 100;
 
         console.log("Graduation target (Persona):", graduationTarget / 1e18);
-        console.log("Tokens sold so far:", tokensSold / 1e18);
+        console.log("Tokens sold so far:", tokensPurchased / 1e18);
 
-        uint256 remainingAmica = EXPECTED_GRADUATION_AMOUNT - totalDeposited;
+        uint256 remainingAmica =
+            EXPECTED_GRADUATION_AMOUNT - totalPairingTokensCollected;
         console.log("Remaining AMICA needed:", remainingAmica / 1e18);
 
         if (remainingAmica > 0) {
@@ -161,16 +162,17 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
         }
 
         // Check graduation
-        (,,,,, bool graduated,,,,,) = personaFactory.personas(testTokenId);
+        (,,, bool graduated,,,,) = personaFactory.personas(testTokenId);
         assertTrue(graduated, "Persona should have graduated");
         console.log("Persona graduated!", "");
 
         _logBondingState();
 
         // Verify collection amount
-        (totalDeposited,) = personaFactory.purchases(testTokenId);
+        (totalPairingTokensCollected,) =
+            personaFactory.bondingStates(testTokenId);
         assertApproxEqRel(
-            totalDeposited,
+            totalPairingTokensCollected,
             EXPECTED_GRADUATION_AMOUNT,
             0.1e18,
             "Should collect ~1M AMICA"
@@ -181,7 +183,7 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
         console.log("\n--- Step 4: Checking Uniswap V4 Pool ---", "");
 
         // Get pool info
-        (,, address pairToken,,,,,,, PoolId poolId,) =
+        (, address pairToken,,,,, PoolId poolId,) =
             personaFactory.personas(testTokenId);
 
         // Check pool state
@@ -361,7 +363,7 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
 
     function _executeUniswapSwap(uint256 swapAmount) internal {
         // Get pool info
-        (,, address pairToken,,,,,,, PoolId poolId,) =
+        (, address pairToken,,,,, PoolId poolId,) =
             personaFactory.personas(testTokenId);
 
         // Setup pool key
@@ -405,10 +407,10 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
     }
 
     function _logBondingState() internal view {
-        (uint256 totalDeposited, uint256 tokensSold) =
-            personaFactory.purchases(testTokenId);
-        console.log("Total AMICA raised:", totalDeposited / 1e18);
-        console.log("Total Persona sold:", tokensSold / 1e18);
+        (uint256 totalPairingTokensCollected, uint256 tokensPurchased) =
+            personaFactory.bondingStates(testTokenId);
+        console.log("Total AMICA raised:", totalPairingTokensCollected / 1e18);
+        console.log("Total Persona sold:", tokensPurchased / 1e18);
     }
 
     function test_BondingCurveProgression() public {
@@ -442,7 +444,7 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
             tokenId, spendAmount, 0, user2, block.timestamp + 1
         );
 
-        (uint256 total, uint256 sold) = personaFactory.purchases(tokenId);
+        (uint256 total, uint256 sold) = personaFactory.bondingStates(tokenId);
         uint256 newTotal = previousTotal + spendAmount;
 
         console.log("\nCheckpoint - Total spent:", total / 1e18);
@@ -453,7 +455,7 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
             console.log("Avg price:", avgPrice / 1e18);
         }
 
-        (,,,,, bool graduated,,,,,) = personaFactory.personas(tokenId);
+        (,,, bool graduated,,,,) = personaFactory.personas(tokenId);
         if (graduated) {
             console.log("GRADUATED!", "");
         }

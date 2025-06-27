@@ -13,7 +13,7 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
     // Constants from the contract
     uint256 constant PERSONA_TOKEN_SUPPLY = 1_000_000_000 ether;
     uint256 constant AMICA_DEPOSIT_AMOUNT = 222_222_222 ether; // 2/9 of supply for agent personas
-    uint256 constant STANDARD_AMICA_AMOUNT = 333_333_333 ether + 1 ether; // 1/3 + rounding
+    uint256 constant STANDARD_AMICA_AMOUNT = 333_333_334 ether; // 1/3 + rounding
 
     // Graduation thresholds (85% of bonding tokens)
     uint256 constant AGENT_GRADUATION_THRESHOLD = 188_888_888 ether; // 85% of 222,222,222
@@ -39,10 +39,16 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
         uint256 indexed tokenId, address indexed agentToken
     );
     event AgentTokensDeposited(
-        uint256 indexed tokenId, address indexed depositor, uint256 amount
+        uint256 indexed tokenId,
+        address indexed depositor,
+        uint256 amount,
+        uint256 newTotal
     );
     event AgentTokensWithdrawn(
-        uint256 indexed tokenId, address indexed depositor, uint256 amount
+        uint256 indexed tokenId,
+        address indexed depositor,
+        uint256 amount,
+        uint256 newTotal
     );
     event AgentRewardsDistributed(
         uint256 indexed tokenId,
@@ -104,27 +110,21 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
 
         // Verify persona data
         (
-            string memory name,
-            string memory symbol,
             address token,
             address pairToken,
             address agentTokenAddr,
             bool graduated,
-            uint256 createdAt,
             uint256 totalAgentDeposited,
-            uint256 minAgentTokens,
+            uint256 agentTokenThreshold,
             ,
         ) = personaFactory.personas(tokenId);
 
-        assertEq(name, "Normal Persona");
-        assertEq(symbol, "NORMAL");
         assertTrue(token != address(0));
         assertEq(pairToken, address(amicaToken));
         assertEq(agentTokenAddr, address(0));
         assertFalse(graduated);
-        assertEq(createdAt, block.timestamp);
         assertEq(totalAgentDeposited, 0);
-        assertEq(minAgentTokens, 0);
+        assertEq(agentTokenThreshold, 0);
 
         // Check token details
         PersonaToken personaTokenContract = PersonaToken(token);
@@ -163,22 +163,19 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
 
         // Verify persona data
         (
-            string memory name,
-            string memory symbol,
             address token,
             address pairToken,
             address agentTokenAddr,
             bool graduated,
             ,
-            ,
-            uint256 minAgentTokens,
+            uint256 agentTokenThreshold,
             ,
         ) = personaFactory.personas(tokenId);
 
-        assertEq(name, "Agent Persona");
-        assertEq(symbol, "AGENT");
+        assertTrue(token != address(0));
+        assertEq(pairToken, address(amicaToken));
         assertEq(agentTokenAddr, address(agentToken));
-        assertEq(minAgentTokens, minAgentAmount);
+        assertEq(agentTokenThreshold, minAgentAmount);
         assertFalse(graduated);
     }
 
@@ -207,13 +204,13 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
         vm.stopPrank();
 
         // Check purchase was recorded
-        uint256 userPurchase = personaFactory.userPurchases(tokenId, user1);
-        assertGt(userPurchase, 0, "User should have purchased tokens");
+        uint256 userBalance = personaFactory.bondingBalances(tokenId, user1);
+        assertGt(userBalance, 0, "User should have purchased tokens");
 
-        (uint256 totalDeposited, uint256 tokensSold) =
-            personaFactory.purchases(tokenId);
-        assertEq(totalDeposited, buyAmount);
-        assertEq(tokensSold, userPurchase);
+        (uint256 totalPairingTokensCollected, uint256 tokensPurchased) =
+            personaFactory.bondingStates(tokenId);
+        assertEq(totalPairingTokensCollected, buyAmount);
+        assertEq(tokensPurchased, userBalance);
     }
 
     // ==================== Agent Token Tests ====================
@@ -238,7 +235,7 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
         agentToken.approve(address(personaFactory), depositAmount);
 
         vm.expectEmit(true, true, false, true);
-        emit AgentTokensDeposited(tokenId, user2, depositAmount);
+        emit AgentTokensDeposited(tokenId, user2, depositAmount, depositAmount);
 
         personaFactory.depositAgentTokens(tokenId, depositAmount);
         vm.stopPrank();
@@ -246,8 +243,7 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
         // Verify deposit
         assertEq(personaFactory.agentDeposits(tokenId, user2), depositAmount);
 
-        (,,,,,,, uint256 totalAgentDeposited,,,) =
-            personaFactory.personas(tokenId);
+        (,,,, uint256 totalAgentDeposited,,,) = personaFactory.personas(tokenId);
         assertEq(totalAgentDeposited, depositAmount);
     }
 
@@ -324,7 +320,9 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
         uint256 balanceBefore = agentToken.balanceOf(user2);
 
         vm.expectEmit(true, true, false, true);
-        emit AgentTokensWithdrawn(tokenId, user2, withdrawAmount);
+        emit AgentTokensWithdrawn(
+            tokenId, user2, withdrawAmount, depositAmount - withdrawAmount
+        );
 
         personaFactory.withdrawAgentTokens(tokenId, withdrawAmount);
         vm.stopPrank();
@@ -336,8 +334,7 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
         );
         assertEq(agentToken.balanceOf(user2), balanceBefore + withdrawAmount);
 
-        (,,,,,,, uint256 totalAgentDeposited,,,) =
-            personaFactory.personas(tokenId);
+        (,,,, uint256 totalAgentDeposited,,,) = personaFactory.personas(tokenId);
         assertEq(totalAgentDeposited, depositAmount - withdrawAmount);
     }
 
@@ -404,7 +401,7 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
         vm.stopPrank();
 
         // Verify graduation
-        (,,,,, bool graduated,,,,,) = personaFactory.personas(tokenId);
+        (,,, bool graduated,,,,) = personaFactory.personas(tokenId);
         assertTrue(graduated, "Should have graduated");
     }
 
@@ -438,7 +435,7 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
         );
 
         // Verify NOT graduated due to insufficient agent tokens
-        (,,,,, bool graduated,,,,,) = personaFactory.personas(tokenId);
+        (,,, bool graduated,,,,) = personaFactory.personas(tokenId);
         assertFalse(graduated, "Should not have graduated");
     }
 
@@ -482,7 +479,7 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
         );
 
         // Get persona token address
-        (,, address personaTokenAddr,,,,,,,,) = personaFactory.personas(tokenId);
+        (address personaTokenAddr,,,,,,,) = personaFactory.personas(tokenId);
 
         // Claim rewards for user2
         vm.prank(user2);
@@ -571,7 +568,7 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
         );
 
         // Get persona token address
-        (,, address personaTokenAddr,,,,,,,,) = personaFactory.personas(tokenId);
+        (address personaTokenAddr,,,,,,,) = personaFactory.personas(tokenId);
 
         // User2 claims (should get purchased + bonus + agent rewards)
         vm.prank(user2);
@@ -604,7 +601,7 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
         );
 
         // Get persona token address
-        (,, address personaTokenAddr,,,,,,,,) = personaFactory.personas(tokenId);
+        (address personaTokenAddr,,,,,,,) = personaFactory.personas(tokenId);
         PersonaToken pToken = PersonaToken(personaTokenAddr);
 
         // Initial state - all tokens in factory
@@ -658,7 +655,7 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
         );
 
         // Get persona token address
-        (,, address personaTokenAddr,,,,,,,,) = personaFactory.personas(tokenId);
+        (address personaTokenAddr,,,,,,,) = personaFactory.personas(tokenId);
 
         // Get balance before graduation
         uint256 amicaPersonaBalanceBefore =
@@ -734,8 +731,7 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
             );
         }
 
-        (,,,,,,, uint256 totalAgentDeposited,,,) =
-            personaFactory.personas(tokenId);
+        (,,,, uint256 totalAgentDeposited,,,) = personaFactory.personas(tokenId);
         assertEq(totalAgentDeposited, 30_000 ether);
     }
 
@@ -835,11 +831,11 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
         );
 
         // Verify graduated
-        (,,,,, bool graduated,,,,,) = personaFactory.personas(tokenId);
+        (,,, bool graduated,,,,) = personaFactory.personas(tokenId);
         assertTrue(graduated, "Should have graduated");
 
         // Get persona token
-        (,, address personaTokenAddr,,,,,,,,) = personaFactory.personas(tokenId);
+        (address personaTokenAddr,,,,,,,) = personaFactory.personas(tokenId);
 
         // Claim tokens (should include 15% bonus)
         vm.prank(user2);
