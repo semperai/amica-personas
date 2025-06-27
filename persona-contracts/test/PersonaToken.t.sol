@@ -7,9 +7,9 @@ import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 
 import {Fixtures} from "./shared/Fixtures.sol";
 import {
-    PersonaToken,
-    InvalidOwner,
-    InvalidSupply,
+    PersonaToken, InvalidOwner, InvalidSupply
+} from "../src/PersonaToken.sol";
+import {
     InvalidBurnAmount,
     NoTokensSelected,
     TokensMustBeSortedAndUnique,
@@ -17,7 +17,7 @@ import {
     InvalidTokenAddress,
     TransferFailed,
     NoTokensToClaim
-} from "../src/PersonaToken.sol";
+} from "../src/interfaces/IBurnAndClaim.sol";
 
 contract PersonaTokenTest is Fixtures {
     PersonaToken public testToken;
@@ -60,7 +60,6 @@ contract PersonaTokenTest is Fixtures {
         assertEq(newToken.symbol(), "NEW");
         assertEq(newToken.totalSupply(), 1000 ether);
         assertEq(newToken.balanceOf(user1), 1000 ether);
-        assertEq(newToken.owner(), user1);
     }
 
     function test_Initialize_RevertZeroOwner() public {
@@ -105,7 +104,7 @@ contract PersonaTokenTest is Fixtures {
 
         vm.prank(user1);
         vm.expectEmit(true, true, false, true);
-        emit PersonaToken.TokensBurnedAndClaimed(
+        emit TokensBurnedAndClaimed(
             user1, burnAmount, tokens, _toArray(expectedClaim)
         );
         testToken.burnAndClaim(burnAmount, tokens);
@@ -252,9 +251,15 @@ contract PersonaTokenTest is Fixtures {
             "Zero Supply", "ZERO", 100 ether, address(this)
         );
 
-        // Burn all supply
-        zeroSupplyToken.burn(100 ether);
+        // Send some tokens to the contract so we can burn all supply
+        mockToken1.transfer(address(zeroSupplyToken), 1000 ether);
 
+        // Burn all supply by claiming the tokens
+        address[] memory tokensForBurn = new address[](1);
+        tokensForBurn[0] = address(mockToken1);
+        zeroSupplyToken.burnAndClaim(100 ether, tokensForBurn);
+
+        // Now try to burn more (should fail with NoSupply)
         address[] memory tokens = new address[](1);
         tokens[0] = address(mockToken1);
 
@@ -355,8 +360,23 @@ contract PersonaTokenTest is Fixtures {
         zeroSupplyToken.initialize(
             "Zero Supply", "ZERO", 100 ether, address(this)
         );
-        zeroSupplyToken.burn(100 ether);
 
+        // Send tokens to the contract first
+        mockToken1.transfer(address(zeroSupplyToken), 1000 ether);
+        mockToken2.transfer(address(zeroSupplyToken), 500 ether);
+
+        // Burn all supply by claiming tokens
+        address[] memory tokensForBurn = new address[](2);
+        tokensForBurn[0] = address(mockToken1);
+        tokensForBurn[1] = address(mockToken2);
+        // Sort the tokens
+        if (uint160(address(mockToken1)) > uint160(address(mockToken2))) {
+            tokensForBurn[0] = address(mockToken2);
+            tokensForBurn[1] = address(mockToken1);
+        }
+        zeroSupplyToken.burnAndClaim(100 ether, tokensForBurn);
+
+        // Now send more tokens to test preview with zero supply
         mockToken1.transfer(address(zeroSupplyToken), 1000 ether);
 
         address[] memory tokens = new address[](1);
@@ -593,4 +613,12 @@ contract PersonaTokenTest is Fixtures {
         array[0] = value;
         return array;
     }
+
+    // ==================== Event definitions ====================
+    event TokensBurnedAndClaimed(
+        address indexed user,
+        uint256 amountBurned,
+        address[] tokens,
+        uint256[] amounts
+    );
 }

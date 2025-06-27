@@ -20,7 +20,6 @@ contract AmicaTokenTest is Fixtures {
     address public owner;
 
     // Events
-    event TokensWithdrawn(address indexed to, uint256 amount);
     event TokensBurnedAndClaimed(
         address indexed user,
         uint256 amountBurned,
@@ -50,6 +49,13 @@ contract AmicaTokenTest is Fixtures {
         usdc.mint(user1, 100_000 ether);
         weth.mint(user1, 1_000 ether);
         dai.mint(user1, 100_000 ether);
+
+        // Distribute some AMICA tokens to users for testing
+        vm.startPrank(owner);
+        amicaToken.transfer(user1, 10_000_000 ether); // 10M to user1
+        amicaToken.transfer(user2, 10_000_000 ether); // 10M to user2
+        amicaToken.transfer(user3, 10_000_000 ether); // 10M to user3
+        vm.stopPrank();
     }
 
     // Deployment Tests
@@ -64,11 +70,6 @@ contract AmicaTokenTest is Fixtures {
 
     function test_Deployment_Owner() public {
         assertEq(amicaToken.owner(), owner);
-    }
-
-    function test_Deployment_InitialCirculatingSupply() public {
-        uint256 circulatingSupply = amicaToken.circulatingSupply();
-        assertEq(circulatingSupply, TOTAL_SUPPLY);
     }
 
     // Ownership Tests
@@ -94,82 +95,6 @@ contract AmicaTokenTest is Fixtures {
         assertEq(amicaToken.owner(), address(0));
     }
 
-    // Withdraw Tests
-    function test_Withdraw_Success() public {
-        // Transfer tokens to contract
-        vm.prank(owner);
-        amicaToken.transfer(address(amicaToken), 10_000 ether);
-
-        uint256 withdrawAmount = 5_000 ether;
-        uint256 initialBalance = amicaToken.balanceOf(user1);
-
-        vm.expectEmit(true, false, false, true);
-        emit TokensWithdrawn(user1, withdrawAmount);
-
-        vm.prank(owner);
-        amicaToken.withdraw(user1, withdrawAmount);
-
-        assertEq(amicaToken.balanceOf(user1), initialBalance + withdrawAmount);
-    }
-
-    function test_Withdraw_UpdatesCirculatingSupply() public {
-        vm.prank(owner);
-        amicaToken.transfer(address(amicaToken), 10_000 ether);
-
-        uint256 initialCirculating = amicaToken.circulatingSupply();
-        uint256 withdrawAmount = 5_000 ether;
-
-        vm.prank(owner);
-        amicaToken.withdraw(user1, withdrawAmount);
-
-        assertEq(
-            amicaToken.circulatingSupply(), initialCirculating + withdrawAmount
-        );
-    }
-
-    function test_Withdraw_RevertWhen_ExceedsBalance() public {
-        uint256 contractBalance = amicaToken.balanceOf(address(amicaToken));
-        uint256 excessAmount = contractBalance + 1 ether;
-
-        vm.prank(owner);
-        vm.expectRevert(abi.encodeWithSignature("InsufficientBalance()"));
-        amicaToken.withdraw(user1, excessAmount);
-    }
-
-    function test_Withdraw_RevertWhen_ZeroAddress() public {
-        vm.prank(owner);
-        vm.expectRevert(abi.encodeWithSignature("InvalidRecipient()"));
-        amicaToken.withdraw(address(0), 1_000 ether);
-    }
-
-    function test_Withdraw_RevertWhen_NonOwner() public {
-        vm.prank(user1);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                OwnableUpgradeable.OwnableUnauthorizedAccount.selector, user1
-            )
-        );
-        amicaToken.withdraw(user2, 1_000 ether);
-    }
-
-    function test_Withdraw_MultipleWithdrawals() public {
-        // Transfer tokens to contract
-        vm.prank(owner);
-        amicaToken.transfer(address(amicaToken), 10_000 ether);
-
-        uint256 initialUser1Balance = amicaToken.balanceOf(user1);
-        uint256 initialUser2Balance = amicaToken.balanceOf(user2);
-
-        vm.startPrank(owner);
-        amicaToken.withdraw(user1, 1_000 ether);
-        amicaToken.withdraw(user2, 2_000 ether);
-        amicaToken.withdraw(user1, 500 ether);
-        vm.stopPrank();
-
-        assertEq(amicaToken.balanceOf(user1), initialUser1Balance + 1_500 ether);
-        assertEq(amicaToken.balanceOf(user2), initialUser2Balance + 2_000 ether);
-    }
-
     // Burn and Claim Tests
     function test_BurnAndClaim_Success() public {
         // Setup by sending tokens directly to contract
@@ -177,36 +102,41 @@ contract AmicaTokenTest is Fixtures {
 
         uint256 userBalance = amicaToken.balanceOf(user1);
         uint256 burnAmount = 1_000 ether;
-        uint256 circulatingSupply = amicaToken.circulatingSupply();
+        uint256 totalSupply = amicaToken.totalSupply();
 
         // Calculate expected amounts
-        uint256 expectedUsdc = (100_000 ether * burnAmount) / circulatingSupply;
-        uint256 expectedWeth = (1_000 ether * burnAmount) / circulatingSupply;
-        uint256 expectedDai = (500_000 ether * burnAmount) / circulatingSupply;
+        uint256 expectedUsdc = (100_000 ether * burnAmount) / totalSupply;
+        uint256 expectedWeth = (1_000 ether * burnAmount) / totalSupply;
+        uint256 expectedDai = (500_000 ether * burnAmount) / totalSupply;
 
-        address[] memory tokens = new address[](3);
-        tokens[0] = address(usdc);
-        tokens[1] = address(weth);
-        tokens[2] = address(dai);
+        // Create sorted token array
+        address[] memory tokens =
+            _sortTokens(address(usdc), address(weth), address(dai));
 
-        vm.expectEmit(true, false, false, false);
-        emit TokensBurnedAndClaimed(
-            user1, burnAmount, new address[](0), new uint256[](0)
-        );
+        // Create expected amounts array in the same order as sorted tokens
+        uint256[] memory expectedAmounts = new uint256[](3);
+        for (uint256 i = 0; i < 3; i++) {
+            if (tokens[i] == address(usdc)) {
+                expectedAmounts[i] = expectedUsdc;
+            } else if (tokens[i] == address(weth)) {
+                expectedAmounts[i] = expectedWeth;
+            } else if (tokens[i] == address(dai)) {
+                expectedAmounts[i] = expectedDai;
+            }
+        }
+
+        vm.expectEmit(true, true, true, true);
+        emit TokensBurnedAndClaimed(user1, burnAmount, tokens, expectedAmounts);
 
         vm.prank(user1);
         amicaToken.burnAndClaim(burnAmount, tokens);
 
         // Check token balances
         assertApproxEqAbs(
-            usdc.balanceOf(user1), 100_000 ether + expectedUsdc, 0.01 ether
+            usdc.balanceOf(user1), 100_000 ether + expectedUsdc, 1
         );
-        assertApproxEqAbs(
-            weth.balanceOf(user1), 1_000 ether + expectedWeth, 0.001 ether
-        );
-        assertApproxEqAbs(
-            dai.balanceOf(user1), 100_000 ether + expectedDai, 0.01 ether
-        );
+        assertApproxEqAbs(weth.balanceOf(user1), 1_000 ether + expectedWeth, 1);
+        assertApproxEqAbs(dai.balanceOf(user1), 100_000 ether + expectedDai, 1);
 
         // Check AMICA balance
         assertEq(amicaToken.balanceOf(user1), userBalance - burnAmount);
@@ -220,10 +150,8 @@ contract AmicaTokenTest is Fixtures {
         uint256 initialWethBalance = weth.balanceOf(user1);
         uint256 initialDaiBalance = dai.balanceOf(user1);
 
-        // Only claim USDC and WETH
-        address[] memory tokens = new address[](2);
-        tokens[0] = address(usdc);
-        tokens[1] = address(weth);
+        // Only claim USDC and WETH - must be sorted
+        address[] memory tokens = _sortTokens(address(usdc), address(weth));
 
         vm.prank(user1);
         amicaToken.burnAndClaim(burnAmount, tokens);
@@ -239,7 +167,7 @@ contract AmicaTokenTest is Fixtures {
     function test_BurnAndClaim_UpdatesCirculatingSupply() public {
         _setupTokenBalances();
 
-        uint256 initialCirculating = amicaToken.circulatingSupply();
+        uint256 initialSupply = amicaToken.totalSupply();
         uint256 burnAmount = 1_000 ether;
 
         address[] memory tokens = new address[](1);
@@ -248,9 +176,7 @@ contract AmicaTokenTest is Fixtures {
         vm.prank(user1);
         amicaToken.burnAndClaim(burnAmount, tokens);
 
-        assertEq(
-            amicaToken.circulatingSupply(), initialCirculating - burnAmount
-        );
+        assertEq(amicaToken.totalSupply(), initialSupply - burnAmount);
     }
 
     function test_BurnAndClaim_RevertWhen_NoTokensSelected() public {
@@ -297,15 +223,24 @@ contract AmicaTokenTest is Fixtures {
         amicaToken.burnAndClaim(1_000 ether, tokens);
     }
 
-    function test_BurnAndClaim_RevertWhen_ClaimingAmica() public {
+    function test_BurnAndClaim_AllowsClaimingAmica() public {
         _setupTokenBalances();
+
+        // Send some AMICA to the contract itself
+        vm.prank(owner);
+        amicaToken.transfer(address(amicaToken), 1_000_000 ether);
+
+        uint256 burnAmount = 1_000 ether;
+        uint256 initialAmicaBalance = amicaToken.balanceOf(user1);
 
         address[] memory tokens = new address[](1);
         tokens[0] = address(amicaToken);
 
         vm.prank(user1);
-        vm.expectRevert(abi.encodeWithSignature("CannotClaimAmica()"));
-        amicaToken.burnAndClaim(1_000 ether, tokens);
+        amicaToken.burnAndClaim(burnAmount, tokens);
+
+        // User should have received some AMICA back (minus what was burned)
+        assertGt(amicaToken.balanceOf(user1), initialAmicaBalance - burnAmount);
     }
 
     // Vulnerability Test - Duplicate Token Addresses
@@ -332,10 +267,16 @@ contract AmicaTokenTest is Fixtures {
 
         uint256 burnAmount = 1_000 ether;
 
-        // Try unsorted tokens
+        // Create intentionally unsorted tokens
         address[] memory unsortedTokens = new address[](2);
-        unsortedTokens[0] = address(weth);
-        unsortedTokens[1] = address(usdc);
+        // Put them in descending order (should be ascending)
+        if (uint160(address(usdc)) < uint160(address(weth))) {
+            unsortedTokens[0] = address(weth);
+            unsortedTokens[1] = address(usdc);
+        } else {
+            unsortedTokens[0] = address(usdc);
+            unsortedTokens[1] = address(weth);
+        }
 
         vm.prank(user1);
         vm.expectRevert(
@@ -350,15 +291,7 @@ contract AmicaTokenTest is Fixtures {
         uint256 burnAmount = 1_000 ether;
 
         // Properly sorted, unique tokens should work
-        address[] memory validTokens = new address[](2);
-        // Sort by address value (dai < usdc in our case)
-        if (uint160(address(dai)) < uint160(address(usdc))) {
-            validTokens[0] = address(dai);
-            validTokens[1] = address(usdc);
-        } else {
-            validTokens[0] = address(usdc);
-            validTokens[1] = address(dai);
-        }
+        address[] memory validTokens = _sortTokens(address(dai), address(usdc));
 
         vm.prank(user1);
         amicaToken.burnAndClaim(burnAmount, validTokens);
@@ -368,46 +301,49 @@ contract AmicaTokenTest is Fixtures {
         assertGt(dai.balanceOf(user1), 100_000 ether);
     }
 
-    function test_BurnAndClaim_LowCirculatingSupply() public {
+    function test_BurnAndClaim_HighBurnPercentage() public {
         _setupTokenBalances();
 
-        // Get actual balances
+        // First, let's check the actual owner balance
         uint256 ownerBalance = amicaToken.balanceOf(owner);
-        uint256 user1Balance = amicaToken.balanceOf(user1);
-        uint256 user2Balance = amicaToken.balanceOf(user2);
-        uint256 user3Balance = amicaToken.balanceOf(user3);
-        uint256 testContractBalance = amicaToken.balanceOf(address(this));
 
-        // Transfer most tokens back to contract to reduce circulating supply
-        vm.prank(owner);
-        amicaToken.transfer(address(amicaToken), ownerBalance - 1_000_000 ether);
+        // The owner should have received the total supply minus what was distributed
+        // Let's ensure owner has enough tokens by transferring more if needed
+        if (ownerBalance < 900_000_000 ether) {
+            // Transfer tokens from users back to owner
+            vm.prank(user1);
+            amicaToken.transfer(owner, amicaToken.balanceOf(user1));
+            vm.prank(user2);
+            amicaToken.transfer(owner, amicaToken.balanceOf(user2));
+            vm.prank(user3);
+            amicaToken.transfer(owner, amicaToken.balanceOf(user3));
 
-        vm.prank(user2);
-        amicaToken.transfer(address(amicaToken), user2Balance);
+            // Update owner balance
+            ownerBalance = amicaToken.balanceOf(owner);
+        }
 
-        vm.prank(user3);
-        amicaToken.transfer(address(amicaToken), user3Balance);
+        // Now burn most of owner's tokens
+        uint256 burnAmount = ownerBalance - 1_000_000 ether; // Keep 1M for testing
 
-        amicaToken.transfer(address(amicaToken), testContractBalance);
-
-        uint256 lowCirculating = amicaToken.circulatingSupply();
-        assertLt(lowCirculating, 12_000_000 ether);
-        assertGt(lowCirculating, 10_000_000 ether);
-
-        // User1 burns half their tokens
-        uint256 burnAmount = user1Balance / 2;
         address[] memory tokens = new address[](1);
         tokens[0] = address(usdc);
 
-        vm.prank(user1);
+        uint256 totalSupply = amicaToken.totalSupply();
+        uint256 usdcInContract = usdc.balanceOf(address(amicaToken));
+        uint256 expectedUsdc = (usdcInContract * burnAmount) / totalSupply;
+        uint256 initialOwnerUsdc = usdc.balanceOf(owner);
+
+        vm.prank(owner);
         amicaToken.burnAndClaim(burnAmount, tokens);
 
-        // Should receive proportional share based on the low circulating supply
-        uint256 expectedUsdc = (100_000 ether * burnAmount) / lowCirculating;
-
+        // Owner should receive the expected USDC amount
         assertApproxEqAbs(
-            usdc.balanceOf(user1), 100_000 ether + expectedUsdc, 1 ether
+            usdc.balanceOf(owner), initialOwnerUsdc + expectedUsdc, 1
         );
+
+        // Total supply should be significantly reduced
+        // After burning most of the owner's tokens, supply should be much less than 100M
+        assertLt(amicaToken.totalSupply(), 100_000_000 ether);
     }
 
     function test_BurnAndClaim_NoTokenBalance() public {
@@ -426,24 +362,29 @@ contract AmicaTokenTest is Fixtures {
         _setupTokenBalances();
 
         uint256 burnAmount = 1_000 ether;
-        uint256 circulatingSupply = amicaToken.circulatingSupply();
+        uint256 totalSupply = amicaToken.totalSupply();
 
-        address[] memory tokens = new address[](3);
-        tokens[0] = address(usdc);
-        tokens[1] = address(weth);
-        tokens[2] = address(dai);
+        address[] memory tokens =
+            _sortTokens(address(usdc), address(weth), address(dai));
 
         uint256[] memory amounts =
             amicaToken.previewBurnAndClaim(burnAmount, tokens);
 
         // Calculate expected amounts
-        uint256 expectedUsdc = (100_000 ether * burnAmount) / circulatingSupply;
-        uint256 expectedWeth = (1_000 ether * burnAmount) / circulatingSupply;
-        uint256 expectedDai = (500_000 ether * burnAmount) / circulatingSupply;
+        uint256 expectedUsdc = (100_000 ether * burnAmount) / totalSupply;
+        uint256 expectedWeth = (1_000 ether * burnAmount) / totalSupply;
+        uint256 expectedDai = (500_000 ether * burnAmount) / totalSupply;
 
-        assertEq(amounts[0], expectedUsdc);
-        assertEq(amounts[1], expectedWeth);
-        assertEq(amounts[2], expectedDai);
+        // Check amounts match expected based on sorted order
+        for (uint256 i = 0; i < 3; i++) {
+            if (tokens[i] == address(usdc)) {
+                assertEq(amounts[i], expectedUsdc);
+            } else if (tokens[i] == address(weth)) {
+                assertEq(amounts[i], expectedWeth);
+            } else if (tokens[i] == address(dai)) {
+                assertEq(amounts[i], expectedDai);
+            }
+        }
     }
 
     function test_PreviewBurnAndClaim_ZeroAmount() public {
@@ -456,26 +397,75 @@ contract AmicaTokenTest is Fixtures {
         assertEq(amounts[0], 0);
     }
 
-    function test_PreviewBurnAndClaim_ZeroCirculatingSupply() public {
-        // Transfer all tokens to contract
-        vm.prank(owner);
-        amicaToken.transfer(address(amicaToken), amicaToken.balanceOf(owner));
+    function test_PreviewBurnAndClaim_ZeroSupply() public {
+        // Setup tokens in contract first
+        _setupTokenBalances();
 
-        // Other users also transfer
-        vm.prank(user1);
-        amicaToken.transfer(address(amicaToken), amicaToken.balanceOf(user1));
-        vm.prank(user2);
-        amicaToken.transfer(address(amicaToken), amicaToken.balanceOf(user2));
-        vm.prank(user3);
-        amicaToken.transfer(address(amicaToken), amicaToken.balanceOf(user3));
+        // We need to burn all the supply
+        // First, let's collect all tokens to one account
 
-        // Transfer test contract balance
-        amicaToken.transfer(
-            address(amicaToken), amicaToken.balanceOf(address(this))
-        );
+        // Get initial balances
+        uint256 ownerBal = amicaToken.balanceOf(owner);
+        uint256 user1Bal = amicaToken.balanceOf(user1);
+        uint256 user2Bal = amicaToken.balanceOf(user2);
+        uint256 user3Bal = amicaToken.balanceOf(user3);
 
+        // Have users send their tokens to owner
+        if (user1Bal > 0) {
+            vm.prank(user1);
+            amicaToken.transfer(owner, user1Bal);
+        }
+        if (user2Bal > 0) {
+            vm.prank(user2);
+            amicaToken.transfer(owner, user2Bal);
+        }
+        if (user3Bal > 0) {
+            vm.prank(user3);
+            amicaToken.transfer(owner, user3Bal);
+        }
+
+        // Check if test contract has any balance
+        uint256 testContractBal = amicaToken.balanceOf(address(this));
+        if (testContractBal > 0) {
+            amicaToken.transfer(owner, testContractBal);
+        }
+
+        // Now burn ALL tokens until supply is 0
+        address[] memory burnTokens = new address[](1);
+        burnTokens[0] = address(usdc);
+
+        // Keep burning until total supply is 0
+        while (amicaToken.totalSupply() > 0) {
+            uint256 ownerBalance = amicaToken.balanceOf(owner);
+            if (ownerBalance > 0) {
+                vm.prank(owner);
+                amicaToken.burnAndClaim(ownerBalance, burnTokens);
+            } else {
+                // Find who has tokens and transfer to owner
+                for (uint256 i = 0; i < 4; i++) {
+                    address user = i == 0
+                        ? user1
+                        : (i == 1 ? user2 : (i == 2 ? user3 : address(this)));
+                    uint256 bal = amicaToken.balanceOf(user);
+                    if (bal > 0) {
+                        if (user == address(this)) {
+                            amicaToken.transfer(owner, bal);
+                        } else {
+                            vm.prank(user);
+                            amicaToken.transfer(owner, bal);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Verify supply is now 0
+        assertEq(amicaToken.totalSupply(), 0);
+
+        // Now preview should return 0 for any amount when supply is 0
         address[] memory tokens = new address[](1);
-        tokens[0] = address(usdc);
+        tokens[0] = address(weth);
 
         uint256[] memory amounts =
             amicaToken.previewBurnAndClaim(1_000 ether, tokens);
@@ -483,19 +473,21 @@ contract AmicaTokenTest is Fixtures {
         assertEq(amounts[0], 0);
     }
 
-    function test_PreviewBurnAndClaim_SkipsAmicaToken() public {
+    function test_PreviewBurnAndClaim_IncludesAmicaToken() public {
         _setupTokenBalances();
 
-        address[] memory tokens = new address[](2);
-        tokens[0] = address(amicaToken);
-        tokens[1] = address(usdc);
+        // Send AMICA to itself
+        vm.prank(owner);
+        amicaToken.transfer(address(amicaToken), 100_000 ether);
+
+        address[] memory tokens =
+            _sortTokens(address(amicaToken), address(usdc));
 
         uint256[] memory amounts =
             amicaToken.previewBurnAndClaim(1_000 ether, tokens);
 
-        // First should be 0 (AMICA skipped)
-        assertEq(amounts[0], 0);
-        // Second should have value
+        // Both should have values
+        assertGt(amounts[0], 0);
         assertGt(amounts[1], 0);
     }
 
@@ -509,24 +501,47 @@ contract AmicaTokenTest is Fixtures {
         vm.stopPrank();
     }
 
-    // Fuzz Tests
-    function testFuzz_Withdraw_AnyValidAmount(uint256 amount) public {
-        // Transfer some tokens to contract first
-        uint256 contractFunds = 100_000 ether;
-        vm.prank(owner);
-        amicaToken.transfer(address(amicaToken), contractFunds);
-
-        // Bound the amount to valid range
-        amount = bound(amount, 1, contractFunds);
-
-        uint256 initialBalance = amicaToken.balanceOf(user1);
-
-        vm.prank(owner);
-        amicaToken.withdraw(user1, amount);
-
-        assertEq(amicaToken.balanceOf(user1), initialBalance + amount);
+    function _sortTokens(address a, address b)
+        internal
+        pure
+        returns (address[] memory)
+    {
+        address[] memory sorted = new address[](2);
+        if (uint160(a) < uint160(b)) {
+            sorted[0] = a;
+            sorted[1] = b;
+        } else {
+            sorted[0] = b;
+            sorted[1] = a;
+        }
+        return sorted;
     }
 
+    function _sortTokens(address a, address b, address c)
+        internal
+        pure
+        returns (address[] memory)
+    {
+        address[] memory tokens = new address[](3);
+        tokens[0] = a;
+        tokens[1] = b;
+        tokens[2] = c;
+
+        // Simple bubble sort
+        for (uint256 i = 0; i < 3; i++) {
+            for (uint256 j = 0; j < 2 - i; j++) {
+                if (uint160(tokens[j]) > uint160(tokens[j + 1])) {
+                    address temp = tokens[j];
+                    tokens[j] = tokens[j + 1];
+                    tokens[j + 1] = temp;
+                }
+            }
+        }
+
+        return tokens;
+    }
+
+    // Fuzz Tests
     function testFuzz_BurnAndClaim_ProportionalRewards(uint256 burnAmount)
         public
     {
@@ -535,14 +550,14 @@ contract AmicaTokenTest is Fixtures {
         uint256 userBalance = amicaToken.balanceOf(user1);
         burnAmount = bound(burnAmount, 1, userBalance);
 
-        uint256 circulatingSupply = amicaToken.circulatingSupply();
+        uint256 totalSupply = amicaToken.totalSupply();
         uint256 usdcBalance = usdc.balanceOf(address(amicaToken));
 
         address[] memory tokens = new address[](1);
         tokens[0] = address(usdc);
 
         // Calculate expected amount
-        uint256 expectedUsdc = (usdcBalance * burnAmount) / circulatingSupply;
+        uint256 expectedUsdc = (usdcBalance * burnAmount) / totalSupply;
 
         // If the expected amount rounds to 0, the contract will revert
         if (expectedUsdc == 0) {
@@ -555,15 +570,7 @@ contract AmicaTokenTest is Fixtures {
             vm.prank(user1);
             amicaToken.burnAndClaim(burnAmount, tokens);
 
-            // Use a reasonable tolerance - 0.1% of expected amount
-            uint256 tolerance = expectedUsdc / 1000;
-            if (tolerance == 0) tolerance = 1;
-
-            assertApproxEqAbs(
-                usdc.balanceOf(user1),
-                initialUsdcBalance + expectedUsdc,
-                tolerance
-            );
+            assertEq(usdc.balanceOf(user1), initialUsdcBalance + expectedUsdc);
         }
     }
 
@@ -589,8 +596,8 @@ contract AmicaTokenTest is Fixtures {
 
             uint256 actualReceived = usdc.balanceOf(user1) - initialBalance;
 
-            // Preview should match actual (allowing for rounding)
-            assertApproxEqAbs(actualReceived, previewAmounts[0], 1);
+            // Preview should match actual exactly
+            assertEq(actualReceived, previewAmounts[0]);
         }
     }
 }

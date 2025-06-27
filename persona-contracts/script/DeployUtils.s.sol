@@ -277,7 +277,6 @@ contract DeployUtils is DeployConfig {
 
         console2.log("Key configurations:");
         console2.log("  AMICA total supply:", amica.totalSupply() / 1e18);
-        console2.log("  AMICA circulating:", amica.circulatingSupply() / 1e18);
         console2.log("  Factory owner:", factory.owner());
         console2.log("  Factory paused:", factory.paused());
         console2.log("  Bonding curve:", address(factory.bondingCurve()));

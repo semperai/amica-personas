@@ -612,7 +612,7 @@ contract PersonaTokenFactory is
             // - hyphen: 0x2D (-)
             if (
                 // a-z
-                    // 0-9
+                // 0-9
                 !(
                     (char >= 0x61 && char <= 0x7A)
                         || (char >= 0x30 && char <= 0x39) || (char == 0x2D)
