@@ -433,19 +433,6 @@ contract PersonaTokenFactory is
     }
 
     /**
-     * @notice Calculates the graduation threshold based on bonding amount
-     * @param bondingAmount Total tokens available in bonding curve
-     * @return threshold Amount of tokens that need to be sold for graduation
-     */
-    function _getGraduationThreshold(uint256 bondingAmount)
-        private
-        pure
-        returns (uint256)
-    {
-        return (bondingAmount * GRADUATION_THRESHOLD_PERCENT) / 100;
-    }
-
-    /**
      * @notice Pauses all contract operations
      * @dev Only callable by owner
      */
@@ -780,7 +767,7 @@ contract PersonaTokenFactory is
         emit TokensPurchased(tokenId, to, amountIn, amountOut);
 
         // Check graduation requirements
-        uint256 graduationThreshold = _getGraduationThreshold(amounts.bonding);
+        uint256 graduationThreshold = (amounts.bonding * GRADUATION_THRESHOLD_PERCENT) / 100;
         bool tokenThresholdMet = purchase.tokensSold >= graduationThreshold;
 
         // Check agent token requirement if applicable
@@ -1037,6 +1024,24 @@ contract PersonaTokenFactory is
         amount1 = _getBalance(poolKey.currency1, to) - balance1before;
 
         emit FeesCollected(nftTokenId, persona.poolId, amount0, amount1);
+    }
+
+    /**
+     * @notice Helper to get token balance
+     * @param currency The currency to check
+     * @param account The account to check
+     * @return balance The balance
+     */
+    function _getBalance(Currency currency, address account)
+        private
+        view
+        returns (uint256)
+    {
+        if (currency.isAddressZero()) {
+            return account.balance;
+        } else {
+            return IERC20(Currency.unwrap(currency)).balanceOf(account);
+        }
     }
 
     /**
@@ -1382,23 +1387,5 @@ contract PersonaTokenFactory is
             tickSpacing: TICK_SPACING,
             hooks: IHooks(dynamicFeeHook)
         });
-    }
-
-    /**
-     * @notice Helper to get token balance
-     * @param currency The currency to check
-     * @param account The account to check
-     * @return balance The balance
-     */
-    function _getBalance(Currency currency, address account)
-        private
-        view
-        returns (uint256)
-    {
-        if (currency.isAddressZero()) {
-            return account.balance;
-        } else {
-            return IERC20(Currency.unwrap(currency)).balanceOf(account);
-        }
     }
 }
