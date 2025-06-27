@@ -18,7 +18,7 @@ contract PersonaTokenFactoryAdminTest is Fixtures {
         MockERC20 testToken = new MockERC20("Test Token", "TEST", 18);
 
         uint256 customMintCost = 500 ether;
-        uint256 customThreshold = 500_000 ether;
+        uint256 customMultiplier = 333 ether; // 333x multiplier
 
         // Configure the pairing token as owner
         vm.prank(factoryOwner);
@@ -28,16 +28,16 @@ contract PersonaTokenFactoryAdminTest is Fixtures {
         personaFactory.configurePairingToken(
             address(testToken),
             customMintCost,
-            customThreshold,
+            customMultiplier,
             true // enabled
         );
 
         // Verify configuration
-        (bool enabled, uint256 mintCost, uint256 graduationThreshold) =
+        (bool enabled, uint256 mintCost, uint256 liquidityMultiplier) =
             personaFactory.pairingConfigs(address(testToken));
         assertTrue(enabled);
         assertEq(mintCost, customMintCost);
-        assertEq(graduationThreshold, customThreshold);
+        assertEq(liquidityMultiplier, customMultiplier);
     }
 
     function test_DisablePairingToken_AsOwner() public {
@@ -53,7 +53,7 @@ contract PersonaTokenFactoryAdminTest is Fixtures {
         personaFactory.configurePairingToken(
             address(amicaToken),
             0, // mint cost doesn't matter when disabling
-            0, // threshold doesn't matter when disabling
+            0, // multiplier doesn't matter when disabling
             false // disabled
         );
 
@@ -70,9 +70,7 @@ contract PersonaTokenFactoryAdminTest is Fixtures {
             )
         );
 
-        personaFactory.configurePairingToken(
-            user1, 100 ether, 100_000 ether, true
-        );
+        personaFactory.configurePairingToken(user1, 100 ether, 333 ether, true);
     }
 
     function test_ConfigurePairingToken_RevertZeroAddress() public {
@@ -80,7 +78,7 @@ contract PersonaTokenFactoryAdminTest is Fixtures {
         vm.expectRevert(abi.encodeWithSignature("Invalid(uint8)", 0)); // Invalid token = 0
 
         personaFactory.configurePairingToken(
-            address(0), 100 ether, 100_000 ether, true
+            address(0), 100 ether, 333 ether, true
         );
     }
 
@@ -148,11 +146,13 @@ contract PersonaTokenFactoryAdminTest is Fixtures {
 
         // Now should work
         vm.prank(user1);
-        // We only check the first two indexed parameters (tokenId and domain)
-        // and skip the token address since we don't know it beforehand
+        // We only check the first three indexed parameters (tokenId, domain, and token)
+        // We can't predict the token address, so we don't check it
         vm.expectEmit(true, true, false, false);
         emit PersonaTokenFactory.PersonaCreated(
-            1, bytes32("pausetest2"), address(0)
+            1,
+            bytes32("pausetest2"),
+            address(0) // placeholder - actual address will be different
         );
 
         uint256 tokenId = personaFactory.createPersona(
@@ -176,7 +176,7 @@ contract PersonaTokenFactoryAdminTest is Fixtures {
         // Configure and enable the token
         vm.prank(factoryOwner);
         personaFactory.configurePairingToken(
-            address(newToken), 2000 ether, 2_000_000 ether, true
+            address(newToken), 2000 ether, 333 ether, true
         );
 
         // Verify user can create persona with the new token
@@ -199,7 +199,7 @@ contract PersonaTokenFactoryAdminTest is Fixtures {
         // Now disable the token
         vm.prank(factoryOwner);
         personaFactory.configurePairingToken(
-            address(newToken), 2000 ether, 2_000_000 ether, false
+            address(newToken), 2000 ether, 333 ether, false
         );
 
         // Verify user cannot create persona with disabled token
@@ -229,36 +229,36 @@ contract PersonaTokenFactoryAdminTest is Fixtures {
         vm.startPrank(factoryOwner);
 
         personaFactory.configurePairingToken(
-            address(token1), 100 ether, 100_000 ether, true
+            address(token1), 100 ether, 100 ether, true
         );
 
         personaFactory.configurePairingToken(
-            address(token2), 500 ether, 500_000 ether, true
+            address(token2), 500 ether, 200 ether, true
         );
 
         personaFactory.configurePairingToken(
-            address(token3), 1000 ether, 1_000_000 ether, true
+            address(token3), 1000 ether, 333 ether, true
         );
 
         vm.stopPrank();
 
         // Verify all configurations
-        (bool enabled1, uint256 mintCost1, uint256 threshold1) =
+        (bool enabled1, uint256 mintCost1, uint256 multiplier1) =
             personaFactory.pairingConfigs(address(token1));
         assertTrue(enabled1);
         assertEq(mintCost1, 100 ether);
-        assertEq(threshold1, 100_000 ether);
+        assertEq(multiplier1, 100 ether);
 
-        (bool enabled2, uint256 mintCost2, uint256 threshold2) =
+        (bool enabled2, uint256 mintCost2, uint256 multiplier2) =
             personaFactory.pairingConfigs(address(token2));
         assertTrue(enabled2);
         assertEq(mintCost2, 500 ether);
-        assertEq(threshold2, 500_000 ether);
+        assertEq(multiplier2, 200 ether);
 
-        (bool enabled3, uint256 mintCost3, uint256 threshold3) =
+        (bool enabled3, uint256 mintCost3, uint256 multiplier3) =
             personaFactory.pairingConfigs(address(token3));
         assertTrue(enabled3);
         assertEq(mintCost3, 1000 ether);
-        assertEq(threshold3, 1_000_000 ether);
+        assertEq(multiplier3, 333 ether);
     }
 }

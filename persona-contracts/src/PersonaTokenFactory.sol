@@ -289,20 +289,28 @@ contract PersonaTokenFactory is
      * @notice Emitted when agent tokens are deposited
      * @param tokenId Persona token ID
      * @param depositor Address depositing tokens
-     * @param amount Amount deposited
+     * @param amount Amount deposited in this transaction
+     * @param newTotal New total agent tokens deposited
      */
     event AgentTokensDeposited(
-        uint256 indexed tokenId, address indexed depositor, uint256 amount
+        uint256 indexed tokenId,
+        address indexed depositor,
+        uint256 amount,
+        uint256 newTotal
     );
 
     /**
      * @notice Emitted when agent tokens are withdrawn
      * @param tokenId Persona token ID
      * @param depositor Address withdrawing tokens
-     * @param amount Amount withdrawn
+     * @param amount Amount withdrawn in this transaction
+     * @param newTotal New total agent tokens deposited after withdrawal
      */
     event AgentTokensWithdrawn(
-        uint256 indexed tokenId, address indexed depositor, uint256 amount
+        uint256 indexed tokenId,
+        address indexed depositor,
+        uint256 amount,
+        uint256 newTotal
     );
 
     /**
@@ -355,6 +363,36 @@ contract PersonaTokenFactory is
         PoolId poolId,
         uint256 amount0,
         uint256 amount1
+    );
+
+    /**
+     * @notice Emitted when a persona graduates to Uniswap V4
+     * @param tokenId Persona token ID
+     * @param mainPoolId Main pool ID (persona/pairToken)
+     * @param agentPoolId Agent pool ID (0 if no agent pool)
+     * @param totalDeposited Total pairing tokens collected
+     * @param tokensSold Total persona tokens sold
+     */
+    event Graduated(
+        uint256 indexed tokenId,
+        PoolId indexed mainPoolId,
+        PoolId agentPoolId,
+        uint256 totalDeposited,
+        uint256 tokensSold
+    );
+
+    /**
+     * @notice Emitted when tokens are distributed during graduation
+     * @param tokenId Persona token ID
+     * @param toAmica Amount sent to AMICA protocol
+     * @param toLiquidity Amount reserved for liquidity
+     * @param toAgentRewards Amount reserved for agent rewards (0 if no agent)
+     */
+    event TokensDistributed(
+        uint256 indexed tokenId,
+        uint256 toAmica,
+        uint256 toLiquidity,
+        uint256 toAgentRewards
     );
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -941,7 +979,9 @@ contract PersonaTokenFactory is
         agentDeposits[tokenId][msg.sender] += amount;
         persona.totalAgentDeposited += amount;
 
-        emit AgentTokensDeposited(tokenId, msg.sender, amount);
+        emit AgentTokensDeposited(
+            tokenId, msg.sender, amount, persona.totalAgentDeposited
+        );
     }
 
     /**
@@ -967,7 +1007,9 @@ contract PersonaTokenFactory is
             revert Failed(0);
         }
 
-        emit AgentTokensWithdrawn(tokenId, msg.sender, amount);
+        emit AgentTokensWithdrawn(
+            tokenId, msg.sender, amount, persona.totalAgentDeposited
+        );
     }
 
     /**
@@ -1158,6 +1200,15 @@ contract PersonaTokenFactory is
         }
 
         persona.pairCreated = true;
+
+        // Emit graduation event
+        emit Graduated(
+            tokenId,
+            persona.poolId,
+            persona.agentPoolId,
+            purchases[tokenId].totalDeposited,
+            purchases[tokenId].tokensSold
+        );
     }
 
     /**
@@ -1179,6 +1230,11 @@ contract PersonaTokenFactory is
                 address(amicaToken), persona.totalAgentDeposited
             );
         }
+
+        // Emit token distribution event
+        emit TokensDistributed(
+            tokenId, amounts.amica, amounts.liquidity, amounts.agentRewards
+        );
     }
 
     /**
