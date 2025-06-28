@@ -84,7 +84,7 @@ contract GraduationDebugTest is Fixtures {
 
             try personaFactory.swapExactTokensForTokens(
                 data.tokenId,
-                100_000 ether, // 100k AMICA
+                9_000_000 ether, // 100k AMICA
                 0,
                 user1,
                 block.timestamp + 300

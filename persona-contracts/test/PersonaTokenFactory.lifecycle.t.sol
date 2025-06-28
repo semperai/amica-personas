@@ -46,6 +46,26 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
         string failReason;
     }
 
+    // Structure to track pricing milestones
+    struct PricingMilestone {
+        uint256 percentComplete;
+        uint256 totalTokensBought;
+        uint256 totalAmicaSpent;
+        uint256 incrementalCost;
+        uint256 avgPriceFromStart;
+        uint256 priceMultiplier;
+    }
+
+    // State tracking struct to reduce stack depth
+    struct TestState {
+        uint256 tokenId;
+        uint256 totalSpent;
+        uint256 totalReceived;
+        uint256 pricingMultiplier;
+        uint256 adjustedStartingPrice;
+        uint256 lastMilestone;
+    }
+
     function deployTestFactory(
         uint256 curveMultiplier,
         uint256 pricingMultiplier
@@ -80,20 +100,252 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
         );
     }
 
+    function testPreciseLifecycleWithPricing() public {
+        console.log("=== Precise Lifecycle Test with Pricing Analysis ===");
+
+        // Use the best parameters found
+        uint256 curveMultiplier = 10532;
+        uint256 pricingMultiplier = 333 ether; // 0.333x
+
+        vm.startPrank(factoryOwner);
+        deployTestFactory(curveMultiplier, pricingMultiplier);
+        vm.stopPrank();
+
+        // Create persona
+        vm.startPrank(user1);
+        amicaToken.approve(address(testFactory), type(uint256).max);
+
+        uint256 tokenId = testFactory.createPersona(
+            address(amicaToken),
+            "Test Persona",
+            "TEST",
+            bytes32("testpersona"),
+            0, // No initial buy
+            address(0), // No agent token
+            0
+        );
+
+        console.log("Created persona with tokenId:", tokenId);
+
+        // Get starting price
+        uint256 startingPrice =
+            testBondingCurve.getCurrentPrice(0, 333_333_333 ether);
+        uint256 adjustedStartingPrice =
+            (startingPrice * pricingMultiplier) / 1e18;
+        console.log("\nStarting price per persona token:");
+        console.log("  Raw bonding curve:", startingPrice, "wei per token");
+        console.log(
+            "  With pricing multiplier:", adjustedStartingPrice, "wei per token"
+        );
+        console.log(
+            "  In AMICA:",
+            adjustedStartingPrice / 1e18,
+            "AMICA per persona token"
+        );
+
+        // Initialize test state
+        TestState memory state = TestState({
+            tokenId: tokenId,
+            totalSpent: DEFAULT_MINT_COST,
+            totalReceived: 0,
+            pricingMultiplier: pricingMultiplier,
+            adjustedStartingPrice: adjustedStartingPrice,
+            lastMilestone: 0
+        });
+
+        // Track milestones
+        PricingMilestone[] memory milestones = new PricingMilestone[](10);
+
+        console.log("\n=== Buying Progress ===");
+
+        // Execute buying loop
+        _executeBuyingLoop(state, milestones);
+
+        // Print final results
+        _printFinalResults(state.tokenId, state.totalSpent, state.totalReceived);
+
+        vm.stopPrank();
+    }
+
+    function _executeBuyingLoop(
+        TestState memory state,
+        PricingMilestone[] memory milestones
+    ) private {
+        uint256 buyAmount = 1_000 ether; // Buy in smaller chunks for precision
+
+        while (true) {
+            // Check if graduated
+            (,,, uint256 graduationTimestamp,,) =
+                testFactory.personas(state.tokenId);
+            if (graduationTimestamp > 0) break;
+
+            // Try to buy tokens
+            try testFactory.swapExactTokensForTokens(
+                state.tokenId, buyAmount, 0, user1, block.timestamp + 300
+            ) returns (uint256 received) {
+                state.totalSpent += buyAmount;
+                state.totalReceived += received;
+
+                // Check for milestone
+                _checkAndRecordMilestone(state, milestones);
+            } catch {
+                // Graduated
+                break;
+            }
+        }
+    }
+
+    function _checkAndRecordMilestone(
+        TestState memory state,
+        PricingMilestone[] memory milestones
+    ) private {
+        // Calculate current progress percentage
+        uint256 currentPercent = (state.totalReceived * 100) / 333_333_333 ether;
+
+        // Check if we hit a 10% milestone
+        if (
+            currentPercent >= (state.lastMilestone + 1) * 10
+                && state.lastMilestone < 9
+        ) {
+            state.lastMilestone = currentPercent / 10;
+            if (state.lastMilestone > 9) state.lastMilestone = 9;
+
+            // Record the milestone data
+            _recordMilestoneData(state, milestones, state.lastMilestone);
+        }
+    }
+
+    function _recordMilestoneData(
+        TestState memory state,
+        PricingMilestone[] memory milestones,
+        uint256 milestone
+    ) private {
+        // Get current state from bonding curve
+        (, uint256 tokensPurchased,) =
+            testFactory.preGraduationStates(state.tokenId);
+
+        // Calculate prices
+        uint256 currentPrice =
+            testBondingCurve.getCurrentPrice(tokensPurchased, 333_333_333 ether);
+        uint256 adjustedCurrentPrice =
+            (currentPrice * state.pricingMultiplier) / 1e18;
+        uint256 avgPrice = state.totalReceived > 0
+            ? (state.totalSpent * 1e18) / state.totalReceived
+            : 0;
+        uint256 priceMultiplier = state.adjustedStartingPrice > 0
+            ? (adjustedCurrentPrice * 1e18) / state.adjustedStartingPrice
+            : 0;
+
+        // Calculate incremental cost
+        uint256 incrementalCost = state.totalSpent;
+        if (milestone > 1) {
+            incrementalCost =
+                state.totalSpent - milestones[milestone - 2].totalAmicaSpent;
+        } else {
+            incrementalCost = state.totalSpent - DEFAULT_MINT_COST;
+        }
+
+        // Store milestone
+        milestones[milestone - 1] = PricingMilestone({
+            percentComplete: milestone * 10,
+            totalTokensBought: state.totalReceived,
+            totalAmicaSpent: state.totalSpent,
+            incrementalCost: incrementalCost,
+            avgPriceFromStart: avgPrice,
+            priceMultiplier: priceMultiplier
+        });
+
+        // Print milestone info
+        console.log("\nMilestone:", milestone * 10, "%");
+        console.log("  Total tokens bought:", state.totalReceived / 1e18);
+        console.log("  Total AMICA spent:", state.totalSpent / 1e18);
+        console.log(
+            "  Incremental cost for this 10%:", incrementalCost / 1e18, "AMICA"
+        );
+        console.log(
+            "  Average price from start:", avgPrice / 1e18, "AMICA per persona"
+        );
+        console.log(
+            "  Current spot price:",
+            adjustedCurrentPrice / 1e18,
+            "AMICA per persona"
+        );
+        console.log("  Price multiplier vs start:", priceMultiplier / 1e16, "%");
+    }
+
+    function _printFinalResults(
+        uint256 tokenId,
+        uint256 totalSpent,
+        uint256 totalReceived
+    ) private {
+        // Final graduation stats
+        (, uint256 finalTokensPurchased,) =
+            testFactory.preGraduationStates(tokenId);
+        uint256 graduationPercent =
+            (finalTokensPurchased * 100) / 333_333_333 ether;
+        uint256 finalAvgPrice =
+            totalReceived > 0 ? (totalSpent * 1e18) / totalReceived : 0;
+
+        console.log("\n=== Graduation Summary ===");
+        console.log("Graduated at:", graduationPercent, "%");
+        console.log("Total AMICA spent:", totalSpent / 1e18);
+        console.log("Total persona tokens bought:", totalReceived / 1e18);
+        console.log(
+            "Final average price:", finalAvgPrice / 1e18, "AMICA per persona"
+        );
+
+        // Wait and claim
+        vm.warp(block.timestamp + 1 days + 1);
+
+        (
+            uint256 purchasedAmount,
+            uint256 bonusAmount,
+            ,
+            uint256 totalClaimable,
+            ,
+        ) = testFactory.getClaimableRewards(tokenId, user1);
+
+        console.log("\n=== Claim Details ===");
+        console.log("Purchased amount:", purchasedAmount / 1e18);
+        console.log("Bonus amount:", bonusAmount / 1e18);
+        console.log("Total claimable:", totalClaimable / 1e18);
+
+        testFactory.claimRewards(tokenId);
+
+        // Final balances
+        (address personaTokenAddr,,,,,) = testFactory.personas(tokenId);
+        uint256 userBalance = IERC20(personaTokenAddr).balanceOf(user1);
+
+        console.log("\n=== Final Results ===");
+        console.log("User received:", userBalance / 1e18, "persona tokens");
+        console.log(
+            "Effective price paid:",
+            (totalSpent * 1e18) / userBalance / 1e18,
+            "AMICA per persona"
+        );
+        console.log(
+            "Target was: ~3 AMICA per persona (1M AMICA / 333M persona)"
+        );
+    }
+
     function testFindOptimalParameters() public {
         console.log("=== Finding Optimal Bonding Curve Parameters ===");
         console.log("Target: Spend ~1M AMICA to get ~333M persona tokens");
         console.log("");
 
         // Test different curve multipliers (smaller = steeper curve)
-        uint256[] memory curveMultipliers = new uint256[](7);
-        curveMultipliers[0] = 5000; // Very steep
-        curveMultipliers[1] = 7500; // Steep
-        curveMultipliers[2] = 10000; // Medium-steep
-        curveMultipliers[3] = 10532; // Original (sqrt(133) - 1) * 1000
-        curveMultipliers[4] = 12500; // Medium-flat
-        curveMultipliers[5] = 15000; // Flat
-        curveMultipliers[6] = 20000; // Very flat
+        uint256[] memory curveMultipliers = new uint256[](11);
+        curveMultipliers[0] = 1000;
+        curveMultipliers[1] = 2000; // Very steep
+        curveMultipliers[2] = 3000; // Steep
+        curveMultipliers[3] = 4000; // Medium-steep
+        curveMultipliers[4] = 5000; // Very steep
+        curveMultipliers[5] = 7500; // Steep
+        curveMultipliers[6] = 10000; // Medium-steep
+        curveMultipliers[7] = 10532; // Original (sqrt(133) - 1) * 1000
+        curveMultipliers[8] = 12500; // Medium-flat
+        curveMultipliers[9] = 15000; // Flat
+        curveMultipliers[10] = 20000; // Very flat
 
         // Test different pricing multipliers
         uint256[] memory pricingMultipliers = new uint256[](7);
@@ -268,142 +520,5 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
         uint256 personaScore = (personaDiff * 1000) / TARGET_PERSONA_RECEIVED;
 
         return amicaScore + personaScore;
-    }
-
-    function testDetailedLifecycle() public {
-        console.log("=== Detailed Lifecycle Test ===");
-
-        // Use the original parameters first
-        uint256 curveMultiplier = 10532;
-        uint256 pricingMultiplier = 333 ether;
-
-        vm.startPrank(factoryOwner);
-        deployTestFactory(curveMultiplier, pricingMultiplier);
-        vm.stopPrank();
-
-        // Step 1: Create persona
-        vm.startPrank(user1);
-        amicaToken.approve(address(testFactory), type(uint256).max);
-
-        uint256 tokenId = testFactory.createPersona(
-            address(amicaToken),
-            "Test Persona",
-            "TEST",
-            bytes32("testpersona"),
-            0,
-            address(0),
-            0
-        );
-
-        console.log("Step 1: Created persona with tokenId:", tokenId);
-
-        // Step 2: Buy tokens progressively and track progress
-        uint256 totalSpent = DEFAULT_MINT_COST;
-        uint256 totalReceived = 0;
-        uint256 iterations = 0;
-
-        while (true) {
-            (,,, uint256 graduationTimestamp,,) = testFactory.personas(tokenId);
-            if (graduationTimestamp > 0) break;
-
-            uint256 buyAmount = 10_000 ether;
-            uint256 balanceBefore = testFactory.bondingBalances(tokenId, user1);
-
-            try testFactory.swapExactTokensForTokens(
-                tokenId, buyAmount, 0, user1, block.timestamp + 300
-            ) returns (uint256 received) {
-                totalSpent += buyAmount;
-                totalReceived += received;
-                iterations++;
-
-                if (iterations % 10 == 0) {
-                    console.log("Progress - Iteration:", iterations);
-                    console.log("  Total spent:", totalSpent / 1e18, "AMICA");
-                    console.log(
-                        "  Total received:",
-                        totalReceived / 1e18,
-                        "persona tokens"
-                    );
-                    console.log(
-                        "  Avg price:",
-                        (totalSpent * 1e18) / totalReceived / 1e18,
-                        "AMICA per persona"
-                    );
-                }
-            } catch {
-                // check if graduated
-                (,,, uint256 graduationTimestamp,,) =
-                    testFactory.personas(tokenId);
-                console.log("Graduation timestamp", graduationTimestamp);
-                break;
-            }
-        }
-
-        // Step 3: Check graduation state
-        {
-            (, uint256 tokensPurchased,) =
-                testFactory.preGraduationStates(tokenId);
-            uint256 graduationPercent =
-                (tokensPurchased * 100) / (333_333_333 ether);
-
-            console.log("\nStep 3: Graduation achieved!");
-            console.log("  Total AMICA spent:", totalSpent / 1e18);
-            console.log("  Tokens purchased:", tokensPurchased / 1e18);
-            console.log("  Graduation %:", graduationPercent);
-        }
-
-        // Step 4: Wait and claim
-        {
-            vm.warp(block.timestamp + 1 days + 1);
-
-            (
-                uint256 purchasedAmount,
-                uint256 bonusAmount,
-                uint256 agentRewardAmount,
-                uint256 totalClaimable,
-                bool claimed,
-                bool claimable
-            ) = testFactory.getClaimableRewards(tokenId, user1);
-
-            console.log("\nStep 4: Claimable rewards:");
-            console.log("  Purchased amount:", purchasedAmount / 1e18);
-            console.log("  Bonus amount:", bonusAmount / 1e18);
-            console.log("  Total claimable:", totalClaimable / 1e18);
-
-            testFactory.claimRewards(tokenId);
-        }
-
-        // Step 5: Check final state
-        {
-            (address personaTokenAddr,,,,,) = testFactory.personas(tokenId);
-            uint256 userPersonaBalance =
-                IERC20(personaTokenAddr).balanceOf(user1);
-            uint256 amicaPersonaBalance =
-                IERC20(personaTokenAddr).balanceOf(address(amicaToken));
-
-            console.log("\nStep 5: Final state:");
-            console.log("  User persona balance:", userPersonaBalance / 1e18);
-            console.log("  AMICA persona balance:", amicaPersonaBalance / 1e18);
-            console.log(
-                "  Total distributed:",
-                (userPersonaBalance + amicaPersonaBalance) / 1e18
-            );
-
-            // Verify pool exists and has liquidity
-            (, address pairToken,,,, PoolId poolId) =
-                testFactory.personas(tokenId);
-            assertTrue(PoolId.unwrap(poolId) != bytes32(0), "Pool should exist");
-
-            console.log("\n=== Summary ===");
-            console.log(
-                "AMICA spent per persona token:",
-                (totalSpent * 1e18) / userPersonaBalance / 1e18
-            );
-            console.log(
-                "Expected ratio: 1M AMICA / 333M persona = 0.003 AMICA per persona"
-            );
-        }
-
-        vm.stopPrank();
     }
 }

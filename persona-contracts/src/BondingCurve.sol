@@ -11,7 +11,6 @@ pragma solidity ^0.8.26;
  * This contract implements a bonding curve mechanism similar to pump.fun, where:
  * - Tokens are bought and sold along a mathematical curve
  * - Price increases as more tokens are sold
- * - A 133x price multiplier is achieved when all tokens are sold
  * - Virtual reserves ensure smooth price progression
  *
  * ## Key Features
@@ -22,9 +21,7 @@ pragma solidity ^0.8.26;
  *
  * ## Mathematical Model
  * The curve uses virtual reserves to maintain the relationship:
- * - Starting price: 1x (when no tokens sold)
- * - Ending price: 133x (when all tokens sold)
- * - Virtual buffer: totalSupply / (√133 - 1) ≈ totalSupply / 10.532
+ * - Virtual buffer: totalSupply / (√c - 1)
  *
  * ## Security Considerations
  * - All calculations use integer math to avoid precision issues
@@ -45,18 +42,17 @@ contract BondingCurve {
 
     // ============ Virtual Constants (can be overridden) ============
 
-    /// @notice Approximation of (√133 - 1) * 1000 for integer math precision
-    /// @dev Actual value: 10.532 * 1000 = 10532
+    /// @notice Approximation of (√233 - 1) * 1000 for integer math precision
     /// @dev Virtual function to allow overriding in test contracts
     function getCurveMultiplier() public view virtual returns (uint256) {
-        return 3333;
+        return 14264;
     }
 
     // ============ Custom Errors ============
 
     /// @notice Thrown when input amount is zero
-    /// @param operation The operation that failed ("buy" or "sell")
-    error InvalidAmount(string operation);
+    /// @param operation The operation that failed (0: buy, 1: sell)
+    error InvalidAmount(uint8 operation);
 
     /// @notice Thrown when there are insufficient tokens in the reserve
     /// @param requested Amount of tokens requested
@@ -83,9 +79,6 @@ contract BondingCurve {
      * @param reserveSold Current amount of tokens sold from the curve
      * @param reserveTotal Total amount of tokens available in the curve
      * @return tokenOut Amount of tokens that will be received
-     *
-     * @custom:formula tokenOut = (virtualToken * amountIn) / (virtualETH + amountIn)
-     * @custom:example With 1000 total tokens, 100 sold, 1 ETH input ≈ 95 tokens out
      */
     function calculateAmountOut(
         uint256 amountIn,
@@ -93,7 +86,7 @@ contract BondingCurve {
         uint256 reserveTotal
     ) public view returns (uint256 tokenOut) {
         // Validate inputs
-        if (amountIn == 0) revert InvalidAmount("buy");
+        if (amountIn == 0) revert InvalidAmount(0);
         if (reserveTotal <= reserveSold) {
             revert InsufficientReserve(1, reserveTotal - reserveSold);
         }
@@ -129,9 +122,6 @@ contract BondingCurve {
      * @param reserveSold Current amount of tokens sold from the curve
      * @param reserveTotal Total amount of tokens in the curve
      * @return pairingTokenOut Amount of ETH received after fee
-     *
-     * @custom:fee 0.1% (10 basis points) deducted from output
-     * @custom:security Fee prevents sandwich attacks via rounding exploits
      */
     function calculateAmountOutForSell(
         uint256 amountIn,
@@ -154,8 +144,6 @@ contract BondingCurve {
      * @param reserveSold Current amount of tokens sold from the curve
      * @param reserveTotal Total amount of tokens in the curve
      * @return pairingTokenOut Amount of ETH received (no fee)
-     *
-     * @custom:warning This function doesn't apply fees - use calculateAmountOutForSell for actual trades
      */
     function calculateAmountOutForSellNoFee(
         uint256 amountIn,
@@ -163,7 +151,7 @@ contract BondingCurve {
         uint256 reserveTotal
     ) public view returns (uint256 pairingTokenOut) {
         // Validate inputs
-        if (amountIn == 0) revert InvalidAmount("sell");
+        if (amountIn == 0) revert InvalidAmount(1);
         if (amountIn > reserveSold) {
             revert InsufficientTokensSold(amountIn, reserveSold);
         }
@@ -222,8 +210,6 @@ contract BondingCurve {
      * @param reserveSold Current amount of tokens sold
      * @param reserveTotal Total tokens in the curve
      * @return price Current price in ETH per token (18 decimals)
-     *
-     * @custom:example At 50% sold: price ≈ 11.5 * 1e18 (11.5 ETH per token)
      */
     function getCurrentPrice(uint256 reserveSold, uint256 reserveTotal)
         public
@@ -243,17 +229,15 @@ contract BondingCurve {
      * @notice Calculates virtual reserves at any point on the curve
      * @dev Core mathematical function that enables the price curve behavior
      *
-     * Virtual reserves ensure:
-     * - Starting price = 1x (virtualETH/virtualToken = 1 when nothing sold)
-     * - Ending price = 133x (virtualETH/virtualToken = 133 when all sold)
-     * - Smooth price progression via constant product formula
+     * Virtual reserves ensure mmooth price progression
+     * via constant product formula
      *
      * @param reserveSold Amount of tokens sold from the curve
      * @param reserveTotal Total tokens available in the curve
      * @return virtualToken Current virtual token reserve
      * @return virtualETH Current virtual ETH reserve
      *
-     * @custom:math Virtual buffer b = totalSupply / (√133 - 1)
+     * @custom:math Virtual buffer b = totalSupply / (√c - 1)
      * @custom:math Initial k = (totalSupply + b)²
      * @custom:math virtualToken = (totalSupply - sold) + b
      * @custom:math virtualETH = k / virtualToken
@@ -265,7 +249,7 @@ contract BondingCurve {
         returns (uint256 virtualToken, uint256 virtualETH)
     {
         // Calculate virtual buffer using high precision integer math
-        // b = reserveTotal / (√133 - 1) ≈ reserveTotal / 10.532
+        // b = reserveTotal / (√c - 1)
         // Using integer approximation: b = reserveTotal * 1000 / curveMultiplier
         uint256 curveMultiplier = getCurveMultiplier();
         uint256 virtualBuffer = (reserveTotal * 1000) / curveMultiplier;

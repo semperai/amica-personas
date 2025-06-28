@@ -430,7 +430,7 @@ contract PersonaTokenFactory is
         configurePairingToken(
             amicaToken_,
             1000 ether, // Initial mint cost
-            370 ether, // Initial pricing multiplier (1.37x)
+            1333 ether, // Initial pricing multiplier
             true // Enabled by default
         );
     }
@@ -1179,11 +1179,11 @@ contract PersonaTokenFactory is
 
         (bytes memory actions, bytes[] memory mintParams) = _mintLiquidityParams(
             poolKey,
-            TICK_LOWER,
-            TICK_UPPER,
+            TICK_LOWER, // full range
+            TICK_UPPER, // full range
             liquidity,
-            token0Amount + 1, // slippage limit
-            token1Amount + 1,
+            token0Amount, // max
+            token1Amount, // max
             address(this), // recipient is the factory
             hookData
         );
