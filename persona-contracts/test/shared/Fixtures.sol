@@ -129,6 +129,7 @@ abstract contract Fixtures is Test, Deployers {
                     address(amicaToken),
                     address(poolManager), // Use the actual PoolManager
                     address(positionManager),
+                    address(permit2),
                     address(dynamicFeeHook),
                     address(personaToken),
                     address(bondingCurve) // Add bonding curve address

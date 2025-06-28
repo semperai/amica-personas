@@ -229,6 +229,7 @@ contract DeployAmicaProtocol is DeployConfig {
                     address(amicaToken),
                     config.poolManager,
                     config.positionManager,
+                    config.permit2,
                     address(dynamicFeeHook),
                     address(personaTokenImpl),
                     address(bondingCurve)

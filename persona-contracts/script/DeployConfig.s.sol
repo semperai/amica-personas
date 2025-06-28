@@ -13,6 +13,7 @@ abstract contract DeployConfig is Script {
     struct NetworkConfig {
         address poolManager;
         address positionManager;
+        address permit2;
         address create2Deployer;
         uint256 amicaTotalSupply;
         uint256 defaultMintCost;
@@ -40,170 +41,11 @@ abstract contract DeployConfig is Script {
         config.create2Deployer = CREATE2_DEPLOYER;
         config.amicaTotalSupply = AMICA_TOTAL_SUPPLY;
 
-        // Set chain-specific configurations
-        if (chainId == 1) {
-            // Ethereum Mainnet
-            config.networkName = "mainnet";
-            config.defaultMintCost = 1000 ether;
-            config.defaultGraduationThreshold = 1_000_000 ether;
-            config.poolManager = AddressConstants.getPoolManagerAddress(chainId);
-            config.positionManager =
-                AddressConstants.getPositionManagerAddress(chainId);
-        } else if (chainId == 8453) {
-            // Base Mainnet
-            config.networkName = "base";
-            config.defaultMintCost = 1000 ether;
-            config.defaultGraduationThreshold = 1_000_000 ether;
-            config.poolManager = AddressConstants.getPoolManagerAddress(chainId);
-            config.positionManager =
-                AddressConstants.getPositionManagerAddress(chainId);
-        } else if (chainId == 84532) {
-            // Base Sepolia
-            config.networkName = "base-sepolia";
-            config.defaultMintCost = 100 ether;
-            config.defaultGraduationThreshold = 10_000 ether;
-            config.poolManager = AddressConstants.getPoolManagerAddress(chainId);
-            config.positionManager =
-                AddressConstants.getPositionManagerAddress(chainId);
-        } else if (chainId == 10) {
-            // Optimism
-            config.networkName = "optimism";
-            config.defaultMintCost = 1000 ether;
-            config.defaultGraduationThreshold = 1_000_000 ether;
-            config.poolManager = AddressConstants.getPoolManagerAddress(chainId);
-            config.positionManager =
-                AddressConstants.getPositionManagerAddress(chainId);
-        } else if (chainId == 42161) {
-            // Arbitrum One
-            config.networkName = "arbitrum";
-            config.defaultMintCost = 1000 ether;
-            config.defaultGraduationThreshold = 1_000_000 ether;
-            config.poolManager = AddressConstants.getPoolManagerAddress(chainId);
-            config.positionManager =
-                AddressConstants.getPositionManagerAddress(chainId);
-        } else if (chainId == 137) {
-            // Polygon
-            config.networkName = "polygon";
-            config.defaultMintCost = 1000 ether;
-            config.defaultGraduationThreshold = 1_000_000 ether;
-            config.poolManager = AddressConstants.getPoolManagerAddress(chainId);
-            config.positionManager =
-                AddressConstants.getPositionManagerAddress(chainId);
-        } else if (chainId == 11155111) {
-            // Sepolia
-            config.networkName = "sepolia";
-            config.defaultMintCost = 100 ether;
-            config.defaultGraduationThreshold = 10_000 ether;
-            config.poolManager = AddressConstants.getPoolManagerAddress(chainId);
-            config.positionManager =
-                AddressConstants.getPositionManagerAddress(chainId);
-        } else if (chainId == 421614) {
-            // Arbitrum Sepolia
-            config.networkName = "arbitrum-sepolia";
-            config.defaultMintCost = 100 ether;
-            config.defaultGraduationThreshold = 10_000 ether;
-            config.poolManager = AddressConstants.getPoolManagerAddress(chainId);
-            config.positionManager =
-                AddressConstants.getPositionManagerAddress(chainId);
-        } else if (chainId == 81457) {
-            // Blast
-            config.networkName = "blast";
-            config.defaultMintCost = 1000 ether;
-            config.defaultGraduationThreshold = 1_000_000 ether;
-            config.poolManager = AddressConstants.getPoolManagerAddress(chainId);
-            config.positionManager =
-                AddressConstants.getPositionManagerAddress(chainId);
-        } else if (chainId == 7777777) {
-            // Zora
-            config.networkName = "zora";
-            config.defaultMintCost = 1000 ether;
-            config.defaultGraduationThreshold = 1_000_000 ether;
-            config.poolManager = AddressConstants.getPoolManagerAddress(chainId);
-            config.positionManager =
-                AddressConstants.getPositionManagerAddress(chainId);
-        } else if (chainId == 480) {
-            // Worldchain
-            config.networkName = "worldchain";
-            config.defaultMintCost = 1000 ether;
-            config.defaultGraduationThreshold = 1_000_000 ether;
-            config.poolManager = AddressConstants.getPoolManagerAddress(chainId);
-            config.positionManager =
-                AddressConstants.getPositionManagerAddress(chainId);
-        } else if (chainId == 56) {
-            // BNB Smart Chain
-            config.networkName = "bsc";
-            config.defaultMintCost = 1000 ether;
-            config.defaultGraduationThreshold = 1_000_000 ether;
-            config.poolManager = AddressConstants.getPoolManagerAddress(chainId);
-            config.positionManager =
-                AddressConstants.getPositionManagerAddress(chainId);
-        } else if (chainId == 43114) {
-            // Avalanche
-            config.networkName = "avalanche";
-            config.defaultMintCost = 1000 ether;
-            config.defaultGraduationThreshold = 1_000_000 ether;
-            config.poolManager = AddressConstants.getPoolManagerAddress(chainId);
-            config.positionManager =
-                AddressConstants.getPositionManagerAddress(chainId);
-        } else if (chainId == 130) {
-            // Unichain
-            config.networkName = "unichain";
-            config.defaultMintCost = 1000 ether;
-            config.defaultGraduationThreshold = 1_000_000 ether;
-            config.poolManager = AddressConstants.getPoolManagerAddress(chainId);
-            config.positionManager =
-                AddressConstants.getPositionManagerAddress(chainId);
-        } else if (chainId == 1301) {
-            // Unichain Sepolia
-            config.networkName = "unichain-sepolia";
-            config.defaultMintCost = 100 ether;
-            config.defaultGraduationThreshold = 10_000 ether;
-            config.poolManager = AddressConstants.getPoolManagerAddress(chainId);
-            config.positionManager =
-                AddressConstants.getPositionManagerAddress(chainId);
-        } else if (chainId == 57073) {
-            // Ink
-            config.networkName = "ink";
-            config.defaultMintCost = 1000 ether;
-            config.defaultGraduationThreshold = 1_000_000 ether;
-            config.poolManager = AddressConstants.getPoolManagerAddress(chainId);
-            config.positionManager =
-                AddressConstants.getPositionManagerAddress(chainId);
-        } else if (chainId == 1868) {
-            // Soneium
-            config.networkName = "soneium";
-            config.defaultMintCost = 1000 ether;
-            config.defaultGraduationThreshold = 1_000_000 ether;
-            config.poolManager = AddressConstants.getPoolManagerAddress(chainId);
-            config.positionManager =
-                AddressConstants.getPositionManagerAddress(chainId);
-        } else if (chainId == 420120000) {
-            // interop-alpha-0
-            config.networkName = "interop-alpha-0";
-            config.defaultMintCost = 100 ether;
-            config.defaultGraduationThreshold = 10_000 ether;
-            config.poolManager = AddressConstants.getPoolManagerAddress(chainId);
-            config.positionManager =
-                AddressConstants.getPositionManagerAddress(chainId);
-        } else if (chainId == 420120001) {
-            // interop-alpha-1
-            config.networkName = "interop-alpha-1";
-            config.defaultMintCost = 100 ether;
-            config.defaultGraduationThreshold = 10_000 ether;
-            config.poolManager = AddressConstants.getPoolManagerAddress(chainId);
-            config.positionManager =
-                AddressConstants.getPositionManagerAddress(chainId);
-        } else if (chainId == 31337) {
-            // Local Anvil
-            config.networkName = "anvil";
-            config.defaultMintCost = 100 ether;
-            config.defaultGraduationThreshold = 1000 ether;
-            // For local deployment, V4 contracts will be deployed
-            config.poolManager = address(0);
-            config.positionManager = address(0);
-        } else {
-            revert("Unsupported chain ID");
-        }
+        config.defaultMintCost = 1000 ether;
+        config.defaultGraduationThreshold = 1_000_000 ether;
+        config.poolManager = AddressConstants.getPoolManagerAddress(chainId);
+        config.positionManager = AddressConstants.getPositionManagerAddress(chainId);
+        config.permit2 = AddressConstants.getPermit2Address();
 
         return config;
     }
