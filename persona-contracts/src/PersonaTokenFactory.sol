@@ -414,34 +414,13 @@ contract PersonaTokenFactory is
         personaTokenImplementation = personaTokenImplementation_;
         bondingCurve = IBondingCurve(bondingCurve_);
 
-        pairingConfigs[amicaToken_] = PairingConfig({
-            enabled: true,
-            mintCost: 1000 ether,
-            pricingMultiplier: 370 ether
-        });
-    }
-
-    /**
-     * @notice Get token distribution amounts based on agent token presence
-     * @param hasAgent Whether the persona has an agent token
-     * @return amounts TokenAmounts struct with all distributions
-     */
-    function _getTokenAmounts(bool hasAgent)
-        private
-        pure
-        returns (TokenAmounts memory amounts)
-    {
-        if (hasAgent) {
-            amounts.liquidity = THIRD_SUPPLY; // 1/3
-            amounts.bondingSupply = SIXTH_SUPPLY; // 1/6
-            amounts.amica = THIRD_SUPPLY; // 1/3
-            amounts.agentRewards = SIXTH_SUPPLY + 2 ether; // 1/6 + rounding
-        } else {
-            amounts.liquidity = THIRD_SUPPLY; // 1/3
-            amounts.bondingSupply = THIRD_SUPPLY; // 1/3
-            amounts.amica = THIRD_SUPPLY + 1 ether; // 1/3 + rounding
-            amounts.agentRewards = 0;
-        }
+        // enable amica token as a pairing token by default
+        configurePairingToken(
+            amicaToken_,
+            1000 ether, // Initial mint cost
+            370 ether, // Initial pricing multiplier (1.37x)
+            true // Enabled by default
+        );
     }
 
     /**
@@ -472,7 +451,7 @@ contract PersonaTokenFactory is
         uint256 mintCost,
         uint256 pricingMultiplier,
         bool enabled
-    ) external onlyOwner {
+    ) public onlyOwner {
         if (token == address(0)) revert Invalid(0);
 
         pairingConfigs[token] = PairingConfig({
@@ -480,6 +459,9 @@ contract PersonaTokenFactory is
             mintCost: mintCost,
             pricingMultiplier: pricingMultiplier
         });
+
+        // allow unlimited approval for PositionManager (for creating pools)
+        IERC20(token).approve(address(positionManager), type(uint256).max);
 
         emit PairingConfigUpdated(token);
     }
@@ -541,6 +523,9 @@ contract PersonaTokenFactory is
             PERSONA_TOKEN_SUPPLY,
             address(this)
         );
+
+        // allow unlimited approval for PositionManager (for creating pool)
+        IERC20(token).approve(address(positionManager), type(uint256).max);
 
         PersonaData storage persona = personas[tokenId];
         persona.token = token;
@@ -636,6 +621,29 @@ contract PersonaTokenFactory is
         }
 
         return true;
+    }
+
+    /**
+     * @notice Get token distribution amounts based on agent token presence
+     * @param hasAgent Whether the persona has an agent token
+     * @return amounts TokenAmounts struct with all distributions
+     */
+    function _getTokenAmounts(bool hasAgent)
+        private
+        pure
+        returns (TokenAmounts memory amounts)
+    {
+        if (hasAgent) {
+            amounts.liquidity = THIRD_SUPPLY; // 1/3
+            amounts.bondingSupply = SIXTH_SUPPLY; // 1/6
+            amounts.amica = THIRD_SUPPLY; // 1/3
+            amounts.agentRewards = SIXTH_SUPPLY + 2 ether; // 1/6 + rounding
+        } else {
+            amounts.liquidity = THIRD_SUPPLY; // 1/3
+            amounts.bondingSupply = THIRD_SUPPLY; // 1/3
+            amounts.amica = THIRD_SUPPLY + 1 ether; // 1/3 + rounding
+            amounts.agentRewards = 0;
+        }
     }
 
     /**
@@ -910,7 +918,9 @@ contract PersonaTokenFactory is
             agentDeposits[tokenId][msg.sender] = 0;
 
             // Return agent tokens to user
-            if (!IERC20(persona.agentToken).transfer(msg.sender, userAgentAmount)) {
+            if (
+                !IERC20(persona.agentToken).transfer(msg.sender, userAgentAmount)
+            ) {
                 revert Failed(0);
             }
         }
@@ -1146,7 +1156,7 @@ contract PersonaTokenFactory is
 
         // Get pool key
         PoolKey memory poolKey = _getPoolKey(persona);
-        
+
         // Calculate initial price based on token ratio
         uint160 initialPrice = _calculateInitialPrice(persona, preGradState);
 
@@ -1168,7 +1178,8 @@ contract PersonaTokenFactory is
         PreGraduationState storage preGradState
     ) private view returns (uint160) {
         // Get token amounts
-        TokenAmounts memory amounts = _getTokenAmounts(persona.agentToken != address(0));
+        TokenAmounts memory amounts =
+            _getTokenAmounts(persona.agentToken != address(0));
         uint256 personaTokens = amounts.liquidity;
         uint256 pairingTokens = preGradState.totalPairingTokensCollected;
 
@@ -1182,16 +1193,15 @@ contract PersonaTokenFactory is
             // Now calculate sqrt(ratio) * 2^96 / sqrt(1e18)
             // sqrt(1e18) = 1e9, so we need sqrt(ratio) * 2^96 / 1e9
             uint256 sqrtRatio = sqrt(ratio);
-            return uint160((sqrtRatio * (2**96)) / 1e9);
+            return uint160((sqrtRatio * (2 ** 96)) / 1e9);
         } else {
             // pairing token is token0
             // price = sqrt(token1/token0) * 2^96
             uint256 ratio = (personaTokens * 1e18) / pairingTokens;
             uint256 sqrtRatio = sqrt(ratio);
-            return uint160((sqrtRatio * (2**96)) / 1e9);
+            return uint160((sqrtRatio * (2 ** 96)) / 1e9);
         }
     }
-
 
     function _addLiquidityThroughPositionManager(
         uint256 tokenId,
@@ -1199,25 +1209,15 @@ contract PersonaTokenFactory is
         PreGraduationState storage preGradState
     ) private {
         PersonaData storage persona = personas[tokenId];
-        
+
         // Get amounts
-        TokenAmounts memory amounts = _getTokenAmounts(persona.agentToken != address(0));
+        TokenAmounts memory amounts =
+            _getTokenAmounts(persona.agentToken != address(0));
         uint256 personaTokens = amounts.liquidity;
         uint256 pairingTokens = preGradState.totalPairingTokensCollected;
-        
+
         // Approve tokens to PositionManager
-        IERC20(persona.token).approve(address(positionManager), personaTokens);
-        IERC20(persona.pairToken).approve(address(positionManager), pairingTokens);
-        
-        // Execute liquidity addition
-        _executeLiquidityAddition(
-            poolKey,
-            personaTokens,
-            pairingTokens,
-            uint160(persona.token) < uint160(persona.pairToken)
-        );
-        
-        emit V4PoolCreated(tokenId, persona.poolId, personaTokens);
+        // TODO move these approvals to createPersona and during the configPairingToken
     }
 
     function _executeLiquidityAddition(
@@ -1229,14 +1229,14 @@ contract PersonaTokenFactory is
         // Determine amounts based on token ordering
         uint256 amount0Desired = token0IsPersona ? personaTokens : pairingTokens;
         uint256 amount1Desired = token0IsPersona ? pairingTokens : personaTokens;
-        
+
         // Full range position
         int24 tickLower = -887220;
         int24 tickUpper = 887220;
-        
+
         // Build actions - single byte for MINT_POSITION
         bytes memory actions = abi.encodePacked(uint8(Actions.MINT_POSITION));
-        
+
         // Build params array
         bytes[] memory params = new bytes[](1);
         params[0] = abi.encode(
@@ -1252,14 +1252,13 @@ contract PersonaTokenFactory is
             block.timestamp + 300, // deadline
             bytes("") // hookData
         );
-        
+
         // Encode for modifyLiquidities: (bytes actions, bytes[] params)
         bytes memory unlockData = abi.encode(actions, params);
-        
+
         // Call modifyLiquidities
         positionManager.modifyLiquidities{value: 0}(
-            unlockData,
-            block.timestamp + 300
+            unlockData, block.timestamp + 300
         );
     }
 
@@ -1274,36 +1273,31 @@ contract PersonaTokenFactory is
     ) private pure returns (bytes memory) {
         // Use INCREASE_LIQUIDITY action with full range position
         bytes memory actions = abi.encodePacked(
-            uint8(Actions.INCREASE_LIQUIDITY),
-            uint8(Actions.SETTLE_PAIR)
+            uint8(Actions.INCREASE_LIQUIDITY), uint8(Actions.SETTLE_PAIR)
         );
 
         bytes[] memory params = new bytes[](2);
-        
+
         // INCREASE_LIQUIDITY parameters
         // For full range: tickLower = MIN_TICK, tickUpper = MAX_TICK
         int24 tickLower = -887220; // Closest valid tick to MIN_TICK for tickSpacing 60
-        int24 tickUpper = 887220;  // Closest valid tick to MAX_TICK for tickSpacing 60
-        
+        int24 tickUpper = 887220; // Closest valid tick to MAX_TICK for tickSpacing 60
+
         params[0] = abi.encode(
-            tokenId,        // tokenId (position identifier)
+            tokenId, // tokenId (position identifier)
             poolKey.toId(), // poolId
-            tickLower,      // tickLower
-            tickUpper,      // tickUpper
-            uint256(0),     // liquidityDelta (0 means use token amounts)
-            amount0Max,     // amount0Max
-            amount1Max      // amount1Max
+            tickLower, // tickLower
+            tickUpper, // tickUpper
+            uint256(0), // liquidityDelta (0 means use token amounts)
+            amount0Max, // amount0Max
+            amount1Max // amount1Max
         );
-        
+
         // SETTLE_PAIR parameters
-        params[1] = abi.encode(
-            poolKey.currency0,
-            poolKey.currency1
-        );
+        params[1] = abi.encode(poolKey.currency0, poolKey.currency1);
 
         return abi.encode(actions, params);
     }
-
 
     /**
      * @notice Graduates the persona by creating Uniswap V4 pools and distributing tokens
@@ -1370,10 +1364,10 @@ contract PersonaTokenFactory is
      * @return currency0 The lower address currency
      * @return currency1 The higher address currency
      */
-    function _orderCurrencies(address tokenA, address tokenB) 
-        private 
-        pure 
-        returns (Currency currency0, Currency currency1) 
+    function _orderCurrencies(address tokenA, address tokenB)
+        private
+        pure
+        returns (Currency currency0, Currency currency1)
     {
         if (uint160(tokenA) < uint160(tokenB)) {
             currency0 = Currency.wrap(tokenA);
@@ -1390,11 +1384,9 @@ contract PersonaTokenFactory is
         view
         returns (PoolKey memory poolKey)
     {
-        (Currency currency0, Currency currency1) = _orderCurrencies(
-            persona.token, 
-            persona.pairToken
-        );
-        
+        (Currency currency0, Currency currency1) =
+            _orderCurrencies(persona.token, persona.pairToken);
+
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
