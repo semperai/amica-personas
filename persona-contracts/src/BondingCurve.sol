@@ -37,18 +37,20 @@ contract BondingCurve {
     /// @notice Precision multiplier for price calculations (1e18)
     uint256 private constant PRECISION = 1e18;
 
-    /// @notice Target price multiplier at curve graduation (133x)
-    uint256 public constant CURVE_MULTIPLIER = 133;
-
-    /// @notice Approximation of (√133 - 1) * 1000 for integer math precision
-    /// @dev Actual value: 10.532 * 1000 = 10532
-    uint256 private constant SQRT133_MINUS_1 = 10532;
-
     /// @notice Sell fee in basis points (10 = 0.1%)
     uint256 public constant SELL_FEE_BPS = 10;
 
     /// @notice Basis points divisor for percentage calculations
     uint256 private constant BPS_DIVISOR = 10000;
+
+    // ============ Virtual Constants (can be overridden) ============
+
+    /// @notice Approximation of (√133 - 1) * 1000 for integer math precision
+    /// @dev Actual value: 10.532 * 1000 = 10532
+    /// @dev Virtual function to allow overriding in test contracts
+    function getCurveMultiplier() public view virtual returns (uint256) {
+        return 3333;
+    }
 
     // ============ Custom Errors ============
 
@@ -89,7 +91,7 @@ contract BondingCurve {
         uint256 amountIn,
         uint256 reserveSold,
         uint256 reserveTotal
-    ) public pure returns (uint256 tokenOut) {
+    ) public view returns (uint256 tokenOut) {
         // Validate inputs
         if (amountIn == 0) revert InvalidAmount("buy");
         if (reserveTotal <= reserveSold) {
@@ -135,7 +137,7 @@ contract BondingCurve {
         uint256 amountIn,
         uint256 reserveSold,
         uint256 reserveTotal
-    ) public pure returns (uint256 pairingTokenOut) {
+    ) public view returns (uint256 pairingTokenOut) {
         // Calculate ETH output before fee
         uint256 ethBeforeFee =
             calculateAmountOutForSellNoFee(amountIn, reserveSold, reserveTotal);
@@ -159,7 +161,7 @@ contract BondingCurve {
         uint256 amountIn,
         uint256 reserveSold,
         uint256 reserveTotal
-    ) public pure returns (uint256 pairingTokenOut) {
+    ) public view returns (uint256 pairingTokenOut) {
         // Validate inputs
         if (amountIn == 0) revert InvalidAmount("sell");
         if (amountIn > reserveSold) {
@@ -201,7 +203,7 @@ contract BondingCurve {
         uint256 fromTokens,
         uint256 toTokens,
         uint256 totalSupply
-    ) public pure returns (uint256 cost) {
+    ) public view returns (uint256 cost) {
         // No cost if range is invalid
         if (fromTokens >= toTokens) return 0;
 
@@ -225,7 +227,7 @@ contract BondingCurve {
      */
     function getCurrentPrice(uint256 reserveSold, uint256 reserveTotal)
         public
-        pure
+        view
         returns (uint256 price)
     {
         (uint256 virtualToken, uint256 virtualETH) =
@@ -258,13 +260,15 @@ contract BondingCurve {
      */
     function getVirtualReserves(uint256 reserveSold, uint256 reserveTotal)
         public
-        pure
+        view
+        virtual
         returns (uint256 virtualToken, uint256 virtualETH)
     {
         // Calculate virtual buffer using high precision integer math
         // b = reserveTotal / (√133 - 1) ≈ reserveTotal / 10.532
-        // Using integer approximation: b = reserveTotal * 1000 / 10532
-        uint256 virtualBuffer = (reserveTotal * 1000) / SQRT133_MINUS_1;
+        // Using integer approximation: b = reserveTotal * 1000 / curveMultiplier
+        uint256 curveMultiplier = getCurveMultiplier();
+        uint256 virtualBuffer = (reserveTotal * 1000) / curveMultiplier;
 
         // Virtual token reserve = unsold tokens + buffer
         virtualToken = reserveTotal - reserveSold + virtualBuffer;
@@ -289,7 +293,7 @@ contract BondingCurve {
      */
     function getCurrentMultiplier(uint256 reserveSold, uint256 reserveTotal)
         public
-        pure
+        view
         returns (uint256 multiplier)
     {
         uint256 currentPrice = getCurrentPrice(reserveSold, reserveTotal);

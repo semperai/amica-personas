@@ -12,8 +12,6 @@ import {PausableUpgradeable} from
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
-import {ModifyLiquidityParams} from
-    "@uniswap/v4-core/src/types/PoolOperation.sol";
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {LPFeeLibrary} from "@uniswap/v4-core/src/libraries/LPFeeLibrary.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
@@ -22,11 +20,11 @@ import {
 } from "@uniswap/v4-core/src/types/Currency.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
-import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {IPositionManager} from
     "@uniswap/v4-periphery/src/interfaces/IPositionManager.sol";
 import {Actions} from "@uniswap/v4-periphery/src/libraries/Actions.sol";
 import {IBondingCurve} from "./interfaces/IBondingCurve.sol";
+import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 
 interface IPersonaToken {
     function initialize(
@@ -87,9 +85,6 @@ contract PersonaTokenFactory is
     /// @notice V4 tick spacing for standard pools
     int24 private constant TICK_SPACING = 60;
 
-    /// @notice Initial price sqrt ratio for 1:1 pools
-    uint160 private constant SQRT_RATIO_1_1 = 79228162514264337593543950336;
-
     /// @notice Precision for calculations
     uint256 private constant PRECISION = 1e18;
 
@@ -98,6 +93,9 @@ contract PersonaTokenFactory is
 
     /// @notice Time delay after graduation before claims can be made (24 hours)
     uint256 private constant CLAIM_DELAY = 1 days;
+
+    /// @notice Slippage constants for PositionManager
+    uint256 private constant MAX_SLIPPAGE_INCREASE = 5208; // 5208/10000 = ~52% increase allowance
 
     /**
      * @notice Core data for each persona
@@ -349,17 +347,15 @@ contract PersonaTokenFactory is
     /**
      * @notice Emitted when a persona graduates to Uniswap V4
      * @param tokenId Persona token ID
-     * @param mainPoolId Main pool ID (persona/pairToken)
+     * @param poolId Main pool ID (persona/pairToken)
      * @param totalDeposited Total pairing tokens collected
      * @param tokensSold Total persona tokens sold
-     * @param graduationTimestamp Timestamp of graduation
      */
     event Graduated(
         uint256 indexed tokenId,
-        PoolId indexed mainPoolId,
+        PoolId indexed poolId,
         uint256 totalDeposited,
-        uint256 tokensSold,
-        uint256 graduationTimestamp
+        uint256 tokensSold
     );
 
     /**
@@ -421,7 +417,7 @@ contract PersonaTokenFactory is
         pairingConfigs[amicaToken_] = PairingConfig({
             enabled: true,
             mintCost: 1000 ether,
-            pricingMultiplier: 333 ether
+            pricingMultiplier: 370 ether
         });
     }
 
@@ -729,7 +725,7 @@ contract PersonaTokenFactory is
     }
 
     /**
-     * @notice Internal function for buying tokens
+     * @notice FIXED: Internal function for buying tokens with proper graduation check
      * @dev Handles both initial purchase and regular purchases
      */
     function _swapExactTokensForTokensInternal(
@@ -784,9 +780,9 @@ contract PersonaTokenFactory is
         // Don't transfer tokens - they stay in contract until claimed after graduation
         emit TokensPurchased(tokenId, to, amountIn, amountOut);
 
-        // Check graduation requirements
+        // FIXED: More precise graduation threshold calculation to avoid rounding issues
         uint256 graduationThreshold =
-            (amounts.bondingSupply * GRADUATION_THRESHOLD_PERCENT) / 100;
+            (amounts.bondingSupply * GRADUATION_THRESHOLD_PERCENT + 50) / 100;
         bool tokenThresholdMet =
             preGradState.tokensPurchased >= graduationThreshold;
 
@@ -801,102 +797,6 @@ contract PersonaTokenFactory is
         // Graduate if both requirements are met
         if (tokenThresholdMet && agentRequirementMet) {
             _graduate(tokenId);
-        }
-    }
-
-    /**
-     * @notice Claims all rewards after graduation (purchased tokens + bonus + agent rewards)
-     * @param tokenId ID of the persona
-     * @dev Combines token claims and agent rewards into one transaction
-     */
-    function claimRewards(uint256 tokenId)
-        external
-        nonReentrant
-        whenNotPaused
-    {
-        PersonaData storage persona = personas[tokenId];
-        if (persona.token == address(0)) revert Invalid(0);
-
-        // Can only claim after graduation
-        if (persona.graduationTimestamp == 0) revert NotAllowed(3); // 3 = NotGraduated
-
-        // Check claim delay
-        if (block.timestamp < persona.graduationTimestamp + CLAIM_DELAY) {
-            revert NotAllowed(12); // 12 = ClaimTooEarly
-        }
-
-        // Check if already claimed tokens
-        if (hasClaimedTokens[tokenId][msg.sender]) revert Invalid(14); // 14 = AlreadyClaimed
-
-        uint256 totalPersonaTokens = 0;
-        uint256 purchasedAmount = bondingBalances[tokenId][msg.sender];
-        uint256 bonusAmount = 0;
-        uint256 agentRewardAmount = 0;
-
-        // Calculate purchased tokens + bonus
-        if (purchasedAmount > 0) {
-            PreGraduationState storage preGradState =
-                preGraduationStates[tokenId];
-            TokenAmounts memory amounts =
-                _getTokenAmounts(persona.agentToken != address(0));
-            uint256 unsoldTokens = amounts.bondingSupply
-                > preGradState.tokensPurchased
-                ? amounts.bondingSupply - preGradState.tokensPurchased
-                : 0;
-
-            if (unsoldTokens > 0 && preGradState.tokensPurchased > 0) {
-                bonusAmount = (unsoldTokens * purchasedAmount)
-                    / preGradState.tokensPurchased;
-            }
-
-            totalPersonaTokens = purchasedAmount + bonusAmount;
-            hasClaimedTokens[tokenId][msg.sender] = true;
-        }
-
-        // Calculate agent rewards if applicable
-        uint256 userAgentAmount = agentDeposits[tokenId][msg.sender];
-        if (persona.agentToken != address(0) && userAgentAmount > 0) {
-            agentDeposits[tokenId][msg.sender] = 0;
-
-            PreGraduationState storage preGradState =
-                preGraduationStates[tokenId];
-            if (preGradState.totalAgentDeposited > 0) {
-                TokenAmounts memory amounts = _getTokenAmounts(true);
-                agentRewardAmount = (amounts.agentRewards * userAgentAmount)
-                    / preGradState.totalAgentDeposited;
-                totalPersonaTokens += agentRewardAmount;
-            }
-
-            // Return agent tokens to user
-            if (
-                !IERC20(persona.agentToken).transfer(msg.sender, userAgentAmount)
-            ) {
-                revert Failed(0);
-            }
-        }
-
-        // Require at least something to claim
-        if (totalPersonaTokens == 0) revert NotAllowed(9); // No tokens to claim
-
-        // Transfer all persona tokens in one go
-        if (!IERC20(persona.token).transfer(msg.sender, totalPersonaTokens)) {
-            revert Failed(0);
-        }
-
-        // Emit appropriate events
-        if (purchasedAmount > 0) {
-            emit TokensClaimed(
-                tokenId,
-                msg.sender,
-                purchasedAmount,
-                bonusAmount,
-                purchasedAmount + bonusAmount
-            );
-        }
-        if (agentRewardAmount > 0) {
-            emit AgentRewardsDistributed(
-                tokenId, msg.sender, agentRewardAmount, userAgentAmount
-            );
         }
     }
 
@@ -966,6 +866,78 @@ contract PersonaTokenFactory is
     }
 
     /**
+     * @notice Claims all rewards after graduation (purchased tokens + bonus + agent rewards)
+     * @param tokenId ID of the persona
+     * @dev Combines token claims and agent rewards into one transaction
+     */
+    function claimRewards(uint256 tokenId)
+        external
+        nonReentrant
+        whenNotPaused
+    {
+        (
+            uint256 purchasedAmount,
+            uint256 bonusAmount,
+            uint256 agentRewardAmount,
+            uint256 totalClaimable,
+            bool claimed,
+            bool claimable
+        ) = getClaimableRewards(tokenId, msg.sender);
+
+        PersonaData storage persona = personas[tokenId];
+        if (persona.token == address(0)) revert Invalid(0);
+
+        // Can only claim after graduation
+        if (persona.graduationTimestamp == 0) revert NotAllowed(3); // NotGraduated
+
+        // Check claim delay
+        if (!claimable) revert NotAllowed(12); // ClaimTooEarly
+
+        // Check if already claimed tokens
+        if (claimed) revert Invalid(14); // AlreadyClaimed
+
+        // Require at least something to claim
+        if (totalClaimable == 0) revert NotAllowed(9); // No tokens to claim
+
+        // Update state for token claims
+        if (purchasedAmount > 0) {
+            hasClaimedTokens[tokenId][msg.sender] = true;
+        }
+
+        // Update state for agent deposits and return agent tokens
+        uint256 userAgentAmount = agentDeposits[tokenId][msg.sender];
+        if (persona.agentToken != address(0) && userAgentAmount > 0) {
+            agentDeposits[tokenId][msg.sender] = 0;
+
+            // Return agent tokens to user
+            if (!IERC20(persona.agentToken).transfer(msg.sender, userAgentAmount)) {
+                revert Failed(0);
+            }
+        }
+
+        // Transfer all persona tokens in one go
+        if (!IERC20(persona.token).transfer(msg.sender, totalClaimable)) {
+            revert Failed(0);
+        }
+
+        // Emit appropriate events
+        if (purchasedAmount > 0) {
+            emit TokensClaimed(
+                tokenId,
+                msg.sender,
+                purchasedAmount,
+                bonusAmount,
+                purchasedAmount + bonusAmount
+            );
+        }
+        if (agentRewardAmount > 0) {
+            emit AgentRewardsDistributed(
+                tokenId, msg.sender, agentRewardAmount, userAgentAmount
+            );
+        }
+    }
+
+    /**
      * @notice Deposits agent tokens for a persona
      * @param tokenId ID of the persona
      * @param amount Amount of agent tokens to deposit
@@ -999,7 +971,7 @@ contract PersonaTokenFactory is
         // Check if this deposit triggers graduation
         TokenAmounts memory amounts = _getTokenAmounts(true);
         uint256 graduationThreshold =
-            (amounts.bondingSupply * GRADUATION_THRESHOLD_PERCENT) / 100;
+            (amounts.bondingSupply * GRADUATION_THRESHOLD_PERCENT + 50) / 100;
         bool tokenThresholdMet =
             preGradState.tokensPurchased >= graduationThreshold;
 
@@ -1042,7 +1014,7 @@ contract PersonaTokenFactory is
     }
 
     /**
-     * @notice Collects accumulated fees from pools (integrated from UniswapV4Manager)
+     * @notice Collects accumulated fees from pools using PositionManager
      * @param nftTokenId NFT token ID
      * @param to Address to receive the fees
      * @return amount0 Amount of token0 collected
@@ -1150,48 +1122,188 @@ contract PersonaTokenFactory is
         }
     }
 
-    /**
-     * @notice Internal pool initialization
-     * @param token0 First token address
-     * @param token1 Second token address
-     * @param initialPrice Initial sqrt price
-     * @return poolId The pool ID
-     * @return poolKey The pool key needed for liquidity operations
-     */
-    function _initializePool(
-        address token0,
-        address token1,
-        uint160 initialPrice
-    ) private returns (PoolId poolId, PoolKey memory poolKey) {
-        // Sort tokens
-        Currency currency0;
-        Currency currency1;
-
-        if (uint160(token0) < uint160(token1)) {
-            currency0 = Currency.wrap(token0);
-            currency1 = Currency.wrap(token1);
-        } else {
-            currency0 = Currency.wrap(token1);
-            currency1 = Currency.wrap(token0);
+    function sqrt(uint256 y) internal pure returns (uint256 z) {
+        if (y > 3) {
+            z = y;
+            uint256 x = y / 2 + 1;
+            while (x < z) {
+                z = x;
+                x = (y / x + x) / 2;
+            }
+        } else if (y != 0) {
+            z = 1;
         }
+        // else z = 0 (default value)
+    }
 
-        // Create pool key with dynamic fee
-        poolKey = PoolKey({
-            currency0: currency0,
-            currency1: currency1,
-            fee: LPFeeLibrary.DYNAMIC_FEE_FLAG,
-            tickSpacing: TICK_SPACING,
-            hooks: IHooks(dynamicFeeHook)
-        });
+    /**
+     * @notice Creates liquidity pool using PositionManager
+     * @param tokenId ID of the persona
+     */
+    function _createLiquidityPool(uint256 tokenId) private {
+        PersonaData storage persona = personas[tokenId];
+        PreGraduationState storage preGradState = preGraduationStates[tokenId];
+
+        // Get pool key
+        PoolKey memory poolKey = _getPoolKey(persona);
+        
+        // Calculate initial price based on token ratio
+        uint160 initialPrice = _calculateInitialPrice(persona, preGradState);
 
         // Initialize pool
         poolManager.initialize(poolKey, initialPrice);
 
-        // Get pool ID
-        poolId = poolKey.toId();
+        // Store pool ID
+        persona.poolId = poolKey.toId();
 
-        return (poolId, poolKey);
+        // Add liquidity
+        _addLiquidityThroughPositionManager(tokenId, poolKey, preGradState);
     }
+
+    /**
+     * @notice Calculate initial price for the pool with overflow protection
+     */
+    function _calculateInitialPrice(
+        PersonaData storage persona,
+        PreGraduationState storage preGradState
+    ) private view returns (uint160) {
+        // Get token amounts
+        TokenAmounts memory amounts = _getTokenAmounts(persona.agentToken != address(0));
+        uint256 personaTokens = amounts.liquidity;
+        uint256 pairingTokens = preGradState.totalPairingTokensCollected;
+
+        // Calculate price based on token ordering
+        // Using a more overflow-safe calculation method
+        if (uint160(persona.token) < uint160(persona.pairToken)) {
+            // persona token is token0
+            // price = sqrt(token1/token0) * 2^96
+            // Rearranged to avoid overflow: sqrt(token1 * 2^192 / token0)
+            uint256 ratio = (pairingTokens * 1e18) / personaTokens;
+            // Now calculate sqrt(ratio) * 2^96 / sqrt(1e18)
+            // sqrt(1e18) = 1e9, so we need sqrt(ratio) * 2^96 / 1e9
+            uint256 sqrtRatio = sqrt(ratio);
+            return uint160((sqrtRatio * (2**96)) / 1e9);
+        } else {
+            // pairing token is token0
+            // price = sqrt(token1/token0) * 2^96
+            uint256 ratio = (personaTokens * 1e18) / pairingTokens;
+            uint256 sqrtRatio = sqrt(ratio);
+            return uint160((sqrtRatio * (2**96)) / 1e9);
+        }
+    }
+
+
+    function _addLiquidityThroughPositionManager(
+        uint256 tokenId,
+        PoolKey memory poolKey,
+        PreGraduationState storage preGradState
+    ) private {
+        PersonaData storage persona = personas[tokenId];
+        
+        // Get amounts
+        TokenAmounts memory amounts = _getTokenAmounts(persona.agentToken != address(0));
+        uint256 personaTokens = amounts.liquidity;
+        uint256 pairingTokens = preGradState.totalPairingTokensCollected;
+        
+        // Approve tokens to PositionManager
+        IERC20(persona.token).approve(address(positionManager), personaTokens);
+        IERC20(persona.pairToken).approve(address(positionManager), pairingTokens);
+        
+        // Execute liquidity addition
+        _executeLiquidityAddition(
+            poolKey,
+            personaTokens,
+            pairingTokens,
+            uint160(persona.token) < uint160(persona.pairToken)
+        );
+        
+        emit V4PoolCreated(tokenId, persona.poolId, personaTokens);
+    }
+
+    function _executeLiquidityAddition(
+        PoolKey memory poolKey,
+        uint256 personaTokens,
+        uint256 pairingTokens,
+        bool token0IsPersona
+    ) private {
+        // Determine amounts based on token ordering
+        uint256 amount0Desired = token0IsPersona ? personaTokens : pairingTokens;
+        uint256 amount1Desired = token0IsPersona ? pairingTokens : personaTokens;
+        
+        // Full range position
+        int24 tickLower = -887220;
+        int24 tickUpper = 887220;
+        
+        // Build actions - single byte for MINT_POSITION
+        bytes memory actions = abi.encodePacked(uint8(Actions.MINT_POSITION));
+        
+        // Build params array
+        bytes[] memory params = new bytes[](1);
+        params[0] = abi.encode(
+            poolKey,
+            tickLower,
+            tickUpper,
+            uint256(0), // liquidityDelta of 0 means use token amounts
+            amount0Desired,
+            amount1Desired,
+            amount0Desired * 95 / 100, // amount0Min with 5% slippage
+            amount1Desired * 95 / 100, // amount1Min with 5% slippage
+            address(this), // recipient
+            block.timestamp + 300, // deadline
+            bytes("") // hookData
+        );
+        
+        // Encode for modifyLiquidities: (bytes actions, bytes[] params)
+        bytes memory unlockData = abi.encode(actions, params);
+        
+        // Call modifyLiquidities
+        positionManager.modifyLiquidities{value: 0}(
+            unlockData,
+            block.timestamp + 300
+        );
+    }
+
+    /**
+     * @notice Builds liquidity parameters for PositionManager
+     */
+    function _buildLiquidityParams(
+        PoolKey memory poolKey,
+        uint256 amount0Max,
+        uint256 amount1Max,
+        uint256 tokenId
+    ) private pure returns (bytes memory) {
+        // Use INCREASE_LIQUIDITY action with full range position
+        bytes memory actions = abi.encodePacked(
+            uint8(Actions.INCREASE_LIQUIDITY),
+            uint8(Actions.SETTLE_PAIR)
+        );
+
+        bytes[] memory params = new bytes[](2);
+        
+        // INCREASE_LIQUIDITY parameters
+        // For full range: tickLower = MIN_TICK, tickUpper = MAX_TICK
+        int24 tickLower = -887220; // Closest valid tick to MIN_TICK for tickSpacing 60
+        int24 tickUpper = 887220;  // Closest valid tick to MAX_TICK for tickSpacing 60
+        
+        params[0] = abi.encode(
+            tokenId,        // tokenId (position identifier)
+            poolKey.toId(), // poolId
+            tickLower,      // tickLower
+            tickUpper,      // tickUpper
+            uint256(0),     // liquidityDelta (0 means use token amounts)
+            amount0Max,     // amount0Max
+            amount1Max      // amount1Max
+        );
+        
+        // SETTLE_PAIR parameters
+        params[1] = abi.encode(
+            poolKey.currency0,
+            poolKey.currency1
+        );
+
+        return abi.encode(actions, params);
+    }
+
 
     /**
      * @notice Graduates the persona by creating Uniswap V4 pools and distributing tokens
@@ -1208,7 +1320,7 @@ contract PersonaTokenFactory is
         // Process token distributions
         _processTokenDistributions(tokenId);
 
-        // Create liquidity pool
+        // Create liquidity pool using PositionManager
         _createLiquidityPool(tokenId);
 
         PreGraduationState storage preGradState = preGraduationStates[tokenId];
@@ -1218,8 +1330,7 @@ contract PersonaTokenFactory is
             tokenId,
             persona.poolId,
             preGradState.totalPairingTokensCollected,
-            preGradState.tokensPurchased,
-            persona.graduationTimestamp
+            preGradState.tokensPurchased
         );
     }
 
@@ -1253,110 +1364,37 @@ contract PersonaTokenFactory is
     }
 
     /**
-     * @notice Creates the persona/pairing token liquidity pool
-     * @param tokenId ID of the persona
+     * @notice Orders two currencies according to Uniswap V4 conventions
+     * @param tokenA First token
+     * @param tokenB Second token
+     * @return currency0 The lower address currency
+     * @return currency1 The higher address currency
      */
-    function _createLiquidityPool(uint256 tokenId) private {
-        PersonaData storage persona = personas[tokenId];
-        PreGraduationState storage preGradState = preGraduationStates[tokenId];
-
-        // Calculate liquidity amounts
-        TokenAmounts memory amounts =
-            _getTokenAmounts(persona.agentToken != address(0));
-        uint256 personaTokensForPool = amounts.liquidity;
-
-        // Initialize pool
-        (PoolId poolId, PoolKey memory poolKey) =
-            _initializePool(persona.token, persona.pairToken, SQRT_RATIO_1_1);
-        persona.poolId = poolId;
-
-        // IMPORTANT: Token ordering matters for V4
-        // We need to ensure we're passing amounts in the correct order
-        bool isToken0 = uint160(persona.token) < uint160(persona.pairToken);
-
-        if (isToken0) {
-            // persona.token is token0
-            _addLiquidityToPool(
-                poolKey,
-                persona.token, // token0
-                persona.pairToken, // token1
-                personaTokensForPool,
-                preGradState.totalPairingTokensCollected,
-                tokenId
-            );
+    function _orderCurrencies(address tokenA, address tokenB) 
+        private 
+        pure 
+        returns (Currency currency0, Currency currency1) 
+    {
+        if (uint160(tokenA) < uint160(tokenB)) {
+            currency0 = Currency.wrap(tokenA);
+            currency1 = Currency.wrap(tokenB);
         } else {
-            // persona.pairToken is token0
-            _addLiquidityToPool(
-                poolKey,
-                persona.pairToken, // token0
-                persona.token, // token1
-                preGradState.totalPairingTokensCollected,
-                personaTokensForPool,
-                tokenId
-            );
+            currency0 = Currency.wrap(tokenB);
+            currency1 = Currency.wrap(tokenA);
         }
-
-        emit V4PoolCreated(tokenId, poolId, personaTokensForPool);
     }
 
-    /**
-     * @notice Adds liquidity to a pool
-     * @param poolKey Pool key
-     * @param token0 First token
-     * @param token1 Second token
-     * @param amount0 Amount of token0
-     * @param amount1 Amount of token1
-     * @param salt Salt for the position
-     */
-    function _addLiquidityToPool(
-        PoolKey memory poolKey,
-        address token0,
-        address token1,
-        uint256 amount0,
-        uint256 amount1,
-        uint256 salt
-    ) private {
-        // Approve poolManager for both tokens
-        IERC20(token0).approve(address(poolManager), amount0);
-        IERC20(token1).approve(address(poolManager), amount1);
-
-        // IMPORTANT: For V4, we need to use the minimum of both amounts for liquidity
-        // at a 1:1 price ratio (SQRT_RATIO_1_1)
-        uint256 liquidityAmount = amount0 < amount1 ? amount0 : amount1;
-
-        // Full range liquidity position
-        ModifyLiquidityParams memory params = ModifyLiquidityParams({
-            tickLower: -887200, // Min tick for full range
-            tickUpper: 887200, // Max tick for full range
-            liquidityDelta: int256(liquidityAmount),
-            salt: bytes32(salt)
-        });
-
-        // V4 expects hook data in the last parameter
-        poolManager.modifyLiquidity(poolKey, params, abi.encode(salt));
-    }
-
-    /**
-     * @notice Helper to get pool key for a persona
-     * @param persona Persona data
-     * @return poolKey The pool key
-     */
+    // Updated _getPoolKey using the helper
     function _getPoolKey(PersonaData storage persona)
         private
         view
         returns (PoolKey memory poolKey)
     {
-        Currency currency0;
-        Currency currency1;
-
-        if (uint160(persona.token) < uint160(persona.pairToken)) {
-            currency0 = Currency.wrap(persona.token);
-            currency1 = Currency.wrap(persona.pairToken);
-        } else {
-            currency0 = Currency.wrap(persona.pairToken);
-            currency1 = Currency.wrap(persona.token);
-        }
-
+        (Currency currency0, Currency currency1) = _orderCurrencies(
+            persona.token, 
+            persona.pairToken
+        );
+        
         poolKey = PoolKey({
             currency0: currency0,
             currency1: currency1,
