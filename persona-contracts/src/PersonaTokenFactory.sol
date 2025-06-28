@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {ERC721Upgradeable} from
-    "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import {ERC721EnumerableUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import {OwnableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from
@@ -65,10 +65,10 @@ error NotAllowed(uint8 code);
  * @title PersonaTokenFactory
  * @author Amica Protocol
  * @notice Factory contract for creating and managing persona tokens with bonding curves and Uniswap V4 integration
- * @dev Implements ERC721 for persona ownership, with each NFT controlling an ERC20 token
+ * @dev Implements ERC721 with Enumerable and URIStorage extensions for persona ownership
  */
 contract PersonaTokenFactory is
-    ERC721Upgradeable,
+    ERC721EnumerableUpgradeable,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
     PausableUpgradeable
@@ -78,26 +78,26 @@ contract PersonaTokenFactory is
     using PoolIdLibrary for PoolKey;
 
     /// @notice Total supply for each persona token (1 billion with 18 decimals)
-    uint256 public constant PERSONA_TOKEN_SUPPLY = 1_000_000_000 ether;
+    uint256 private constant PERSONA_TOKEN_SUPPLY = 1_000_000_000 ether;
 
     /// @notice Token distribution fractions
     uint256 private constant THIRD_SUPPLY = 333_333_333 ether;
     uint256 private constant SIXTH_SUPPLY = 166_666_666 ether;
 
     /// @notice V4 tick spacing for standard pools
-    int24 public constant TICK_SPACING = 60;
+    int24 private constant TICK_SPACING = 60;
 
     /// @notice Initial price sqrt ratio for 1:1 pools
-    uint160 public constant SQRT_RATIO_1_1 = 79228162514264337593543950336;
+    uint160 private constant SQRT_RATIO_1_1 = 79228162514264337593543950336;
 
     /// @notice Precision for calculations
     uint256 private constant PRECISION = 1e18;
 
     /// @notice Graduation threshold - 85% of bonding tokens must be sold
-    uint256 public constant GRADUATION_THRESHOLD_PERCENT = 85;
+    uint256 private constant GRADUATION_THRESHOLD_PERCENT = 85;
 
     /// @notice Time delay after graduation before claims can be made (24 hours)
-    uint256 public constant CLAIM_DELAY = 1 days;
+    uint256 private constant CLAIM_DELAY = 1 days;
 
     /**
      * @notice Core data for each persona
@@ -154,6 +154,9 @@ contract PersonaTokenFactory is
         uint256 amica;
         uint256 agentRewards;
     }
+
+    /// @notice Base URI for token metadata
+    string public baseTokenURI;
 
     /// @notice AMICA token contract
     IERC20 public amicaToken;
@@ -396,6 +399,7 @@ contract PersonaTokenFactory is
         address bondingCurve_
     ) public initializer {
         __ERC721_init("Amica Persona", "PERSONA");
+        __ERC721Enumerable_init();
         __Ownable_init(msg.sender);
         __ReentrancyGuard_init();
         __Pausable_init();
@@ -489,6 +493,7 @@ contract PersonaTokenFactory is
      * @param pairingToken Token to use for pairing/bonding
      * @param name Name of the persona (max 32 chars)
      * @param symbol Symbol of the persona token (max 10 chars)
+     * @param domain Domain of the persona
      * @param initialBuyAmount Amount to spend on initial token purchase
      * @param agentToken Optional agent token for staking
      * @param agentTokenThreshold Agent token threshold required for graduation
@@ -1108,6 +1113,23 @@ contract PersonaTokenFactory is
     }
 
     /**
+     * @notice Sets the base URI for token metadata
+     * @param newBaseURI New base URI (e.g., "https://api.amica.com/metadata/")
+     * @dev Only callable by owner
+     */
+    function setBaseURI(string memory newBaseURI) external onlyOwner {
+        baseTokenURI = newBaseURI;
+    }
+
+    /**
+     * @notice Returns the base URI for token metadata
+     * @return The base URI string
+     */
+    function _baseURI() internal view override returns (string memory) {
+        return baseTokenURI;
+    }
+
+    /**
      * @notice Updates metadata for a persona
      * @param tokenId ID of the persona
      * @param keys Array of metadata keys to update
@@ -1126,32 +1148,6 @@ contract PersonaTokenFactory is
             metadata[tokenId][keys[i]] = values[i];
             emit MetadataUpdated(tokenId, keys[i]);
         }
-    }
-
-    /**
-     * @notice Returns metadata URI for a persona NFT
-     * @param tokenId ID of the persona
-     * @return JSON metadata URI
-     */
-    function tokenURI(uint256 tokenId)
-        public
-        view
-        override
-        returns (string memory)
-    {
-        _requireOwned(tokenId);
-
-        PersonaData storage persona = personas[tokenId];
-
-        return string(
-            abi.encodePacked(
-                'data:application/json;utf8,{"tokenId":"',
-                tokenId.toString(),
-                '","token":"',
-                Strings.toHexString(uint160(persona.token), 20),
-                '"}'
-            )
-        );
     }
 
     /**
