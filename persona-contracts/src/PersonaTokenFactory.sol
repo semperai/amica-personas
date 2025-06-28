@@ -1143,20 +1143,6 @@ contract PersonaTokenFactory is
         }
     }
 
-    function sqrt(uint256 y) internal pure returns (uint256 z) {
-        if (y > 3) {
-            z = y;
-            uint256 x = y / 2 + 1;
-            while (x < z) {
-                z = x;
-                x = (y / x + x) / 2;
-            }
-        } else if (y != 0) {
-            z = 1;
-        }
-        // else z = 0 (default value)
-    }
-
     /**
      * @notice Creates liquidity pool using PositionManager
      * @param tokenId ID of the persona
@@ -1169,9 +1155,6 @@ contract PersonaTokenFactory is
 
         bytes memory hookData = new bytes(0);
 
-        uint160 startingPrice = 2 ** 96;
-        int24 currentTick = TickMath.getTickAtSqrtPrice(startingPrice);
-
         uint256 token0Amount = uint160(persona.token)
             < uint160(persona.pairToken)
             ? THIRD_SUPPLY
@@ -1181,6 +1164,9 @@ contract PersonaTokenFactory is
             < uint160(persona.pairToken)
             ? preGradState.totalPairingTokensCollected
             : THIRD_SUPPLY;
+
+        uint160 startingPrice =
+            _calculateSqrtPriceX96(token0Amount, token1Amount);
 
         // Converts token amounts to liquidity units
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
@@ -1239,6 +1225,60 @@ contract PersonaTokenFactory is
         persona.poolId = poolKey.toId();
 
         emit V4PoolCreated(tokenId, persona.poolId, liquidity);
+    }
+
+    /**
+     * @notice Calculates the sqrt price in X96 format for given token amounts
+     * @param amount0 Amount of token0
+     * @param amount1 Amount of token1
+     * @return sqrtPriceX96 The square root price in X96 format
+     */
+    function _calculateSqrtPriceX96(uint256 amount0, uint256 amount1)
+        private
+        pure
+        returns (uint160 sqrtPriceX96)
+    {
+        if (amount0 == 0) revert Invalid(1);
+
+        // Calculate price = amount1 / amount0
+        // Then calculate sqrtPriceX96 = sqrt(price) * 2^96
+
+        // To maintain precision, we'll use the following approach:
+        // sqrtPriceX96 = sqrt(amount1 * 2^192 / amount0)
+        // This is equivalent to: sqrt(amount1/amount0) * 2^96
+
+        // First scale amount1 by 2^192 to maintain precision
+        // We need to be careful about overflow, so we'll do this in steps
+        uint256 ratio = (amount1 << 96) / amount0;
+
+        // Now we need sqrt(ratio * 2^96)
+        // Which is equivalent to sqrt(ratio) * 2^48
+        uint256 sqrtRatio = sqrt(ratio);
+
+        // Scale by remaining 2^48
+        sqrtPriceX96 = uint160(sqrtRatio << 48);
+
+        // Ensure the result fits in uint160
+        if (sqrtPriceX96 == 0) revert Invalid(6);
+    }
+
+    /**
+     * @notice Calculates the square root of a number
+     * @param x The number to calculate the square root of
+     * @return y The square root
+     */
+    function sqrt(uint256 x) internal pure returns (uint256 y) {
+        if (x == 0) return 0;
+
+        // Initial guess
+        y = x;
+        uint256 z = (x + 1) / 2;
+
+        // Babylonian method
+        while (z < y) {
+            y = z;
+            z = (x / z + z) / 2;
+        }
     }
 
     function _mintLiquidityParams(
