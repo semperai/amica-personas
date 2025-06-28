@@ -44,7 +44,8 @@ abstract contract DeployConfig is Script {
         config.defaultMintCost = 1000 ether;
         config.defaultGraduationThreshold = 1_000_000 ether;
         config.poolManager = AddressConstants.getPoolManagerAddress(chainId);
-        config.positionManager = AddressConstants.getPositionManagerAddress(chainId);
+        config.positionManager =
+            AddressConstants.getPositionManagerAddress(chainId);
         config.permit2 = AddressConstants.getPermit2Address();
 
         return config;

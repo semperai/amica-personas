@@ -19,7 +19,8 @@ import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {
     Currency, CurrencyLibrary
 } from "@uniswap/v4-core/src/types/Currency.sol";
-import {LiquidityAmounts} from "@uniswap/v4-core/test/utils/LiquidityAmounts.sol";
+import {LiquidityAmounts} from
+    "@uniswap/v4-core/test/utils/LiquidityAmounts.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
@@ -90,7 +91,6 @@ contract PersonaTokenFactory is
     /// @notice Full range ticks for Uniswap V4
     int24 private constant TICK_LOWER = -887220;
     int24 private constant TICK_UPPER = 887220;
-
 
     /// @notice Precision for calculations
     uint256 private constant PRECISION = 1e18;
@@ -414,8 +414,8 @@ contract PersonaTokenFactory is
         if (
             amicaToken_ == address(0) || poolManager_ == address(0)
                 || positionManager_ == address(0) || dynamicFeeHook_ == address(0)
-                || personaTokenImplementation_ == address(0) || permit2_ == address(0)
-                || bondingCurve_ == address(0)
+                || personaTokenImplementation_ == address(0)
+                || permit2_ == address(0) || bondingCurve_ == address(0)
         ) revert Invalid(12);
 
         amicaToken = IERC20(amicaToken_);
@@ -472,7 +472,7 @@ contract PersonaTokenFactory is
             pricingMultiplier: pricingMultiplier
         });
 
-        // allow unlimited approval for PositionManager (for creating pools)
+        // Allow unlimited approval for Uniswap Permit2
         IERC20(token).approve(address(permit2), type(uint256).max);
 
         emit PairingConfigUpdated(token);
@@ -535,6 +535,9 @@ contract PersonaTokenFactory is
             PERSONA_TOKEN_SUPPLY,
             address(this)
         );
+
+        // Allow unlimited approval for Uniswap Permit2
+        IERC20(token).approve(address(permit2), type(uint256).max);
 
         PersonaData storage persona = personas[tokenId];
         persona.token = token;
@@ -742,7 +745,7 @@ contract PersonaTokenFactory is
     }
 
     /**
-     * @notice FIXED: Internal function for buying tokens with proper graduation check
+     * @notice Internal function for buying tokens with proper graduation check
      * @dev Handles both initial purchase and regular purchases
      */
     function _swapExactTokensForTokensInternal(
@@ -1073,7 +1076,7 @@ contract PersonaTokenFactory is
         uint256 deadline = block.timestamp + 60; // 1 minute deadline
 
         // Execute fee collection through position manager
-        positionManager.modifyLiquidities{value: 0 /* not ETH */}(
+        positionManager.modifyLiquidities{value: 0 /* not ETH */ }(
             abi.encode(actions, params), deadline
         );
 
@@ -1169,11 +1172,13 @@ contract PersonaTokenFactory is
         uint160 startingPrice = 2 ** 96;
         int24 currentTick = TickMath.getTickAtSqrtPrice(startingPrice);
 
-        uint256 token0Amount = uint160(persona.token) < uint160(persona.pairToken)
+        uint256 token0Amount = uint160(persona.token)
+            < uint160(persona.pairToken)
             ? THIRD_SUPPLY
             : preGradState.totalPairingTokensCollected;
 
-        uint256 token1Amount = uint160(persona.token) < uint160(persona.pairToken)
+        uint256 token1Amount = uint160(persona.token)
+            < uint160(persona.pairToken)
             ? preGradState.totalPairingTokensCollected
             : THIRD_SUPPLY;
 
@@ -1216,20 +1221,24 @@ contract PersonaTokenFactory is
         );
 
         // refresh allowance
-        IERC20(persona.token).approve(address(permit2), type(uint256).max);
-        IERC20(persona.pairToken).approve(address(permit2), type(uint256).max);
-        permit2.approve(persona.token, address(positionManager), type(uint160).max, type(uint48).max);
-        permit2.approve(persona.pairToken, address(positionManager), type(uint160).max, type(uint48).max);
+        permit2.approve(
+            persona.token,
+            address(positionManager),
+            type(uint160).max,
+            type(uint48).max
+        );
+        permit2.approve(
+            persona.pairToken,
+            address(positionManager),
+            type(uint160).max,
+            type(uint48).max
+        );
 
-        positionManager.multicall{value: 0 /* not ETH*/}(params);
+        positionManager.multicall{value: 0 /* not ETH*/ }(params);
 
         persona.poolId = poolKey.toId();
 
-        emit V4PoolCreated(
-            tokenId,
-            persona.poolId,
-            liquidity
-        );
+        emit V4PoolCreated(tokenId, persona.poolId, liquidity);
     }
 
     function _mintLiquidityParams(
@@ -1243,11 +1252,23 @@ contract PersonaTokenFactory is
         bytes memory hookData
     ) internal pure returns (bytes memory, bytes[] memory) {
         bytes memory actions = abi.encodePacked(
-            uint8(Actions.MINT_POSITION), uint8(Actions.SETTLE_PAIR), uint8(Actions.SWEEP), uint8(Actions.SWEEP)
+            uint8(Actions.MINT_POSITION),
+            uint8(Actions.SETTLE_PAIR),
+            uint8(Actions.SWEEP),
+            uint8(Actions.SWEEP)
         );
 
         bytes[] memory params = new bytes[](4);
-        params[0] = abi.encode(poolKey, _tickLower, _tickUpper, liquidity, amount0Max, amount1Max, recipient, hookData);
+        params[0] = abi.encode(
+            poolKey,
+            _tickLower,
+            _tickUpper,
+            liquidity,
+            amount0Max,
+            amount1Max,
+            recipient,
+            hookData
+        );
         params[1] = abi.encode(poolKey.currency0, poolKey.currency1);
         params[2] = abi.encode(poolKey.currency0, recipient);
         params[3] = abi.encode(poolKey.currency1, recipient);
