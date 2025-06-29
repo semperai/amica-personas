@@ -130,29 +130,26 @@ contract PersonaTokenFactoryMetadataTest is Fixtures {
         }
     }
 
-    function test_TokenURI_ValidToken() public view {
+    function test_TokenURI_ValidToken() public {
+        // First set a base URI
+        vm.prank(factoryOwner);
+        personaFactory.setBaseURI("https://api.amica.com/metadata/");
+
         string memory uri = personaFactory.tokenURI(testTokenId);
 
-        // Verify the URI starts with the expected data URI prefix
-        assertTrue(_startsWith(uri, "data:application/json;utf8,"));
-
-        // Extract JSON from URI
-        string memory jsonStr = _substring(uri, 27, bytes(uri).length);
-
-        // Verify it contains expected fields (basic checks)
-        assertTrue(_contains(jsonStr, '"name":"Test Persona"'));
-        assertTrue(_contains(jsonStr, '"symbol":"TESTP"'));
-        assertTrue(
-            _contains(
-                jsonStr,
-                string(
-                    abi.encodePacked(
-                        '"tokenId":"', vm.toString(testTokenId), '"'
-                    )
-                )
+        // The default ERC721 implementation concatenates baseURI + tokenId
+        string memory expectedURI = string(
+            abi.encodePacked(
+                "https://api.amica.com/metadata/", vm.toString(testTokenId)
             )
         );
-        assertTrue(_contains(jsonStr, '"token":"0x')); // Should contain the token address
+        assertEq(uri, expectedURI);
+    }
+
+    function test_TokenURI_NoBaseURI() public {
+        // When no base URI is set, the default ERC721 implementation returns an empty string
+        string memory uri = personaFactory.tokenURI(testTokenId);
+        assertEq(uri, "");
     }
 
     function test_TokenURI_RevertNonExistentToken() public {
@@ -352,68 +349,27 @@ contract PersonaTokenFactoryMetadataTest is Fixtures {
         assertEq(retrieved[2], "value3");
     }
 
-    // Helper functions for string operations
-    function _startsWith(string memory str, string memory prefix)
-        private
-        pure
-        returns (bool)
-    {
-        bytes memory strBytes = bytes(str);
-        bytes memory prefixBytes = bytes(prefix);
+    function test_SetBaseURI() public {
+        // Only owner can set base URI
+        vm.prank(user1);
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "OwnableUnauthorizedAccount(address)", user1
+            )
+        );
+        personaFactory.setBaseURI("https://invalid.com/");
 
-        if (strBytes.length < prefixBytes.length) {
-            return false;
-        }
+        // Owner can set base URI
+        vm.prank(factoryOwner);
+        personaFactory.setBaseURI("https://metadata.amica.com/");
 
-        for (uint256 i = 0; i < prefixBytes.length; i++) {
-            if (strBytes[i] != prefixBytes[i]) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    function _contains(string memory str, string memory substr)
-        private
-        pure
-        returns (bool)
-    {
-        bytes memory strBytes = bytes(str);
-        bytes memory substrBytes = bytes(substr);
-
-        if (strBytes.length < substrBytes.length) {
-            return false;
-        }
-
-        for (uint256 i = 0; i <= strBytes.length - substrBytes.length; i++) {
-            bool found = true;
-            for (uint256 j = 0; j < substrBytes.length; j++) {
-                if (strBytes[i + j] != substrBytes[j]) {
-                    found = false;
-                    break;
-                }
-            }
-            if (found) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    function _substring(string memory str, uint256 start, uint256 end)
-        private
-        pure
-        returns (string memory)
-    {
-        bytes memory strBytes = bytes(str);
-        bytes memory result = new bytes(end - start);
-
-        for (uint256 i = start; i < end; i++) {
-            result[i - start] = strBytes[i];
-        }
-
-        return string(result);
+        // Verify the URI is updated
+        string memory uri = personaFactory.tokenURI(testTokenId);
+        string memory expectedURI = string(
+            abi.encodePacked(
+                "https://metadata.amica.com/", vm.toString(testTokenId)
+            )
+        );
+        assertEq(uri, expectedURI);
     }
 }

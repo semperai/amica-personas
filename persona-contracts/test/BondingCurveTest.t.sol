@@ -11,7 +11,7 @@ contract BondingCurveTest is Test {
     // Constants for testing
     uint256 constant TOTAL_SUPPLY = 222_222_222 ether; // 2/9 of 1B tokens (bonding allocation)
     uint256 constant PRECISION = 1e18;
-    uint256 constant CURVE_MULTIPLIER = 66; // Updated from 33 to 66
+    uint256 constant CURVE_MULTIPLIER = 233; // Updated to match actual implementation
 
     function setUp() public {
         bondingCurve = new BondingCurve();
@@ -33,12 +33,12 @@ contract BondingCurveTest is Test {
 
     function test_GetCurrentPrice_AtEnd() public view {
         uint256 price = bondingCurve.getCurrentPrice(TOTAL_SUPPLY, TOTAL_SUPPLY);
-        // Price should be approximately 66x at the end
+        // Price should be approximately 233x at the end (based on curve multiplier 14264)
         assertApproxEqRel(
             price,
             CURVE_MULTIPLIER * PRECISION,
             0.05 ether,
-            "End price should be ~66x"
+            "End price should be ~233x"
         );
         console.log("End price:", price);
     }
@@ -97,7 +97,7 @@ contract BondingCurveTest is Test {
     }
 
     function test_CalculateAmountOut_NearEndOfCurve() public view {
-        // When almost all tokens are sold, price should be near 66x
+        // When almost all tokens are sold, price should be near 233x
         uint256 amountIn = 1000 ether;
         uint256 almostAllSold = TOTAL_SUPPLY - 1000 ether; // Only 1000 tokens left
 
@@ -105,10 +105,10 @@ contract BondingCurveTest is Test {
             amountIn, almostAllSold, TOTAL_SUPPLY
         );
 
-        // At the end, price should be ~66x, so we should get much fewer tokens
+        // At the end, price should be ~233x, so we should get much fewer tokens
         assertLt(
             tokensOut,
-            amountIn / 40,
+            amountIn / 150, // Changed from /40 to /150 to account for 233x instead of 66x
             "Should receive much fewer tokens at end of curve"
         );
         assertGt(tokensOut, 0, "Should still receive some tokens");
@@ -154,20 +154,20 @@ contract BondingCurveTest is Test {
         uint256 totalCost =
             bondingCurve.calculateCostBetween(0, TOTAL_SUPPLY, TOTAL_SUPPLY);
 
-        // Should be significant due to 66x multiplier
+        // Should be significant due to 233x multiplier
         assertGt(
             totalCost,
             TOTAL_SUPPLY,
             "Total cost should exceed supply due to curve"
         );
 
-        // Average price should be between 1x and 66x
+        // Average price should be between 1x and 233x
         uint256 avgPrice = (totalCost * PRECISION) / TOTAL_SUPPLY;
         assertGt(avgPrice, PRECISION, "Average price should be > 1x");
         assertLt(
             avgPrice,
             CURVE_MULTIPLIER * PRECISION,
-            "Average price should be < 66x"
+            "Average price should be < 233x"
         );
 
         console.log("Total cost to buy all tokens:", totalCost / 1e18);

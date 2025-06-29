@@ -28,6 +28,15 @@ contract PersonaTokenTest is Fixtures {
 
     uint256 constant INITIAL_SUPPLY = 1_000_000_000 ether;
 
+    // ==================== Event definitions ====================
+    // Define the event from IBurnAndClaim interface
+    event TokenClaimed(
+        address indexed user,
+        address indexed claimedToken,
+        uint256 amountBurned,
+        uint256 amountClaimed
+    );
+
     function setUp() public override {
         super.setUp();
 
@@ -103,10 +112,8 @@ contract PersonaTokenTest is Fixtures {
         tokens[0] = address(mockToken1);
 
         vm.prank(user1);
-        vm.expectEmit(true, true, false, true);
-        emit TokensBurnedAndClaimed(
-            user1, burnAmount, tokens, _toArray(expectedClaim)
-        );
+        vm.expectEmit(true, true, true, true);
+        emit TokenClaimed(user1, address(mockToken1), burnAmount, expectedClaim);
         testToken.burnAndClaim(burnAmount, tokens);
 
         // Check balances
@@ -613,12 +620,4 @@ contract PersonaTokenTest is Fixtures {
         array[0] = value;
         return array;
     }
-
-    // ==================== Event definitions ====================
-    event TokensBurnedAndClaimed(
-        address indexed user,
-        uint256 amountBurned,
-        address[] tokens,
-        uint256[] amounts
-    );
 }

@@ -321,13 +321,11 @@ contract PersonaTokenFactory is
      * @param tokenId Persona token ID
      * @param recipient Address receiving rewards
      * @param personaTokens Amount of persona tokens distributed
-     * @param agentShare Amount of agent tokens returned
      */
     event AgentRewardsDistributed(
         uint256 indexed tokenId,
         address indexed recipient,
-        uint256 personaTokens,
-        uint256 agentShare
+        uint256 personaTokens
     );
 
     /**
@@ -920,22 +918,7 @@ contract PersonaTokenFactory is
         if (totalClaimable == 0) revert NotAllowed(9); // No tokens to claim
 
         // Update state for token claims
-        if (purchasedAmount > 0) {
-            hasClaimedTokens[tokenId][msg.sender] = true;
-        }
-
-        // Update state for agent deposits and return agent tokens
-        uint256 userAgentAmount = agentDeposits[tokenId][msg.sender];
-        if (persona.agentToken != address(0) && userAgentAmount > 0) {
-            agentDeposits[tokenId][msg.sender] = 0;
-
-            // Return agent tokens to user
-            if (
-                !IERC20(persona.agentToken).transfer(msg.sender, userAgentAmount)
-            ) {
-                revert Failed(0);
-            }
-        }
+        hasClaimedTokens[tokenId][msg.sender] = true;
 
         // Transfer all persona tokens in one go
         if (!IERC20(persona.token).transfer(msg.sender, totalClaimable)) {
@@ -953,9 +936,7 @@ contract PersonaTokenFactory is
             );
         }
         if (agentRewardAmount > 0) {
-            emit AgentRewardsDistributed(
-                tokenId, msg.sender, agentRewardAmount, userAgentAmount
-            );
+            emit AgentRewardsDistributed(tokenId, msg.sender, agentRewardAmount);
         }
     }
 

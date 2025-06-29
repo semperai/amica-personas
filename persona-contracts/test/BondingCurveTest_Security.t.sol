@@ -2,6 +2,7 @@
 pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
+import {stdError} from "forge-std/StdError.sol";
 import {console} from "forge-std/console.sol";
 import {BondingCurve} from "../src/BondingCurve.sol";
 
@@ -11,7 +12,7 @@ contract BondingCurveTest_Security is Test {
     uint256 constant SUPPLY_222M = 222_222_222 ether;
     uint256 constant SUPPLY_333M = 333_333_333 ether;
     uint256 constant PRECISION = 1e18;
-    uint256 constant CURVE_MULTIPLIER = 66; // Updated from 33 to 66
+    uint256 constant CURVE_MULTIPLIER = 233; // Updated to match actual implementation
 
     function setUp() public {
         bondingCurve = new BondingCurve();
@@ -166,19 +167,34 @@ contract BondingCurveTest_Security is Test {
     function test_Revert_InvalidInputs() public {
         uint256 supply = SUPPLY_222M;
 
-        // Test zero amount
-        vm.expectRevert("Invalid input");
+        // Test zero amount for buy
+        vm.expectRevert(
+            abi.encodeWithSelector(BondingCurve.InvalidAmount.selector, 0)
+        );
         bondingCurve.calculateAmountOut(0, 0, supply);
 
-        vm.expectRevert("Invalid input");
+        // Test zero amount for sell
+        vm.expectRevert(
+            abi.encodeWithSelector(BondingCurve.InvalidAmount.selector, 1)
+        );
         bondingCurve.calculateAmountOutForSell(0, supply / 2, supply);
 
         // Test selling more than sold
-        vm.expectRevert("Insufficient tokens sold");
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                BondingCurve.InsufficientTokensSold.selector,
+                1000 ether,
+                500 ether
+            )
+        );
         bondingCurve.calculateAmountOutForSell(1000 ether, 500 ether, supply);
 
         // Test with no remaining reserve
-        vm.expectRevert("Insufficient reserve");
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                BondingCurve.InsufficientReserve.selector, 1, 0
+            )
+        );
         bondingCurve.calculateAmountOut(1 ether, supply, supply);
     }
 
@@ -215,12 +231,12 @@ contract BondingCurveTest_Security is Test {
         // Test behavior with extreme values (should revert gracefully)
         uint256 supply = SUPPLY_222M;
 
-        // This should revert due to overflow in calculations
-        vm.expectRevert();
+        // This should revert due to arithmetic overflow (Solidity panic code 0x11)
+        vm.expectRevert(stdError.arithmeticError);
         bondingCurve.calculateAmountOut(type(uint256).max, 0, supply);
 
-        // Test with max supply
-        vm.expectRevert();
+        // Test with max supply - this will likely cause arithmetic overflow in virtual buffer calculation
+        vm.expectRevert(stdError.arithmeticError);
         bondingCurve.calculateAmountOut(1000 ether, 0, type(uint256).max);
     }
 

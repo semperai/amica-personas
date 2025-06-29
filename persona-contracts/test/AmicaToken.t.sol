@@ -19,13 +19,15 @@ contract AmicaTokenTest is Fixtures {
     // Users
     address public owner;
 
-    // Events
-    event TokensBurnedAndClaimed(
+    // Events - Update to match what BurnAndClaimBase actually emits
+    event TokenClaimed(
         address indexed user,
+        address indexed claimedToken,
         uint256 amountBurned,
-        address[] tokens,
-        uint256[] amounts
+        uint256 amountClaimed
     );
+
+    event Transfer(address indexed from, address indexed to, uint256 value);
 
     function setUp() public override {
         super.setUp();
@@ -113,20 +115,25 @@ contract AmicaTokenTest is Fixtures {
         address[] memory tokens =
             _sortTokens(address(usdc), address(weth), address(dai));
 
-        // Create expected amounts array in the same order as sorted tokens
-        uint256[] memory expectedAmounts = new uint256[](3);
-        for (uint256 i = 0; i < 3; i++) {
-            if (tokens[i] == address(usdc)) {
-                expectedAmounts[i] = expectedUsdc;
-            } else if (tokens[i] == address(weth)) {
-                expectedAmounts[i] = expectedWeth;
-            } else if (tokens[i] == address(dai)) {
-                expectedAmounts[i] = expectedDai;
-            }
-        }
-
+        // Expect individual TokenClaimed events for each token
+        // First expect the burn transfer event
         vm.expectEmit(true, true, true, true);
-        emit TokensBurnedAndClaimed(user1, burnAmount, tokens, expectedAmounts);
+        emit Transfer(user1, address(0), burnAmount);
+
+        // Then expect TokenClaimed events in the order of sorted tokens
+        for (uint256 i = 0; i < tokens.length; i++) {
+            uint256 expectedAmount;
+            if (tokens[i] == address(usdc)) {
+                expectedAmount = expectedUsdc;
+            } else if (tokens[i] == address(weth)) {
+                expectedAmount = expectedWeth;
+            } else if (tokens[i] == address(dai)) {
+                expectedAmount = expectedDai;
+            }
+
+            vm.expectEmit(true, true, true, true);
+            emit TokenClaimed(user1, tokens[i], burnAmount, expectedAmount);
+        }
 
         vm.prank(user1);
         amicaToken.burnAndClaim(burnAmount, tokens);
