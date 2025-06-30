@@ -1034,12 +1034,15 @@ contract PersonaTokenFactory is
         if (PoolId.unwrap(persona.poolId) == bytes32(0)) revert NotAllowed(11);
         if (to == address(0)) revert Invalid(12);
 
+        (address token0, address token1) =
+            _ordering(persona.token, persona.pairToken);
+
         // Get pool key to determine currencies
-        PoolKey memory poolKey = _getPoolKey(persona);
+        PoolKey memory poolKey = _getPoolKey(token0, token1);
 
         // Get balances before
-        uint256 balance0before = _getBalance(poolKey.currency0, to);
-        uint256 balance1before = _getBalance(poolKey.currency1, to);
+        uint256 balance0before = IERC20(token0).balanceOf(to);
+        uint256 balance1before = IERC20(token1).balanceOf(to);
 
         // Prepare actions for fee collection
         bytes memory actions = abi.encodePacked(
@@ -1062,28 +1065,10 @@ contract PersonaTokenFactory is
         );
 
         // Calculate collected amounts
-        amount0 = _getBalance(poolKey.currency0, to) - balance0before;
-        amount1 = _getBalance(poolKey.currency1, to) - balance1before;
+        amount0 = IERC20(token0).balanceOf(to) - balance0before;
+        amount1 = IERC20(token1).balanceOf(to) - balance1before;
 
         emit FeesCollected(nftTokenId, persona.poolId, amount0, amount1);
-    }
-
-    /**
-     * @notice Helper to get token balance
-     * @param currency The currency to check
-     * @param account The account to check
-     * @return balance The balance
-     */
-    function _getBalance(Currency currency, address account)
-        private
-        view
-        returns (uint256)
-    {
-        if (currency.isAddressZero()) {
-            return account.balance;
-        } else {
-            return IERC20(Currency.unwrap(currency)).balanceOf(account);
-        }
     }
 
     /**
@@ -1132,7 +1117,9 @@ contract PersonaTokenFactory is
         PersonaData storage persona = personas[tokenId];
         PreGraduationState storage preGradState = preGraduationStates[tokenId];
 
-        PoolKey memory poolKey = _getPoolKey(persona);
+        (address token0, address token1) =
+            _ordering(persona.token, persona.pairToken);
+        PoolKey memory poolKey = _getPoolKey(token0, token1);
 
         bytes memory hookData = new bytes(0);
 
@@ -1306,13 +1293,10 @@ contract PersonaTokenFactory is
         PersonaData storage persona = personas[tokenId];
         if (persona.graduationTimestamp > 0) revert NotAllowed(7);
 
-        // Set graduation timestamp
         persona.graduationTimestamp = block.timestamp;
 
-        // Process token distributions
         _processTokenDistributions(tokenId);
 
-        // Create liquidity pool using PositionManager
         _createLiquidityPool(tokenId);
 
         PreGraduationState storage preGradState = preGraduationStates[tokenId];
@@ -1356,34 +1340,37 @@ contract PersonaTokenFactory is
     }
 
     /**
-     * @notice Orders two currencies according to Uniswap V4 conventions
-     * @param tokenA First token
-     * @param tokenB Second token
-     * @return currency0 The lower address currency
-     * @return currency1 The higher address currency
+     * @notice Orders two addresses according to Uniswap V4 conventions
+     * @param tokenA First token address
+     * @param tokenB Second token address
+     * @return token0 The lower address token
+     * @return token1 The higher address token
      */
-    function _orderCurrencies(address tokenA, address tokenB)
+    function _ordering(address tokenA, address tokenB)
         private
         pure
-        returns (Currency currency0, Currency currency1)
+        returns (address, address)
     {
         if (uint160(tokenA) < uint160(tokenB)) {
-            currency0 = Currency.wrap(tokenA);
-            currency1 = Currency.wrap(tokenB);
+            return (tokenA, tokenB);
         } else {
-            currency0 = Currency.wrap(tokenB);
-            currency1 = Currency.wrap(tokenA);
+            return (tokenB, tokenA);
         }
     }
 
-    // Updated _getPoolKey using the helper
-    function _getPoolKey(PersonaData storage persona)
+    // @notice Gets the pool key for a persona
+    // @dev ensure token0 < token1
+    function _getPoolKey(address token0, address token1)
         private
         view
         returns (PoolKey memory poolKey)
     {
-        (Currency currency0, Currency currency1) =
-            _orderCurrencies(persona.token, persona.pairToken);
+        if (uint160(token0) >= uint160(token1)) {
+            revert Invalid(7); // Token order is invalid
+        }
+
+        Currency currency0 = Currency.wrap(token0);
+        Currency currency1 = Currency.wrap(token1);
 
         poolKey = PoolKey({
             currency0: currency0,
