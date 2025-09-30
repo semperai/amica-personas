@@ -340,13 +340,13 @@ contract PersonaTokenFactory is
 
     /**
      * @notice Emitted when fees are collected (from UniswapV4Manager)
-     * @param nftTokenId NFT token ID
+     * @param tokenId NFT token ID
      * @param poolId Pool ID
      * @param amount0 Amount of token0 collected
      * @param amount1 Amount of token1 collected
      */
     event FeesCollected(
-        uint256 indexed nftTokenId,
+        uint256 indexed tokenId,
         PoolId poolId,
         uint256 amount0,
         uint256 amount1
@@ -816,6 +816,8 @@ contract PersonaTokenFactory is
         if (tokenThresholdMet && agentRequirementMet) {
             _graduate(tokenId);
         }
+
+        return amountOut;
     }
 
     /**
@@ -1018,19 +1020,19 @@ contract PersonaTokenFactory is
 
     /**
      * @notice Collects accumulated fees from pools using PositionManager
-     * @param nftTokenId NFT token ID
+     * @param tokenId NFT token ID
      * @param to Address to receive the fees
      * @return amount0 Amount of token0 collected
      * @return amount1 Amount of token1 collected
      */
-    function collectFees(uint256 nftTokenId, address to)
+    function collectFees(uint256 tokenId, address to)
         external
         nonReentrant
         returns (uint256 amount0, uint256 amount1)
     {
-        if (ownerOf(nftTokenId) != msg.sender) revert NotAllowed(11);
+        if (ownerOf(tokenId) != msg.sender) revert NotAllowed(11);
 
-        PersonaData storage persona = personas[nftTokenId];
+        PersonaData storage persona = personas[tokenId];
         if (PoolId.unwrap(persona.poolId) == bytes32(0)) revert NotAllowed(11);
         if (to == address(0)) revert Invalid(12);
 
@@ -1068,7 +1070,7 @@ contract PersonaTokenFactory is
         amount0 = IERC20(token0).balanceOf(to) - balance0before;
         amount1 = IERC20(token1).balanceOf(to) - balance1before;
 
-        emit FeesCollected(nftTokenId, persona.poolId, amount0, amount1);
+        emit FeesCollected(tokenId, persona.poolId, amount0, amount1);
     }
 
     /**

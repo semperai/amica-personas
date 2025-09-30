@@ -857,17 +857,11 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
         vm.stopPrank();
 
         // User3 buys tokens to help graduate
+        // For agent personas: need 1.1M to ensure graduation
         vm.prank(user3);
-        for (uint256 i = 0; i < 20; i++) {
-            (,,, uint256 gradTime,,) = personaFactory.personas(tokenId);
-            if (gradTime > 0) break;
-
-            try personaFactory.swapExactTokensForTokens(
-                tokenId, 50_000 ether, 0, user3, block.timestamp + 1
-            ) {} catch {
-                break;
-            }
-        }
+        personaFactory.swapExactTokensForTokens(
+            tokenId, 1_100_000 ether, 0, user3, block.timestamp + 300
+        );
 
         // Verify graduated
         (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);

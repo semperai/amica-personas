@@ -620,23 +620,18 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
         assertEq(graduationTimestamp, 0);
 
-        // Deposit again to meet minimum
+        // Deposit again to meet minimum - this should trigger graduation
         vm.startPrank(user2);
         agentToken.approve(address(personaFactory), 1000 ether);
+
+        // Expect graduation event when deposit triggers graduation
+        vm.expectEmit(true, false, false, false);
+        emit V4PoolCreated(tokenId, PoolId.wrap(bytes32(0)), 0);
+
         personaFactory.depositAgentTokens(tokenId, 1000 ether);
         vm.stopPrank();
 
-        // Now should graduate with another purchase (any amount since we already bought enough)
-        vm.prank(user3);
-        personaFactory.swapExactTokensForTokens(
-            tokenId,
-            1000 ether, // Small additional purchase
-            0,
-            user3,
-            block.timestamp + 300
-        );
-
-        // Verify graduated
+        // Verify graduated (deposit triggered graduation)
         (,,, uint256 graduationTimestamp2,,) = personaFactory.personas(tokenId);
         assertTrue(graduationTimestamp2 > 0);
     }
@@ -874,10 +869,10 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         personaFactory.depositAgentTokens(tokenId, 1000 ether);
         vm.stopPrank();
 
-        // Graduate
+        // Graduate - need enough tokens for agent persona threshold
         vm.prank(user3);
         personaFactory.swapExactTokensForTokens(
-            tokenId, 300_000 ether, 0, user3, block.timestamp + 300
+            tokenId, 1_100_000 ether, 0, user3, block.timestamp + 300
         );
 
         // Wait for claim delay
@@ -997,10 +992,10 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         assertEq(personaFactory.agentDeposits(tokenId, user1), 2500 ether);
         assertEq(personaFactory.agentDeposits(tokenId, user2), 3000 ether);
 
-        // Graduate
+        // Graduate - need enough tokens for agent persona threshold
         vm.prank(user3);
         personaFactory.swapExactTokensForTokens(
-            tokenId, 300_000 ether, 0, user3, block.timestamp + 300
+            tokenId, 1_100_000 ether, 0, user3, block.timestamp + 300
         );
 
         // Get persona token
@@ -1022,8 +1017,8 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         uint256 user2Balance = pToken.balanceOf(user2);
         uint256 totalRewards = user1Balance + user2Balance;
 
-        // Total should be the agent rewards amount
-        assertEq(totalRewards, AGENT_REWARDS_AMOUNT);
+        // Total should be the agent rewards amount (allow 1 wei rounding error)
+        assertApproxEqAbs(totalRewards, AGENT_REWARDS_AMOUNT, 1);
 
         // User1 had 2500/5500 = ~45.45% of deposits
         uint256 expectedUser1Balance = AGENT_REWARDS_AMOUNT * 2500 / 5500;
@@ -1065,10 +1060,11 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         uint256 personaAgentBalanceBefore =
             IERC20(address(agentToken)).balanceOf(personaTokenAddress);
 
-        // Graduate
+        // Graduate - need to buy enough to reach 85% threshold
+        // For agent personas: 166,666,666 * 0.85 = 141,666,666 tokens needed
         vm.prank(user3);
         personaFactory.swapExactTokensForTokens(
-            tokenId, 300_000 ether, 0, user3, block.timestamp + 300
+            tokenId, 1_100_000 ether, 0, user3, block.timestamp + 300
         );
 
         // Check agent tokens were sent to persona token contract
