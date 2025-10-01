@@ -322,7 +322,7 @@ export const Settings = ({
     switch(page) {
     case 'main_menu':
       return <MenuPage
-        keys={["appearance", "chatbot", "language", "tts", "stt", "vision", "developer", "reset_settings", "community"]}
+        keys={["appearance", "chatbot", "tts", "stt", "vision", "developer", "reset_settings", "community"]}
         menuClick={handleMenuClick} />;
 
     case 'appearance':
@@ -670,93 +670,79 @@ export const Settings = ({
 
   return (
     <div
-      className="fixed top-0 left-0 w-full max-h-full text-black text-xs text-left z-20 overflow-y-auto backdrop-blur"
+      className="fixed inset-0 z-20 flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-200"
     >
+      {/* Backdrop */}
       <div
-        className="absolute top-0 left-0 w-full h-full bg-gray-700 opacity-10 z-index-50"
+        className="absolute inset-0 bg-black/60 backdrop-blur-md"
+        onClick={onClickClose}
       ></div>
-      <div
-        className="fixed w-full top-0 left-0 z-50 p-2 bg-white"
-        ref={topMenuRef}
-      >
 
-        <nav aria-label="Breadcrumb" className="inline-block ml-4">
-          <ol role="list" className="flex items-center space-x-4">
-            <li className="flex">
-              <div className="flex items-center">
-                <span
-                  onClick={() => {
-                    if (breadcrumbs.length === 0) {
-                      onClickClose();
-                      return;
-                    }
-                    setPage('main_menu');
-                    setBreadcrumbs([]);
-                  }}
-                  className="text-gray-400 hover:text-gray-500 cursor-pointer"
-                >
-                  <HomeIcon className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
-                  <span className="sr-only">Home</span>
-                </span>
-              </div>
-            </li>
-
-            {breadcrumbs.map((breadcrumb) => (
-              <li key={breadcrumb.key} className="flex">
-                <div className="flex items-center">
-                  <ChevronRightIcon className="h-5 w-5 flex-shrink-0 text-gray-400" aria-hidden="true" />
+      {/* Modal Container */}
+      <div className="relative w-full max-w-xl max-h-[80vh] bg-white/95 backdrop-blur-xl shadow-2xl rounded-lg overflow-hidden flex flex-col z-50">
+        {/* Header with Breadcrumbs */}
+        <div
+          className="flex-shrink-0 bg-slate-900/95 backdrop-blur-xl text-white px-3 py-2 border-b border-slate-700/30"
+          ref={topMenuRef}
+        >
+          <div className="flex items-center justify-between">
+            <nav aria-label="Breadcrumb" className="flex items-center min-w-0">
+              <ol role="list" className="flex items-center space-x-1.5">
+                <li className="flex">
                   <span
                     onClick={() => {
-                      setPage(breadcrumb.key);
-                      const nb = [];
-                      for (let b of breadcrumbs) {
-                        nb.push(b);
-                        if (b.key === breadcrumb.key) {
-                          break;
-                        }
+                      if (breadcrumbs.length === 0) {
+                        onClickClose();
+                        return;
                       }
-                      setBreadcrumbs(nb);
+                      setPage('main_menu');
+                      setBreadcrumbs([]);
                     }}
-                    className="ml-4 text-sm font-medium text-gray-500 hover:text-gray-700 cursor-pointer"
+                    className="text-slate-400 hover:text-white transition-colors cursor-pointer"
                   >
-                    {breadcrumb.label}
+                    <HomeIcon className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
                   </span>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </nav>
-      </div>
+                </li>
 
-      <div className="h-screen overflow-auto opacity-95 backdrop-blur">
-        <div className="mx-auto max-w-2xl py-16 text-text1">
-          <div className="mt-12">
-            <div
-              className="inline-block pt-4 pr-4"
-              ref={backButtonRef}
+                {breadcrumbs.map((breadcrumb) => (
+                  <li key={breadcrumb.key} className="flex">
+                    <div className="flex items-center">
+                      <ChevronRightIcon className="h-3.5 w-3.5 flex-shrink-0 text-slate-600" aria-hidden="true" />
+                      <span
+                        onClick={() => {
+                          setPage(breadcrumb.key);
+                          const nb = [];
+                          for (let b of breadcrumbs) {
+                            nb.push(b);
+                            if (b.key === breadcrumb.key) {
+                              break;
+                            }
+                          }
+                          setBreadcrumbs(nb);
+                        }}
+                        className="ml-1.5 text-xs font-medium text-slate-300 hover:text-white cursor-pointer transition-colors"
+                      >
+                        {breadcrumb.label}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+
+            <button
+              onClick={onClickClose}
+              className="bg-white/10 hover:bg-white/20 text-white rounded p-1 transition-colors cursor-pointer ml-2 flex-shrink-0"
             >
-              <TextButton
-                className="rounded-b-none text-lg ml-4 px-8 shadow-sm"
-                onClick={() => {
-                  if (breadcrumbs.length === 0) {
-                    onClickClose();
-                    return;
-                  }
-                  if (breadcrumbs.length === 1) {
-                    setPage('main_menu');
-                    setBreadcrumbs([]);
-                    return;
-                  }
+              <XMarkIcon className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
 
-                  const prevPage = breadcrumbs[breadcrumbs.length - 2];
-                  setPage(prevPage.key);
-                  setBreadcrumbs(breadcrumbs.slice(0, -1));
-                }}
-              >
-                <ArrowUturnLeftIcon className="h-5 w-5 flex-none text-white" aria-hidden="true" />
-              </TextButton>
-            </div>
-
+        {/* Content Area */}
+        <div className="flex-1 overflow-y-auto bg-transparent">
+          <div className="p-3">
+            {/* Page Content */}
             <div ref={mainMenuRef}>
               { renderPage() }
             </div>
@@ -764,50 +750,38 @@ export const Settings = ({
         </div>
       </div>
 
+      {/* Notifications */}
       <div
         aria-live="assertive"
-        className="pointer-events-none fixed inset-0 flex items-end px-4 py-6 sm:items-start sm:p-6 mt-2"
+        className="pointer-events-none fixed bottom-0 right-0 flex items-end px-6 py-6 z-[60]"
         ref={notificationsRef}
       >
-        <div className="flex w-full flex-col items-center space-y-4 sm:items-end">
-
-          <Transition
-            show={showNotification}
-            as={Fragment}
-            enter="transform ease-out duration-300 transition"
-            enterFrom="translate-y-2 opacity-0 sm:translate-y-0 sm:translate-x-2"
-            enterTo="translate-y-0 opacity-100 sm:translate-x-0"
-            leave="transition ease-in duration-100"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
-          >
-            <div className="pointer-events-auto w-full max-w-sm overflow-hidden rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5">
-              <div className="p-4">
-                <div className="flex items-start">
-                  <div className="flex-shrink-0">
-                    <CheckCircleIcon className="h-6 w-6 text-green-400" aria-hidden="true" />
-                  </div>
-                  <div className="ml-3 w-0 flex-1 pt-0.5">
-                    <p className="text-sm font-medium text-gray-900">Successfully saved!</p>
-                    <p className="mt-1 text-sm text-gray-500">Your settings were updated successfully.</p>
-                  </div>
-                  <div className="ml-4 flex flex-shrink-0">
-                    <button
-                      type="button"
-                      className="inline-flex rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                      onClick={() => {
-                        setShowNotification(false)
-                      }}
-                    >
-                      <span className="sr-only">Close</span>
-                      <XMarkIcon className="h-5 w-5" aria-hidden="true" />
-                    </button>
-                  </div>
-                </div>
-              </div>
+        <Transition
+          show={showNotification}
+          as={Fragment}
+          enter="transform ease-out duration-300 transition"
+          enterFrom="translate-y-2 opacity-0"
+          enterTo="translate-y-0 opacity-100"
+          leave="transition ease-in duration-200"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
+        >
+          <div className="pointer-events-auto overflow-hidden rounded bg-white/80 backdrop-blur-xl shadow-lg border border-white/40 px-3 py-2">
+            <div className="flex items-center gap-2">
+              <CheckCircleIcon className="h-4 w-4 text-emerald-500 flex-shrink-0" aria-hidden="true" />
+              <p className="text-xs font-semibold text-slate-900">Saved</p>
+              <button
+                type="button"
+                className="inline-flex rounded text-slate-400 hover:text-slate-600 transition-colors cursor-pointer ml-2"
+                onClick={() => {
+                  setShowNotification(false)
+                }}
+              >
+                <XMarkIcon className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
             </div>
-          </Transition>
-        </div>
+          </div>
+        </Transition>
       </div>
 
       <input

@@ -16,31 +16,29 @@ export function NamePage({
       title={"Name"}
       description={"Configure the avatars name. This is the name that is used to generate the chatbot response."}
     >
-      <ul role="list" className="divide-y divide-gray-100 max-w-xs">
-        <li className="py-4">
-          <FormRow label={"Name"}>
-            <TextInput
-              value={name}
-              onChange={(event: React.ChangeEvent<any>) => {
-                setName(event.target.value);
-                updateConfig("name", event.target.value);
-                setSettingsUpdated(true);
-              }}
-            />
+      <div className="space-y-2">
+        <FormRow label={"Name"}>
+          <TextInput
+            value={name}
+            onChange={(event: React.ChangeEvent<any>) => {
+              setName(event.target.value);
+              updateConfig("name", event.target.value);
+              setSettingsUpdated(true);
+            }}
+          />
 
-            { name !== defaultConfig("name") && (
-              <p className="mt-2">
-                <ResetToDefaultButton onClick={() => {
-                  setName(defaultConfig("name"));
-                  updateConfig("name", defaultConfig("name"));
-                  setSettingsUpdated(true);
-                  }}
-                />
-              </p>
-            )}
-          </FormRow>
-        </li>
-      </ul>
+          { name !== defaultConfig("name") && (
+            <div className="mt-2">
+              <ResetToDefaultButton onClick={() => {
+                setName(defaultConfig("name"));
+                updateConfig("name", defaultConfig("name"));
+                setSettingsUpdated(true);
+                }}
+              />
+            </div>
+          )}
+        </FormRow>
+      </div>
     </BasicPage>
   );
 }

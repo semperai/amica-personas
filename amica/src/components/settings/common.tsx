@@ -33,11 +33,11 @@ export function basicPage(
 ) {
   return (
     <>
-      <div className="rounded-lg shadow-lg bg-white p-4">
-        <h2 className="text-xl w-full">{title}</h2>
-        <p className="w-full my-4">{description}</p>
+      <div className="rounded bg-white/40 backdrop-blur-xl border border-white/30 p-3">
+        <h2 className="text-sm font-bold text-slate-900 w-full">{title}</h2>
+        <p className="w-full mt-1 mb-2 text-slate-600 text-xs leading-relaxed">{description}</p>
 
-        <div className="mt-4">
+        <div className="mt-3">
           {children}
         </div>
       </div>
@@ -56,11 +56,11 @@ export function BasicPage({
 }) {
   return (
     <>
-      <div className="rounded-lg shadow-lg bg-white p-4">
-        <h2 className="text-xl w-full">{title}</h2>
-        <p className="w-full my-4">{description}</p>
+      <div className="rounded bg-white/40 backdrop-blur-xl border border-white/30 p-3">
+        <h2 className="text-sm font-bold text-slate-900 w-full">{title}</h2>
+        <p className="w-full mt-1 mb-2 text-slate-600 text-xs leading-relaxed">{description}</p>
 
-        <div className="mt-4">
+        <div className="mt-3">
           {children}
         </div>
       </div>
@@ -73,11 +73,11 @@ export function FormRow({label, children}: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="sm:col-span-3 max-w-xs rounded-xl">
-      <label className="block text-sm font-medium leading-6 text-gray-900">
+    <div className="sm:col-span-3 max-w-md">
+      <label className="block text-xs font-semibold text-slate-900 mb-1.5">
         {label}
       </label>
-      <div className="mt-2">
+      <div>
         {children}
       </div>
     </div>
@@ -135,50 +135,50 @@ export type PageProps = {
 
 export function getIconFromPage(page: string): ReactElement {
   switch(page) {
-    case 'appearance':          return <FaceSmileIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'chatbot':             return <ChatBubbleOvalLeftEllipsisIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'language':            return <LanguageIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'tts':                 return <MusicalNoteIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'stt':                 return <PencilIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'vision':              return <EyeIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'reset_settings':      return <PowerIcon className="h-5 w-5 flex-none text-red-500" aria-hidden="true" />;
-    case 'developer':           return <CommandLineIcon className="h-5 w-5 flex-none text-green-500" aria-hidden="true" />;
-    case 'community':           return <RocketLaunchIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
+    case 'appearance':          return <FaceSmileIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'chatbot':             return <ChatBubbleOvalLeftEllipsisIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'language':            return <LanguageIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'tts':                 return <MusicalNoteIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'stt':                 return <PencilIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'vision':              return <EyeIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'reset_settings':      return <PowerIcon className="h-4 w-4 flex-none text-rose-600" aria-hidden="true" />;
+    case 'developer':           return <CommandLineIcon className="h-4 w-4 flex-none text-emerald-600" aria-hidden="true" />;
+    case 'community':           return <RocketLaunchIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
 
-    case 'background_img':      return <PhotoIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'background_color':      return <SwatchIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'background_video':    return <FilmIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'character_model':     return <UsersIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'character_animation': return <AdjustmentsHorizontalIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
+    case 'background_img':      return <PhotoIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'background_color':      return <SwatchIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'background_video':    return <FilmIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'character_model':     return <UsersIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'character_animation': return <AdjustmentsHorizontalIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
 
-    case 'chatbot_backend':     return <Cog6ToothIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'arbius_llm_settings': return <AdjustmentsHorizontalIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'chatgpt_settings':    return <AdjustmentsHorizontalIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'llamacpp_settings':   return <AdjustmentsHorizontalIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'ollama_settings':     return <AdjustmentsHorizontalIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'koboldai_settings':   return <AdjustmentsHorizontalIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'name':                return <IdentificationIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'system_prompt':       return <DocumentTextIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
+    case 'chatbot_backend':     return <Cog6ToothIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'arbius_llm_settings': return <AdjustmentsHorizontalIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'chatgpt_settings':    return <AdjustmentsHorizontalIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'llamacpp_settings':   return <AdjustmentsHorizontalIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'ollama_settings':     return <AdjustmentsHorizontalIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'koboldai_settings':   return <AdjustmentsHorizontalIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'name':                return <IdentificationIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'system_prompt':       return <DocumentTextIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
 
-    case 'tts_backend':         return <SpeakerWaveIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'elevenlabs_settings': return <AdjustmentsHorizontalIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'speecht5_settings':   return <AdjustmentsHorizontalIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'openai_tts_settings': return <AdjustmentsHorizontalIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'piper_settings': return <AdjustmentsHorizontalIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'rvc_settings': return <CogIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'coquiLocal_settings': return <AdjustmentsHorizontalIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'localXTTS_settings': return <AdjustmentsHorizontalIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
+    case 'tts_backend':         return <SpeakerWaveIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'elevenlabs_settings': return <AdjustmentsHorizontalIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'speecht5_settings':   return <AdjustmentsHorizontalIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'openai_tts_settings': return <AdjustmentsHorizontalIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'piper_settings': return <AdjustmentsHorizontalIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'rvc_settings': return <CogIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'coquiLocal_settings': return <AdjustmentsHorizontalIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'localXTTS_settings': return <AdjustmentsHorizontalIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
 
-    case 'stt_backend':         return <PencilSquareIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'stt_wake_word':  return <MoonIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'whisper_openai_settings':  return <AdjustmentsHorizontalIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'whispercpp_settings': return <AdjustmentsHorizontalIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
+    case 'stt_backend':         return <PencilSquareIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'stt_wake_word':  return <MoonIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'whisper_openai_settings':  return <AdjustmentsHorizontalIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'whispercpp_settings': return <AdjustmentsHorizontalIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
 
-    case 'vision_backend':           return <EyeDropperIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'vision_llamacpp_settings': return <AdjustmentsHorizontalIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'vision_ollama_settings':   return <AdjustmentsHorizontalIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'vision_openai_settings':   return <AdjustmentsHorizontalIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
-    case 'vision_system_prompt':     return <DocumentTextIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
+    case 'vision_backend':           return <EyeDropperIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'vision_llamacpp_settings': return <AdjustmentsHorizontalIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'vision_ollama_settings':   return <AdjustmentsHorizontalIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'vision_openai_settings':   return <AdjustmentsHorizontalIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
+    case 'vision_system_prompt':     return <DocumentTextIcon className="h-4 w-4 flex-none text-slate-700" aria-hidden="true" />;
   }
 
   return <></>;
@@ -238,7 +238,8 @@ function getLabelFromPage(page: string): string {
 
 function getClassNameFromPage(page: string) {
   switch(page) {
-    case 'reset_settings': return 'text-red-500';
+    case 'reset_settings': return 'text-rose-600';
+    case 'developer': return 'text-emerald-600';
   }
 
   return '';
@@ -249,16 +250,16 @@ export function ResetToDefaultButton({ onClick }: { onClick: () => void }) {
     <button
         type="button"
         onClick={onClick}
-        className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-rose-600 hover:bg-rose-700 focus:outline-none"
+        className="inline-flex items-center px-2 py-1 border border-rose-300 text-xs font-semibold rounded text-rose-700 bg-rose-50 hover:bg-rose-100 hover:border-rose-400 transition-colors cursor-pointer"
     >
-      Reset to Default
+      Reset
     </button>
   );
 }
 
 export function NotUsingAlert({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+    <div className="bg-amber-50/60 backdrop-blur-xl border border-amber-200/50 rounded p-2 text-xs text-amber-800">
       {children}
     </div>
   );

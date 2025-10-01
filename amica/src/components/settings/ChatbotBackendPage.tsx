@@ -53,54 +53,50 @@ export function ChatbotBackendPage({
       title="Chatbot Backend"
       description="Select the chatbot backend to use. Echo simply responds with what you type, it is used for testing and demonstration. ChatGPT is a commercial chatbot API from OpenAI, however there are multiple compatible API providers which can be used in lieu of OpenAI. LLama.cpp is a free and open source chatbot backend."
     >
-      <ul role="list" className="divide-y divide-gray-100 max-w-xs">
-        <li className="py-4">
-          <FormRow label="Chatbot Backend">
-            <select
-              className="mt-2 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6"
-              value={chatbotBackend}
-              onChange={(event: React.ChangeEvent<any>) => {
-                setChatbotBackend(event.target.value);
-                updateConfig("chatbot_backend", event.target.value);
-                setSettingsUpdated(true);
+      <div className="space-y-3">
+        <FormRow label="Chatbot Backend">
+          <select
+            className="block w-full rounded px-2.5 py-1.5 text-xs text-slate-900 bg-white/50 backdrop-blur-xl border border-white/30 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-transparent transition-all cursor-pointer"
+            value={chatbotBackend}
+            onChange={(event: React.ChangeEvent<any>) => {
+              setChatbotBackend(event.target.value);
+              updateConfig("chatbot_backend", event.target.value);
+              setSettingsUpdated(true);
+            }}
+          >
+            {chatbotBackends.map((engine) => (
+              <option key={engine.key} value={engine.key}>{engine.label}</option>
+            ))}
+          </select>
+        </FormRow>
+
+        { ["arbius_llm", "chatgpt", "llamacpp", "ollama", "koboldai"].includes(chatbotBackend) && (
+          <FormRow label={`Configure ${idToTitle(chatbotBackend)}`}>
+            <button
+              type="button"
+              className="rounded px-3 py-1.5 text-xs font-semibold text-white bg-slate-800 hover:bg-slate-700 transition-all cursor-pointer"
+              onClick={() => {
+                setPage(`${chatbotBackend}_settings`);
+                setBreadcrumbs(breadcrumbs.concat([getLinkFromPage(`${chatbotBackend}_settings`)]));
               }}
             >
-              {chatbotBackends.map((engine) => (
-                <option key={engine.key} value={engine.key}>{engine.label}</option>
-              ))}
-            </select>
+              Configure {idToTitle(chatbotBackend)}
+            </button>
           </FormRow>
-        </li>
-        { ["arbius_llm", "chatgpt", "llamacpp", "ollama", "koboldai"].includes(chatbotBackend) && (
-          <li className="py-4">
-            <FormRow label={`Configure ${idToTitle(chatbotBackend)}`}>
-              <button
-                type="button"
-                className="rounded bg-indigo-600 px-2 py-1 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                onClick={() => {
-                  setPage(`${chatbotBackend}_settings`);
-                  setBreadcrumbs(breadcrumbs.concat([getLinkFromPage(`${chatbotBackend}_settings`)]));
-                }}
-              >
-                Click here to configure {idToTitle(chatbotBackend)}
-              </button>
-            </FormRow>
-          </li>
         )}
+
         { chatbotBackend === 'windowai' && ! windowAiDetected && (
-          <li className="py-4">
-            <FormRow label="Window.ai not found">
-              <a
-                href="https://windowai.io/"
-                target="_blank"
-                className="rounded bg-indigo-600 px-2 py-1 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-              >
-                Install window.ai
-              </a>
-            </FormRow>
-          </li>
+          <FormRow label="Window.ai not found">
+            <a
+              href="https://windowai.io/"
+              target="_blank"
+              className="inline-block rounded px-3 py-1.5 text-xs font-semibold text-white bg-slate-800 hover:bg-slate-700 transition-all cursor-pointer"
+            >
+              Install window.ai
+            </a>
+          </FormRow>
         )}
-      </ul>
+      </div>
     </BasicPage>
   );
 }

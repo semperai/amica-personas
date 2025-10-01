@@ -12,19 +12,20 @@ export function MenuPage({
 }) {
 
   const links = pagesToLinks(keys);
+
   return (
-    <ul role="list" className="divide-y divide-black/5 bg-white rounded-lg shadow-lg">
+    <ul role="list" className="space-y-1.5">
       {links.map((link) => (
         <li
           key={link.key}
-          className="relative flex items-center space-x-4 py-4 cursor-pointer rounded-lg hover:bg-gray-50 p-4 transition-all"
+          className="relative flex items-center justify-between bg-white/40 backdrop-blur-xl rounded border border-white/30 hover:bg-white/60 hover:border-white/50 p-2 cursor-pointer transition-all group"
           onClick={() => {
             menuClick(link);
           }}
         >
           <div className="min-w-0 flex-auto">
-            <div className="flex items-center gap-x-3">
-              <h2 className="min-w-0 text-sm font-semibold leading-6">
+            <div className="flex items-center gap-x-2">
+              <h2 className="min-w-0 text-xs font-semibold text-slate-900">
                 <span className={clsx(
                   'whitespace-nowrap flex w-0 flex-1 gap-x-2 items-center',
                   link.className,
@@ -35,7 +36,7 @@ export function MenuPage({
               </h2>
             </div>
           </div>
-          <ChevronRightIcon className="h-5 w-5 flex-none text-gray-400" aria-hidden="true" />
+          <ChevronRightIcon className="h-3.5 w-3.5 flex-none text-slate-400 group-hover:text-slate-600 transition-colors" aria-hidden="true" />
         </li>
       ))}
     </ul>
