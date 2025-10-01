@@ -2,8 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useAccount, useReadContract, useWriteContract, useBalance, useWaitForTransactionReceipt } from 'wagmi';
 import { formatEther, formatUnits, parseUnits } from 'viem';
-import { gql } from '@apollo/client';
-import { useQuery } from '@apollo/client/react';
+import { gql } from 'graphql-tag';
+import { useQuery } from 'urql';
 import { FACTORY_ABI, getAddressesForChain } from '../lib/contracts';
 
 interface AgentDepositsProps {
@@ -143,15 +143,14 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
   });
 
   // Query GraphQL for agent deposits
-  const { data: graphqlData, loading: graphqlLoading, refetch: refetchDeposits, error: graphqlError } = useQuery<AgentDepositsQueryResult>(GET_AGENT_DEPOSITS, {
+  const [{ data: graphqlData, fetching: graphqlLoading, error: graphqlError }, refetchDeposits] = useQuery<AgentDepositsQueryResult>({
+    query: GET_AGENT_DEPOSITS,
     variables: {
       tokenId: tokenIdBigInt, // Pass as string representation of BigInt
       chainId: parseInt(chainId),
       user: address?.toLowerCase() || ''
     },
-    skip: !address || !chainId || !tokenId,
-    fetchPolicy: 'cache-and-network',
-    errorPolicy: 'all',
+    pause: !address || !chainId || !tokenId,
   });
 
   // Get the full persona struct to access agentToken

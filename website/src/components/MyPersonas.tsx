@@ -1,7 +1,7 @@
 // src/components/MyPersonas.tsx
 import { useState } from 'react';
 import Link from 'next/link';
-import { useQuery } from '@apollo/client/react';
+import { useQuery } from 'urql';
 import { formatEther } from 'viem';
 import { GET_USER_PORTFOLIO } from '@/lib/graphql/client';
 import Image from 'next/image';
@@ -154,13 +154,13 @@ function PersonaCard({ persona }: PersonaCardProps) {
 }
 
 export function MyPersonas({ address }: MyPersonasProps) {
-  const { data, loading, error } = useQuery<UserPortfolioQueryResult>(GET_USER_PORTFOLIO, {
+  const [{ data, fetching, error }] = useQuery<UserPortfolioQueryResult>({
+    query: GET_USER_PORTFOLIO,
     variables: { creator: address.toLowerCase() },
-    skip: !address,
-    fetchPolicy: 'network-only', // Always fetch fresh data
+    pause: !address,
   });
 
-  if (loading) {
+  if (fetching) {
     return (
       <div>
         <h2 className="text-2xl font-semibold text-foreground mb-6">My Created Personas</h2>

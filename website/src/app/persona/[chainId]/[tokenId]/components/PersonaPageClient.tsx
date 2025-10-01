@@ -2,10 +2,10 @@
 
 // src/pages/persona/[chainId]/[tokenId].tsx
 
-import { gql } from '@apollo/client';
+import { gql } from 'graphql-tag';
 import { useParams } from 'next/navigation';
 import { formatEther } from 'viem';
-import { useQuery } from '@apollo/client/react';
+import { useQuery } from 'urql';
 import Layout from '@/components/Layout';
 import PersonaMetadata from '@/components/PersonaMetadata';
 import TradingInterface from '@/components/TradingInterface';
@@ -116,14 +116,14 @@ const TradeHistory = ({ chainId, tokenId }: { chainId: string; tokenId: string }
   // Convert tokenId to BigInt string for GraphQL
   const tokenIdBigInt = tokenId.replace(/^0+/, '') || '0';
 
-  const { data, loading, error } = useQuery<TradesQueryResult>(GET_PERSONA_TRADES_BY_TOKEN, {
+  const [{ data, fetching: loading, error }] = useQuery<TradesQueryResult>({
+    query: GET_PERSONA_TRADES_BY_TOKEN,
     variables: {
       tokenId: tokenIdBigInt, // Pass as string representation of BigInt
       chainId: parseInt(chainId),
       limit: 10
     },
-    skip: !chainId || !tokenId,
-    fetchPolicy: 'cache-and-network',
+    pause: !chainId || !tokenId,
   });
 
   // Get block explorer URL based on chain
@@ -257,14 +257,13 @@ const PersonaDetailPage = () => {
   const tokenIdBigInt = tokenIdStr ? tokenIdStr.replace(/^0+/, '') || '0' : '0';
 
   // Query to check if persona exists
-  const { data: graphqlData, loading: isCheckingPersona } = useQuery<PersonaQueryResult>(GET_PERSONA_BY_TOKEN_AND_CHAIN, {
+  const [{ data: graphqlData, fetching: isCheckingPersona }] = useQuery<PersonaQueryResult>({
+    query: GET_PERSONA_BY_TOKEN_AND_CHAIN,
     variables: {
       tokenId: tokenIdBigInt, // Pass as string representation of BigInt
       chainId: parseInt(chainIdStr || '0')
     },
-    skip: !tokenIdStr || !chainIdStr,
-    fetchPolicy: 'network-only',
-    errorPolicy: 'all',
+    pause: !tokenIdStr || !chainIdStr,
   });
 
   // Handle loading state while params are being resolved or checking if persona exists

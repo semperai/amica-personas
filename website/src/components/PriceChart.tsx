@@ -1,8 +1,8 @@
 // src/components/PriceChart.tsx - Enhanced with buy/sell volume separation
 import { useState } from 'react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { gql } from '@apollo/client';
-import { useQuery } from '@apollo/client/react';
+import { gql } from 'graphql-tag';
+import { useQuery } from 'urql';
 import { formatEther } from 'viem';
 
 interface PriceChartProps {
@@ -170,14 +170,14 @@ export default function PriceChart({ chainId, tokenId }: PriceChartProps) {
   const tokenIdBigInt = tokenId.replace(/^0+/, '') || '0';
   
   // Fetch data from GraphQL
-  const { data, loading, error } = useQuery<PersonaDailyStatsQueryResult>(GET_PERSONA_DAILY_STATS, {
+  const [{ data, fetching: loading, error }] = useQuery<PersonaDailyStatsQueryResult>({
+    query: GET_PERSONA_DAILY_STATS,
     variables: {
       tokenId: tokenIdBigInt,
       chainId: parseInt(chainId),
       days
     },
-    skip: !chainId || !tokenId,
-    fetchPolicy: 'cache-and-network',
+    pause: !chainId || !tokenId,
   });
 
   // Process the data

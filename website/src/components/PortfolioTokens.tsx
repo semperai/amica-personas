@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useQuery } from '@apollo/client/react';
+import { useQuery } from 'urql';
 import { GET_USER_PORTFOLIO } from '@/lib/graphql/client';
 
 interface TokenBalance {
@@ -43,9 +43,10 @@ export function PortfolioTokens({ address }: { address: string }) {
   const [loading, setLoading] = useState(true);
 
   // Query for created personas to show token holdings
-  const { data: portfolioData } = useQuery<UserPortfolioQueryResult>(GET_USER_PORTFOLIO, {
+  const [{ data: portfolioData }] = useQuery<UserPortfolioQueryResult>({
+    query: GET_USER_PORTFOLIO,
     variables: { creator: address.toLowerCase() },
-    skip: !address,
+    pause: !address,
   });
 
   useEffect(() => {

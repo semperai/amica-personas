@@ -1,7 +1,7 @@
 // src/lib/api-graphql.ts - Updated with enhanced contract features and proper types
-import { apolloClient, GET_PERSONAS, GET_PERSONA_DETAILS, convertOrderBy, PersonasQueryResult, executeQuery } from './graphql/client';
+import { urqlClient, GET_PERSONAS, GET_PERSONA_DETAILS, convertOrderBy, PersonasQueryResult } from './graphql/client';
 import { mockPersonas, mockTrades, mockVolumeChart, mockUserPortfolio } from './mockData';
-import { gql } from '@apollo/client';
+import { gql } from 'graphql-tag';
 
 const USE_MOCK_DATA = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true';
 
@@ -322,24 +322,15 @@ export async function fetchPersonas(params?: FetchPersonasParams): Promise<Perso
 
     const orderBy = params?.sort ? convertOrderBy(params.sort) : 'createdAt_DESC';
     
-    const result = await executeQuery(async () => {
-      const { data } = await apolloClient.query<PersonasQueryResult>({
-        query: GET_PERSONAS,
-        variables: {
-          limit: params?.limit || 50,
-          offset: params?.offset || 0,
-          orderBy: [orderBy],
-          where: Object.keys(whereClause).length > 0 ? whereClause : undefined,
-        },
-        fetchPolicy: 'network-only'
-      });
-      return data;
-    }, {
-      showError: true,
-      fallbackData: null
-    });
+    const result = await urqlClient.query<PersonasQueryResult>(GET_PERSONAS, {
+      limit: params?.limit || 50,
+      offset: params?.offset || 0,
+      orderBy: [orderBy],
+      chainId: params?.chainId ? parseInt(params.chainId) : undefined,
+    }).toPromise();
 
-    if (!result) {
+    if (!result.data || result.error) {
+      console.error('Error fetching personas:', result.error);
       return {
         personas: [],
         total: 0,
@@ -348,7 +339,18 @@ export async function fetchPersonas(params?: FetchPersonasParams): Promise<Perso
       };
     }
 
-    let personas = result.personas.map(transformPersona);
+    const data = result.data;
+
+    if (!data) {
+      return {
+        personas: [],
+        total: 0,
+        limit: params?.limit,
+        offset: params?.offset
+      };
+    }
+
+    let personas = data.personas.map(transformPersona);
 
     // Apply client-side search filter (for text search)
     if (params?.search) {
@@ -361,7 +363,7 @@ export async function fetchPersonas(params?: FetchPersonasParams): Promise<Perso
 
     return {
       personas,
-      total: result.personasConnection.totalCount,
+      total: data.personasConnection.totalCount,
       limit: params?.limit,
       offset: params?.offset
     };
@@ -375,6 +377,10 @@ export async function fetchPersonas(params?: FetchPersonasParams): Promise<Perso
     };
   }
 }
+
+/*
+// NOTE: The following functions are commented out pending urql migration
+// Only uncomment and migrate if needed
 
 // Enhanced persona detail fetch with transfer history
 export async function fetchPersonaDetail(chainId: string, tokenId: string): Promise<Persona | null> {
@@ -1166,3 +1172,4 @@ interface BridgeActivity {
   txHash: string;
   chain: PersonaChain;
 }
+*/

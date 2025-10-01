@@ -3,9 +3,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WagmiProvider } from 'wagmi';
 import { RainbowKitProvider, lightTheme } from '@rainbow-me/rainbowkit';
-import { ApolloProvider } from '@apollo/client/react';
+import { Provider as UrqlProvider } from 'urql';
 import { config } from '@/lib/wagmi';
-import { apolloClient } from '@/lib/graphql/client';
+import { urqlClient } from '@/lib/graphql/client';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { ErrorNotification, setupErrorNotifications, errorNotificationStyles } from '@/components/ErrorNotification';
 import { useEffect, useState } from 'react';
@@ -57,7 +57,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ErrorBoundary>
       <style jsx global>{errorNotificationStyles}</style>
-      <ApolloProvider client={apolloClient}>
+      <UrqlProvider value={urqlClient}>
         <WagmiProvider config={config}>
           <QueryClientProvider client={queryClient}>
             <RainbowKitProvider
@@ -73,7 +73,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             </RainbowKitProvider>
           </QueryClientProvider>
         </WagmiProvider>
-      </ApolloProvider>
+      </UrqlProvider>
     </ErrorBoundary>
   );
 }

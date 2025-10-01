@@ -1,6 +1,6 @@
 // src/components/PersonaMetadata.tsx - Enhanced with new contract features
-import { gql } from '@apollo/client';
-import { useQuery } from '@apollo/client/react';
+import { gql } from 'graphql-tag';
+import { useQuery } from 'urql';
 import { useReadContract } from 'wagmi';
 import { formatEther } from 'viem';
 import AgentTokenInfo from './AgentTokenInfo';
@@ -108,16 +108,17 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
   const chainIdNum = parseInt(chainId);
   const tokenIdBigInt = tokenId.replace(/^0+/, '') || '0';
   
-  const { data, loading, error, refetch, networkStatus } = useQuery<PersonaQueryResult>(GET_PERSONA_BY_TOKEN_AND_CHAIN, {
+  const [{ data, fetching: loading, error }, refetch] = useQuery<PersonaQueryResult>({
+    query: GET_PERSONA_BY_TOKEN_AND_CHAIN,
     variables: {
       tokenId: tokenIdBigInt,
       chainId: chainIdNum
     },
-    skip: !chainId || !tokenId,
-    errorPolicy: 'all',
-    notifyOnNetworkStatusChange: true,
-    fetchPolicy: 'cache-and-network',
+    pause: !chainId || !tokenId,
   });
+
+  // urql doesn't have networkStatus, we'll just use fetching
+  const networkStatus = loading ? 4 : 7;
 
   const isRefetching = networkStatus === 4;
 
