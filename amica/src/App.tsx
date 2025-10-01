@@ -1,6 +1,18 @@
 import { Providers } from './providers';
 import Home from './HomePage';
+import { Navbar } from './components/Navbar';
+import { AAWalletProvider, init as initAAWallet } from './lib/arbius-wallet';
 import { useEffect } from 'react';
+
+// Initialize AA Wallet
+initAAWallet({
+  defaultChainId: 42161, // Arbitrum
+  supportedChainIds: [42161],
+  ui: {
+    theme: 'light',
+    autoConnectOnInit: false,
+  },
+});
 
 function App() {
   useEffect(() => {
@@ -22,7 +34,12 @@ function App() {
 
   return (
     <Providers>
-      <Home />
+      <AAWalletProvider>
+        <Navbar />
+        <div className="pt-14">
+          <Home />
+        </div>
+      </AAWalletProvider>
     </Providers>
   );
 }

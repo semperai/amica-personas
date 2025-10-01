@@ -400,6 +400,7 @@ export class Viewer {
     // gui
     const gui = new GUI();
     this.gui = gui;
+    gui.domElement.style.marginTop = "56px";
     let updateDebounceId: ReturnType<typeof setTimeout> | null = null;
     gui.add(this.gparams, "room-x", -10, 10).onChange((value: number) => {
       this.room?.room?.position.setX(value);
@@ -443,7 +444,7 @@ export class Viewer {
     stats.dom.style.width = "80px";
     stats.dom.style.height = "48px";
     stats.dom.style.position = "absolute";
-    stats.dom.style.top = "0px";
+    stats.dom.style.top = "56px";
     stats.dom.style.left = window.innerWidth - 80 + "px";
     document.body.appendChild(stats.dom);
 
