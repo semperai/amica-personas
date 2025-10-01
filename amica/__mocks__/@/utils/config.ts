@@ -1,0 +1,86 @@
+// Manual mock for utils/config to avoid import.meta issues in Jest
+
+const mockDefaults: Record<string, string> = {
+  autosend_from_mic: 'true',
+  wake_word_enabled: 'false',
+  wake_word: 'Hello',
+  time_before_idle_sec: '20',
+  debug_gfx: 'false',
+  use_webgpu: 'false',
+  mtoon_debug_mode: 'none',
+  mtoon_material_type: 'mtoon',
+  language: 'en',
+  show_introduction: 'true',
+  show_arbius_introduction: 'false',
+  show_add_to_homescreen: 'true',
+  bg_color: '#000000',
+  bg_url: '/bg/bg-room2.jpg',
+  vrm_url: '/vrm/AvatarSample_A.vrm',
+  vrm_hash: '',
+  vrm_save_type: 'web',
+  youtube_videoid: '',
+  animation_url: '/animations/idle_loop.vrma',
+  animation_procedural: 'false',
+  voice_url: '',
+  chatbot_backend: 'chatgpt',
+  arbius_llm_model_id: 'default',
+  openai_apikey: 'default',
+  openai_url: 'https://api-01.heyamica.com',
+  openai_model: 'gpt-4o',
+  llamacpp_url: 'http://127.0.0.1:8080',
+  llamacpp_stop_sequence: '(End)||[END]||Note||***||You:||User:||</s>',
+  ollama_url: 'http://localhost:11434',
+  ollama_model: 'llama2',
+  koboldai_url: 'http://localhost:5001',
+  koboldai_use_extra: 'false',
+  koboldai_stop_sequence: '(End)||[END]||Note||***||You:||User:||</s>',
+  tts_muted: 'false',
+  tts_backend: 'openai_tts',
+  stt_backend: 'whisper_openai',
+  vision_backend: 'vision_openai',
+  vision_system_prompt: 'You are a friendly human named Amica. Describe the image in detail. Let\'s start the conversation.',
+  vision_openai_apikey: 'default',
+  vision_openai_url: 'https://api-01.heyamica.com',
+  vision_openai_model: 'gpt-4-vision-preview',
+  vision_llamacpp_url: 'http://127.0.0.1:8081',
+  vision_ollama_url: 'http://localhost:11434',
+  vision_ollama_model: 'llava',
+  whispercpp_url: 'http://localhost:8080',
+  openai_whisper_apikey: 'default',
+  openai_whisper_url: 'https://api-01.heyamica.com',
+  openai_whisper_model: 'whisper-1',
+  openai_tts_apikey: 'default',
+  openai_tts_url: 'https://api-01.heyamica.com',
+  openai_tts_model: 'tts-1',
+  openai_tts_voice: 'alloy',
+  openai_tts_speed: '1.0',
+  elevenlabs_apikey: 'default',
+  elevenlabs_voice_id: 'default',
+  elevenlabs_model_id: 'eleven_monolingual_v1',
+  local_xtts_url: 'http://localhost:8020',
+  local_xtts_speaker_wav: '',
+  coqui_url: 'http://localhost:5002',
+  local_xtts_language: 'en',
+  coqui_api_model_id: 'default',
+  coqui_api_voice_id: 'default',
+  piper_url: 'http://localhost:5000',
+  piper_voice: 'en_US-amy-medium',
+  piper_length_scale: '1.0',
+  piper_noise_scale: '0.667',
+  piper_noise_w: '0.8',
+  system_prompt: 'You are a helpful AI assistant.',
+  vision_system_prompt: 'You are a vision AI assistant.',
+  name: 'Amica',
+};
+
+export function config(key: string): string {
+  return mockDefaults[key] || '';
+}
+
+export function setConfig(key: string, value: string): void {
+  mockDefaults[key] = value;
+}
+
+export function getAllConfig(): Record<string, string> {
+  return { ...mockDefaults };
+}

@@ -4,6 +4,8 @@ const config = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testMatch: ['**/__tests__/**/*.spec.[jt]s?(x)'],
   moduleNameMapper: {
+    '^@/utils/config$': '<rootDir>/__mocks__/@/utils/config.ts',
+    '^@/utils/buildUrl$': '<rootDir>/__mocks__/@/utils/buildUrl.ts',
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   transform: {
@@ -18,6 +20,10 @@ const config = {
             runtime: 'automatic',
           },
         },
+        target: 'es2022',
+      },
+      module: {
+        type: 'commonjs',
       },
     }],
   },
