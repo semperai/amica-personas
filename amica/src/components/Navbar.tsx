@@ -30,7 +30,7 @@ export function Navbar() {
               href="https://t.me/arbius_ai"
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-white rounded-xl px-3 py-2 shadow-sm h-10 flex items-center hover:bg-gray-50 transition-colors cursor-pointer"
+              className="flex bg-white rounded-xl px-3 py-2 shadow-sm h-10 items-center hover:bg-gray-50 transition-colors cursor-pointer"
               title="Join Arbius on Telegram"
             >
               <Send className="h-5 w-5 text-gray-700" />
@@ -46,6 +46,10 @@ export function Navbar() {
             <ConnectButton
               chainStatus="icon"
               showBalance={false}
+              accountStatus={{
+                smallScreen: 'avatar',
+                largeScreen: 'full',
+              }}
             />
           </div>
         </div>

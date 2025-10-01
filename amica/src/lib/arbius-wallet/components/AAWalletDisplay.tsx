@@ -1,6 +1,7 @@
 import { useAAWallet } from '../hooks/useAAWallet';
 import { useState } from 'react';
 import { AAWalletModal } from './AAWalletModal';
+import { ChevronDown } from 'lucide-react';
 
 interface AAWalletDisplayProps {
   arbiusLogoSrc?: string;
@@ -32,14 +33,15 @@ export function AAWalletDisplay({ arbiusLogoSrc }: AAWalletDisplayProps) {
     <>
       <button
         onClick={handleClick}
-        className="text-base text-gray-700 font-[family-name:var(--font-family-fredoka)] font-medium bg-white rounded-xl px-4 py-2 shadow-sm h-10 flex items-center space-x-2 hover:bg-gray-50 hover:scale-105 transition-all cursor-pointer"
+        className="text-base text-gray-700 font-[family-name:var(--font-family-fredoka)] font-medium bg-white rounded-xl px-3 py-2 shadow-sm h-10 flex items-center gap-2 hover:bg-gray-50 hover:scale-105 transition-all cursor-pointer"
       >
         {arbiusLogoSrc && (
-          <img src={arbiusLogoSrc} alt="Arbius" className="h-5 w-5" />
+          <img src={arbiusLogoSrc} alt="Arbius" className="h-5 w-5 rounded-full" />
         )}
-        <span>
+        <span className="hidden md:inline">
           0x{smartAccountAddress.slice(2, 4)}...{smartAccountAddress.slice(-4)}
         </span>
+        <ChevronDown className="h-5 w-5 -ml-1" strokeWidth={2.5} />
       </button>
 
       <AAWalletModal

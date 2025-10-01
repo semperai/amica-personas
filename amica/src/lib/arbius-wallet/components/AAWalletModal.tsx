@@ -515,7 +515,7 @@ export function AAWalletModal({ isOpen, onClose, smartAccountAddress }: AAWallet
             onClick={() => setActiveTab('overview')}
             className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 cursor-pointer ${
               activeTab === 'overview'
-                ? 'border-primary text-primary'
+                ? 'border-gray-900 text-gray-900'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -525,7 +525,7 @@ export function AAWalletModal({ isOpen, onClose, smartAccountAddress }: AAWallet
             onClick={() => setActiveTab('fund')}
             className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 cursor-pointer ${
               activeTab === 'fund'
-                ? 'border-primary text-primary'
+                ? 'border-gray-900 text-gray-900'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -535,7 +535,7 @@ export function AAWalletModal({ isOpen, onClose, smartAccountAddress }: AAWallet
             onClick={() => setActiveTab('send')}
             className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 cursor-pointer ${
               activeTab === 'send'
-                ? 'border-primary text-primary'
+                ? 'border-gray-900 text-gray-900'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -545,7 +545,7 @@ export function AAWalletModal({ isOpen, onClose, smartAccountAddress }: AAWallet
             onClick={() => setActiveTab('history')}
             className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 cursor-pointer ${
               activeTab === 'history'
-                ? 'border-primary text-primary'
+                ? 'border-gray-900 text-gray-900'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
