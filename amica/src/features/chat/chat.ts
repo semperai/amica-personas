@@ -1,4 +1,3 @@
-import { Queue } from "typescript-collections";
 import { Message, Role, Screenplay, Talk, textsToScreenplay } from "./messages";
 import { Viewer } from "@/features/vrmViewer/viewer";
 import { Alert } from "@/features/alert/alert";
@@ -50,6 +49,30 @@ type TTSJob = {
   screenplay: Screenplay;
   streamIdx: number;
 };
+
+export class Queue<T> {
+  private items: T[] = [];
+
+  enqueue(item: T): void {
+    this.items.push(item);
+  }
+
+  dequeue(): T | undefined {
+    return this.items.shift();
+  }
+
+  size(): number {
+    return this.items.length;
+  }
+
+  clear(): void {
+    this.items = [];
+  }
+
+  isEmpty(): boolean {
+    return this.items.length === 0;
+  }
+}
 
 export class Chat {
   public initialized: boolean;

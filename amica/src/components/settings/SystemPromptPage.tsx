@@ -14,8 +14,8 @@ export function SystemPromptPage({
 
   return (
     <BasicPage
-      title={"System Prompt" + " " + "Settings"}
-      description={t("System_Prompt_desc", "Configure the system prompt. Alter the prompt to change your character's personality. You can share your character's personality using the share button!")}
+      title="System Prompt Settings"
+      description="Configure the system prompt. Alter the prompt to change your character's personality. You can share your character's personality using the share button!"
     >
       <ul role="list" className="divide-y divide-gray-100 max-w-xs">
         <li className="py-4">

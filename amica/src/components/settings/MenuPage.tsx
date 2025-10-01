@@ -30,7 +30,7 @@ export function MenuPage({
                   link.className,
                 )}>
                   {link.icon}
-                  {t(link.label)}
+                  {link.label}
                 </span>
               </h2>
             </div>

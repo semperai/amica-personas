@@ -24,17 +24,17 @@ export function WhisperOpenAISettingsPage({
 
   return (
     <BasicPage
-      title={"Whisper (OpenAI)" + " "+ "Settings"}
-      description={t("Whisper_OpenAI_desc", "Configure Whisper (OpenAI)")}
+      title="Whisper (OpenAI) Settings"
+      description="Configure Whisper (OpenAI)"
     >
       { config("stt_backend") !== "whisper_openai" && (
         <NotUsingAlert>
-          {t("not_using_alert", "You are not currently using {{name}} as your {{what}} backend. These settings will not be used.", {name: "Whisper (OpenAI)", what: "STT"})}
+          You are not currently using Whisper (OpenAI) as your STT backend. These settings will not be used.
         </NotUsingAlert>
       ) }
       <ul role="list" className="divide-y divide-gray-100 max-w-xs">
         <li className="py-4">
-          <FormRow label={t("OpenAI URL")}>
+          <FormRow label="OpenAI URL">
             <TextInput
               value={whisperOpenAIUrl}
               onChange={(event: React.ChangeEvent<any>) => {

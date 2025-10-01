@@ -16,12 +16,12 @@ export function WhisperCppSettingsPage({
 
   return (
     <BasicPage
-      title={"Whisper.cpp" + " "+ "Settings"}
-      description={t("Whisper_cpp_desc", "Configure Whisper.cpp")}
+      title="Whisper.cpp Settings"
+      description="Configure Whisper.cpp"
     >
       { config("stt_backend") !== "whispercpp" && (
         <NotUsingAlert>
-          {t("not_using_alert", "You are not currently using {{name}} as your {{what}} backend. These settings will not be used.", {name: "Whisper.cpp", what: "STT"})}
+          You are not currently using Whisper.cpp as your STT backend. These settings will not be used.
         </NotUsingAlert>
       ) }
       <ul role="list" className="divide-y divide-gray-100 max-w-xs">
