@@ -157,9 +157,8 @@ export default function PriceChart({ chainId, tokenId }: PriceChartProps) {
   const [days, setDays] = useState(7);
   const [chartType, setChartType] = useState<'volume' | 'trades' | 'combined'>('volume');
   const [showBuySell, setShowBuySell] = useState(true);
-  const personaId = `${chainId}-${tokenId}`;
   const isMockMode = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true';
-  
+
   // Convert tokenId to BigInt string for GraphQL
   const tokenIdBigInt = tokenId.replace(/^0+/, '') || '0';
   
@@ -213,8 +212,6 @@ export default function PriceChart({ chainId, tokenId }: PriceChartProps) {
   const totalBuyVolume = chartData.reduce((sum, item) => sum + BigInt(item.buyVolume || '0'), BigInt(0));
   const totalSellVolume = chartData.reduce((sum, item) => sum + BigInt(item.sellVolume || '0'), BigInt(0));
   const totalTrades = chartData.reduce((sum, item) => sum + item.trades, 0);
-  const totalBuyTrades = chartData.reduce((sum, item) => sum + (item.buyTrades || 0), 0);
-  const totalSellTrades = chartData.reduce((sum, item) => sum + (item.sellTrades || 0), 0);
   const avgDailyVolume = chartData.length > 0 ? totalVolume / BigInt(chartData.length) : BigInt(0);
   const buyPercentage = totalVolume > BigInt(0) ? (Number(totalBuyVolume) / Number(totalVolume)) * 100 : 50;
 

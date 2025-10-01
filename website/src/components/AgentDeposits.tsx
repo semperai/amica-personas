@@ -113,8 +113,7 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
   const addresses = getAddressesForChain(Number(chainId));
   const { writeContract, data: hash, isPending, isError } = useWriteContract();
   const isMockMode = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true';
-  const personaId = `${chainId}-${tokenId}`;
-  
+
   // Convert tokenId to BigInt string for GraphQL
   const tokenIdBigInt = tokenId.replace(/^0+/, '') || '0';
   

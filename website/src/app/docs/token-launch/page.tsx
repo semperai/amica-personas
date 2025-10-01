@@ -60,7 +60,7 @@ export default function TokenLaunchPage() {
         <h3>3. Graduation Process</h3>
 
         <p>
-          Your persona "graduates" when 85% of bonding curve tokens are sold. Upon graduation:
+          Your persona &quot;graduates&quot; when 85% of bonding curve tokens are sold. Upon graduation:
         </p>
 
         <ul>
@@ -142,7 +142,7 @@ export default function TokenLaunchPage() {
         <h3>Development & Utility</h3>
 
         <p>
-          Increase your token's value by:
+          Increase your token&apos;s value by:
         </p>
 
         <ul>
@@ -157,7 +157,7 @@ export default function TokenLaunchPage() {
         <div className="not-prose my-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
           <h3 className="text-lg font-semibold text-foreground mb-2">⚠️ Avoid These Mistakes</h3>
           <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
-            <li>Not buying any tokens during bonding (looks like you don't believe in it)</li>
+            <li>Not buying any tokens during bonding (looks like you don&apos;t believe in it)</li>
             <li>Buying too much too fast (can trigger graduation before community forms)</li>
             <li>Lack of post-graduation engagement (token dies)</li>
             <li>No clear utility or purpose (pump and dump)</li>

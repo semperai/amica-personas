@@ -33,7 +33,7 @@ export default function ArbiusIntegrationPage() {
           and fill in your persona details including name, symbol, and description.
         </p>
         <p>
-          Once deployed, you'll receive a persona token address that will be used to link your Arbius model.
+          Once deployed, you&apos;ll receive a persona token address that will be used to link your Arbius model.
         </p>
 
         <h3>2. Configure Persona to Demo Your Model</h3>
@@ -107,7 +107,7 @@ export default function ArbiusIntegrationPage() {
         </ul>
         <p>
           This creates a fair, transparent distribution where token holders directly benefit from
-          your model's success.
+          your model&apos;s success.
         </p>
       </section>
 

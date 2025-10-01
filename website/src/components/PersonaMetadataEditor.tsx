@@ -222,7 +222,7 @@ export default function PersonaMetadataEditor({
         <div className="text-center py-8 text-muted-foreground">
           <p className="text-sm">No metadata available</p>
           {isOwner && (
-            <p className="text-xs mt-2">Click "Add Metadata" to add information about this persona</p>
+            <p className="text-xs mt-2">Click &quot;Add Metadata&quot; to add information about this persona</p>
           )}
         </div>
       )}

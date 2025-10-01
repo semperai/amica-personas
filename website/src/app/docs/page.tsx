@@ -25,7 +25,7 @@ export default function DocsPage() {
 
         <p>
           Holding AMICA tokens gives you proportional ownership of every persona launched on the platform.
-          33% of each persona's supply is distributed to AMICA holders, claimable anytime through the{' '}
+          33% of each persona&apos;s supply is distributed to AMICA holders, claimable anytime through the{' '}
           <a href="/docs/burn-and-claim" className="text-brand-blue hover:text-brand-cyan">Burn & Claim</a> mechanism.
           This creates continuous value accrual as new personas launch and gain traction.
         </p>

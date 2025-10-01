@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import AnimatedHeroText from './AnimatedHeroText';
 
 export default function HeroSection() {
   return (
@@ -37,25 +36,6 @@ export default function HeroSection() {
             </Link>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-            <div className="p-6 rounded-lg bg-card border border-border">
-              <p className="text-3xl md:text-4xl font-bold text-foreground mb-1">250+</p>
-              <p className="text-sm text-muted-foreground">Active Personas</p>
-            </div>
-            <div className="p-6 rounded-lg bg-card border border-border">
-              <p className="text-3xl md:text-4xl font-bold text-foreground mb-1">$12M+</p>
-              <p className="text-sm text-muted-foreground">Total Volume</p>
-            </div>
-            <div className="p-6 rounded-lg bg-card border border-border">
-              <p className="text-3xl md:text-4xl font-bold text-foreground mb-1">777K+</p>
-              <p className="text-sm text-muted-foreground">Total Trades</p>
-            </div>
-            <div className="p-6 rounded-lg bg-card border border-border">
-              <p className="text-3xl md:text-4xl font-bold text-foreground mb-1">3</p>
-              <p className="text-sm text-muted-foreground">Chains</p>
-            </div>
-          </div>
         </div>
       </div>
     </section>

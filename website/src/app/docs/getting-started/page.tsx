@@ -3,6 +3,7 @@
 import Layout from '@/components/Layout'
 import { DocsPageLayout } from '../components/DocsPageLayout'
 import { Button } from '@/components/Button'
+import Link from 'next/link'
 
 export default function GettingStartedPage() {
   return (
@@ -29,7 +30,7 @@ export default function GettingStartedPage() {
         <h2>Step 1: Connect Your Wallet</h2>
 
         <p>
-          Click the "Connect Wallet" button in the top right corner of the page. Select your preferred wallet provider
+          Click the &quot;Connect Wallet&quot; button in the top right corner of the page. Select your preferred wallet provider
           and authorize the connection.
         </p>
 
@@ -42,7 +43,7 @@ export default function GettingStartedPage() {
         <h2>Step 2: Explore Existing Personas</h2>
 
         <p>
-          Browse the <a href="/">Explore</a> page to see existing AI personas. You can:
+          Browse the <Link href="/" className="text-brand-blue hover:text-brand-cyan">Explore</Link> page to see existing AI personas. You can:
         </p>
 
         <ul>
@@ -67,7 +68,7 @@ export default function GettingStartedPage() {
         <h2>Step 4: Manage Your Portfolio</h2>
 
         <p>
-          Once you've created or purchased persona tokens, visit your <a href="/portfolio">Portfolio</a> to:
+          Once you&apos;ve created or purchased persona tokens, visit your <a href="/portfolio">Portfolio</a> to:
         </p>
 
         <ul>

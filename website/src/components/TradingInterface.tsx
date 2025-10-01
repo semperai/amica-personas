@@ -1,6 +1,6 @@
 // src/components/TradingInterface.tsx - Enhanced with buy/sell separation and improved error handling
 import { useState, useEffect } from 'react';
-import { useAccount, useReadContract, useWriteContract, useBalance, useWaitForTransactionReceipt } from 'wagmi';
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
 import { FACTORY_ABI, getAddressesForChain } from '../lib/contracts';
 import { SwapSettings } from './trading/SwapSettings';
@@ -65,7 +65,6 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
   const [slippage, setSlippage] = useState('0.5');
   const [isApproving, setIsApproving] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [tradeHistory, setTradeHistory] = useState<'all' | 'buy' | 'sell'>('all');
 
   const addresses = getAddressesForChain(Number(chainId));
   const isMockMode = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true';
@@ -87,13 +86,11 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
   }) as { data: readonly [string, string, `0x${string}`, `0x${string}`, `0x${string}`, boolean, bigint, bigint, bigint] | undefined, refetch: () => void };
 
   // Extract data from persona tuple
-  const personaName = personaTuple?.[0] || 'Unknown';
   const tokenSymbol = personaTuple?.[1] || 'TOKEN';
   const personaToken = personaTuple?.[2];
   const pairingToken = personaTuple?.[3];
   const agentToken = personaTuple?.[4];
   const isGraduated = personaTuple?.[5] || false;
-  const createdAt = personaTuple?.[6] || BigInt(0);
   const totalAgentDeposited = personaTuple?.[7] || BigInt(0);
   const minAgentTokens = personaTuple?.[8] || BigInt(0);
 
@@ -124,8 +121,6 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
     }
   }) as { data: readonly [bigint, bigint, bigint, bigint, bigint] | undefined };
 
-  const currentDeposited = graduationProgress?.[0] || BigInt(0);
-  const thresholdRequired = graduationProgress?.[1] || BigInt(1);
   const percentComplete = graduationProgress?.[2] || BigInt(0);
   const currentAgentDeposited = graduationProgress?.[3] || BigInt(0);
   const agentRequired = graduationProgress?.[4] || BigInt(0);

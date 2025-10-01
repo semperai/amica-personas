@@ -196,7 +196,7 @@ function totalSupply() external view returns (uint256)`}</code></pre>
 }`}</code></pre>
         </div>
 
-        <h4>Get User's Personas</h4>
+        <h4>Get User&apos;s Personas</h4>
 
         <div className="not-prose my-6 p-4 bg-muted rounded-lg">
           <pre className="text-sm overflow-x-auto"><code>{`query {

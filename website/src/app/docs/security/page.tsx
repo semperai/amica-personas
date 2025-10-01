@@ -101,7 +101,7 @@ export default function SecurityPage() {
           <li>Keep your OS and browser updated</li>
           <li>Use antivirus software</li>
           <li>Avoid public WiFi when transacting</li>
-          <li>Don't install suspicious browser extensions</li>
+          <li>Don&apos;t install suspicious browser extensions</li>
         </ul>
 
         <h2>Common Scams</h2>
@@ -119,7 +119,7 @@ export default function SecurityPage() {
             <li>Fake Amica websites with similar domains (check URL carefully)</li>
             <li>Urgent messages claiming your account is compromised</li>
             <li>Too-good-to-be-true investment opportunities</li>
-            <li>Unsolicited direct messages offering "support"</li>
+            <li>Unsolicited direct messages offering &quot;support&quot;</li>
           </ul>
         </div>
 
@@ -143,7 +143,7 @@ export default function SecurityPage() {
         <p><strong>Protection:</strong></p>
 
         <ul>
-          <li>Research the creator's history and reputation</li>
+          <li>Research the creator&apos;s history and reputation</li>
           <li>Check if liquidity is locked (view on arbiscan.io)</li>
           <li>Start with small investments to test legitimacy</li>
           <li>Look for community activity and engagement</li>
@@ -159,7 +159,7 @@ export default function SecurityPage() {
 
         <ul>
           <li>Always verify contract addresses</li>
-          <li>Use Amica's official interface for trading</li>
+          <li>Use Amica&apos;s official interface for trading</li>
           <li>Check token creation date and history</li>
           <li>Look for verification badges (coming soon)</li>
         </ul>
@@ -234,7 +234,7 @@ export default function SecurityPage() {
         </ul>
 
         <p>
-          Rewards may be provided for valid, critical vulnerabilities at the project's discretion.
+          Rewards may be provided for valid, critical vulnerabilities at the project&apos;s discretion.
         </p>
 
         <h3>Scam Reporting</h3>

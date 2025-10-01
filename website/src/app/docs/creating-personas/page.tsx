@@ -30,10 +30,10 @@ export default function CreatingPersonasPage() {
         <h3>1. Basic Information</h3>
 
         <ul>
-          <li><strong>Domain:</strong> Unique subdomain at .amica.bot (like ENS for AI agents, e.g., "myagent.amica.bot")</li>
+          <li><strong>Domain:</strong> Unique subdomain at .amica.bot (like ENS for AI agents, e.g., &quot;myagent.amica.bot&quot;)</li>
           <li><strong>Name:</strong> Display name for your persona (3-32 characters)</li>
           <li><strong>Symbol:</strong> Token ticker symbol (2-8 characters)</li>
-          <li><strong>Description:</strong> Brief description of your persona's purpose and personality</li>
+          <li><strong>Description:</strong> Brief description of your persona&apos;s purpose and personality</li>
           <li><strong>Avatar:</strong> Visual representation of your persona (image/NFT)</li>
         </ul>
 
@@ -41,7 +41,7 @@ export default function CreatingPersonasPage() {
           <h4 className="text-sm font-semibold text-foreground mb-2">📝 Domain System</h4>
           <p className="text-sm text-muted-foreground">
             Amica uses an ENS-like domain system for AI agent personas. Each persona gets a unique subdomain
-            at .amica.bot (e.g., "assistant.amica.bot") that serves as its identity. Domains must start with a letter, can contain
+            at .amica.bot (e.g., &quot;assistant.amica.bot&quot;) that serves as its identity. Domains must start with a letter, can contain
             letters, numbers, and hyphens, and must end with a letter or number. Like ENS, domains are unique
             and permanent once registered.
           </p>
@@ -58,7 +58,7 @@ export default function CreatingPersonasPage() {
         <h3>3. Metadata & Customization</h3>
 
         <p>
-          Personas support a comprehensive metadata system that allows for full customization of your AI agent's
+          Personas support a comprehensive metadata system that allows for full customization of your AI agent&apos;s
           characteristics, capabilities, and behavior. The metadata can include:
         </p>
 
@@ -87,7 +87,7 @@ export default function CreatingPersonasPage() {
         <h3>Step 2: Fill in Basic Details</h3>
 
         <p>
-          Enter your persona's name, symbol, and description. Choose these carefully as they cannot be changed
+          Enter your persona&apos;s name, symbol, and description. Choose these carefully as they cannot be changed
           after deployment.
         </p>
 
@@ -139,7 +139,7 @@ export default function CreatingPersonasPage() {
 
         <p>
           Set key-value pairs for metadata that will be loaded by the Amica interface. This metadata system
-          allows you to customize all aspects of your persona's behavior, appearance, and capabilities.
+          allows you to customize all aspects of your persona&apos;s behavior, appearance, and capabilities.
         </p>
 
         <p>
@@ -182,7 +182,7 @@ export default function CreatingPersonasPage() {
         <h3>Description & Personality</h3>
 
         <ul>
-          <li>Be clear about your persona's purpose</li>
+          <li>Be clear about your persona&apos;s purpose</li>
           <li>Highlight unique features or capabilities</li>
           <li>Use engaging, professional language</li>
         </ul>
@@ -199,7 +199,7 @@ export default function CreatingPersonasPage() {
         </ul>
 
         <p>
-          Note: There is no "initial liquidity" parameter. Liquidity is created at graduation using ETH collected during the bonding phase.
+          Note: There is no &quot;initial liquidity&quot; parameter. Liquidity is created at graduation using ETH collected during the bonding phase.
         </p>
 
         <div className="not-prose mt-8 p-6 bg-gradient-to-r from-brand-blue/10 to-brand-cyan/10 border border-brand-blue/20 rounded-lg">

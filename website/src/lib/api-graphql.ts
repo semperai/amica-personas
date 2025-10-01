@@ -1,5 +1,5 @@
 // src/lib/api-graphql.ts - Updated with enhanced contract features and proper types
-import { apolloClient, GET_PERSONAS, GET_PERSONA_DETAILS, GET_PERSONA_TRADES, GET_DAILY_STATS, convertOrderBy, PersonasQueryResult, executeQuery } from './graphql/client';
+import { apolloClient, GET_PERSONAS, GET_PERSONA_DETAILS, convertOrderBy, PersonasQueryResult, executeQuery } from './graphql/client';
 import { mockPersonas, mockTrades, mockVolumeChart, mockUserPortfolio } from './mockData';
 import { gql } from '@apollo/client';
 
@@ -121,14 +121,6 @@ export interface GlobalStats {
   totalStaked: string;
   totalBridgeVolume: string;
   lastUpdated: string;
-}
-
-interface GraphQLError {
-  message: string;
-  extensions?: {
-    code?: string;
-    [key: string]: unknown;
-  };
 }
 
 interface WhereClause {
@@ -1022,10 +1014,6 @@ export async function fetchPersonaTrades(chainId: string, tokenId: string, limit
       sellTradesCount: 0
     };
   }
-}
-
-interface GlobalStatsQueryResult {
-  globalStats: GlobalStats;
 }
 
 // New function to fetch global statistics

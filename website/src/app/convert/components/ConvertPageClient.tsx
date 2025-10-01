@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
 import Layout from '@/components/Layout';
-import { getAddressesForChain } from '@/lib/contracts';
 import Link from 'next/link';
 
 const AIUS_ABI = [
@@ -55,11 +54,10 @@ const CONVERTER_ABI = [
 ] as const;
 
 export default function ConvertPageClient() {
-  const { address, chainId } = useAccount();
+  const { address } = useAccount();
   const [amount, setAmount] = useState('');
   const [isApproving, setIsApproving] = useState(false);
 
-  const addresses = chainId ? getAddressesForChain(chainId) : null;
   const { writeContract, data: txHash, isPending } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash });
 

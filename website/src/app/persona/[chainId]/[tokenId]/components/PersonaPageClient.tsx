@@ -13,7 +13,6 @@ import PriceChart from '@/components/PriceChart';
 import AgentDeposits from '@/components/AgentDeposits';
 import PersonaMetadataEditor from '@/components/PersonaMetadataEditor';
 import PersonaTokenBurnAndClaim from '@/components/PersonaTokenBurnAndClaim';
-import { GET_PERSONA_DETAILS, GET_PERSONA_TRADES } from '@/lib/graphql/client';
 import Link from 'next/link';
 
 // Updated query to use BigInt for tokenId
@@ -84,8 +83,6 @@ interface Trade {
 
 // Create TradeHistory component with GraphQL
 const TradeHistory = ({ chainId, tokenId }: { chainId: string; tokenId: string }) => {
-  const personaId = `${chainId}-${tokenId}`;
-
   // Convert tokenId to BigInt string for GraphQL
   const tokenIdBigInt = tokenId.replace(/^0+/, '') || '0';
 
@@ -225,13 +222,12 @@ const PersonaDetailPage = () => {
   // Ensure we have string values
   const chainIdStr = Array.isArray(chainId) ? chainId[0] : chainId;
   const tokenIdStr = Array.isArray(tokenId) ? tokenId[0] : tokenId;
-  const personaId = chainIdStr && tokenIdStr ? `${chainIdStr}-${tokenIdStr}` : null;
 
   // Convert tokenId to BigInt string for GraphQL
   const tokenIdBigInt = tokenIdStr ? tokenIdStr.replace(/^0+/, '') || '0' : '0';
 
   // Query to check if persona exists
-  const { data: graphqlData, loading: isCheckingPersona, error } = useQuery(GET_PERSONA_BY_TOKEN_AND_CHAIN, {
+  const { data: graphqlData, loading: isCheckingPersona } = useQuery(GET_PERSONA_BY_TOKEN_AND_CHAIN, {
     variables: { 
       tokenId: tokenIdBigInt, // Pass as string representation of BigInt
       chainId: parseInt(chainIdStr || '0')

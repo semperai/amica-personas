@@ -30,7 +30,7 @@ export default function ConfigurationPage() {
         <h3>Adding Arbitrum to Your Wallet</h3>
 
         <p>
-          If your wallet doesn't have Arbitrum configured, add it manually:
+          If your wallet doesn&apos;t have Arbitrum configured, add it manually:
         </p>
 
         <div className="not-prose my-6 overflow-x-auto">
@@ -92,7 +92,7 @@ export default function ConfigurationPage() {
 
         <ol>
           <li>Click your wallet address in the top right</li>
-          <li>Select "Disconnect" from the dropdown</li>
+          <li>Select &quot;Disconnect&quot; from the dropdown</li>
         </ol>
 
         <h2>Gas Configuration</h2>
@@ -118,7 +118,7 @@ export default function ConfigurationPage() {
         <ul>
           <li>Batch multiple operations when possible</li>
           <li>Transact during off-peak hours (weekends, late night UTC)</li>
-          <li>Use standard gas settings (avoid "fast" or "instant")</li>
+          <li>Use standard gas settings (avoid &quot;fast&quot; or &quot;instant&quot;)</li>
         </ul>
 
         <h2>Slippage Configuration</h2>
@@ -185,7 +185,7 @@ export default function ConfigurationPage() {
           <li><strong>Local storage:</strong> Wallet connection, preferences</li>
         </ul>
 
-        <h3>What We Don't Collect</h3>
+        <h3>What We Don&apos;t Collect</h3>
 
         <ul>
           <li>Private keys or seed phrases</li>

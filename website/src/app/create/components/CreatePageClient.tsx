@@ -161,7 +161,7 @@ export default function CreatePersonaPage() {
   const needsApproval = currentAllowance !== undefined && totalRequired > currentAllowance;
 
   // Wait for approval transaction
-  const { isLoading: isApprovalPending, isSuccess: isApprovalSuccess } = useWaitForTransactionReceipt({
+  const { isLoading: isApprovalPending } = useWaitForTransactionReceipt({
     hash: approvalTxHash,
   });
 

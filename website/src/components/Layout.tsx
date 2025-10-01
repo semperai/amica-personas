@@ -4,7 +4,6 @@ import { ReactNode, useState } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useAccount } from 'wagmi';
 import Image from 'next/image';
 import AmicaLogo from '@/assets/AmicaLogo.png';
 
@@ -20,7 +19,6 @@ const fredoka = Fredoka({
 
 const Layout = ({ children }: LayoutProps) => {
   const pathname = usePathname();
-  const { chainId } = useAccount();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isActive = (path: string) => {

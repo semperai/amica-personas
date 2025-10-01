@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import Image from 'next/image';
+import { Bot, ShieldCheck, Users } from 'lucide-react';
 import ArbiusLogo from '@/assets/ArbiusLogo.webp';
 import EffectiveAccelerationLogo from '@/assets/EffectiveAccelerationLogo.webp';
 import CatgirlLogo from '@/assets/CatgirlLogo.webp';
@@ -121,19 +121,25 @@ export default function EcosystemSection() {
           <h3 className="text-lg font-semibold text-foreground mb-4 text-center">Why This Matters</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
             <div className="text-center">
-              <div className="text-2xl mb-2">🤖</div>
+              <div className="flex justify-center mb-3">
+                <Bot className="w-8 h-8 text-brand-blue" />
+              </div>
               <p className="text-foreground font-medium mb-1">AI-Powered</p>
               <p className="text-muted-foreground">Personas backed by decentralized AI computation</p>
             </div>
             <div className="text-center">
-              <div className="text-2xl mb-2">🔒</div>
+              <div className="flex justify-center mb-3">
+                <ShieldCheck className="w-8 h-8 text-brand-blue" />
+              </div>
               <p className="text-foreground font-medium mb-1">Secure & Private</p>
               <p className="text-muted-foreground">Encrypted P2P communication for agent interactions</p>
             </div>
             <div className="text-center">
-              <div className="text-2xl mb-2">⚡</div>
-              <p className="text-foreground font-medium mb-1">Cross-Chain</p>
-              <p className="text-muted-foreground">Deploy on Ethereum, Base, and Arbitrum</p>
+              <div className="flex justify-center mb-3">
+                <Users className="w-8 h-8 text-brand-blue" />
+              </div>
+              <p className="text-foreground font-medium mb-1">Permissionless</p>
+              <p className="text-muted-foreground">Anyone can create, trade, and integrate AI personas</p>
             </div>
           </div>
         </div>

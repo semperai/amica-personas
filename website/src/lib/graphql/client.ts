@@ -1,6 +1,6 @@
 // src/lib/graphql/client.ts
 import { ApolloClient, InMemoryCache, gql, ApolloLink, createHttpLink, from } from '@apollo/client';
-import { onError, ErrorResponse } from '@apollo/client/link/error';
+import { onError } from '@apollo/client/link/error';
 import { RetryLink } from '@apollo/client/link/retry';
 
 // Define proper types for GraphQL errors
@@ -72,7 +72,7 @@ const retryLink = new RetryLink({
   },
   attempts: {
     max: 3,
-    retryIf: (error, _operation) => {
+    retryIf: (error) => {
       // Type guard for network error
       if (error?.networkError) {
         const networkError = error.networkError as NetworkErrorWithStatus;
@@ -88,7 +88,7 @@ const retryLink = new RetryLink({
 });
 
 // Error handling link
-const errorLink = onError(({ graphQLErrors, networkError, operation }) => {
+const errorLink = onError(({ graphQLErrors, networkError }) => {
   // Handle GraphQL errors
   if (graphQLErrors) {
     graphQLErrors.forEach(({ message, locations, path, extensions }) => {
@@ -225,13 +225,13 @@ export const apolloClient = new ApolloClient({
           // Add merge functions for paginated queries
           personas: {
             keyArgs: ['where', 'orderBy'],
-            merge(_existing = [], incoming) {
+            merge(_, incoming) {
               return [...incoming];
             },
           },
           trades: {
             keyArgs: ['where', 'orderBy'],
-            merge(_existing = [], incoming) {
+            merge(_, incoming) {
               return [...incoming];
             },
           },

@@ -28,7 +28,7 @@ export default function FaqPage() {
 
         <p>
           Amica operates on Arbitrum One, a Layer 2 scaling solution for Ethereum. Arbitrum offers fast
-          transactions and low fees while maintaining Ethereum's security guarantees.
+          transactions and low fees while maintaining Ethereum&apos;s security guarantees.
         </p>
 
         <h3>Do I need technical knowledge to use Amica?</h3>
@@ -75,7 +75,7 @@ export default function FaqPage() {
         </ul>
 
         <p>
-          Note: There is no traditional "initial liquidity" parameter. Liquidity is created automatically at graduation.
+          Note: There is no traditional &quot;initial liquidity&quot; parameter. Liquidity is created automatically at graduation.
         </p>
 
         <h2>Creating Personas</h2>
@@ -83,7 +83,7 @@ export default function FaqPage() {
         <h3>Can I change my persona after creation?</h3>
 
         <p>
-          Basic information (name, symbol, initial supply) cannot be changed as they're permanently stored in the
+          Basic information (name, symbol, initial supply) cannot be changed as they&apos;re permanently stored in the
           smart contract. However, metadata like description and images can be updated through the platform.
         </p>
 
@@ -98,7 +98,7 @@ export default function FaqPage() {
         <h3>Can I create multiple personas?</h3>
 
         <p>
-          Yes! There's no limit to how many personas you can create. Each persona is independent with its own
+          Yes! There&apos;s no limit to how many personas you can create. Each persona is independent with its own
           token and liquidity pool.
         </p>
 
@@ -126,7 +126,7 @@ export default function FaqPage() {
         </p>
 
         <ul>
-          <li>On Amica's built-in trading interface</li>
+          <li>On Amica&apos;s built-in trading interface</li>
           <li>Directly on Uniswap V3</li>
           <li>Through any DEX aggregator (1inch, Paraswap, etc.)</li>
           <li>On any platform that supports Arbitrum ERC-20s</li>
@@ -197,7 +197,7 @@ export default function FaqPage() {
         <ul>
           <li>Damages trust in your persona</li>
           <li>Makes trading difficult for others</li>
-          <li>Can be seen as a "rugpull"</li>
+          <li>Can be seen as a &quot;rugpull&quot;</li>
           <li>Stops you from earning trading fees</li>
         </ul>
 
@@ -210,7 +210,7 @@ export default function FaqPage() {
         <h3>Are the smart contracts audited?</h3>
 
         <p>
-          The contracts have undergone internal security reviews and are built using OpenZeppelin's audited
+          The contracts have undergone internal security reviews and are built using OpenZeppelin&apos;s audited
           libraries. A third-party audit is planned for Q2 2025. See the{' '}
           <a href="/docs/security">Security</a> page for details.
         </p>
@@ -252,7 +252,7 @@ export default function FaqPage() {
         <h3>How are gas fees calculated?</h3>
 
         <p>
-          Gas fees are paid in ETH to Arbitrum validators for processing transactions. Amica doesn't control
+          Gas fees are paid in ETH to Arbitrum validators for processing transactions. Amica doesn&apos;t control
           gas prices. Fees vary based on network congestion but are typically $0.02-$0.50 per transaction on Arbitrum - much cheaper than Ethereum mainnet.
         </p>
 
