@@ -1,5 +1,8 @@
 import { describe, expect, test, jest, beforeEach, afterEach } from "@jest/globals";
-import { handleNews } from "@/features/plugins/news";
+
+// Mock fetch BEFORE importing the module that uses it
+const fetchMock = jest.fn();
+global.fetch = fetchMock as any;
 
 // Mock expandPrompt
 jest.mock("@/features/functionCalling/eventHandler", () => ({
@@ -8,16 +11,11 @@ jest.mock("@/features/functionCalling/eventHandler", () => ({
   }),
 }));
 
+import { handleNews } from "@/features/plugins/news";
+
 describe("news", () => {
-  let fetchSpy: jest.SpiedFunction<typeof global.fetch>;
-
   beforeEach(() => {
-    // Spy on global fetch
-    fetchSpy = jest.spyOn(global, 'fetch') as jest.SpiedFunction<typeof global.fetch>;
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
+    jest.clearAllMocks();
   });
 
   const createMockRSS = (items: Array<{title: string, description: string}>) => {
@@ -43,7 +41,7 @@ describe("news", () => {
         { title: "Test Article", description: "Test description" }
       ]);
 
-      fetchSpy.mockResolvedValue({
+      fetchMock.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -52,7 +50,7 @@ describe("news", () => {
 
       const result = await handleNews();
 
-      expect(mockFetch).toHaveBeenCalledWith(
+      expect(fetchMock).toHaveBeenCalledWith(
         "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml"
       );
       expect(result).toContain("Test Article: Test description");
@@ -71,7 +69,7 @@ describe("news", () => {
         { title: "Article 3", description: "Description 3" },
       ]);
 
-      fetchSpy.mockResolvedValue({
+      fetchMock.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -92,7 +90,7 @@ describe("news", () => {
     });
 
     test("should handle fetch error with status code", async () => {
-      fetchSpy.mockResolvedValue({
+      fetchMock.mockResolvedValue({
         ok: false,
         statusText: "Not Found",
       });
@@ -111,7 +109,7 @@ describe("news", () => {
     });
 
     test("should handle network error", async () => {
-      mockFetch.mockRejectedValue(new Error("Network error"));
+      fetchMock.mockRejectedValue(new Error("Network error"));
 
       const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
 
@@ -124,7 +122,7 @@ describe("news", () => {
     });
 
     test("should handle malformed XML", async () => {
-      fetchSpy.mockResolvedValue({
+      fetchMock.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve("Invalid XML"),
       });
@@ -143,7 +141,7 @@ describe("news", () => {
           </channel>
         </rss>`;
 
-      fetchSpy.mockResolvedValue({
+      fetchMock.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -162,7 +160,7 @@ describe("news", () => {
         }
       ]);
 
-      fetchSpy.mockResolvedValue({
+      fetchMock.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -181,7 +179,7 @@ describe("news", () => {
         }
       ]);
 
-      fetchSpy.mockResolvedValue({
+      fetchMock.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -199,7 +197,7 @@ describe("news", () => {
         }
       ]);
 
-      fetchSpy.mockResolvedValue({
+      fetchMock.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -221,7 +219,7 @@ describe("news", () => {
         }
       ]);
 
-      fetchSpy.mockResolvedValue({
+      fetchMock.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -242,7 +240,7 @@ describe("news", () => {
           </channel>
         </rss>`;
 
-      fetchSpy.mockResolvedValue({
+      fetchMock.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -263,7 +261,7 @@ describe("news", () => {
           </channel>
         </rss>`;
 
-      fetchSpy.mockResolvedValue({
+      fetchMock.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -284,7 +282,7 @@ describe("news", () => {
           </channel>
         </rss>`;
 
-      fetchSpy.mockResolvedValue({
+      fetchMock.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -306,7 +304,7 @@ describe("news", () => {
           </channel>
         </rss>`;
 
-      fetchSpy.mockResolvedValue({
+      fetchMock.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -325,7 +323,7 @@ describe("news", () => {
         { title: "Business: Market Update", description: "Stocks rise" },
       ]);
 
-      fetchSpy.mockResolvedValue({
+      fetchMock.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -342,7 +340,7 @@ describe("news", () => {
         { title: "Test", description: "Test desc" }
       ]);
 
-      fetchSpy.mockResolvedValue({
+      fetchMock.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -358,7 +356,7 @@ describe("news", () => {
         { title: "", description: "" }
       ]);
 
-      fetchSpy.mockResolvedValue({
+      fetchMock.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -373,7 +371,7 @@ describe("news", () => {
         { title: "   ", description: "   " }
       ]);
 
-      fetchSpy.mockResolvedValue({
+      fetchMock.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -384,7 +382,7 @@ describe("news", () => {
     });
 
     test("should handle timeout error", async () => {
-      mockFetch.mockRejectedValue(new Error("Timeout"));
+      fetchMock.mockRejectedValue(new Error("Timeout"));
 
       const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
 
@@ -401,17 +399,17 @@ describe("news", () => {
         { title: "Test", description: "Test" }
       ]);
 
-      fetchSpy.mockResolvedValue({
+      fetchMock.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
 
       await handleNews();
 
-      expect(mockFetch).toHaveBeenCalledWith(
+      expect(fetchMock).toHaveBeenCalledWith(
         "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml"
       );
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
     });
   });
 });
