@@ -40,7 +40,7 @@ export function TokenInput({
         {onMaxClick && !readOnly && (
           <button
             onClick={onMaxClick}
-            className="text-xs text-purple-400 hover:text-purple-300 mr-2"
+            className="px-3 py-1.5 bg-brand-blue text-white rounded-full hover:bg-blue-500 transition-colors text-xs font-medium cursor-pointer"
           >
             MAX
           </button>

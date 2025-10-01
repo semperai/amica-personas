@@ -24,11 +24,12 @@ interface CreatedPersona {
 // Generate gradient for persona cards
 const getPersonaGradient = (id: string) => {
   const gradients = [
-    'from-purple-600 to-pink-600',
+    'from-brand-blue to-brand-cyan',
     'from-blue-600 to-cyan-500',
-    'from-indigo-600 to-purple-600',
-    'from-pink-500 to-rose-600',
+    'from-indigo-600 to-blue-600',
     'from-cyan-500 to-blue-600',
+    'from-blue-500 to-brand-cyan',
+    'from-brand-blue to-blue-500',
   ];
 
   const index = parseInt(id.split('-')[1] || '0') % gradients.length;
@@ -74,12 +75,12 @@ function PersonaCard({ persona }: PersonaCardProps) {
   return (
     <Link
       href={`/persona/${chain.id}/${persona.id}`}
-      className="group relative aspect-[3/4] rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl"
+      className="group relative aspect-[3/4] rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl border border-border bg-card hover:border-brand-blue/50"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Background Gradient (shown while image loads) */}
-      <div className={`absolute inset-0 bg-gradient-to-br ${getPersonaGradient(persona.id)} opacity-80`} />
+      <div className={`absolute inset-0 bg-gradient-to-br ${getPersonaGradient(persona.id)} opacity-20`} />
 
       {/* Background Image */}
       <div className="absolute inset-0">
@@ -87,65 +88,62 @@ function PersonaCard({ persona }: PersonaCardProps) {
           src={getPersonaImage(persona.id)}
           alt={persona.name}
           fill
-          className={`object-cover transition-all duration-700 ${
-            imageLoaded ? 'opacity-100' : 'opacity-0'
-          } ${isHovered ? 'scale-110' : 'scale-100'}`}
+          className={`object-cover transition-all duration-700 opacity-30 ${
+            imageLoaded ? 'opacity-30' : 'opacity-0'
+          } ${isHovered ? 'scale-105' : 'scale-100'}`}
           onLoad={() => setImageLoaded(true)}
           sizes="(max-width: 768px) 50vw, 33vw"
           priority={false}
         />
       </div>
 
-      {/* Dark overlay for text readability */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
-
-      {/* Glass overlay */}
-      <div className="absolute inset-0 bg-white/5 backdrop-blur-[2px]" />
+      {/* Gradient overlay for better text contrast */}
+      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
 
       {/* Content */}
       <div className="relative h-full p-5 flex flex-col justify-between">
         {/* Top Section */}
-        <div>
-          {persona.pairCreated && (
-            <div className="inline-flex items-center px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-sm mb-3">
-              <span className="text-xs font-medium text-white">Graduated</span>
-            </div>
-          )}
+        <div className="flex justify-between items-start">
+          <div className="flex flex-wrap gap-1">
+            {persona.pairCreated && (
+              <span className="inline-flex items-center px-2 py-1 rounded-full bg-green-500/20 text-green-400 backdrop-blur-sm text-xs font-medium">
+                Graduated
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Bottom Section */}
         <div className="space-y-3">
           <div>
-            <h3 className="text-xl font-semibold text-white mb-1 line-clamp-1">
+            <h3 className="text-lg font-semibold text-foreground mb-1 line-clamp-1">
               {persona.name}
             </h3>
-            <p className="text-sm text-white/70">${persona.symbol}</p>
+            <p className="text-sm text-muted-foreground">${persona.symbol}</p>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 bg-background/50 backdrop-blur-sm rounded-lg p-3 border border-border/50">
             <div className="flex justify-between items-center">
-              <span className="text-xs text-white/60">TVL</span>
-              <span className="text-sm font-medium text-white">
+              <span className="text-xs text-muted-foreground">TVL</span>
+              <span className="text-sm font-semibold text-foreground">
                 {parseFloat(formatEther(BigInt(persona.totalDeposited || '0'))).toFixed(2)} Ξ
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-xs text-white/60">Created</span>
-              <span className="text-sm font-medium text-white">
+              <span className="text-xs text-muted-foreground">Created</span>
+              <span className="text-sm font-semibold text-foreground">
                 {new Date(persona.createdAt).toLocaleDateString()}
               </span>
             </div>
           </div>
 
           {/* Chain indicator */}
-          <div className="pt-2 border-t border-white/20">
-            <span className="text-xs text-white/60 capitalize">{chain.name}</span>
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-brand-blue" />
+            <span className="text-xs text-muted-foreground capitalize">{chain.name}</span>
           </div>
         </div>
       </div>
-
-      {/* Hover effect overlay */}
-      <div className="absolute inset-0 bg-white/0 group-hover:bg-white/5 transition-colors duration-300" />
     </Link>
   );
 }
@@ -160,7 +158,7 @@ export function MyPersonas({ address }: MyPersonasProps) {
   if (loading) {
     return (
       <div>
-        <h2 className="text-2xl font-light text-foreground mb-6">My Created Personas</h2>
+        <h2 className="text-2xl font-semibold text-foreground mb-6">My Created Personas</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="aspect-[3/4] bg-muted rounded-2xl animate-pulse" />
@@ -173,7 +171,7 @@ export function MyPersonas({ address }: MyPersonasProps) {
   if (error) {
     return (
       <div>
-        <h2 className="text-2xl font-light text-foreground mb-6">My Created Personas</h2>
+        <h2 className="text-2xl font-semibold text-foreground mb-6">My Created Personas</h2>
         <div className="text-center py-12">
           <p className="text-red-400 mb-4">Error loading personas</p>
           <button
@@ -192,7 +190,7 @@ export function MyPersonas({ address }: MyPersonasProps) {
   if (personas.length === 0) {
     return (
       <div>
-        <h2 className="text-2xl font-light text-foreground mb-6">My Created Personas</h2>
+        <h2 className="text-2xl font-semibold text-foreground mb-6">My Created Personas</h2>
         <div className="text-center py-12">
           <p className="text-muted-foreground mb-6">You haven&apos;t created any personas yet.</p>
           <Link
@@ -208,7 +206,7 @@ export function MyPersonas({ address }: MyPersonasProps) {
 
   return (
     <div>
-      <h2 className="text-2xl font-light text-foreground mb-6">My Created Personas ({personas.length})</h2>
+      <h2 className="text-2xl font-semibold text-foreground mb-6">My Created Personas ({personas.length})</h2>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
         {personas.map((persona: CreatedPersona) => (
           <PersonaCard key={persona.id} persona={persona} />

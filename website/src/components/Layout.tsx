@@ -33,10 +33,17 @@ const Layout = ({ children }: LayoutProps) => {
     { href: '/', label: 'Explore' },
     { href: '/create', label: 'Create' },
     { href: '/portfolio', label: 'Portfolio' },
+    { href: '/convert', label: 'Convert' },
+    { href: '/docs', label: 'Docs' },
   ];
 
   return (
     <div className={`min-h-screen bg-background ${fredoka.className}`}>
+      {/* Developer Preview Banner */}
+      <div className="bg-gradient-to-r from-brand-blue to-brand-cyan text-white px-4 py-2 text-center text-sm font-medium border-b border-brand-blue/20">
+        <span>⚠️ Developer Preview: Not yet live</span>
+      </div>
+
       {/* Mock Mode Banner */}
       {isMockMode && (
         <div className="bg-brand-blue/20 backdrop-blur-sm text-white px-4 py-2 text-center text-sm border-b border-brand-blue/20">
@@ -57,7 +64,7 @@ const Layout = ({ children }: LayoutProps) => {
                   height={28}
                   className="group-hover:opacity-80 transition-opacity"
                 />
-                <span className="text-xl font-semibold text-foreground">Amica Personas</span>
+                <span className="text-xl font-semibold text-foreground whitespace-nowrap">Amica Personas</span>
               </Link>
 
               {/* Desktop Navigation */}
@@ -207,18 +214,18 @@ const Layout = ({ children }: LayoutProps) => {
               <h3 className="font-semibold text-foreground mb-3 text-sm">Community</h3>
               <ul className="space-y-2">
                 <li>
-                  <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  <Link href="/docs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                     Docs
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  <a href="https://github.com/semperai/amica-personas" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                     GitHub
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                    Discord
+                  <a href="https://t.me/arbius_ai" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    Telegram
                   </a>
                 </li>
               </ul>

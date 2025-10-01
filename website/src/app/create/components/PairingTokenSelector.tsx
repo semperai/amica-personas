@@ -38,7 +38,7 @@ export default function PairingTokenSelector({
               <span className="text-2xl">{selectedToken.icon}</span>
               <div className="text-left">
                 <div className="font-medium">{selectedToken.symbol}</div>
-                <div className="text-xs text-white/50">{selectedToken.name}</div>
+                <div className="text-xs text-white/60">{selectedToken.name}</div>
               </div>
             </div>
           ) : (
@@ -55,18 +55,18 @@ export default function PairingTokenSelector({
         </button>
 
         {showDropdown && (
-          <div className="absolute z-10 w-full mt-2 bg-black/90 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl overflow-hidden">
+          <div className="absolute z-10 w-full mt-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl overflow-hidden">
             {options.map((token) => (
               <button
                 key={token.address}
                 onClick={() => onSelectToken(token)}
-                className="w-full p-4 hover:bg-white/10 transition-colors flex items-center gap-3 text-left"
+                className="w-full p-4 hover:bg-white/20 transition-colors flex items-center gap-3 text-left"
               >
                 <span className="text-2xl">{token.icon}</span>
                 <div>
                   <div className="font-medium text-white">{token.symbol}</div>
-                  <div className="text-xs text-white/50">{token.name}</div>
-                  <div className="text-xs text-white/30 font-mono mt-1">
+                  <div className="text-xs text-white/60">{token.name}</div>
+                  <div className="text-xs text-white/40 font-mono mt-1">
                     {token.address.slice(0, 6)}...{token.address.slice(-4)}
                   </div>
                 </div>

@@ -25,7 +25,7 @@ export function GraduationProgress({
   const canGraduate = tvlComplete && agentComplete;
 
   return (
-    <div className="p-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-b border-border">
+    <div className="p-4 bg-muted border-b border-border">
       <div className="space-y-4">
         {/* TVL Progress */}
         <div>
@@ -38,15 +38,22 @@ export function GraduationProgress({
             </div>
             <span className="text-sm font-medium text-foreground">{progress.toFixed(1)}%</span>
           </div>
-          <div className="w-full bg-background rounded-full h-2">
+          <div className="w-full bg-background rounded-full h-4 overflow-hidden">
             <div
-              className={`h-2 rounded-full transition-all duration-300 ${
+              className={`h-4 rounded-full transition-all duration-500 shadow-lg relative ${
                 tvlComplete
-                  ? 'bg-gradient-to-r from-green-500 to-emerald-500'
-                  : 'bg-gradient-to-r from-purple-500 to-pink-500'
+                  ? 'bg-emerald-500'
+                  : 'bg-brand-blue'
               }`}
-              style={{ width: `${Math.min(progress, 100)}%` }}
-            />
+              style={{
+                width: `${Math.min(progress, 100)}%`,
+                animation: tvlComplete ? 'none' : 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+              }}
+            >
+              {!tvlComplete && (
+                <div className="absolute inset-0 bg-white/20 rounded-full animate-ping" style={{ animationDuration: '2s' }}></div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -65,15 +72,22 @@ export function GraduationProgress({
               </div>
               <span className="text-sm font-medium text-foreground">{agentTokenProgress.toFixed(1)}%</span>
             </div>
-            <div className="w-full bg-background rounded-full h-2">
+            <div className="w-full bg-background rounded-full h-4 overflow-hidden">
               <div
-                className={`h-2 rounded-full transition-all duration-300 ${
+                className={`h-4 rounded-full transition-all duration-500 shadow-lg relative ${
                   agentComplete
-                    ? 'bg-gradient-to-r from-green-500 to-emerald-500'
-                    : 'bg-gradient-to-r from-purple-500 to-cyan-500'
+                    ? 'bg-emerald-500'
+                    : 'bg-orange-500'
                 }`}
-                style={{ width: `${Math.min(agentTokenProgress, 100)}%` }}
-              />
+                style={{
+                  width: `${Math.min(agentTokenProgress, 100)}%`,
+                  animation: agentComplete ? 'none' : 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                }}
+              >
+                {!agentComplete && (
+                  <div className="absolute inset-0 bg-white/20 rounded-full animate-ping" style={{ animationDuration: '2s' }}></div>
+                )}
+              </div>
             </div>
             {agentTokensDeposited && agentTokensRequired && (
               <p className="text-xs text-muted-foreground mt-1">

@@ -43,7 +43,7 @@ export function TradingHistory({ address }: TradingHistoryProps) {
   if (loading) {
     return (
       <div>
-        <h2 className="text-2xl font-light text-foreground mb-6">Recent Trades</h2>
+        <h2 className="text-2xl font-semibold text-foreground mb-6">Recent Trades</h2>
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="h-20 bg-muted rounded-lg animate-pulse" />
@@ -56,7 +56,7 @@ export function TradingHistory({ address }: TradingHistoryProps) {
   if (error) {
     return (
       <div>
-        <h2 className="text-2xl font-light text-foreground mb-6">Recent Trades</h2>
+        <h2 className="text-2xl font-semibold text-foreground mb-6">Recent Trades</h2>
         <div className="text-center py-12">
           <p className="text-red-400">Error loading trades</p>
         </div>
@@ -69,7 +69,7 @@ export function TradingHistory({ address }: TradingHistoryProps) {
   if (trades.length === 0) {
     return (
       <div>
-        <h2 className="text-2xl font-light text-foreground mb-6">Recent Trades</h2>
+        <h2 className="text-2xl font-semibold text-foreground mb-6">Recent Trades</h2>
         <div className="text-center py-12">
           <p className="text-muted-foreground">No trading history yet.</p>
         </div>
@@ -79,7 +79,7 @@ export function TradingHistory({ address }: TradingHistoryProps) {
 
   return (
     <div>
-      <h2 className="text-2xl font-light text-foreground mb-6">Recent Trades</h2>
+      <h2 className="text-2xl font-semibold text-foreground mb-6">Recent Trades</h2>
       <div className="overflow-hidden rounded-xl border border-border">
         <table className="w-full">
           <thead>

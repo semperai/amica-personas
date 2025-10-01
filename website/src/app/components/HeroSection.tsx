@@ -15,7 +15,7 @@ export default function HeroSection() {
         <div className="text-center max-w-3xl mx-auto">
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-foreground mb-6 leading-tight">
             Launch & Trade
-            <span className="block text-gradient-brand">AI Personas</span>
+            <span className="block text-brand-blue">AI Personas</span>
           </h1>
 
           <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
@@ -25,7 +25,7 @@ export default function HeroSection() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
             <Link
               href="/create"
-              className="px-8 py-3 gradient-brand text-white rounded-lg hover:opacity-90 transition-all font-semibold shadow-lg hover:shadow-xl"
+              className="px-8 py-3 bg-brand-blue text-white rounded-lg hover:bg-blue-500 transition-all font-semibold shadow-lg hover:shadow-xl"
             >
               Create Persona
             </Link>

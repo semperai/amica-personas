@@ -292,7 +292,7 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
   // Wait for data to load (but don't error out if GraphQL fails)
   if (graphqlLoading) {
     return (
-      <div className="bg-card backdrop-blur-md rounded-2xl p-6 border border-border">
+      <div className="bg-card backdrop-blur-md rounded-2xl p-4 border border-border">
         <div className="animate-pulse">
           <div className="h-6 bg-muted rounded w-1/3 mb-4"></div>
           <div className="h-20 bg-muted rounded"></div>
@@ -341,9 +341,9 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
     : 100;
 
   return (
-    <div className="bg-card backdrop-blur-md rounded-2xl p-6 border border-border">
+    <div className="bg-card backdrop-blur-md rounded-2xl p-4 border border-border">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-light text-foreground">Agent Token Integration</h3>
+        <h3 className="text-lg font-semibold text-foreground">Agent Token Integration</h3>
         <div className="flex items-center gap-2">
           {isMockMode && (
             <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded">Mock Mode</span>
@@ -461,7 +461,7 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
                 <button
                   onClick={handleApprove}
                   disabled={!address || !depositAmount || isPending || isApproving || isConfirming}
-                  className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-3 rounded-xl hover:from-yellow-600 hover:to-orange-600 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transition-all"
+                  className="w-full bg-orange-600 text-white py-3 rounded-xl hover:bg-orange-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 >
                   {isApproving || isConfirming ? 'Approving...' : 'Approve ' + agentTokenSymbol}
                 </button>
@@ -469,7 +469,7 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
                 <button
                   onClick={handleDeposit}
                   disabled={!address || !depositAmount || isPending || parseFloat(depositAmount) <= 0 || isConfirming}
-                  className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-xl hover:from-purple-600 hover:to-pink-600 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transition-all"
+                  className="w-full bg-brand-blue text-white py-3 rounded-xl hover:bg-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 >
                   {isPending || isConfirming ? 'Depositing...' : 'Deposit ' + agentTokenSymbol}
                 </button>
@@ -574,7 +574,7 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
               <button
                 onClick={handleClaimRewards}
                 disabled={isPending || isConfirming}
-                className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white py-3 rounded-xl hover:from-green-600 hover:to-emerald-600 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transition-all"
+                className="w-full bg-green-600 text-white py-3 rounded-xl hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors cursor-pointer"
               >
                 {isPending || isConfirming ? 'Claiming...' : 'Claim Persona Token Rewards'}
               </button>

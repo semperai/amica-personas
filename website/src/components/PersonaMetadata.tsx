@@ -1,9 +1,12 @@
 // src/components/PersonaMetadata.tsx - Enhanced with new contract features
 import { useQuery, gql } from '@apollo/client';
+import { useReadContract } from 'wagmi';
 import { formatEther } from 'viem';
 import AgentTokenInfo from './AgentTokenInfo';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
+import AmicaLogo from '@/assets/AmicaLogo.png';
 
 // Enhanced query with new fields from updated schema
 const GET_PERSONA_BY_TOKEN_AND_CHAIN = gql`
@@ -90,6 +93,25 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
 
   const isRefetching = networkStatus === 4;
 
+  // Extract persona data early for hooks
+  const persona = data?.personas?.[0];
+
+  // Get total supply for graduated tokens (must be called before any early returns)
+  const { data: totalSupply } = useReadContract({
+    address: persona?.erc20Token as `0x${string}`,
+    abi: [{
+      name: 'totalSupply',
+      type: 'function',
+      stateMutability: 'view',
+      inputs: [],
+      outputs: [{ name: '', type: 'uint256' }]
+    }],
+    functionName: 'totalSupply',
+    query: {
+      enabled: !!persona?.erc20Token && !!persona?.pairCreated
+    }
+  }) as { data: bigint | undefined };
+
   // Auto-retry on error with exponential backoff
   useEffect(() => {
     if (error && retryCount < 3 && !data) {
@@ -151,8 +173,6 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
     );
   }
 
-  const persona = data?.personas?.[0];
-
   // No data found
   if (!loading && !persona) {
     return (
@@ -175,7 +195,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
                 refetch();
               }}
               disabled={isRefetching}
-              className={`px-6 py-2 gradient-brand text-white rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all ${
+              className={`px-6 py-2 bg-brand-blue text-white rounded-lg hover:bg-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors cursor-pointer ${
                 isRefetching ? 'animate-pulse' : ''
               }`}
             >
@@ -220,7 +240,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
   const chainName = chainNames[chainId] || 'unknown';
 
   return (
-    <div className="bg-card backdrop-blur-md rounded-2xl p-6 border border-border relative">
+    <div className="bg-card backdrop-blur-md rounded-2xl p-4 border border-border relative">
       {/* Refetching indicator */}
       {isRefetching && (
         <div className="absolute top-4 right-4">
@@ -231,52 +251,56 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
         </div>
       )}
 
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <h1 className="text-3xl font-light text-foreground">{persona.name}</h1>
-          <p className="text-lg text-muted-foreground">${persona.symbol}</p>
-        </div>
-        <div className="flex gap-2">
-          {isGraduated && (
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-400 backdrop-blur-sm">
-              Graduated
-            </span>
-          )}
-          {!isGraduated && canGraduate && (
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-500/20 text-yellow-400 backdrop-blur-sm">
-              Ready to Graduate
-            </span>
-          )}
-          {hasAgentToken && (
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-brand-cyan/20 text-brand-cyan backdrop-blur-sm">
-              Agent Token
-            </span>
-          )}
-        </div>
-      </div>
+      <div className="flex gap-4 mb-3">
+        {/* Left Content */}
+        <div className="flex-1">
+          {/* Name and Badges */}
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <h1 className="text-3xl font-semibold text-foreground">{persona.name}</h1>
+              <p className="text-lg text-muted-foreground">${persona.symbol}</p>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {isGraduated && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-400 backdrop-blur-sm">
+                  Graduated
+                </span>
+              )}
+              {!isGraduated && canGraduate && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-500/20 text-yellow-400 backdrop-blur-sm">
+                  Ready to Graduate
+                </span>
+              )}
+              {hasAgentToken && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-brand-cyan/20 text-brand-cyan backdrop-blur-sm">
+                  Agent Token
+                </span>
+              )}
+            </div>
+          </div>
 
-      {/* Enhanced grid with new fields */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          {/* Enhanced grid with new fields */}
+          <div className="grid grid-cols-3 lg:grid-cols-6 gap-2">
         <div>
-          <p className="text-sm text-muted-foreground">Creator</p>
+          <p className="text-xs font-semibold text-muted-foreground mb-0.5">Creator</p>
           <a
             href={getAddressExplorerUrl(persona.creator)}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-brand-cyan hover:text-brand-blue font-mono text-sm transition-colors"
+            className="text-brand-cyan hover:text-brand-blue font-mono text-xs transition-colors"
           >
             {persona.creator.slice(0, 6)}...{persona.creator.slice(-4)}
           </a>
         </div>
-        
+
         {isOwnerDifferentFromCreator && (
           <div>
-            <p className="text-sm text-muted-foreground">Current Owner</p>
+            <p className="text-xs font-semibold text-muted-foreground mb-0.5">Owner</p>
             <a
               href={getAddressExplorerUrl(persona.owner)}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-brand-cyan hover:text-brand-blue font-mono text-sm transition-colors"
+              className="text-brand-cyan hover:text-brand-blue font-mono text-xs transition-colors"
             >
               {persona.owner.slice(0, 6)}...{persona.owner.slice(-4)}
             </a>
@@ -284,116 +308,30 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
         )}
 
         <div>
-          <p className="text-sm text-muted-foreground">Chain</p>
-          <p className="text-foreground font-light capitalize">{chainName}</p>
+          <p className="text-xs font-semibold text-muted-foreground mb-0.5">Chain</p>
+          <p className="text-foreground text-xs capitalize">{chainName}</p>
         </div>
         <div>
-          <p className="text-sm text-muted-foreground">Token ID</p>
-          <p className="text-foreground font-light">#{tokenId}</p>
+          <p className="text-xs font-semibold text-muted-foreground mb-0.5">Token ID</p>
+          <p className="text-foreground text-xs">#{tokenId}</p>
         </div>
         <div>
-          <p className="text-sm text-muted-foreground">Created</p>
-          <p className="text-foreground font-light">
+          <p className="text-xs font-semibold text-muted-foreground mb-0.5">Created</p>
+          <p className="text-foreground text-xs">
             {new Date(persona.createdAt).toLocaleDateString()}
           </p>
         </div>
         <div>
-          <p className="text-sm text-muted-foreground">Block</p>
-          <p className="text-foreground font-light">#{persona.createdAtBlock}</p>
+          <p className="text-xs font-semibold text-muted-foreground mb-0.5">Block</p>
+          <p className="text-foreground text-xs">#{persona.createdAtBlock}</p>
         </div>
+        {isGraduated && totalSupply && (
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground mb-0.5">Total Supply</p>
+            <p className="text-foreground text-xs">{formatEther(totalSupply)}</p>
+          </div>
+        )}
       </div>
-
-      {/* Contract Addresses */}
-      <div className="mb-6 p-4 bg-muted rounded-xl">
-        <h3 className="text-sm font-medium text-foreground mb-3">Contract Addresses</h3>
-        <div className="space-y-2">
-          <div className="flex justify-between items-center">
-            <span className="text-muted-foreground text-sm">ERC20 Token:</span>
-            <a
-              href={getAddressExplorerUrl(persona.erc20Token)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-brand-cyan hover:text-brand-blue font-mono text-xs transition-colors"
-            >
-              {persona.erc20Token.slice(0, 6)}...{persona.erc20Token.slice(-4)}
-            </a>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-muted-foreground text-sm">Pairing Token:</span>
-            <a
-              href={getAddressExplorerUrl(persona.pairToken)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-brand-cyan hover:text-brand-blue font-mono text-xs transition-colors"
-            >
-              {persona.pairToken.slice(0, 6)}...{persona.pairToken.slice(-4)}
-            </a>
-          </div>
-          {isGraduated && persona.pairAddress && (
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground text-sm">Uniswap Pair:</span>
-              <a
-                href={getAddressExplorerUrl(persona.pairAddress)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-brand-cyan hover:text-brand-blue font-mono text-xs transition-colors"
-              >
-                {persona.pairAddress.slice(0, 6)}...{persona.pairAddress.slice(-4)}
-              </a>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Enhanced graduation progress */}
-      {!isGraduated && (
-        <div className="mb-6">
-          <div className="flex justify-between text-sm mb-2">
-            <span className="text-muted-foreground">TVL Progress</span>
-            <span className="text-foreground font-light">{progress.toFixed(1)}%</span>
-          </div>
-          <div className="w-full bg-muted rounded-full h-2 mb-2">
-            <div
-              className="gradient-brand h-2 rounded-full transition-all duration-300"
-              style={{ width: `${Math.min(progress, 100)}%` }}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {formatEther(BigInt(persona.totalDeposited || 0))} / {formatEther(BigInt(persona.graduationThreshold || 0))} tokens
-          </p>
-
-          {hasAgentToken && persona.minAgentTokens && Number(persona.minAgentTokens) > 0 && (
-            <div className="mt-4">
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-muted-foreground">Agent Token Progress</span>
-                <span className="text-foreground font-light">{agentTokenProgress.toFixed(1)}%</span>
-              </div>
-              <div className="w-full bg-muted rounded-full h-2 mb-2">
-                <div
-                  className="gradient-brand h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${Math.min(agentTokenProgress, 100)}%` }}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {formatEther(BigInt(persona.totalAgentDeposited || 0))} / {formatEther(BigInt(persona.minAgentTokens))} agent tokens
-              </p>
-            </div>
-          )}
-
-          {!canGraduate && (
-            <div className="mt-3 p-3 bg-yellow-500/10 backdrop-blur-sm rounded-lg border border-yellow-500/20">
-              <p className="text-xs text-yellow-400">
-                {progress < 100 
-                  ? `Need ${formatEther(BigInt(persona.graduationThreshold || 0) - BigInt(persona.totalDeposited || 0))} more tokens` 
-                  : agentTokenProgress < 100 
-                    ? `Need ${formatEther(BigInt(persona.minAgentTokens || 0) - BigInt(persona.totalAgentDeposited || 0))} more agent tokens`
-                    : 'All requirements met - ready to graduate!'
-                }
-              </p>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* NFT Transfer History */}
       {persona.transfers && persona.transfers.length > 0 && (
@@ -440,84 +378,74 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
         </div>
       )}
 
-      {/* Enhanced metadata display */}
-      {persona.metadata && persona.metadata.length > 0 && (
-        <div className="mt-6 pt-6 border-t border-white/10">
-          <h3 className="text-sm font-medium text-white mb-3">Metadata</h3>
-          <div className="space-y-2">
-            {persona.metadata.map((item: MetadataItem) => (
-              <div key={item.key} className="p-3 bg-white/5 rounded-lg">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-white/80">{item.key}</p>
-                    <p className="text-sm text-white/60 break-all mt-1">{item.value}</p>
-                  </div>
-                  {item.updatedAt && (
-                    <p className="text-xs text-white/40 ml-2">
-                      {new Date(item.updatedAt).toLocaleDateString()}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+          {/* Agent Token Info */}
+          <AgentTokenInfo
+            agentToken={persona.agentToken}
+            minAgentTokens={persona.minAgentTokens}
+            totalAgentDeposited={persona.totalAgentDeposited}
+            isGraduated={isGraduated}
+          />
         </div>
-      )}
 
-      {/* Agent Token Info */}
-      <AgentTokenInfo
-        agentToken={persona.agentToken}
-        minAgentTokens={persona.minAgentTokens}
-        totalAgentDeposited={persona.totalAgentDeposited}
-        isGraduated={isGraduated}
-      />
+        {/* Persona Image */}
+        <a
+          href={`https://${persona.name.toLowerCase().replace(/\s+/g, '-')}.amica.bot`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-shrink-0"
+        >
+          <div className="w-48 self-stretch rounded-3xl border-4 border-brand-blue/30 hover:border-brand-blue transition-colors overflow-hidden bg-gradient-to-br from-brand-blue/20 to-brand-cyan/20 flex items-center justify-center min-h-full">
+            {persona.metadata?.find((m: MetadataItem) => m.key === 'image')?.value ? (
+              <img
+                src={persona.metadata.find((m: MetadataItem) => m.key === 'image')?.value}
+                alt={persona.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="p-8">
+                <Image
+                  src={AmicaLogo}
+                  alt="Amica Logo"
+                  width={120}
+                  height={120}
+                  className="opacity-60"
+                />
+              </div>
+            )}
+          </div>
+        </a>
+      </div>
 
       {/* Quick Actions */}
-      <div className="mt-6 pt-6 border-t border-white/10">
+      <div className="mt-4 pt-4 border-t border-border">
         <div className="flex flex-wrap gap-2">
           <a
             href={getAddressExplorerUrl(persona.erc20Token)}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-3 py-2 bg-brand-blue/20 text-brand-blue rounded-lg hover:bg-brand-blue/30 transition-colors text-sm"
+            className="px-4 py-2 bg-muted text-foreground rounded-lg hover:bg-muted/80 transition-colors text-sm font-medium cursor-pointer"
           >
-            View Token Contract
+            View Contract
           </a>
           {isGraduated && persona.pairAddress && (
             <a
               href={`https://app.uniswap.org/#/swap?inputCurrency=${persona.pairToken}&outputCurrency=${persona.erc20Token}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-3 py-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors text-sm"
+              className="px-4 py-2 bg-brand-blue text-white rounded-lg hover:bg-blue-500 transition-colors text-sm font-medium cursor-pointer"
             >
               Trade on Uniswap
             </a>
           )}
           <Link
             href={`/portfolio`}
-            className="px-3 py-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors text-sm"
+            className="px-4 py-2 bg-muted text-foreground rounded-lg hover:bg-muted/80 transition-colors text-sm font-medium cursor-pointer"
           >
-            View in Portfolio
+            View Portfolio
           </Link>
         </div>
       </div>
 
-      {/* Manual refresh button */}
-      <div className="mt-4 pt-4 border-t border-white/10 flex justify-between items-center">
-        <button
-          onClick={() => refetch()}
-          disabled={isRefetching}
-          className="text-xs text-white/40 hover:text-white/60 transition-colors disabled:opacity-50"
-        >
-          Last updated: {new Date().toLocaleTimeString()}
-        </button>
-        
-        {error && (
-          <div className="text-xs text-red-400">
-            Warning: Some data may be outdated
-          </div>
-        )}
-      </div>
     </div>
   );
 };

@@ -71,7 +71,7 @@ function PortfolioTokens({ address }: { address: string }) {
   if (loading) {
     return (
       <div>
-        <h2 className="text-2xl font-light text-foreground mb-6">My Tokens</h2>
+        <h2 className="text-2xl font-semibold text-foreground mb-6">My Tokens</h2>
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="h-20 bg-card rounded-lg animate-pulse" />
@@ -84,7 +84,7 @@ function PortfolioTokens({ address }: { address: string }) {
   if (tokens.length === 0) {
     return (
       <div>
-        <h2 className="text-2xl font-light text-foreground mb-6">My Tokens</h2>
+        <h2 className="text-2xl font-semibold text-foreground mb-6">My Tokens</h2>
         <div className="text-center py-12">
           <p className="text-muted-foreground">You don&apos;t own any persona tokens yet.</p>
         </div>
@@ -92,32 +92,94 @@ function PortfolioTokens({ address }: { address: string }) {
     );
   }
 
+  const getPersonaGradient = (index: number) => {
+    const gradients = [
+      'from-brand-blue to-brand-cyan',
+      'from-blue-600 to-cyan-500',
+      'from-indigo-600 to-blue-600',
+      'from-cyan-500 to-blue-600',
+      'from-blue-500 to-brand-cyan',
+      'from-brand-blue to-blue-500',
+    ];
+    return gradients[index % gradients.length];
+  };
+
+  const getPersonaImage = (index: number) => {
+    const images = [
+      'https://images.unsplash.com/photo-1614680376593-902f74cf0d41?w=400&h=500&fit=crop',
+      'https://images.unsplash.com/photo-1635236066330-53dbf96c7208?w=400&h=500&fit=crop',
+      'https://images.unsplash.com/photo-1634926878768-2a5b3c42f139?w=400&h=500&fit=crop',
+      'https://images.unsplash.com/photo-1620321023374-d1a68fbc720d?w=400&h=500&fit=crop',
+      'https://images.unsplash.com/photo-1617791160505-6f00504e3519?w=400&h=500&fit=crop',
+    ];
+    return images[index % images.length];
+  };
+
   return (
     <div>
       <div className="flex justify-between items-baseline mb-6">
-        <h2 className="text-2xl font-light text-foreground">My Tokens</h2>
+        <h2 className="text-2xl font-semibold text-foreground">My Tokens</h2>
         <p className="text-lg text-muted-foreground">
           Total Value: <span className="text-foreground font-medium">${totalValue.toFixed(2)}</span>
         </p>
       </div>
 
-      <div className="space-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {tokens.map((token, index) => (
           <div
             key={index}
-            className="p-4 bg-card backdrop-blur-sm rounded-xl border border-border hover:bg-muted transition-colors"
+            className="group relative aspect-[3/4] rounded-xl overflow-hidden transition-all duration-300 hover:shadow-xl border border-border bg-card hover:border-brand-blue/50 cursor-pointer"
           >
-            <div className="flex justify-between items-center">
-              <div>
+            {/* Background Gradient */}
+            <div className={`absolute inset-0 bg-gradient-to-br ${getPersonaGradient(index)} opacity-20`} />
+
+            {/* Background Image */}
+            <div className="absolute inset-0">
+              <img
+                src={getPersonaImage(index)}
+                alt={token.name}
+                className="w-full h-full object-cover opacity-30 group-hover:scale-105 transition-transform duration-700"
+              />
+            </div>
+
+            {/* Gradient overlay for better text contrast */}
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
+
+            {/* Content */}
+            <div className="relative h-full p-5 flex flex-col justify-between">
+              {/* Top Section */}
+              <div className="flex justify-between items-start">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-medium text-foreground">{token.symbol}</h3>
-                  <span className="text-xs text-muted-foreground capitalize">{token.chainId === '1' ? 'ethereum' : token.chainId === '8453' ? 'base' : 'arbitrum'}</span>
+                  <div className="h-2 w-2 rounded-full bg-brand-blue" />
+                  <span className="text-xs text-muted-foreground capitalize">
+                    {token.chainId === '1' ? 'ethereum' : token.chainId === '8453' ? 'base' : 'arbitrum'}
+                  </span>
                 </div>
-                <p className="text-sm text-muted-foreground">{token.name}</p>
               </div>
-              <div className="text-right">
-                <p className="font-medium text-foreground">{parseFloat(token.balance).toLocaleString()}</p>
-                <p className="text-sm text-muted-foreground">${token.valueUSD.toFixed(2)}</p>
+
+              {/* Bottom Section */}
+              <div className="space-y-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground mb-1 line-clamp-1">
+                    {token.name}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">${token.symbol}</p>
+                </div>
+
+                <div className="space-y-2 bg-background/50 backdrop-blur-sm rounded-lg p-3 border border-border/50">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">Balance</span>
+                    <span className="text-sm font-semibold text-foreground">
+                      {parseFloat(token.balance).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">Value</span>
+                    <span className="text-sm font-semibold text-foreground">
+                      ${token.valueUSD.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -149,7 +211,7 @@ export default function PortfolioPage() {
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="flex flex-col items-center justify-center min-h-[60vh]">
             <div className="bg-card backdrop-blur-md rounded-2xl p-12 border border-border text-center">
-              <h2 className="text-2xl font-light text-foreground mb-4">Connect Your Wallet</h2>
+              <h2 className="text-2xl font-semibold text-foreground mb-4">Connect Your Wallet</h2>
               <p className="text-muted-foreground mb-8">Please connect your wallet to view your portfolio</p>
               <div className="p-1 inline-block">
                 <ConnectButton />
@@ -164,11 +226,11 @@ export default function PortfolioPage() {
   return (
     <Layout>
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <h1 className="text-4xl font-light text-foreground mb-8">My Portfolio</h1>
+        <h1 className="text-4xl font-semibold text-foreground mb-8">My Portfolio</h1>
 
         {/* AMICA Balance Card */}
         <div className="mb-8">
-          <div className="gradient-brand rounded-2xl shadow-2xl p-8 text-white">
+          <div className="bg-brand-blue rounded-2xl shadow-2xl p-8 text-white">
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-lg opacity-90 mb-2">AMICA Balance</p>

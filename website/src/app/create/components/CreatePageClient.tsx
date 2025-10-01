@@ -369,7 +369,7 @@ export default function CreatePersonaPage() {
   return (
     <Layout>
       <div className="max-w-2xl mx-auto px-6 py-8">
-        <h1 className="text-4xl font-light text-foreground mb-8">Create New Persona</h1>
+        <h1 className="text-4xl font-semibold text-foreground mb-8">Create New Persona</h1>
 
         <div className="bg-card backdrop-blur-md rounded-2xl p-8 border border-border">
           <div className="mb-8">
@@ -427,7 +427,7 @@ export default function CreatePersonaPage() {
               </button>
 
               {showPairingDropdown && (
-                <div className="absolute z-10 w-full mt-2 bg-black/90 backdrop-blur-xl border border-border rounded-xl shadow-2xl overflow-hidden">
+                <div className="absolute z-10 w-full mt-2 bg-card backdrop-blur-xl border border-border rounded-xl shadow-2xl overflow-hidden">
                   {pairingTokenOptions.map((token) => (
                     <button
                       key={token.address}

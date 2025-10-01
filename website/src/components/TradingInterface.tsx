@@ -429,7 +429,7 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
       {/* Header */}
       <div className="p-4 border-b border-border">
         <div className="flex justify-between items-center">
-          <h2 className="text-xl font-light text-foreground">
+          <h2 className="text-xl font-semibold text-foreground">
             {isBuying ? 'Buy' : 'Sell'} {tokenSymbol}
           </h2>
           <div className="flex items-center gap-2">
@@ -644,7 +644,7 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
           <button
             onClick={handleApprove}
             disabled={!amount || parseFloat(amount) <= 0 || isApproving || isPending || isConfirming || isGraduated}
-            className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-4 rounded-xl hover:from-yellow-600 hover:to-orange-600 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transition-all duration-300 font-light text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            className="w-full bg-orange-600 text-white py-4 rounded-xl hover:bg-orange-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium text-lg cursor-pointer"
           >
             {isApproving || isPending || isConfirming 
               ? 'Approving...' 
@@ -655,7 +655,7 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
           <button
             onClick={handleTrade}
             disabled={!amount || parseFloat(amount) <= 0 || isPending || isConfirming || isGraduated || (priceImpact > 10)}
-            className="w-full gradient-brand text-white py-4 rounded-xl hover:opacity-90 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transition-all duration-300 font-light text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            className="w-full bg-brand-blue text-white py-4 rounded-xl hover:bg-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium text-lg cursor-pointer"
           >
             {isPending || isConfirming 
               ? 'Processing...' 

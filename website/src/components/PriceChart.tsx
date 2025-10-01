@@ -218,38 +218,13 @@ export default function PriceChart({ chainId, tokenId }: PriceChartProps) {
   const avgDailyVolume = chartData.length > 0 ? totalVolume / BigInt(chartData.length) : BigInt(0);
   const buyPercentage = totalVolume > BigInt(0) ? (Number(totalBuyVolume) / Number(totalVolume)) * 100 : 50;
 
-  if (loading && !data) {
-    return (
-      <div className="bg-card backdrop-blur-md rounded-2xl p-6 border border-border">
-        <div className="animate-pulse">
-          <div className="h-6 bg-muted rounded w-1/4 mb-4"></div>
-          <div className="h-64 bg-muted rounded"></div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-card backdrop-blur-md rounded-2xl p-6 border border-border">
-        <div className="text-center">
-          <p className="text-red-400 mb-4">Error loading chart data</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const isLoadingData = loading && !data;
 
   return (
-    <div className="bg-card backdrop-blur-md rounded-2xl p-6 border border-border">
+    <div className="bg-card backdrop-blur-md rounded-2xl p-4 border border-border">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-4 gap-4">
-        <h2 className="text-xl font-light text-foreground">Trading Analytics</h2>
-        
+        <h2 className="text-xl font-semibold text-foreground">Trading Analytics</h2>
+
         <div className="flex flex-wrap gap-2">
           {/* Chart Type Selector */}
           <div className="flex gap-1 bg-muted rounded-lg p-1">
@@ -257,10 +232,10 @@ export default function PriceChart({ chainId, tokenId }: PriceChartProps) {
               <button
                 key={type}
                 onClick={() => setChartType(type)}
-                className={`px-3 py-1 rounded text-xs transition-colors capitalize ${
+                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors capitalize cursor-pointer ${
                   chartType === type
-                    ? 'bg-purple-500/50 text-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-brand-blue text-white'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
                 }`}
               >
                 {type}
@@ -269,27 +244,29 @@ export default function PriceChart({ chainId, tokenId }: PriceChartProps) {
           </div>
 
           {/* Buy/Sell Toggle */}
-          <button
-            onClick={() => setShowBuySell(!showBuySell)}
-            className={`px-3 py-1 rounded-lg text-xs transition-colors ${
-              showBuySell
-                ? 'bg-green-500/20 text-green-400 border border-green-500/50'
-                : 'bg-muted text-muted-foreground hover:bg-muted/80'
-            }`}
-          >
-            Buy/Sell Split
-          </button>
+          <div className="flex gap-1 bg-muted rounded-lg p-1">
+            <button
+              onClick={() => setShowBuySell(!showBuySell)}
+              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
+                showBuySell
+                  ? 'bg-brand-blue text-white'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+              }`}
+            >
+              Buy/Sell Split
+            </button>
+          </div>
 
           {/* Time Period Selector */}
-          <div className="flex gap-1">
+          <div className="flex gap-1 bg-muted rounded-lg p-1">
             {[7, 30, 90].map(d => (
               <button
                 key={d}
                 onClick={() => setDays(d)}
-                className={`px-3 py-1 rounded-lg text-xs transition-colors ${
+                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
                   days === d
-                    ? 'bg-purple-500/20 text-purple-400 border border-purple-500/50'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    ? 'bg-brand-blue text-white'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
                 }`}
               >
                 {d}D
@@ -299,30 +276,52 @@ export default function PriceChart({ chainId, tokenId }: PriceChartProps) {
         </div>
       </div>
 
-      {/* Enhanced Summary Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-6">
+      {/* Loading/Error States */}
+      {isLoadingData ? (
+        <div className="animate-pulse">
+          <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="bg-muted rounded-lg p-3 h-20"></div>
+            ))}
+          </div>
+          <div className="h-80 bg-muted rounded"></div>
+        </div>
+      ) : error ? (
+        <div className="text-center py-12">
+          <p className="text-red-400 mb-4">Error loading chart data</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-brand-blue text-white px-4 py-2 rounded-lg hover:bg-blue-500"
+          >
+            Try Again
+          </button>
+        </div>
+      ) : (
+        <>
+          {/* Enhanced Summary Stats */}
+          <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-6">
         <div className="bg-muted rounded-lg p-3">
-          <p className="text-xs text-muted-foreground mb-1">Total Volume</p>
+          <p className="text-xs font-semibold text-muted-foreground mb-1">Total Volume</p>
           <p className="text-lg font-light text-foreground">{formatEther(totalVolume)} ETH</p>
         </div>
         <div className="bg-muted rounded-lg p-3">
-          <p className="text-xs text-muted-foreground mb-1">Buy Volume</p>
+          <p className="text-xs font-semibold text-muted-foreground mb-1">Buy Volume</p>
           <p className="text-lg font-light text-green-400">{formatEther(totalBuyVolume)} ETH</p>
         </div>
         <div className="bg-muted rounded-lg p-3">
-          <p className="text-xs text-muted-foreground mb-1">Sell Volume</p>
+          <p className="text-xs font-semibold text-muted-foreground mb-1">Sell Volume</p>
           <p className="text-lg font-light text-red-400">{formatEther(totalSellVolume)} ETH</p>
         </div>
         <div className="bg-muted rounded-lg p-3">
-          <p className="text-xs text-muted-foreground mb-1">Total Trades</p>
+          <p className="text-xs font-semibold text-muted-foreground mb-1">Total Trades</p>
           <p className="text-lg font-light text-foreground">{totalTrades}</p>
         </div>
         <div className="bg-muted rounded-lg p-3">
-          <p className="text-xs text-muted-foreground mb-1">Buy/Sell Ratio</p>
+          <p className="text-xs font-semibold text-muted-foreground mb-1">Buy/Sell Ratio</p>
           <p className="text-lg font-light text-foreground">{buyPercentage.toFixed(0)}%/{ (100 - buyPercentage).toFixed(0)}%</p>
         </div>
         <div className="bg-muted rounded-lg p-3">
-          <p className="text-xs text-muted-foreground mb-1">Avg Daily</p>
+          <p className="text-xs font-semibold text-muted-foreground mb-1">Avg Daily</p>
           <p className="text-lg font-light text-foreground">{formatEther(avgDailyVolume)} ETH</p>
         </div>
       </div>
@@ -506,20 +505,22 @@ export default function PriceChart({ chainId, tokenId }: PriceChartProps) {
         </div>
       )}
 
-      {/* Additional Info */}
-      <div className="mt-4 p-3 bg-blue-500/10 backdrop-blur-sm rounded-lg text-xs border border-blue-500/20">
-        <p className="font-light text-foreground/90 mb-1">Chart Information:</p>
-        <ul className="text-muted-foreground space-y-0.5 ml-4 list-disc">
-          <li>Volume data shows {showBuySell ? 'buy (green) and sell (red) volumes' : 'total volume'} on the bonding curve</li>
-          <li>Data is aggregated daily from all trades with buy/sell classification</li>
-          <li>Buy trades use pairing tokens to purchase persona tokens</li>
-          <li>Sell trades use persona tokens to get pairing tokens back</li>
-          {data?.personaDailyStats?.length === 0 && data?.recentTrades?.length > 0 && (
-            <li>Chart generated from recent trade history with buy/sell analysis</li>
-          )}
-          {isMockMode && <li className="text-purple-400">Using mock data for demonstration</li>}
-        </ul>
-      </div>
+          {/* Additional Info */}
+          <div className="mt-4 p-3 bg-blue-500/10 backdrop-blur-sm rounded-lg text-xs border border-blue-500/20">
+            <p className="font-light text-foreground/90 mb-1">Chart Information:</p>
+            <ul className="text-muted-foreground space-y-0.5 ml-4 list-disc">
+              <li>Volume data shows {showBuySell ? 'buy (green) and sell (red) volumes' : 'total volume'} on the bonding curve</li>
+              <li>Data is aggregated daily from all trades with buy/sell classification</li>
+              <li>Buy trades use pairing tokens to purchase persona tokens</li>
+              <li>Sell trades use persona tokens to get pairing tokens back</li>
+              {data?.personaDailyStats?.length === 0 && data?.recentTrades?.length > 0 && (
+                <li>Chart generated from recent trade history with buy/sell analysis</li>
+              )}
+              {isMockMode && <li className="text-purple-400">Using mock data for demonstration</li>}
+            </ul>
+          </div>
+        </>
+      )}
     </div>
   );
 }

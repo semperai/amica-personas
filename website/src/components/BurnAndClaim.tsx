@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAccount, useReadContract, useWriteContract, useBalance } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
 import { FACTORY_ABI, AMICA_ABI, getAddressesForChain } from '../lib/contracts';
+import { MultiTokenSelector } from './MultiTokenSelector';
 
 interface ClaimableToken {
   address: string;
@@ -14,6 +15,7 @@ interface ClaimableToken {
 export function BurnAndClaim() {
   const { address, chainId } = useAccount();
   const [burnAmount, setBurnAmount] = useState('');
+  const [selectedTokens, setSelectedTokens] = useState<string[]>([]);
   const [claimableTokens, setClaimableTokens] = useState<ClaimableToken[]>([]);
   const [totalValueUSD, setTotalValueUSD] = useState(0);
 
@@ -83,17 +85,21 @@ export function BurnAndClaim() {
   }, [burnAmount, totalSupply]);
 
   const handleBurnAndClaim = async () => {
-    if (!addresses || !burnAmount || parseFloat(burnAmount) <= 0) return;
+    if (!addresses || !burnAmount || parseFloat(burnAmount) <= 0 || selectedTokens.length === 0) return;
 
     try {
+      // Convert selected token addresses to the format expected by the contract
+      const tokenAddresses = selectedTokens.map(addr => addr as `0x${string}`);
+
       await writeContract({
         address: addresses.personaFactory as `0x${string}`,
         abi: FACTORY_ABI,
         functionName: 'burnAndClaim',
-        args: [parseEther(burnAmount)]
+        args: [parseEther(burnAmount), tokenAddresses]
       });
 
       setBurnAmount('');
+      setSelectedTokens([]);
     } catch (error) {
       console.error('Error burning and claiming:', error);
     }
@@ -105,7 +111,7 @@ export function BurnAndClaim() {
 
   return (
     <div>
-      <h2 className="text-2xl font-light text-foreground mb-6">Burn & Claim Treasury</h2>
+      <h2 className="text-2xl font-semibold text-foreground mb-6">Burn & Claim Treasury</h2>
 
       {/* AMICA Balance Display */}
       <div className="mb-6 p-4 bg-muted backdrop-blur-sm rounded-xl">
@@ -119,7 +125,7 @@ export function BurnAndClaim() {
 
       {/* Burn Amount Input */}
       <div className="mb-6">
-        <label className="block text-sm font-light text-muted-foreground mb-3">Amount to Burn</label>
+        <label className="block text-sm font-medium text-muted-foreground mb-3">Amount to Burn</label>
         <div className="relative">
           <input
             type="number"
@@ -130,7 +136,7 @@ export function BurnAndClaim() {
           />
           <button
             onClick={() => setBurnAmount(amicaBalance ? formatEther(amicaBalance.value) : '0')}
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-2 text-sm bg-muted rounded-lg hover:bg-muted/80 transition-colors text-foreground/80"
+            className="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-2 text-sm bg-muted rounded-lg hover:bg-muted/80 transition-colors text-foreground/80 cursor-pointer"
           >
             MAX
           </button>
@@ -142,10 +148,19 @@ export function BurnAndClaim() {
         )}
       </div>
 
+      {/* Token Selection */}
+      <div className="mb-6">
+        <MultiTokenSelector
+          selectedTokens={selectedTokens}
+          onSelectionChange={setSelectedTokens}
+          maxTokens={100}
+        />
+      </div>
+
       {/* Claimable Tokens Preview */}
       {claimableTokens.length > 0 && (
         <div className="mb-6">
-          <h3 className="text-sm font-light text-muted-foreground mb-3">You Will Receive</h3>
+          <h3 className="text-sm font-semibold text-muted-foreground mb-3">You Will Receive</h3>
           <div className="space-y-2">
             {claimableTokens.map((token, index) => (
               <div
@@ -185,15 +200,15 @@ export function BurnAndClaim() {
       {/* Action Button */}
       <button
         onClick={handleBurnAndClaim}
-        disabled={!address || isPending || !burnAmount || parseFloat(burnAmount) <= 0}
-        className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 rounded-xl hover:from-orange-600 hover:to-red-600 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transition-all duration-300 font-light text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+        disabled={!address || isPending || !burnAmount || parseFloat(burnAmount) <= 0 || selectedTokens.length === 0}
+        className="w-full bg-red-600 text-white py-4 rounded-xl hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium text-lg cursor-pointer"
       >
-        {isPending ? 'Processing...' : 'Burn AMICA & Claim Treasury'}
+        {isPending ? 'Processing...' : selectedTokens.length === 0 ? 'Select Tokens to Burn & Claim' : 'Burn AMICA & Claim Treasury'}
       </button>
 
       {/* Warning */}
-      <div className="mt-4 p-4 bg-yellow-500/10 backdrop-blur-sm rounded-xl border border-yellow-500/20">
-        <p className="text-sm text-yellow-400/90">
+      <div className="mt-4 p-4 bg-orange-50 dark:bg-orange-900/20 backdrop-blur-sm rounded-xl border border-orange-200 dark:border-orange-800">
+        <p className="text-sm text-orange-800 dark:text-orange-300">
           ⚠️ Warning: Burning AMICA is irreversible. You will receive a proportional share of all tokens in the treasury.
         </p>
       </div>

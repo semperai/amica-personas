@@ -11,6 +11,8 @@ import PersonaMetadata from '@/components/PersonaMetadata';
 import TradingInterface from '@/components/TradingInterface';
 import PriceChart from '@/components/PriceChart';
 import AgentDeposits from '@/components/AgentDeposits';
+import PersonaMetadataEditor from '@/components/PersonaMetadataEditor';
+import PersonaTokenBurnAndClaim from '@/components/PersonaTokenBurnAndClaim';
 import { GET_PERSONA_DETAILS, GET_PERSONA_TRADES } from '@/lib/graphql/client';
 import Link from 'next/link';
 
@@ -29,8 +31,15 @@ const GET_PERSONA_BY_TOKEN_AND_CHAIN = gql`
       name
       symbol
       creator
+      owner
+      erc20Token
       chainId
       pairCreated
+      metadata {
+        key
+        value
+        updatedAt
+      }
     }
   }
 `;
@@ -106,8 +115,8 @@ const TradeHistory = ({ chainId, tokenId }: { chainId: string; tokenId: string }
 
   if (loading) {
     return (
-      <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-        <h3 className="text-lg font-light text-white mb-4">Recent Trades</h3>
+      <div className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10">
+        <h3 className="text-lg font-semibold text-white mb-4">Recent Trades</h3>
         <div className="animate-pulse space-y-3">
           <div className="h-4 bg-white/10 rounded"></div>
           <div className="h-4 bg-white/10 rounded"></div>
@@ -119,8 +128,8 @@ const TradeHistory = ({ chainId, tokenId }: { chainId: string; tokenId: string }
 
   if (error) {
     return (
-      <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-        <h3 className="text-lg font-light text-white mb-4">Recent Trades</h3>
+      <div className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10">
+        <h3 className="text-lg font-semibold text-white mb-4">Recent Trades</h3>
         <p className="text-white/50">Unable to load trades</p>
       </div>
     );
@@ -129,8 +138,8 @@ const TradeHistory = ({ chainId, tokenId }: { chainId: string; tokenId: string }
   const trades = data?.trades || [];
 
   return (
-    <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-      <h3 className="text-lg font-light text-white mb-4">Recent Trades</h3>
+    <div className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10">
+      <h3 className="text-lg font-semibold text-white mb-4">Recent Trades</h3>
       {trades.length === 0 ? (
         <p className="text-white/50">No trades yet</p>
       ) : (
@@ -191,15 +200,15 @@ const PersonaNotFound = ({ chainId, tokenId }: { chainId: string; tokenId: strin
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <h2 className="text-2xl font-light text-white mb-4">Persona Not Found</h2>
+        <h2 className="text-2xl font-semibold text-white mb-4">Persona Not Found</h2>
         <p className="text-white/60 mb-8">
           The persona with ID #{tokenId} on chain {chainId} doesn&apos;t exist or hasn&apos;t been created yet.
         </p>
         <div className="space-y-4">
-          <Link href="/" className="block w-full bg-white/10 backdrop-blur-sm text-white py-3 rounded-xl hover:bg-white/20 transition-all duration-300">
+          <Link href="/" className="block w-full bg-muted text-foreground py-3 rounded-xl hover:bg-muted/80 transition-colors text-center">
             Browse Personas
           </Link>
-          <Link href="/create" className="block w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-300">
+          <Link href="/create" className="block w-full bg-brand-blue text-white py-3 rounded-xl hover:bg-blue-500 transition-colors text-center">
             Create New Persona
           </Link>
         </div>
@@ -232,25 +241,68 @@ const PersonaDetailPage = () => {
     errorPolicy: 'all',
   });
 
-  // Handle loading state while params are being resolved
-  if (!chainId || !tokenId) {
+  // Handle loading state while params are being resolved or checking if persona exists
+  if (!chainId || !tokenId || (isCheckingPersona && !graphqlData)) {
     return (
       <Layout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-        </div>
-      </Layout>
-    );
-  }
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Left column skeleton - 2/3 width */}
+            <div className="lg:col-span-2 space-y-4">
+              {/* Header skeleton */}
+              <div className="bg-card backdrop-blur-md rounded-2xl p-4 border border-border animate-pulse">
+                <div className="flex gap-4 mb-3">
+                  <div className="flex-1">
+                    <div className="h-8 bg-muted rounded w-1/3 mb-2"></div>
+                    <div className="h-5 bg-muted rounded w-1/4 mb-3"></div>
+                    <div className="grid grid-cols-3 lg:grid-cols-6 gap-2">
+                      {[...Array(6)].map((_, i) => (
+                        <div key={i} className="h-12 bg-muted rounded"></div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="w-48 h-48 bg-muted rounded-3xl"></div>
+                </div>
+              </div>
 
-  // Show loading while checking if persona exists
-  if (isCheckingPersona && !graphqlData) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-            <p className="text-white/60">Loading persona...</p>
+              {/* Chart skeleton */}
+              <div className="bg-card backdrop-blur-md rounded-2xl p-4 border border-border animate-pulse">
+                <div className="h-6 bg-muted rounded w-1/4 mb-4"></div>
+                <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-6">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="h-20 bg-muted rounded"></div>
+                  ))}
+                </div>
+                <div className="h-80 bg-muted rounded"></div>
+              </div>
+
+              {/* Agent deposits skeleton */}
+              <div className="bg-card backdrop-blur-md rounded-2xl p-4 border border-border animate-pulse">
+                <div className="h-6 bg-muted rounded w-1/3 mb-4"></div>
+                <div className="h-32 bg-muted rounded"></div>
+              </div>
+            </div>
+
+            {/* Right column skeleton - 1/3 width */}
+            <div className="lg:col-span-1 space-y-4">
+              {/* Trading interface skeleton */}
+              <div className="bg-card backdrop-blur-md rounded-2xl p-4 border border-border animate-pulse">
+                <div className="h-6 bg-muted rounded w-1/2 mb-4"></div>
+                <div className="h-32 bg-muted rounded mb-4"></div>
+                <div className="h-32 bg-muted rounded mb-4"></div>
+                <div className="h-12 bg-muted rounded"></div>
+              </div>
+
+              {/* Trade history skeleton */}
+              <div className="bg-card backdrop-blur-md rounded-2xl p-4 border border-border animate-pulse">
+                <div className="h-6 bg-muted rounded w-1/3 mb-4"></div>
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="h-16 bg-muted rounded"></div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </Layout>
@@ -269,24 +321,49 @@ const PersonaDetailPage = () => {
     );
   }
 
+  // Get persona data for metadata editor
+  const persona = graphqlData?.personas?.[0];
+
   // Show the full persona page if it exists
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Left column - 2/3 width */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4">
             <PersonaMetadata chainId={chainIdStr ?? ''} tokenId={tokenIdStr ?? ''} />
             <PriceChart chainId={chainIdStr ?? ''} tokenId={tokenIdStr ?? ''} />
             <AgentDeposits chainId={chainIdStr ?? ''} tokenId={tokenIdStr ?? ''} />
           </div>
 
           {/* Right column - 1/3 width */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="lg:col-span-1 space-y-4">
             <TradingInterface chainId={chainIdStr ?? ''} tokenId={tokenIdStr ?? ''} />
             <TradeHistory chainId={chainIdStr ?? ''} tokenId={tokenIdStr ?? ''} />
+            {persona && persona.erc20Token && (
+              <PersonaTokenBurnAndClaim
+                chainId={chainIdStr ?? ''}
+                tokenId={tokenIdStr ?? ''}
+                personaToken={persona.erc20Token}
+                isGraduated={persona.pairCreated || false}
+              />
+            )}
           </div>
         </div>
+
+        {/* Metadata Section - Full Width */}
+        {persona && (
+          <div className="mt-4">
+            <div className="bg-card backdrop-blur-md rounded-2xl p-4 border border-border">
+              <PersonaMetadataEditor
+                tokenId={tokenIdStr ?? '0'}
+                chainId={chainIdStr ?? '0'}
+                metadata={persona.metadata || []}
+                owner={persona.owner}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   );
