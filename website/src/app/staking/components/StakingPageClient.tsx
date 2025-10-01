@@ -1,3 +1,5 @@
+'use client';
+
 // src/pages/staking.tsx
 import { useState } from 'react';
 import Layout from '@/components/Layout';

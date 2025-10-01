@@ -1,8 +1,9 @@
+'use client';
+
 // src/pages/persona/[chainId]/[tokenId].tsx
 
 import { gql } from '@apollo/client';
-import { useRouter } from 'next/router';
-import { NextPage } from 'next';
+import { useParams } from 'next/navigation';
 import { formatEther } from 'viem';
 import { useQuery } from '@apollo/client';
 import Layout from '@/components/Layout';
@@ -207,9 +208,10 @@ const PersonaNotFound = ({ chainId, tokenId }: { chainId: string; tokenId: strin
   );
 };
 
-const PersonaDetailPage: NextPage = () => {
-  const router = useRouter();
-  const { chainId, tokenId } = router.query;
+const PersonaDetailPage = () => {
+  const params = useParams();
+  const chainId = params.chainId as string;
+  const tokenId = params.tokenId as string;
 
   // Ensure we have string values
   const chainIdStr = Array.isArray(chainId) ? chainId[0] : chainId;
@@ -225,13 +227,13 @@ const PersonaDetailPage: NextPage = () => {
       tokenId: tokenIdBigInt, // Pass as string representation of BigInt
       chainId: parseInt(chainIdStr || '0')
     },
-    skip: !tokenIdStr || !chainIdStr || !router.isReady,
+    skip: !tokenIdStr || !chainIdStr,
     fetchPolicy: 'network-only',
     errorPolicy: 'all',
   });
 
-  // Handle loading state while router params are being resolved
-  if (!router.isReady || !chainId || !tokenId) {
+  // Handle loading state while params are being resolved
+  if (!chainId || !tokenId) {
     return (
       <Layout>
         <div className="flex items-center justify-center min-h-screen">

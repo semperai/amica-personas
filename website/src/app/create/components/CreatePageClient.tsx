@@ -1,3 +1,5 @@
+'use client';
+
 // src/pages/create.tsx - Updated with separate approval and creation hooks
 import { useState, useEffect, useMemo } from 'react';
 import Layout from '@/components/Layout';
@@ -5,7 +7,7 @@ import { useAccount, useWriteContract, useReadContract, useWaitForTransactionRec
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { parseEther, zeroAddress, parseUnits, formatEther, decodeEventLog } from 'viem';
 import { FACTORY_ABI, getAddressesForChain } from '@/lib/contracts';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 
 // ERC20 ABI for reading token details and approval
 const ERC20_ABI = [

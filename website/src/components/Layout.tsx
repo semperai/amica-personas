@@ -4,7 +4,7 @@ import clsx from 'clsx';
 import { ReactNode, useState } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
+import { usePathname } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import { hasBridgeWrapper } from '@/lib/contracts';
 import Image from 'next/image';
@@ -20,12 +20,12 @@ const yomogi = Yomogi({
 });
 
 const Layout = ({ children }: LayoutProps) => {
-  const router = useRouter();
+  const pathname = usePathname();
   const { chainId } = useAccount();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isActive = (path: string) => {
-    return router.pathname === path;
+    return pathname === path;
   };
 
   // Check if bridge is available on current chain

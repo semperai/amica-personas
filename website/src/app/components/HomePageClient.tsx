@@ -1,4 +1,6 @@
-// src/pages/index.tsx - Enhanced with new contract features and improved UX
+'use client';
+
+// src/app/page.tsx - Enhanced with new contract features and improved UX
 import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import { fetchPersonas, fetchGlobalStats, GlobalStats, fetchTrending } from '@/lib/api-graphql';
@@ -207,7 +209,7 @@ function PersonaCard({ persona }: PersonaCardProps) {
               </span>
             )}
           </div>
-          
+
           {/* Growth indicator */}
           {persona.growthMultiplier && persona.growthMultiplier > 1.5 && (
             <div className="flex items-center gap-1 px-2 py-1 bg-orange-500/20 rounded-full backdrop-blur-sm">
@@ -266,7 +268,7 @@ function PersonaCard({ persona }: PersonaCardProps) {
 function AnimatedHeroText() {
   const phrases = [
     "autonomous AI agents on the blockchain",
-    "augmented reality internet workers", 
+    "augmented reality internet workers",
     "3D personas of your favorite characters",
     "AI companions with real-world capabilities",
     "virtual assistants powered by decentralized compute",
@@ -330,13 +332,13 @@ export default function HomePage() {
           graduated: 'totalDeposited_DESC'  // Changed from totalVolumeAllTime_DESC
         };
 
-  
+
         try {
           const data = await fetchPersonas({
             sort: sortMap[sortBy],
             limit: 50,
           });
-  
+
           setPersonas(data.personas);
         } catch (personasError) {
           console.error('Failed to load personas:', personasError);
@@ -350,7 +352,7 @@ export default function HomePage() {
         setLoading(false);
       }
     };
-  
+
     loadData();
   }, [sortBy, filterBy]);
 

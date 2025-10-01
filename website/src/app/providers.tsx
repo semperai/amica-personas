@@ -1,7 +1,5 @@
-// src/pages/_app.tsx
-import '@rainbow-me/rainbowkit/styles.css';
-import '@/styles/globals.css';
-import type { AppProps } from 'next/app';
+'use client';
+
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WagmiProvider } from 'wagmi';
 import { RainbowKitProvider, midnightTheme } from '@rainbow-me/rainbowkit';
@@ -10,19 +8,19 @@ import { config } from '@/lib/wagmi';
 import { apolloClient } from '@/lib/graphql/client';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { ErrorNotification, setupErrorNotifications, errorNotificationStyles } from '@/components/ErrorNotification';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 // Configure React Query with retry logic
-const queryClient = new QueryClient({
+const makeQueryClient = () => new QueryClient({
   defaultOptions: {
     queries: {
       retry: (failureCount, error: unknown) => {
         // Type guard for error with response
         const errorWithResponse = error as { response?: { status?: number } };
         // Don't retry on 4xx errors except 429 (rate limit)
-        if (errorWithResponse?.response?.status && 
-            errorWithResponse.response.status >= 400 && 
-            errorWithResponse.response.status < 500 && 
+        if (errorWithResponse?.response?.status &&
+            errorWithResponse.response.status >= 400 &&
+            errorWithResponse.response.status < 500 &&
             errorWithResponse.response.status !== 429) {
           return false;
         }
@@ -35,7 +33,22 @@ const queryClient = new QueryClient({
   },
 });
 
-function MyApp({ Component, pageProps }: AppProps) {
+let browserQueryClient: QueryClient | undefined = undefined;
+
+function getQueryClient() {
+  if (typeof window === 'undefined') {
+    // Server: always make a new query client
+    return makeQueryClient();
+  } else {
+    // Browser: make a new query client if we don't already have one
+    if (!browserQueryClient) browserQueryClient = makeQueryClient();
+    return browserQueryClient;
+  }
+}
+
+export default function Providers({ children }: { children: React.ReactNode }) {
+  const [queryClient] = useState(() => getQueryClient());
+
   // Set up error notifications on mount
   useEffect(() => {
     setupErrorNotifications();
@@ -47,7 +60,7 @@ function MyApp({ Component, pageProps }: AppProps) {
       <ApolloProvider client={apolloClient}>
         <WagmiProvider config={config}>
           <QueryClientProvider client={queryClient}>
-            <RainbowKitProvider 
+            <RainbowKitProvider
               theme={midnightTheme({
                 borderRadius: 'large',
               })}
@@ -55,7 +68,7 @@ function MyApp({ Component, pageProps }: AppProps) {
                 appName: 'Amica Personas',
               }}
             >
-              <Component {...pageProps} />
+              {children}
               <ErrorNotification />
             </RainbowKitProvider>
           </QueryClientProvider>
@@ -64,5 +77,3 @@ function MyApp({ Component, pageProps }: AppProps) {
     </ErrorBoundary>
   );
 }
-
-export default MyApp;

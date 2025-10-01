@@ -1,3 +1,5 @@
+'use client';
+
 // src/pages/bridge.tsx
 import Layout from '@/components/Layout';
 import BridgeInterface from '@/components/BridgeInterface';

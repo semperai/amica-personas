@@ -1,3 +1,5 @@
+'use client';
+
 // src/pages/portfolio.tsx
 import Layout from '@/components/Layout';
 import { useAccount, useBalance } from 'wagmi';
