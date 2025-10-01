@@ -1,0 +1,1079 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`Text Components AssistantText should match snapshot with code-like content 1`] = `
+<div
+  class="fixed bottom-0 left-0 mb-20 w-full"
+>
+  <div
+    class="mx-auto max-w-4xl w-full px-4 md:px-16"
+  >
+    <div
+      class="backdrop-blur-lg rounded-lg"
+    >
+      <div
+        class="bg-white/70 rounded-lg backdrop-blur-lg shadow-lg"
+      >
+        <div
+          class="px-8 pr-1 py-3 bg-rose/90 rounded-t-lg text-white font-bold tracking-wider"
+        >
+          <span
+            class="p-4 bg-pink-600/80 rounded-lg rounded-tl-none rounded-tr-none shadow-sm"
+          >
+            AMICA
+          </span>
+          <button
+            class="bg-primary hover:bg-primary-hover active:bg-primary-press disabled:bg-primary-disabled text-white rounded-lg text-sm p-1 text-center inline-flex items-center mr-2
+        bg-transparent hover:bg-transparent active:bg-transparent disabled:bg-transparent float-right
+      "
+          >
+            <pixiv-icon
+              name="24/FrameSize"
+              scale="1"
+            />
+          </button>
+        </div>
+        <div
+          class="px-8 py-4 overflow-y-auto max-h-32"
+        >
+          <div
+            class="min-h-8 max-h-full text-gray-700 typography-16 font-bold"
+          >
+            Here's the code: console.log('Hello');
+            <div />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Text Components AssistantText should match snapshot with emotion tags removed 1`] = `
+<div
+  class="fixed bottom-0 left-0 mb-20 w-full"
+>
+  <div
+    class="mx-auto max-w-4xl w-full px-4 md:px-16"
+  >
+    <div
+      class="backdrop-blur-lg rounded-lg"
+    >
+      <div
+        class="bg-white/70 rounded-lg backdrop-blur-lg shadow-lg"
+      >
+        <div
+          class="px-8 pr-1 py-3 bg-rose/90 rounded-t-lg text-white font-bold tracking-wider"
+        >
+          <span
+            class="p-4 bg-pink-600/80 rounded-lg rounded-tl-none rounded-tr-none shadow-sm"
+          >
+            AMICA
+          </span>
+          <button
+            class="bg-primary hover:bg-primary-hover active:bg-primary-press disabled:bg-primary-disabled text-white rounded-lg text-sm p-1 text-center inline-flex items-center mr-2
+        bg-transparent hover:bg-transparent active:bg-transparent disabled:bg-transparent float-right
+      "
+          >
+            <pixiv-icon
+              name="24/FrameSize"
+              scale="1"
+            />
+          </button>
+        </div>
+        <div
+          class="px-8 py-4 overflow-y-auto max-h-32"
+        >
+          <div
+            class="min-h-8 max-h-full text-gray-700 typography-16 font-bold"
+          >
+             Let me help you with that.
+            <div />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Text Components AssistantText should match snapshot with long message 1`] = `
+<div
+  class="fixed bottom-0 left-0 mb-20 w-full"
+>
+  <div
+    class="mx-auto max-w-4xl w-full px-4 md:px-16"
+  >
+    <div
+      class="backdrop-blur-lg rounded-lg"
+    >
+      <div
+        class="bg-white/70 rounded-lg backdrop-blur-lg shadow-lg"
+      >
+        <div
+          class="px-8 pr-1 py-3 bg-rose/90 rounded-t-lg text-white font-bold tracking-wider"
+        >
+          <span
+            class="p-4 bg-pink-600/80 rounded-lg rounded-tl-none rounded-tr-none shadow-sm"
+          >
+            AMICA
+          </span>
+          <button
+            class="bg-primary hover:bg-primary-hover active:bg-primary-press disabled:bg-primary-disabled text-white rounded-lg text-sm p-1 text-center inline-flex items-center mr-2
+        bg-transparent hover:bg-transparent active:bg-transparent disabled:bg-transparent float-right
+      "
+          >
+            <pixiv-icon
+              name="24/FrameSize"
+              scale="1"
+            />
+          </button>
+        </div>
+        <div
+          class="px-8 py-4 overflow-y-auto max-h-32"
+        >
+          <div
+            class="min-h-8 max-h-full text-gray-700 typography-16 font-bold"
+          >
+            This is a comprehensive response that provides detailed information about the topic you asked about. It should demonstrate how the component handles longer text content.
+            <div />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Text Components AssistantText should match snapshot with markdown-like content 1`] = `
+<div
+  class="fixed bottom-0 left-0 mb-20 w-full"
+>
+  <div
+    class="mx-auto max-w-4xl w-full px-4 md:px-16"
+  >
+    <div
+      class="backdrop-blur-lg rounded-lg"
+    >
+      <div
+        class="bg-white/70 rounded-lg backdrop-blur-lg shadow-lg"
+      >
+        <div
+          class="px-8 pr-1 py-3 bg-rose/90 rounded-t-lg text-white font-bold tracking-wider"
+        >
+          <span
+            class="p-4 bg-pink-600/80 rounded-lg rounded-tl-none rounded-tr-none shadow-sm"
+          >
+            AMICA
+          </span>
+          <button
+            class="bg-primary hover:bg-primary-hover active:bg-primary-press disabled:bg-primary-disabled text-white rounded-lg text-sm p-1 text-center inline-flex items-center mr-2
+        bg-transparent hover:bg-transparent active:bg-transparent disabled:bg-transparent float-right
+      "
+          >
+            <pixiv-icon
+              name="24/FrameSize"
+              scale="1"
+            />
+          </button>
+        </div>
+        <div
+          class="px-8 py-4 overflow-y-auto max-h-32"
+        >
+          <div
+            class="min-h-8 max-h-full text-gray-700 typography-16 font-bold"
+          >
+            **Bold text** and *italic text*
+            <div />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Text Components AssistantText should match snapshot with multiple emotion tags 1`] = `
+<div
+  class="fixed bottom-0 left-0 mb-20 w-full"
+>
+  <div
+    class="mx-auto max-w-4xl w-full px-4 md:px-16"
+  >
+    <div
+      class="backdrop-blur-lg rounded-lg"
+    >
+      <div
+        class="bg-white/70 rounded-lg backdrop-blur-lg shadow-lg"
+      >
+        <div
+          class="px-8 pr-1 py-3 bg-rose/90 rounded-t-lg text-white font-bold tracking-wider"
+        >
+          <span
+            class="p-4 bg-pink-600/80 rounded-lg rounded-tl-none rounded-tr-none shadow-sm"
+          >
+            AMICA
+          </span>
+          <button
+            class="bg-primary hover:bg-primary-hover active:bg-primary-press disabled:bg-primary-disabled text-white rounded-lg text-sm p-1 text-center inline-flex items-center mr-2
+        bg-transparent hover:bg-transparent active:bg-transparent disabled:bg-transparent float-right
+      "
+          >
+            <pixiv-icon
+              name="24/FrameSize"
+              scale="1"
+            />
+          </button>
+        </div>
+        <div
+          class="px-8 py-4 overflow-y-auto max-h-32"
+        >
+          <div
+            class="min-h-8 max-h-full text-gray-700 typography-16 font-bold"
+          >
+             Let me  consider that.
+            <div />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Text Components AssistantText should match snapshot with simple message 1`] = `
+<div
+  class="fixed bottom-0 left-0 mb-20 w-full"
+>
+  <div
+    class="mx-auto max-w-4xl w-full px-4 md:px-16"
+  >
+    <div
+      class="backdrop-blur-lg rounded-lg"
+    >
+      <div
+        class="bg-white/70 rounded-lg backdrop-blur-lg shadow-lg"
+      >
+        <div
+          class="px-8 pr-1 py-3 bg-rose/90 rounded-t-lg text-white font-bold tracking-wider"
+        >
+          <span
+            class="p-4 bg-pink-600/80 rounded-lg rounded-tl-none rounded-tr-none shadow-sm"
+          >
+            AMICA
+          </span>
+          <button
+            class="bg-primary hover:bg-primary-hover active:bg-primary-press disabled:bg-primary-disabled text-white rounded-lg text-sm p-1 text-center inline-flex items-center mr-2
+        bg-transparent hover:bg-transparent active:bg-transparent disabled:bg-transparent float-right
+      "
+          >
+            <pixiv-icon
+              name="24/FrameSize"
+              scale="1"
+            />
+          </button>
+        </div>
+        <div
+          class="px-8 py-4 overflow-y-auto max-h-32"
+        >
+          <div
+            class="min-h-8 max-h-full text-gray-700 typography-16 font-bold"
+          >
+            I'm doing well, thank you!
+            <div />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Text Components SwitchBox should match snapshot when disabled prop is true 1`] = `
+<div
+  class="flex items-center"
+>
+  <button
+    aria-checked="true"
+    aria-labelledby="headlessui-label-«r5»"
+    class="bg-gray-300 cursor-not-allowed relative ml-2 inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none pointer-events-none"
+    data-checked=""
+    data-disabled=""
+    data-headlessui-state="checked disabled"
+    disabled=""
+    id="headlessui-switch-«r4»"
+    role="switch"
+    tabindex="0"
+    type="button"
+  >
+    <span
+      class="sr-only"
+    >
+      Use setting
+    </span>
+    <span
+      class="translate-x-5 pointer-events-none relative inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+    >
+      <span
+        aria-hidden="true"
+        class="opacity-0 duration-100 ease-out absolute inset-0 flex h-full w-full items-center justify-center transition-opacity"
+      >
+        <svg
+          class="h-3 w-3 text-gray-400"
+          fill="none"
+          viewBox="0 0 12 12"
+        >
+          <path
+            d="M4 8l2-2m0 0l2-2M6 6L4 4m2 2l2 2"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+          />
+        </svg>
+      </span>
+      <span
+        aria-hidden="true"
+        class="opacity-100 duration-200 ease-in absolute inset-0 flex h-full w-full items-center justify-center transition-opacity"
+      >
+        <svg
+          class="h-3 w-3 text-indigo-600"
+          fill="currentColor"
+          viewBox="0 0 12 12"
+        >
+          <path
+            d="M3.707 5.293a1 1 0 00-1.414 1.414l1.414-1.414zm1.414 2l-.707.707a1 1 0 001.414 0L5 8zm4.707-3.293a1 1 0 00-1.414-1.414l1.414 1.414zm-7.414 2l2 2 1.414-1.414-2-2-1.414 1.414zm3.414 2l4-4-1.414-1.414-4 4 1.414 1.414z"
+          />
+        </svg>
+      </span>
+    </span>
+  </button>
+  <span
+    class="ml-3 text-sm"
+    data-headlessui-state=""
+    for="headlessui-switch-«r4»"
+    id="headlessui-label-«r5»"
+  >
+    <span
+      class="font-medium text-gray-900 whitespace-nowrap"
+    >
+      Disabled Feature
+    </span>
+  </span>
+</div>
+`;
+
+exports[`Text Components SwitchBox should match snapshot when disabled state 1`] = `
+<div
+  class="flex items-center"
+>
+  <button
+    aria-checked="false"
+    aria-labelledby="headlessui-label-«r3»"
+    class="bg-gray-200 relative ml-2 inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+    data-headlessui-state=""
+    id="headlessui-switch-«r2»"
+    role="switch"
+    tabindex="0"
+    type="button"
+  >
+    <span
+      class="sr-only"
+    >
+      Use setting
+    </span>
+    <span
+      class="translate-x-0 pointer-events-none relative inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+    >
+      <span
+        aria-hidden="true"
+        class="opacity-100 duration-200 ease-in absolute inset-0 flex h-full w-full items-center justify-center transition-opacity"
+      >
+        <svg
+          class="h-3 w-3 text-gray-400"
+          fill="none"
+          viewBox="0 0 12 12"
+        >
+          <path
+            d="M4 8l2-2m0 0l2-2M6 6L4 4m2 2l2 2"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+          />
+        </svg>
+      </span>
+      <span
+        aria-hidden="true"
+        class="opacity-0 duration-100 ease-out absolute inset-0 flex h-full w-full items-center justify-center transition-opacity"
+      >
+        <svg
+          class="h-3 w-3 text-indigo-600"
+          fill="currentColor"
+          viewBox="0 0 12 12"
+        >
+          <path
+            d="M3.707 5.293a1 1 0 00-1.414 1.414l1.414-1.414zm1.414 2l-.707.707a1 1 0 001.414 0L5 8zm4.707-3.293a1 1 0 00-1.414-1.414l1.414 1.414zm-7.414 2l2 2 1.414-1.414-2-2-1.414 1.414zm3.414 2l4-4-1.414-1.414-4 4 1.414 1.414z"
+          />
+        </svg>
+      </span>
+    </span>
+  </button>
+  <span
+    class="ml-3 text-sm"
+    data-headlessui-state=""
+    for="headlessui-switch-«r2»"
+    id="headlessui-label-«r3»"
+  >
+    <span
+      class="font-medium text-gray-900 whitespace-nowrap"
+    >
+      Enable Feature
+    </span>
+  </span>
+</div>
+`;
+
+exports[`Text Components SwitchBox should match snapshot when enabled 1`] = `
+<div
+  class="flex items-center"
+>
+  <button
+    aria-checked="true"
+    aria-labelledby="headlessui-label-«r1»"
+    class="bg-indigo-600 relative ml-2 inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+    data-checked=""
+    data-headlessui-state="checked"
+    id="headlessui-switch-«r0»"
+    role="switch"
+    tabindex="0"
+    type="button"
+  >
+    <span
+      class="sr-only"
+    >
+      Use setting
+    </span>
+    <span
+      class="translate-x-5 pointer-events-none relative inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+    >
+      <span
+        aria-hidden="true"
+        class="opacity-0 duration-100 ease-out absolute inset-0 flex h-full w-full items-center justify-center transition-opacity"
+      >
+        <svg
+          class="h-3 w-3 text-gray-400"
+          fill="none"
+          viewBox="0 0 12 12"
+        >
+          <path
+            d="M4 8l2-2m0 0l2-2M6 6L4 4m2 2l2 2"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+          />
+        </svg>
+      </span>
+      <span
+        aria-hidden="true"
+        class="opacity-100 duration-200 ease-in absolute inset-0 flex h-full w-full items-center justify-center transition-opacity"
+      >
+        <svg
+          class="h-3 w-3 text-indigo-600"
+          fill="currentColor"
+          viewBox="0 0 12 12"
+        >
+          <path
+            d="M3.707 5.293a1 1 0 00-1.414 1.414l1.414-1.414zm1.414 2l-.707.707a1 1 0 001.414 0L5 8zm4.707-3.293a1 1 0 00-1.414-1.414l1.414 1.414zm-7.414 2l2 2 1.414-1.414-2-2-1.414 1.414zm3.414 2l4-4-1.414-1.414-4 4 1.414 1.414z"
+          />
+        </svg>
+      </span>
+    </span>
+  </button>
+  <span
+    class="ml-3 text-sm"
+    data-headlessui-state=""
+    for="headlessui-switch-«r0»"
+    id="headlessui-label-«r1»"
+  >
+    <span
+      class="font-medium text-gray-900 whitespace-nowrap"
+    >
+      Enable Feature
+    </span>
+  </span>
+</div>
+`;
+
+exports[`Text Components SwitchBox should match snapshot with long label 1`] = `
+<div
+  class="flex items-center"
+>
+  <button
+    aria-checked="true"
+    aria-labelledby="headlessui-label-«r7»"
+    class="bg-indigo-600 relative ml-2 inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+    data-checked=""
+    data-headlessui-state="checked"
+    id="headlessui-switch-«r6»"
+    role="switch"
+    tabindex="0"
+    type="button"
+  >
+    <span
+      class="sr-only"
+    >
+      Use setting
+    </span>
+    <span
+      class="translate-x-5 pointer-events-none relative inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+    >
+      <span
+        aria-hidden="true"
+        class="opacity-0 duration-100 ease-out absolute inset-0 flex h-full w-full items-center justify-center transition-opacity"
+      >
+        <svg
+          class="h-3 w-3 text-gray-400"
+          fill="none"
+          viewBox="0 0 12 12"
+        >
+          <path
+            d="M4 8l2-2m0 0l2-2M6 6L4 4m2 2l2 2"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+          />
+        </svg>
+      </span>
+      <span
+        aria-hidden="true"
+        class="opacity-100 duration-200 ease-in absolute inset-0 flex h-full w-full items-center justify-center transition-opacity"
+      >
+        <svg
+          class="h-3 w-3 text-indigo-600"
+          fill="currentColor"
+          viewBox="0 0 12 12"
+        >
+          <path
+            d="M3.707 5.293a1 1 0 00-1.414 1.414l1.414-1.414zm1.414 2l-.707.707a1 1 0 001.414 0L5 8zm4.707-3.293a1 1 0 00-1.414-1.414l1.414 1.414zm-7.414 2l2 2 1.414-1.414-2-2-1.414 1.414zm3.414 2l4-4-1.414-1.414-4 4 1.414 1.414z"
+          />
+        </svg>
+      </span>
+    </span>
+  </button>
+  <span
+    class="ml-3 text-sm"
+    data-headlessui-state=""
+    for="headlessui-switch-«r6»"
+    id="headlessui-label-«r7»"
+  >
+    <span
+      class="font-medium text-gray-900 whitespace-nowrap"
+    >
+      This is a very long label that might wrap to multiple lines
+    </span>
+  </span>
+</div>
+`;
+
+exports[`Text Components SwitchBox should match snapshot with short label 1`] = `
+<div
+  class="flex items-center"
+>
+  <button
+    aria-checked="false"
+    aria-labelledby="headlessui-label-«r9»"
+    class="bg-gray-200 relative ml-2 inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+    data-headlessui-state=""
+    id="headlessui-switch-«r8»"
+    role="switch"
+    tabindex="0"
+    type="button"
+  >
+    <span
+      class="sr-only"
+    >
+      Use setting
+    </span>
+    <span
+      class="translate-x-0 pointer-events-none relative inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+    >
+      <span
+        aria-hidden="true"
+        class="opacity-100 duration-200 ease-in absolute inset-0 flex h-full w-full items-center justify-center transition-opacity"
+      >
+        <svg
+          class="h-3 w-3 text-gray-400"
+          fill="none"
+          viewBox="0 0 12 12"
+        >
+          <path
+            d="M4 8l2-2m0 0l2-2M6 6L4 4m2 2l2 2"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+          />
+        </svg>
+      </span>
+      <span
+        aria-hidden="true"
+        class="opacity-0 duration-100 ease-out absolute inset-0 flex h-full w-full items-center justify-center transition-opacity"
+      >
+        <svg
+          class="h-3 w-3 text-indigo-600"
+          fill="currentColor"
+          viewBox="0 0 12 12"
+        >
+          <path
+            d="M3.707 5.293a1 1 0 00-1.414 1.414l1.414-1.414zm1.414 2l-.707.707a1 1 0 001.414 0L5 8zm4.707-3.293a1 1 0 00-1.414-1.414l1.414 1.414zm-7.414 2l2 2 1.414-1.414-2-2-1.414 1.414zm3.414 2l4-4-1.414-1.414-4 4 1.414 1.414z"
+          />
+        </svg>
+      </span>
+    </span>
+  </button>
+  <span
+    class="ml-3 text-sm"
+    data-headlessui-state=""
+    for="headlessui-switch-«r8»"
+    id="headlessui-label-«r9»"
+  >
+    <span
+      class="font-medium text-gray-900 whitespace-nowrap"
+    >
+      On
+    </span>
+  </span>
+</div>
+`;
+
+exports[`Text Components UserText should match snapshot with emotion tags removed 1`] = `
+<div
+  class="fixed bottom-0 left-0 mb-20 w-full"
+>
+  <div
+    class="mx-auto max-w-4xl w-full px-4 md:px-16"
+  >
+    <div
+      class="backdrop-blur-lg rounded-lg"
+    >
+      <div
+        class="bg-white/70 rounded-lg backdrop-blur-lg shadow-lg"
+      >
+        <div
+          class="px-8 pr-1 py-3 bg-rose/90 rounded-t-lg text-white font-bold tracking-wider"
+        >
+          <span
+            class="p-4 bg-cyan-600/80 rounded-lg rounded-tl-none rounded-tr-none shadow-sm"
+          >
+            YOU
+          </span>
+        </div>
+        <div
+          class="px-8 py-4 max-h-32 overflow-y-auto"
+        >
+          <div
+            class="min-h-8 max-h-full typography-16 font-bold text-gray-600"
+          >
+             I'm feeling great today!
+            <div />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Text Components UserText should match snapshot with empty message 1`] = `
+<div
+  class="fixed bottom-0 left-0 mb-20 w-full"
+>
+  <div
+    class="mx-auto max-w-4xl w-full px-4 md:px-16"
+  >
+    <div
+      class="backdrop-blur-lg rounded-lg"
+    >
+      <div
+        class="bg-white/70 rounded-lg backdrop-blur-lg shadow-lg"
+      >
+        <div
+          class="px-8 pr-1 py-3 bg-rose/90 rounded-t-lg text-white font-bold tracking-wider"
+        >
+          <span
+            class="p-4 bg-cyan-600/80 rounded-lg rounded-tl-none rounded-tr-none shadow-sm"
+          >
+            YOU
+          </span>
+        </div>
+        <div
+          class="px-8 py-4 max-h-32 overflow-y-auto"
+        >
+          <div
+            class="min-h-8 max-h-full typography-16 font-bold text-gray-600"
+          >
+            <div />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Text Components UserText should match snapshot with long message 1`] = `
+<div
+  class="fixed bottom-0 left-0 mb-20 w-full"
+>
+  <div
+    class="mx-auto max-w-4xl w-full px-4 md:px-16"
+  >
+    <div
+      class="backdrop-blur-lg rounded-lg"
+    >
+      <div
+        class="bg-white/70 rounded-lg backdrop-blur-lg shadow-lg"
+      >
+        <div
+          class="px-8 pr-1 py-3 bg-rose/90 rounded-t-lg text-white font-bold tracking-wider"
+        >
+          <span
+            class="p-4 bg-cyan-600/80 rounded-lg rounded-tl-none rounded-tr-none shadow-sm"
+          >
+            YOU
+          </span>
+        </div>
+        <div
+          class="px-8 py-4 max-h-32 overflow-y-auto"
+        >
+          <div
+            class="min-h-8 max-h-full typography-16 font-bold text-gray-600"
+          >
+            This is a very long message that should test the overflow behavior and ensure that the component handles long text properly without breaking the layout.
+            <div />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Text Components UserText should match snapshot with multiple emotion tags 1`] = `
+<div
+  class="fixed bottom-0 left-0 mb-20 w-full"
+>
+  <div
+    class="mx-auto max-w-4xl w-full px-4 md:px-16"
+  >
+    <div
+      class="backdrop-blur-lg rounded-lg"
+    >
+      <div
+        class="bg-white/70 rounded-lg backdrop-blur-lg shadow-lg"
+      >
+        <div
+          class="px-8 pr-1 py-3 bg-rose/90 rounded-t-lg text-white font-bold tracking-wider"
+        >
+          <span
+            class="p-4 bg-cyan-600/80 rounded-lg rounded-tl-none rounded-tr-none shadow-sm"
+          >
+            YOU
+          </span>
+        </div>
+        <div
+          class="px-8 py-4 max-h-32 overflow-y-auto"
+        >
+          <div
+            class="min-h-8 max-h-full typography-16 font-bold text-gray-600"
+          >
+             This is  news!
+            <div />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Text Components UserText should match snapshot with simple message 1`] = `
+<div
+  class="fixed bottom-0 left-0 mb-20 w-full"
+>
+  <div
+    class="mx-auto max-w-4xl w-full px-4 md:px-16"
+  >
+    <div
+      class="backdrop-blur-lg rounded-lg"
+    >
+      <div
+        class="bg-white/70 rounded-lg backdrop-blur-lg shadow-lg"
+      >
+        <div
+          class="px-8 pr-1 py-3 bg-rose/90 rounded-t-lg text-white font-bold tracking-wider"
+        >
+          <span
+            class="p-4 bg-cyan-600/80 rounded-lg rounded-tl-none rounded-tr-none shadow-sm"
+          >
+            YOU
+          </span>
+        </div>
+        <div
+          class="px-8 py-4 max-h-32 overflow-y-auto"
+        >
+          <div
+            class="min-h-8 max-h-full typography-16 font-bold text-gray-600"
+          >
+            Hello, how are you?
+            <div />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Text Components UserText should match snapshot with special characters 1`] = `
+<div
+  class="fixed bottom-0 left-0 mb-20 w-full"
+>
+  <div
+    class="mx-auto max-w-4xl w-full px-4 md:px-16"
+  >
+    <div
+      class="backdrop-blur-lg rounded-lg"
+    >
+      <div
+        class="bg-white/70 rounded-lg backdrop-blur-lg shadow-lg"
+      >
+        <div
+          class="px-8 pr-1 py-3 bg-rose/90 rounded-t-lg text-white font-bold tracking-wider"
+        >
+          <span
+            class="p-4 bg-cyan-600/80 rounded-lg rounded-tl-none rounded-tr-none shadow-sm"
+          >
+            YOU
+          </span>
+        </div>
+        <div
+          class="px-8 py-4 max-h-32 overflow-y-auto"
+        >
+          <div
+            class="min-h-8 max-h-full typography-16 font-bold text-gray-600"
+          >
+            Hello! 👋 How are you? 🎉
+            <div />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Text Components VerticalSwitchBox should match snapshot when disabled 1`] = `
+<div
+  class="flex flex-col items-center space-y-3"
+>
+  <button
+    aria-checked="false"
+    aria-labelledby="headlessui-label-«rd»"
+    class="bg-gray-200 relative inline-flex h-8 w-4 items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-200 focus:ring-offset-2"
+    data-headlessui-state=""
+    id="headlessui-switch-«rc»"
+    role="switch"
+    tabindex="0"
+    type="button"
+  >
+    <span
+      class="sr-only"
+    >
+      Vertical Option
+    </span>
+    <span
+      class="translate-y-2 inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition-transform duration-200 ease-in-out"
+    >
+      <span
+        aria-hidden="true"
+        class="opacity-100 absolute inset-0 flex h-full w-full items-center justify-center transition-opacity duration-200"
+      >
+        <svg
+          class="h-3 w-3 text-gray-400"
+          fill="none"
+          viewBox="0 0 12 12"
+        >
+          <path
+            d="M4 8l2-2m0 0l2-2M6 6L4 4m2 2l2 2"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+          />
+        </svg>
+      </span>
+      <span
+        aria-hidden="true"
+        class="opacity-0 absolute inset-0 flex h-full w-full items-center justify-center transition-opacity duration-200"
+      >
+        <svg
+          class="h-3 w-3 text-gray-600"
+          fill="currentColor"
+          viewBox="0 0 12 12"
+        >
+          <path
+            d="M3.707 5.293a1 1 0 00-1.414 1.414l1.414-1.414zM5 8l-.707.707a1 1 0 001.414 0L5 8zm4.707-3.293a1 1 0 00-1.414-1.414l1.414 1.414zm-7.414 2l2 2 1.414-1.414-2-2-1.414 1.414zm3.414 2l4-4-1.414-1.414-4 4 1.414 1.414z"
+          />
+        </svg>
+      </span>
+    </span>
+  </button>
+  <span
+    class="text-sm font-medium text-gray-900"
+    data-headlessui-state=""
+    for="headlessui-switch-«rc»"
+    id="headlessui-label-«rd»"
+  >
+    Vertical Option
+  </span>
+</div>
+`;
+
+exports[`Text Components VerticalSwitchBox should match snapshot when enabled 1`] = `
+<div
+  class="flex flex-col items-center space-y-3"
+>
+  <button
+    aria-checked="true"
+    aria-labelledby="headlessui-label-«rb»"
+    class="bg-gray-400 relative inline-flex h-8 w-4 items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-200 focus:ring-offset-2"
+    data-checked=""
+    data-headlessui-state="checked"
+    id="headlessui-switch-«ra»"
+    role="switch"
+    tabindex="0"
+    type="button"
+  >
+    <span
+      class="sr-only"
+    >
+      Vertical Option
+    </span>
+    <span
+      class="-translate-y-2 inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition-transform duration-200 ease-in-out"
+    >
+      <span
+        aria-hidden="true"
+        class="opacity-0 absolute inset-0 flex h-full w-full items-center justify-center transition-opacity duration-200"
+      >
+        <svg
+          class="h-3 w-3 text-gray-400"
+          fill="none"
+          viewBox="0 0 12 12"
+        >
+          <path
+            d="M4 8l2-2m0 0l2-2M6 6L4 4m2 2l2 2"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+          />
+        </svg>
+      </span>
+      <span
+        aria-hidden="true"
+        class="opacity-100 absolute inset-0 flex h-full w-full items-center justify-center transition-opacity duration-200"
+      >
+        <svg
+          class="h-3 w-3 text-gray-600"
+          fill="currentColor"
+          viewBox="0 0 12 12"
+        >
+          <path
+            d="M3.707 5.293a1 1 0 00-1.414 1.414l1.414-1.414zM5 8l-.707.707a1 1 0 001.414 0L5 8zm4.707-3.293a1 1 0 00-1.414-1.414l1.414 1.414zm-7.414 2l2 2 1.414-1.414-2-2-1.414 1.414zm3.414 2l4-4-1.414-1.414-4 4 1.414 1.414z"
+          />
+        </svg>
+      </span>
+    </span>
+  </button>
+  <span
+    class="text-sm font-medium text-gray-900"
+    data-headlessui-state=""
+    for="headlessui-switch-«ra»"
+    id="headlessui-label-«rb»"
+  >
+    Vertical Option
+  </span>
+</div>
+`;
+
+exports[`Text Components VerticalSwitchBox should match snapshot with long label 1`] = `
+<div
+  class="flex flex-col items-center space-y-3"
+>
+  <button
+    aria-checked="true"
+    aria-labelledby="headlessui-label-«rf»"
+    class="bg-gray-400 relative inline-flex h-8 w-4 items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-200 focus:ring-offset-2"
+    data-checked=""
+    data-headlessui-state="checked"
+    id="headlessui-switch-«re»"
+    role="switch"
+    tabindex="0"
+    type="button"
+  >
+    <span
+      class="sr-only"
+    >
+      A very long vertical label
+    </span>
+    <span
+      class="-translate-y-2 inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition-transform duration-200 ease-in-out"
+    >
+      <span
+        aria-hidden="true"
+        class="opacity-0 absolute inset-0 flex h-full w-full items-center justify-center transition-opacity duration-200"
+      >
+        <svg
+          class="h-3 w-3 text-gray-400"
+          fill="none"
+          viewBox="0 0 12 12"
+        >
+          <path
+            d="M4 8l2-2m0 0l2-2M6 6L4 4m2 2l2 2"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+          />
+        </svg>
+      </span>
+      <span
+        aria-hidden="true"
+        class="opacity-100 absolute inset-0 flex h-full w-full items-center justify-center transition-opacity duration-200"
+      >
+        <svg
+          class="h-3 w-3 text-gray-600"
+          fill="currentColor"
+          viewBox="0 0 12 12"
+        >
+          <path
+            d="M3.707 5.293a1 1 0 00-1.414 1.414l1.414-1.414zM5 8l-.707.707a1 1 0 001.414 0L5 8zm4.707-3.293a1 1 0 00-1.414-1.414l1.414 1.414zm-7.414 2l2 2 1.414-1.414-2-2-1.414 1.414zm3.414 2l4-4-1.414-1.414-4 4 1.414 1.414z"
+          />
+        </svg>
+      </span>
+    </span>
+  </button>
+  <span
+    class="text-sm font-medium text-gray-900"
+    data-headlessui-state=""
+    for="headlessui-switch-«re»"
+    id="headlessui-label-«rf»"
+  >
+    A very long vertical label
+  </span>
+</div>
+`;
