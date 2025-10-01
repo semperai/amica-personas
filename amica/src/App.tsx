@@ -1,5 +1,5 @@
-import { Providers } from './app/providers';
-import Home from './app/page';
+import { Providers } from './providers';
+import Home from './HomePage';
 import { useEffect } from 'react';
 
 function App() {
