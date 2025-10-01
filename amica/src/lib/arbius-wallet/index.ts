@@ -3,7 +3,7 @@ export { AAWalletProvider } from './components/AAWalletProvider';
 export { AAWalletDisplay } from './components/AAWalletDisplay';
 
 // Hooks
-export { useAAWallet } from './hooks/useAAWalletSimple';
+export { useAAWallet } from './hooks/useAAWallet';
 
 // Types
 export * from './types';

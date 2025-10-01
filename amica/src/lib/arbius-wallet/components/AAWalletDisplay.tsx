@@ -1,4 +1,4 @@
-import { useAAWallet } from '../hooks/useAAWalletSimple';
+import { useAAWallet } from '../hooks/useAAWallet';
 import { useState } from 'react';
 import { AAWalletModal } from './AAWalletModal';
 

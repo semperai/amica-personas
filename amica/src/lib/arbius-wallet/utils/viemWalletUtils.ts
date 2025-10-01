@@ -4,9 +4,6 @@ import { privateKeyToAccount, type PrivateKeyAccount } from 'viem/accounts';
 // Storage keys
 const DERIVED_WALLET_STORAGE_KEY = 'arbiuswallet_derivedWalletCache';
 
-// Allowed domains
-const ALLOWED_DOMAINS = ['localhost', 'heyamica.com', 'amica.arbius.ai'];
-
 interface WalletCache {
   ownerAddress: string;
   derivedPrivateKey: Hex;
@@ -15,32 +12,23 @@ interface WalletCache {
   createdAt: string;
 }
 
-function validateOrigin(): boolean {
+function generateDeterministicMessage(ownerAddress: string, title: string): string {
   const hostname = window.location.hostname;
-  return ALLOWED_DOMAINS.some(domain => hostname === domain || hostname.endsWith(`.${domain}`));
-}
-
-function generateDeterministicMessage(ownerAddress: string): string {
-  const hostname = window.location.hostname;
-  return `Amica wants you to create a deterministic wallet
+  return `${title} wants you to create a deterministic wallet
 Domain: ${hostname}
 Wallet address: ${ownerAddress}
 Purpose: Create deterministic wallet for AI agent interactions
 
-Warning: Make sure the URL matches the official Amica website`;
+Warning: Make sure the URL matches the official ${title} website`;
 }
 
 export async function initDeterministicWallet(
   ownerAddress: string,
-  signMessage: (message: string) => Promise<Hex>
+  signMessage: (message: string) => Promise<Hex>,
+  title: string = 'Amica'
 ): Promise<PrivateKeyAccount> {
   if (!ownerAddress || !signMessage) {
     throw new Error("ownerAddress and signMessage are required.");
-  }
-
-  // Validate origin
-  if (!validateOrigin()) {
-    throw new Error("Wallet creation is only allowed on authorized domains");
   }
 
   const lowerOwnerAddress = ownerAddress.toLowerCase();
@@ -51,7 +39,6 @@ export async function initDeterministicWallet(
       const parsed: WalletCache = JSON.parse(cached);
       if (parsed.ownerAddress.toLowerCase() === lowerOwnerAddress) {
         const account = privateKeyToAccount(parsed.derivedPrivateKey);
-        console.log('Using cached derived wallet:', account.address);
         return account;
       }
     } catch (e) {
@@ -60,8 +47,7 @@ export async function initDeterministicWallet(
   }
 
   // Create new wallet
-  console.log('Creating new deterministic wallet for', lowerOwnerAddress);
-  const messageToSign = generateDeterministicMessage(lowerOwnerAddress);
+  const messageToSign = generateDeterministicMessage(lowerOwnerAddress, title);
   const signature = await signMessage(messageToSign);
 
   // Hash the signature to create a private key
@@ -78,7 +64,6 @@ export async function initDeterministicWallet(
   };
 
   localStorage.setItem(DERIVED_WALLET_STORAGE_KEY, JSON.stringify(cacheData));
-  console.log('New deterministic wallet created and cached:', account.address);
 
   return account;
 }
