@@ -1,4 +1,4 @@
-import { describe, expect, test, jest, beforeEach } from "@jest/globals";
+import { describe, expect, test, jest, beforeEach, afterEach } from "@jest/globals";
 import { handleNews } from "@/features/plugins/news";
 
 // Mock expandPrompt
@@ -8,13 +8,16 @@ jest.mock("@/features/functionCalling/eventHandler", () => ({
   }),
 }));
 
-// Mock global fetch
-const mockFetch = jest.fn();
-global.fetch = mockFetch as any;
-
 describe("news", () => {
+  let fetchSpy: jest.SpiedFunction<typeof global.fetch>;
+
   beforeEach(() => {
-    jest.clearAllMocks();
+    // Spy on global fetch
+    fetchSpy = jest.spyOn(global, 'fetch') as jest.SpiedFunction<typeof global.fetch>;
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   const createMockRSS = (items: Array<{title: string, description: string}>) => {
@@ -40,7 +43,7 @@ describe("news", () => {
         { title: "Test Article", description: "Test description" }
       ]);
 
-      mockFetch.mockResolvedValue({
+      fetchSpy.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -68,7 +71,7 @@ describe("news", () => {
         { title: "Article 3", description: "Description 3" },
       ]);
 
-      mockFetch.mockResolvedValue({
+      fetchSpy.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -89,7 +92,7 @@ describe("news", () => {
     });
 
     test("should handle fetch error with status code", async () => {
-      mockFetch.mockResolvedValue({
+      fetchSpy.mockResolvedValue({
         ok: false,
         statusText: "Not Found",
       });
@@ -121,7 +124,7 @@ describe("news", () => {
     });
 
     test("should handle malformed XML", async () => {
-      mockFetch.mockResolvedValue({
+      fetchSpy.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve("Invalid XML"),
       });
@@ -140,7 +143,7 @@ describe("news", () => {
           </channel>
         </rss>`;
 
-      mockFetch.mockResolvedValue({
+      fetchSpy.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -159,7 +162,7 @@ describe("news", () => {
         }
       ]);
 
-      mockFetch.mockResolvedValue({
+      fetchSpy.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -178,7 +181,7 @@ describe("news", () => {
         }
       ]);
 
-      mockFetch.mockResolvedValue({
+      fetchSpy.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -196,7 +199,7 @@ describe("news", () => {
         }
       ]);
 
-      mockFetch.mockResolvedValue({
+      fetchSpy.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -218,7 +221,7 @@ describe("news", () => {
         }
       ]);
 
-      mockFetch.mockResolvedValue({
+      fetchSpy.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -239,7 +242,7 @@ describe("news", () => {
           </channel>
         </rss>`;
 
-      mockFetch.mockResolvedValue({
+      fetchSpy.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -260,7 +263,7 @@ describe("news", () => {
           </channel>
         </rss>`;
 
-      mockFetch.mockResolvedValue({
+      fetchSpy.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -281,7 +284,7 @@ describe("news", () => {
           </channel>
         </rss>`;
 
-      mockFetch.mockResolvedValue({
+      fetchSpy.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -303,7 +306,7 @@ describe("news", () => {
           </channel>
         </rss>`;
 
-      mockFetch.mockResolvedValue({
+      fetchSpy.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -322,7 +325,7 @@ describe("news", () => {
         { title: "Business: Market Update", description: "Stocks rise" },
       ]);
 
-      mockFetch.mockResolvedValue({
+      fetchSpy.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -339,7 +342,7 @@ describe("news", () => {
         { title: "Test", description: "Test desc" }
       ]);
 
-      mockFetch.mockResolvedValue({
+      fetchSpy.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -355,7 +358,7 @@ describe("news", () => {
         { title: "", description: "" }
       ]);
 
-      mockFetch.mockResolvedValue({
+      fetchSpy.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -370,7 +373,7 @@ describe("news", () => {
         { title: "   ", description: "   " }
       ]);
 
-      mockFetch.mockResolvedValue({
+      fetchSpy.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
@@ -398,7 +401,7 @@ describe("news", () => {
         { title: "Test", description: "Test" }
       ]);
 
-      mockFetch.mockResolvedValue({
+      fetchSpy.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve(mockRSS),
       });
