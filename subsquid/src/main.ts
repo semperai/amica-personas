@@ -28,14 +28,9 @@ import { And, In, MoreThanOrEqual, LessThan, Between } from 'typeorm'
 
 // Event handlers
 import { handlePersonaCreated } from './handlers/persona'
-import { handleTokensPurchased, handleTradingFeesCollected, handleTokensSold } from './handlers/trading'
+import { handleTokensPurchased, handleFeesCollected, handleTokensSold } from './handlers/trading'
 import { handleMetadataUpdated } from './handlers/metadata'
-import { handleLiquidityPairCreated } from './handlers/liquidity'
-import { 
-  handleFeeReductionConfigUpdated, 
-  handleTradingFeeConfigUpdated,
-  handleSnapshotUpdated 
-} from './handlers/fees'
+import { handleV4PoolCreated } from './handlers/liquidity'
 import {
   handleAgentTokenAssociated,
   handleAgentTokensDeposited,
@@ -54,8 +49,9 @@ import {
 import { handleTokensWrapped, handleTokensUnwrapped } from './handlers/bridge'
 import { updateGlobalStats, updateDailyStats } from './handlers/stats'
 import { handleTransfer } from './handlers/transfers'
-import { handleTokensWithdrawn } from './handlers/withdrawals'
-import { handlePairingConfigUpdated, handleStakingRewardsSet } from './handlers/config'
+import { handleTokensClaimed } from './handlers/withdrawals'
+import { handlePairingConfigUpdated } from './handlers/config'
+import { handleGraduated, handleTokensDistributed } from './handlers/graduation'
 
 
 // Log startup information
@@ -152,31 +148,33 @@ processor.run(new TypeormDatabase({ supportHotBlocks: true }), async (ctx) => {
               await handleMetadataUpdated(ctx, log, timestamp, blockNumber)
               break
               
-            case factoryAbi.events.LiquidityPairCreated.topic:
-              ctx.log.info('Processing LiquidityPairCreated event')
-              await handleLiquidityPairCreated(ctx, log)
-              const liquidityEvent = factoryAbi.events.LiquidityPairCreated.decode(log)
-              personasToUpdate.add(liquidityEvent.tokenId.toString())
+            case factoryAbi.events.V4PoolCreated.topic:
+              ctx.log.info('Processing V4PoolCreated event')
+              await handleV4PoolCreated(ctx, log)
+              const v4PoolEvent = factoryAbi.events.V4PoolCreated.decode(log)
+              personasToUpdate.add(v4PoolEvent.tokenId.toString())
               break
-              
-            case factoryAbi.events.TradingFeesCollected.topic:
-              ctx.log.info('Processing TradingFeesCollected event')
-              await handleTradingFeesCollected(ctx, log)
+
+            case factoryAbi.events.FeesCollected.topic:
+              ctx.log.info('Processing FeesCollected event')
+              await handleFeesCollected(ctx, log)
               break
-              
-            case factoryAbi.events.FeeReductionConfigUpdated.topic:
-              ctx.log.info('Processing FeeReductionConfigUpdated event')
-              await handleFeeReductionConfigUpdated(ctx, log, timestamp)
+
+            case factoryAbi.events.Graduated.topic:
+              ctx.log.info('Processing Graduated event')
+              await handleGraduated(ctx, log, timestamp, blockNumber)
+              const graduatedEvent = factoryAbi.events.Graduated.decode(log)
+              personasToUpdate.add(graduatedEvent.tokenId.toString())
               break
-              
-            case factoryAbi.events.TradingFeeConfigUpdated.topic:
-              ctx.log.info('Processing TradingFeeConfigUpdated event')
-              await handleTradingFeeConfigUpdated(ctx, log, timestamp)
+
+            case factoryAbi.events.TokensClaimed.topic:
+              ctx.log.info('Processing TokensClaimed event')
+              await handleTokensClaimed(ctx, log, timestamp, blockNumber)
               break
-              
-            case factoryAbi.events.SnapshotUpdated.topic:
-              ctx.log.info('Processing SnapshotUpdated event')
-              await handleSnapshotUpdated(ctx, log, timestamp)
+
+            case factoryAbi.events.TokensDistributed.topic:
+              ctx.log.info('Processing TokensDistributed event')
+              await handleTokensDistributed(ctx, log, timestamp, blockNumber)
               break
               
             case factoryAbi.events.AgentTokenAssociated.topic:
@@ -198,20 +196,10 @@ processor.run(new TypeormDatabase({ supportHotBlocks: true }), async (ctx) => {
               ctx.log.info('Processing AgentRewardsDistributed event')
               await handleAgentRewardsDistributed(ctx, log, timestamp, blockNumber)
               break
-              
-            case factoryAbi.events.TokensWithdrawn.topic:
-              ctx.log.info('Processing TokensWithdrawn event')
-              await handleTokensWithdrawn(ctx, log, timestamp, blockNumber)
-              break
 
             case factoryAbi.events.PairingConfigUpdated.topic:
               ctx.log.info('Processing PairingConfigUpdated event')
               await handlePairingConfigUpdated(ctx, log, timestamp)
-              break
-
-            case factoryAbi.events.StakingRewardsSet.topic:
-              ctx.log.info('Processing StakingRewardsSet event')
-              await handleStakingRewardsSet(ctx, log)
               break
               
             default:

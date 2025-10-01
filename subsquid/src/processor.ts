@@ -65,20 +65,18 @@ export const processor = new EvmBatchProcessor()
       factoryAbi.events.PersonaCreated.topic,
       factoryAbi.events.Transfer.topic,
       factoryAbi.events.TokensPurchased.topic,
-      factoryAbi.events.TokensSold.topic,  // This was missing
+      factoryAbi.events.TokensSold.topic,
       factoryAbi.events.MetadataUpdated.topic,
-      factoryAbi.events.LiquidityPairCreated.topic,
-      factoryAbi.events.TradingFeesCollected.topic,
-      factoryAbi.events.FeeReductionConfigUpdated.topic,
-      factoryAbi.events.TradingFeeConfigUpdated.topic,
-      factoryAbi.events.SnapshotUpdated.topic,
+      factoryAbi.events.V4PoolCreated.topic,  // Renamed from LiquidityPairCreated
+      factoryAbi.events.FeesCollected.topic,  // Renamed from TradingFeesCollected
+      factoryAbi.events.Graduated.topic,  // New event
+      factoryAbi.events.TokensClaimed.topic,  // New event
+      factoryAbi.events.TokensDistributed.topic,  // New event
       factoryAbi.events.AgentTokenAssociated.topic,
       factoryAbi.events.AgentTokensDeposited.topic,
       factoryAbi.events.AgentTokensWithdrawn.topic,
       factoryAbi.events.AgentRewardsDistributed.topic,
       factoryAbi.events.PairingConfigUpdated.topic,
-      factoryAbi.events.StakingRewardsSet.topic,
-      factoryAbi.events.TokensWithdrawn.topic,
     ]
   })
   // StakingRewards events
@@ -102,20 +100,12 @@ export const processor = new EvmBatchProcessor()
       bridgeAbi.events.TokensUnwrapped.topic,
     ]
   })
-  // AmicaToken events (for deposits)
-  .addLog({
-    address: [DEPLOYMENT.addresses.amicaToken],
-    topic0: [
-      amicaAbi.events.TokensDeposited.topic,
-    ]
-  })
 
 // Log event topic registration
 console.log('Registered event topics:')
 console.log('- PersonaFactory:', Object.keys(factoryAbi.events).length, 'events')
 console.log('- StakingRewards:', Object.keys(stakingAbi.events).length, 'events')
 console.log('- BridgeWrapper:', Object.keys(bridgeAbi.events).length, 'events')
-console.log('- AmicaToken: TokensDeposited event')
 
 export type Fields = EvmBatchProcessorFields<typeof processor>
 export type Context = DataHandlerContext<Store, Fields>

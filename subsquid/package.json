@@ -9,12 +9,14 @@
     "db:migrate:create": "npx squid-typeorm-migration generate",
     "db:reset": "docker compose down && docker compose up -d db && sleep 5 && npm run db:migrate",
     "codegen": "npx squid-typeorm-codegen",
-    "typegen": "npx squid-evm-typegen src/abi/*.json --multicall",
+    "typegen": "npx squid-evm-typegen src/abi src/abi/PersonaTokenFactory.json src/abi/AmicaToken.json src/abi/AmicaBridgeWrapper.json --multicall",
     "processor:start": "node -r dotenv/config lib/main.js",
     "serve": "npx squid-graphql-server",
     "serve:prod": "npx squid-graphql-server --production",
     "check-updates": "npx npm-check-updates --filter /subsquid/",
-    "bump": "npx npm-check-updates --filter /subsquid/ -u && npm i -f"
+    "bump": "npx npm-check-updates --filter /subsquid/ -u && npm i -f",
+    "test:local": "./test-local.sh test",
+    "test:validate": "node scripts/validate-indexing.js"
   },
   "dependencies": {
     "@subsquid/archive-registry": "^3.3.2",

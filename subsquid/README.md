@@ -185,13 +185,51 @@ query {
 4. Add any new entities to schema.graphql
 5. Regenerate models: `npm run codegen`
 
-### Testing locally:
-```bash
-# Reset database and start fresh
-npm run db:reset
+### Testing Locally
 
-# Start processor with verbose logging
-DEBUG=* npm run processor:start
+For comprehensive local testing, see [TESTING.md](./TESTING.md).
+
+Quick commands:
+```bash
+# Start database and prepare for indexing
+./test-local.sh start
+
+# Run processor in test mode
+npm run test:local
+
+# Validate that indexing is working
+npm run test:validate
+
+# Start full stack (db + processor + graphql)
+./test-local.sh full
+
+# Test GraphQL queries
+./test-local.sh query
+
+# Reset database
+./test-local.sh reset
+```
+
+### Updating Contract ABIs
+
+When contracts are updated:
+```bash
+# 1. Build contracts (from contracts directory)
+cd ../contracts && forge build
+
+# 2. Copy new ABIs to subsquid
+cd ../subsquid
+cp ../contracts/out/PersonaTokenFactory.sol/PersonaTokenFactory.json src/abi/
+cp ../contracts/out/AmicaToken.sol/AmicaToken.json src/abi/
+cp ../contracts/out/AmicaBridgeWrapper.sol/AmicaBridgeWrapper.json src/abi/
+
+# 3. Regenerate TypeScript types
+npm run typegen
+
+# 4. Update handlers as needed for new/changed events
+
+# 5. Rebuild
+npm run build
 ```
 
 ## Deployment

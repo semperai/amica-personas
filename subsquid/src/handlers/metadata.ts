@@ -23,17 +23,20 @@ export async function handleMetadataUpdated(
   const contract = new factoryAbi.Contract(ctx, log.block, DEPLOYMENT.addresses.personaFactory)
   
   try {
-    // Use getMetadataValue to get a single metadata value
-    const value = await contract.getMetadataValue(event.tokenId, event.key)
-    
-    const metadataId = `${personaId}-${event.key}`
+    // Use metadata() method with bytes32 key
+    const value = await contract.metadata(event.tokenId, event.key)
+
+    // Convert bytes32 key to string for storage
+    const keyString = event.key
+
+    const metadataId = `${personaId}-${keyString}`
     let metadata = await ctx.store.get(PersonaMetadata, metadataId)
     
     if (!metadata) {
       metadata = new PersonaMetadata({
         id: metadataId,
         persona,
-        key: event.key,
+        key: keyString,
         value: value || '',
         updatedAt: timestamp,
         updatedAtBlock: blockNumber,
@@ -43,10 +46,10 @@ export async function handleMetadataUpdated(
       metadata.updatedAt = timestamp
       metadata.updatedAtBlock = blockNumber
     }
-    
+
     await ctx.store.save(metadata)
-    
-    ctx.log.info(`Updated metadata for persona ${personaId}: ${event.key} = ${value}`)
+
+    ctx.log.info(`Updated metadata for persona ${personaId}: ${keyString} = ${value}`)
   } catch (error) {
     ctx.log.error(`Failed to fetch metadata value for ${personaId}/${event.key}: ${error}`)
   }

@@ -110,31 +110,33 @@ export async function handleAgentRewardsDistributed(
   timestamp: Date,
   blockNumber: bigint
 ) {
+  // New event structure: AgentRewardsDistributed(uint256 tokenId, address recipient, uint256 personaTokens)
+  // Note: agentShare field has been removed
   const event = factoryAbi.events.AgentRewardsDistributed.decode(log)
-  
+
   const personaId = event.tokenId.toString()
   const persona = await ctx.store.get(Persona, personaId)
-  
+
   if (!persona) {
     ctx.log.error(`Persona not found: ${personaId}`)
     return
   }
-  
+
   const rewardId = `${log.transactionHash}-${log.logIndex}`
-  
+
   const reward = new AgentReward({
     id: rewardId,
     persona,
     user: event.recipient.toLowerCase(),
     personaTokensReceived: event.personaTokens,
-    agentTokenAmount: event.agentShare,
+    agentTokenAmount: 0n, // This field is no longer in the event
     timestamp,
     block: blockNumber,
     txHash: log.transactionHash,
   })
-  
+
   await ctx.store.insert(reward)
-  
+
   // Mark deposits as claimed
   const deposits = await ctx.store.find(AgentDeposit, {
     where: {
@@ -143,11 +145,11 @@ export async function handleAgentRewardsDistributed(
       rewardsClaimed: false
     }
   })
-  
+
   for (const deposit of deposits) {
     deposit.rewardsClaimed = true
     await ctx.store.save(deposit)
   }
-  
-  ctx.log.info(`Agent rewards distributed: ${event.personaTokens} tokens to ${event.recipient}`)
+
+  ctx.log.info(`Agent rewards distributed: ${event.personaTokens} persona tokens to ${event.recipient}`)
 }

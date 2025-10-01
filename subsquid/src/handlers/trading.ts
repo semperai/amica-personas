@@ -105,66 +105,29 @@ export async function handleTokensSold(
   return trade
 }
 
-export async function handleTradingFeesCollected(
+export async function handleFeesCollected(
   ctx: Context,
   log: Log
 ) {
-  const event = factoryAbi.events.TradingFeesCollected.decode(log)
-  
-  // Find the trade that corresponds to this fee event
-  // The TradingFeesCollected event should be emitted in the same transaction
-  // as either TokensPurchased or TokensSold, and should have a lower log index
-  
-  // First, try to find trades in the same transaction
-  const trades = await ctx.store.find(Trade, {
-    where: { 
-      txHash: log.transactionHash,
-      persona: { tokenId: event.tokenId }
-    },
-    order: { id: 'ASC' }
-  })
-  
-  if (trades.length === 0) {
-    ctx.log.warn(`No trades found for fees in tx ${log.transactionHash} for persona ${event.tokenId}`)
+  // New event: FeesCollected(uint256 tokenId, bytes32 poolId, uint256 amount0, uint256 amount1)
+  const event = factoryAbi.events.FeesCollected.decode(log)
+
+  ctx.log.info(`Fees collected for token ${event.tokenId}, pool ${event.poolId}`)
+  ctx.log.debug(`  - Amount0: ${event.amount0}`)
+  ctx.log.debug(`  - Amount1: ${event.amount1}`)
+
+  // This event is now for V4 pool fee collection, not trading fees
+  // You may want to create a new entity to track these fees or update persona stats
+
+  const personaId = event.tokenId.toString()
+  const persona = await ctx.store.get(Persona, personaId)
+
+  if (!persona) {
+    ctx.log.error(`Persona not found: ${personaId}`)
     return
   }
-  
-  // Find the trade that doesn't have fees set yet
-  // The fee event should come after the trade event in the same transaction
-  let targetTrade: Trade | null = null
-  
-  for (const trade of trades) {
-    // Extract log index from trade ID (format: txHash-logIndex)
-    const tradeLogIndex = parseInt(trade.id.split('-')[1])
-    
-    // The fee event should have a higher log index than the trade event
-    if (tradeLogIndex < log.logIndex && trade.feeAmount === 0n) {
-      targetTrade = trade
-      break
-    }
-  }
-  
-  if (targetTrade) {
-    targetTrade.feeAmount = event.totalFees
-    await ctx.store.save(targetTrade)
-    
-    const tradeType = targetTrade.isBuy ? 'Buy' : 'Sell'
-    ctx.log.info(`Updated ${tradeType} trade ${targetTrade.id} with fees: ${event.totalFees}`)
-    ctx.log.debug(`  - Creator fees: ${event.creatorFees}`)
-    ctx.log.debug(`  - Amica fees: ${event.amicaFees}`)
-    ctx.log.debug(`  - Total fees: ${event.totalFees}`)
-  } else {
-    // This might happen if events are processed out of order
-    // or if there are multiple trades in the same transaction
-    ctx.log.warn(`Could not match fee event to a specific trade in tx ${log.transactionHash}`)
-    ctx.log.warn(`Found ${trades.length} trades, but none matched the fee event criteria`)
-    
-    // As a fallback, update the most recent trade without fees
-    const unfeeTrade = trades.find(t => t.feeAmount === 0n)
-    if (unfeeTrade) {
-      unfeeTrade.feeAmount = event.totalFees
-      await ctx.store.save(unfeeTrade)
-      ctx.log.info(`Fallback: Updated trade ${unfeeTrade.id} with fees: ${event.totalFees}`)
-    }
-  }
+
+  // The fees are now collected from the V4 pool after graduation
+  // This is different from the old trading fees during bonding curve phase
+  ctx.log.info(`V4 pool fees collected for persona ${personaId}: ${event.amount0} (token0), ${event.amount1} (token1)`)
 }
