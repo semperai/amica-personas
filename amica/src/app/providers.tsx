@@ -1,9 +1,7 @@
+'use client';
+
 import '@/i18n';
 
-import '@rainbow-me/rainbowkit/styles.css';
-import "@/styles/globals.css";
-import "@charcoal-ui/icons";
-import type { AppProps } from "next/app";
 import {
   getDefaultConfig,
   RainbowKitProvider,
@@ -19,17 +17,17 @@ const config = getDefaultConfig({
   appName: 'arbius.heyamica.com',
   projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
   chains: [arbitrum],
-  ssr: true, // If your dApp uses server side rendering (SSR)
+  ssr: true,
 });
 
 const queryClient = new QueryClient();
 
-export default function App({ Component, pageProps }: AppProps) {
+export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider>
-          <Component {...pageProps} />
+          {children}
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>

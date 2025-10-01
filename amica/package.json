@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "npm run generate:paths && npm run build:workers && next dev",
+    "dev": "npm run generate:paths && npm run build:workers && next dev --turbo",
     "build": "npm run generate:paths && npm run build:workers && next build",
     "build:workers": "npm run build:worker:generateMeshBVH",
     "build:worker:generateMeshBVH": "esbuild src/workers/bvh/generateMeshBVH.worker.js --bundle --minify --sourcemap --outfile=public/generateMeshBVH.worker.js",

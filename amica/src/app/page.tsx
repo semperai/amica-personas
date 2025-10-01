@@ -1,3 +1,5 @@
+'use client';
+
 import {
   Fragment,
   useContext,
@@ -156,21 +158,21 @@ export default function Home() {
   }
 
   const toggleState = (
-    setFunc: React.Dispatch<React.SetStateAction<boolean>>, 
+    setFunc: React.Dispatch<React.SetStateAction<boolean>>,
     deps: React.Dispatch<React.SetStateAction<boolean>>[],
   ) => {
     setFunc(prev => {
       if (!prev) {
         deps.forEach(dep => dep(false));
-      } 
+      }
       return !prev;
     });
   };
-  
+
   const toggleChatLog = () => {
     toggleState(setShowChatLog, [setShowChatMode]);
   };
-  
+
   const toggleChatMode = () => {
     toggleState(setShowChatMode, [setShowChatLog]);
   };
@@ -291,7 +293,7 @@ export default function Home() {
           />
         )}
       </VrmStoreProvider>
-      
+
       <MessageInputContainer isChatProcessing={chatProcessing} />
 
       {/* main menu */}
@@ -412,7 +414,7 @@ export default function Home() {
             )}
             */}
           </div>
-        </div>    
+        </div>
       </div>
 
       {/*
