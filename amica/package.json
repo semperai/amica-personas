@@ -56,6 +56,7 @@
   },
   "devDependencies": {
     "@gltf-transform/core": "^4.2.1",
+    "@playwright/test": "^1.55.1",
     "@swc/jest": "^0.2.37",
     "@types/dom-speech-recognition": "^0.0.6",
     "@types/file-saver": "^2.0.7",
