@@ -2,8 +2,7 @@ import { useCallback, useContext, useState, useRef, useEffect } from "react";
 import Webcam from "react-webcam";
 import { useKeyboardShortcut } from "@/hooks/useKeyboardShortcut";
 import { ChatContext } from "@/features/chat/chatContext";
-import { IconButton } from "./iconButton";
-import { ArrowPathIcon } from "@heroicons/react/24/outline";
+import { Upload, Camera, RefreshCw, X } from "lucide-react";
 import { clsx } from "clsx";
 
 export function EmbeddedWebcam({
@@ -96,9 +95,18 @@ export function EmbeddedWebcam({
   };
 
   return (
-    <div className="fixed right-[calc(320px)] top-0 z-[11]">
-      <div className="fixed">
-        <>
+    <div className="fixed right-2 top-2 z-[11]">
+      <div className="bg-white/80 backdrop-blur-xl border border-white/30 rounded-lg shadow-lg overflow-hidden">
+        {/* Close button */}
+        <button
+          onClick={() => setWebcamEnabled(false)}
+          className="absolute top-2 right-2 z-20 p-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-900 text-white transition-colors cursor-pointer"
+        >
+          <X className="h-4 w-4" />
+        </button>
+
+        {/* Video/Image */}
+        <div className="relative">
           {!cameraDisabled && (
             <Webcam
               ref={webcamRef}
@@ -109,10 +117,7 @@ export function EmbeddedWebcam({
               videoConstraints={{
                 facingMode,
               }}
-              className={clsx(
-                "rounded-bl-none rounded-br-none rounded-lg bg-black",
-                cameraDisabled && "animate-pulse"
-              )}
+              className="block"
             />
           )}
           {cameraDisabled && (
@@ -123,36 +128,41 @@ export function EmbeddedWebcam({
               width={320}
               height={240}
               className={clsx(
-                "rounded-bl-none rounded-br-none rounded-lg bg-black",
-                cameraDisabled && "animate-pulse",
+                "block",
+                cameraDisabled && "animate-pulse"
               )}
             />
           )}
-          <div className="p-1 shadow-md flex flex-auto justify-evenly bg-gray-50 rounded-tl-none rounded-tr-none rounded-full">
-            <IconButton
-              iconName="24/UploadAlt"
-              isProcessing={false}
-              className="bg-secondary hover:bg-secondary-hover active:bg-secondary-active"
-              onClick={handleClickOpenImgFile}
-              disabled={cameraDisabled}
-            />
-            <IconButton
-              iconName="24/Shutter"
-              isProcessing={false}
-              className="bg-secondary hover:bg-secondary-hover active:bg-secondary-active"
-              onClick={() => capture()}
-              disabled={cameraDisabled}
-            />
+        </div>
 
-            <button className="pr-2 rounded-lg text-sm p-1 text-center inline-flex items-center">
-              <ArrowPathIcon
-                className="w-5 h-5 text-gray-700 focus:animate-spin"
-                onClick={toggleFacingMode}
-              />
-            </button>
-          </div>
-        </>
+        {/* Controls */}
+        <div className="flex items-center justify-center gap-2 p-2 bg-white/50 backdrop-blur-xl border-t border-white/30">
+          <button
+            onClick={handleClickOpenImgFile}
+            disabled={cameraDisabled}
+            className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors text-slate-900"
+          >
+            <Upload className="h-5 w-5" />
+          </button>
+
+          <button
+            onClick={() => capture()}
+            disabled={cameraDisabled}
+            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors text-white"
+          >
+            <Camera className="h-5 w-5" />
+          </button>
+
+          <button
+            onClick={toggleFacingMode}
+            disabled={cameraDisabled}
+            className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors text-slate-900"
+          >
+            <RefreshCw className="h-5 w-5" />
+          </button>
+        </div>
       </div>
+
       <input
         type="file"
         className="hidden"
@@ -161,6 +171,5 @@ export function EmbeddedWebcam({
         onChange={handleChangeImgFile}
       />
     </div>
-
   );
 }
