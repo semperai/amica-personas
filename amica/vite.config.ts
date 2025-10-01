@@ -1,0 +1,65 @@
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+import { viteStaticCopy } from 'vite-plugin-static-copy';
+
+// https://vitejs.dev/config/
+export default defineConfig({
+  plugins: [
+    react(),
+    viteStaticCopy({
+      targets: [
+        {
+          src: 'node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm',
+          dest: 'assets',
+        },
+        {
+          src: 'node_modules/onnxruntime-web/dist/ort-wasm-threaded.wasm',
+          dest: 'assets',
+        },
+        {
+          src: 'node_modules/onnxruntime-web/dist/ort-wasm.wasm',
+          dest: 'assets',
+        },
+        {
+          src: 'node_modules/onnxruntime-web/dist/ort-wasm-simd.wasm',
+          dest: 'assets',
+        },
+        {
+          src: 'node_modules/@ricky0123/vad-web/dist/vad.worklet.bundle.min.js',
+          dest: 'assets',
+        },
+        {
+          src: 'node_modules/@ricky0123/vad-web/dist/*.onnx',
+          dest: 'assets',
+        },
+      ],
+    }),
+  ],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+  base: process.env.BASE_PATH || '/',
+  define: {
+    'import.meta.env.VITE_CONFIG_BUILD_ID': JSON.stringify(Date.now().toString()),
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: true,
+    rollupOptions: {
+      external: ['sharp', 'onnxruntime-node'],
+    },
+  },
+  server: {
+    port: 3000,
+  },
+  optimizeDeps: {
+    exclude: ['sharp', 'onnxruntime-node'],
+  },
+  worker: {
+    format: 'es',
+  },
+});

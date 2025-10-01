@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { GLTF, GLTFLoader, GLTFParser } from 'three/examples/jsm/loaders/GLTFLoader';
-import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader';
+import { GLTF, GLTFLoader, GLTFParser } from 'three/addons/loaders/GLTFLoader';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader';
 
 // Type for the extension callback
 type ExtensionCallback = (parser: GLTFParser) => Promise<void> | void;

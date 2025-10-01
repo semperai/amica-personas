@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader";
 // @ts-ignore
 import * as GaussianSplats3D from '@mkkellogg/gaussian-splats-3d';
 import { downscaleModelTextures, logTextureInfo } from '@/utils/textureDownscaler';

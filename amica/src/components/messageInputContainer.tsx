@@ -1,11 +1,8 @@
-import dynamic from "next/dynamic";
-import { useCallback, useEffect, useState } from "react";
+import { lazy, useCallback, useEffect, useState, Suspense } from "react";
 
 // necessary because of VAD in MessageInput
-const DynamicMessageInput = dynamic(() =>
-  import("@/components/messageInput"), {
-    ssr: false
-  }
+const DynamicMessageInput = lazy(() =>
+  import("@/components/messageInput")
 );
 
 /**
@@ -28,11 +25,13 @@ export const MessageInputContainer = ({
   }, [isChatProcessing]);
 
   return (
-    <DynamicMessageInput
-      userMessage={userMessage}
-      setUserMessage={setUserMessage}
-      isChatProcessing={isChatProcessing}
-      onChangeUserMessage={(e) => setUserMessage(e.target.value)}
-    />
+    <Suspense fallback={<div />}>
+      <DynamicMessageInput
+        userMessage={userMessage}
+        setUserMessage={setUserMessage}
+        isChatProcessing={isChatProcessing}
+        onChangeUserMessage={(e) => setUserMessage(e.target.value)}
+      />
+    </Suspense>
   );
 };

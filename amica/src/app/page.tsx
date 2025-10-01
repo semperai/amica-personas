@@ -1,12 +1,9 @@
-'use client';
-
 import {
   Fragment,
   useContext,
   useEffect,
   useState,
 } from "react";
-import Link from "next/link";
 import { Menu, Transition } from '@headlessui/react'
 import { clsx } from "clsx";
 import {

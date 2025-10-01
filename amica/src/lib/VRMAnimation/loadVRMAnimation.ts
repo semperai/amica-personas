@@ -1,4 +1,4 @@
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader';
 import { VRMAnimation } from './VRMAnimation';
 import { VRMAnimationLoaderPlugin } from './VRMAnimationLoaderPlugin';
 

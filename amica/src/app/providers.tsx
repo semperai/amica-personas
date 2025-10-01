@@ -1,5 +1,3 @@
-'use client';
-
 import {
   getDefaultConfig,
   RainbowKitProvider,
@@ -13,9 +11,9 @@ import {
 
 const config = getDefaultConfig({
   appName: 'arbius.heyamica.com',
-  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
+  projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID!,
   chains: [arbitrum],
-  ssr: true,
+  ssr: false,
 });
 
 const queryClient = new QueryClient();
