@@ -2,7 +2,7 @@ import { FC, useEffect, useRef } from "react";
 import { useServerText } from "@/features/moshi/hooks/useServerText";
 
 type TextDisplayProps = {
-  containerRef: React.RefObject<HTMLDivElement>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
 };
 
 export const TextDisplay:FC<TextDisplayProps> = ({

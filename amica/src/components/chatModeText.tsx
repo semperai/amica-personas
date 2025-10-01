@@ -16,7 +16,7 @@ export const ChatModeText = ({ messages }: { messages: Message[] }) => {
     }, [messages]);
 
     return (
-        <div className="fixed bottom-0 w-full h-[90%] mb-20 flex flex-col justify-end">
+        <div className="fixed bottom-0 w-full h-[90%] mb-20 flex flex-col justify-end z-50">
             <div className="w-full h-full overflow-y-auto flex flex-col-reverse">
 
                 <div className="w-full max-w-full mx-auto px-4 md:px-16 flex flex-col">

@@ -147,7 +147,7 @@ class GLTFAnalyzer {
   private getTextureFormat(texture: THREE.Texture): string {
     if (texture.format === THREE.RGBAFormat) return 'RGBA';
     if (texture.format === THREE.RGBFormat) return 'RGB';
-    if (texture.format === THREE.LuminanceFormat) return 'Luminance';
+    if (texture.format === THREE.RedFormat) return 'Red';
     return 'Unknown';
   }
 

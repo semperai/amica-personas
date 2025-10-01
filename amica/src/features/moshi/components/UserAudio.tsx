@@ -4,7 +4,7 @@ import { useUserAudio } from "@/features/moshi/hooks/useUserAudio";
 import { ClientVisualizer } from "@/features/moshi/components/ClientVisualizer";
 
 type UserAudioProps = {
-  copyCanvasRef: React.RefObject<HTMLCanvasElement>;
+  copyCanvasRef: React.RefObject<HTMLCanvasElement | null>;
 };
 export const UserAudio: FC<UserAudioProps> = ({copyCanvasRef}) => {
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);

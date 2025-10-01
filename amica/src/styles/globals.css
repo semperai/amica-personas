@@ -1,6 +1,20 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #856292;
+  --color-primary-hover: #8E76A1;
+  --color-primary-press: #988BB0;
+  --color-primary-disabled: #6F48694D;
+  --color-secondary: #FF617F;
+  --color-secondary-hover: #FF849B;
+  --color-secondary-press: #FF9EB1;
+  --color-secondary-disabled: #FF617F4D;
+  --color-base: #FBE2CA;
+  --color-text-primary: #514062;
+
+  --font-family-m-plus-2: Montserrat, M_PLUS_2, sans-serif;
+  --font-family-montserrat: Montserrat, sans-serif;
+}
 
 body {
   background-position: top center;
@@ -9,13 +23,11 @@ body {
   background-repeat: no-repeat;
 }
 
-@layer utilities {
-  .scroll-hidden {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
+@utility scroll-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 
-  .scroll-hidden::-webkit-scrollbar {
+  &::-webkit-scrollbar {
     display: none;
   }
 }

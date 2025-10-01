@@ -15,6 +15,7 @@ export class LipSync {
   }
 
   public update(): LipSyncAnalyzeResult {
+    // @ts-expect-error - TypeScript strict type check for ArrayBuffer vs ArrayBufferLike
     this.analyser.getFloatTimeDomainData(this.timeDomainData);
 
     let volume = 0.0;

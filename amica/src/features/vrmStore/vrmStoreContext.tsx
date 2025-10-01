@@ -1,4 +1,4 @@
-import { Dispatch, PropsWithChildren, SetStateAction, createContext, useContext, useEffect, useReducer, useState } from "react";
+import { Dispatch, PropsWithChildren, ReactElement, SetStateAction, createContext, useContext, useEffect, useReducer, useState } from "react";
 import { VrmData } from "./vrmData";
 import { vrmList } from "@/paths";
 import { thumbPrefix } from "@/components/settings/common";
@@ -25,7 +25,7 @@ export const VrmStoreContext = createContext<VrmStoreContextType>({
     isLoadingVrmList: false, setIsLoadingVrmList: () => {}
 });
 
-export const VrmStoreProvider = ({ children }: PropsWithChildren<{}>): JSX.Element => {
+export const VrmStoreProvider = ({ children }: PropsWithChildren<{}>): ReactElement => {
     const [isLoadingVrmList, setIsLoadingVrmList] = useState(true);
     const [loadedVrmList, vrmListDispatch] = useReducer(vrmStoreReducer, vrmInitList);
     const vrmListAddFile = (file: File, viewer: Viewer) => {

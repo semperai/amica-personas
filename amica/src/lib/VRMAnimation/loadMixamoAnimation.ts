@@ -23,7 +23,11 @@ export function loadMixamoAnimation(url: string, vrm: VRM) {
     const _vec3 = new THREE.Vector3();
 
     // Adjust with reference to hips height.
-    // TODO check for null
+    // Check for null clip
+    if (!clip) {
+      throw new Error('Animation clip not found');
+    }
+
     const vrmHipsY = 0; // vrm.humanoid?.getNormalizedBoneNode('hips')!.getWorldPosition(_vec3).y;
     const vrmRootY = 0; // vrm.scene.getWorldPosition(_vec3).y;
     const vrmHipsHeight = 0; // Math.abs(vrmHipsY - vrmRootY);

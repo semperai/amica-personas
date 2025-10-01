@@ -4,7 +4,7 @@ import { ServerVisualizer } from "@/features/moshi/components/ServerVisualizer";
 
 type ServerAudioProps = {
   setGetAudioStats: (getAudioStats: () => AudioStats) => void;
-  copyCanvasRef?: React.RefObject<HTMLCanvasElement>;
+  copyCanvasRef?: React.RefObject<HTMLCanvasElement | null>;
 };
 export const ServerAudio: FC<ServerAudioProps> = ({ setGetAudioStats,copyCanvasRef }) => {
   const { analyser, hasCriticalDelay, setHasCriticalDelay } = useServerAudio({

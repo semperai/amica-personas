@@ -71,7 +71,7 @@ export async function speecht5(
   let wav = new WaveFile();
   wav.fromScratch(1, 16000, '32f', (<any>window).chatvrm_worker_speecht5_audiocache);
   const wavBuffer = wav.toBuffer();
-  const wavBlob = new Blob([wavBuffer], { type: 'audio/wav' });
+  const wavBlob = new Blob([new Uint8Array(wavBuffer)], { type: 'audio/wav' });
   const arrayBuffer = await wavBlob.arrayBuffer();
 
   return { audio: arrayBuffer };

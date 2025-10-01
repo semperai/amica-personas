@@ -87,7 +87,7 @@ export default function VrmViewer({ chatMode }: { chatMode: boolean }) {
   return (
     <div
       className={clsx(
-        "z-1 fixed left-0 top-0 h-full w-full",
+        "z-0 fixed left-0 top-0 h-full w-full",
         chatMode ? "left-[65%] top-[50%]" : "left-0 top-0",
       )}>
       <canvas ref={canvasRef} className={"h-full w-full"}></canvas>

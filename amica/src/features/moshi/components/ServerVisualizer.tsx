@@ -4,8 +4,8 @@ import { useSocketContext } from "@/features/moshi/hooks/SocketContext";
 
 type AudioVisualizerProps = {
   analyser: AnalyserNode | null;
-  parent: RefObject<HTMLElement>;
-  copyCanvasRef?: RefObject<HTMLCanvasElement>;
+  parent: RefObject<HTMLElement | null>;
+  copyCanvasRef?: RefObject<HTMLCanvasElement | null>;
 };
 
 const MAX_INTENSITY = 255;

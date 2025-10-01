@@ -1,4 +1,5 @@
 import { t } from '@/i18n';
+import { ReactElement } from 'react';
 
 import {
   AdjustmentsHorizontalIcon,
@@ -108,7 +109,7 @@ export function hashCode(str: string): string {
 export type Link = {
   key: string;
   label: string;
-  icon?: JSX.Element;
+  icon?: ReactElement;
   className?: string;
 }
 
@@ -135,7 +136,7 @@ export type PageProps = {
   setBreadcrumbs: (breadcrumbs: Link[]) => void;
 }
 
-export function getIconFromPage(page: string): JSX.Element {
+export function getIconFromPage(page: string): ReactElement {
   switch(page) {
     case 'appearance':          return <FaceSmileIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
     case 'chatbot':             return <ChatBubbleOvalLeftEllipsisIcon className="h-5 w-5 flex-none text-gray-800" aria-hidden="true" />;
