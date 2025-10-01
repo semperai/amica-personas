@@ -1,4 +1,4 @@
-import { useQuery } from '@apollo/client';
+import { useQuery } from '@apollo/client/react';
 import { formatEther } from 'viem';
 import { GET_USER_PORTFOLIO } from '@/lib/graphql/client';
 
@@ -19,6 +19,11 @@ interface Trade {
   txHash: string;
 }
 
+// GraphQL query result type
+interface UserPortfolioQueryResult {
+  userTrades?: Trade[];
+}
+
 // Extract chain info from persona ID
 const extractChainFromId = (id: string) => {
   const [chainId] = id.split('-');
@@ -34,7 +39,7 @@ const extractChainFromId = (id: string) => {
 };
 
 export function TradingHistory({ address }: TradingHistoryProps) {
-  const { data, loading, error } = useQuery(GET_USER_PORTFOLIO, {
+  const { data, loading, error } = useQuery<UserPortfolioQueryResult>(GET_USER_PORTFOLIO, {
     variables: { creator: address.toLowerCase() },
     skip: !address,
     fetchPolicy: 'network-only',

@@ -1,5 +1,6 @@
 // src/components/PersonaMetadata.tsx - Enhanced with new contract features
-import { useQuery, gql } from '@apollo/client';
+import { gql } from '@apollo/client';
+import { useQuery } from '@apollo/client/react';
 import { useReadContract } from 'wagmi';
 import { formatEther } from 'viem';
 import AgentTokenInfo from './AgentTokenInfo';
@@ -7,6 +8,33 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import AmicaLogo from '@/assets/AmicaLogo.png';
+
+// Type definitions for GraphQL query result
+interface PersonaQueryResult {
+  personas?: Array<{
+    id: string;
+    tokenId: string;
+    name: string;
+    symbol: string;
+    creator: string;
+    owner: string;
+    erc20Token: string;
+    pairToken: string;
+    agentToken: string;
+    pairCreated: boolean;
+    pairAddress: string;
+    createdAt: string;
+    createdAtBlock: string;
+    totalDeposited: string;
+    tokensSold: string;
+    graduationThreshold: string;
+    totalAgentDeposited: string;
+    minAgentTokens: string;
+    chainId: number;
+    metadata: Array<{ key: string; value: string; updatedAt?: string }>;
+    transfers: Array<{ id: string; from: string; to: string; timestamp: string; txHash: string }>;
+  }>;
+}
 
 // Enhanced query with new fields from updated schema
 const GET_PERSONA_BY_TOKEN_AND_CHAIN = gql`
@@ -80,10 +108,10 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
   const chainIdNum = parseInt(chainId);
   const tokenIdBigInt = tokenId.replace(/^0+/, '') || '0';
   
-  const { data, loading, error, refetch, networkStatus } = useQuery(GET_PERSONA_BY_TOKEN_AND_CHAIN, {
-    variables: { 
+  const { data, loading, error, refetch, networkStatus } = useQuery<PersonaQueryResult>(GET_PERSONA_BY_TOKEN_AND_CHAIN, {
+    variables: {
       tokenId: tokenIdBigInt,
-      chainId: chainIdNum 
+      chainId: chainIdNum
     },
     skip: !chainId || !tokenId,
     errorPolicy: 'all',
@@ -215,6 +243,11 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
 
   if (error && persona) {
     console.warn('Error fetching persona but showing cached data:', error);
+  }
+
+  // Early return if no persona data (should not happen due to earlier checks)
+  if (!persona) {
+    return null;
   }
 
   const isGraduated = persona.pairCreated;

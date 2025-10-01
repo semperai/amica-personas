@@ -398,7 +398,7 @@ export async function fetchPersonaDetail(chainId: string, tokenId: string): Prom
   try {
     const personaId = `${chainId}-${tokenId}`;
     const result = await executeQuery(async () => {
-      const { data } = await apolloClient.query({
+      const { data } = await apolloClient.query<PersonasQueryResult>({
         query: GET_PERSONA_DETAILS,
         variables: { id: personaId }
       });
@@ -419,13 +419,33 @@ export async function fetchPersonaDetail(chainId: string, tokenId: string): Prom
   }
 }
 
+// Type for persona transfers query
+interface PersonaTransfersQueryResult {
+  personaTransfers?: PersonaTransfer[];
+}
+
+// Type for token withdrawals query
+interface TokenWithdrawalsQueryResult {
+  tokenWithdrawals?: TokenWithdrawalRecord[];
+}
+
+// Type for persona daily stats query
+interface PersonaDailyStatsQueryResult {
+  personaDailyStats?: PersonaDailyStat[];
+}
+
+// Type for global stats query
+interface GlobalStatsQueryResult {
+  globalStats?: GlobalStats | GlobalStats[];
+}
+
 // New function to fetch persona transfer history
 export async function fetchPersonaTransfers(chainId: string, tokenId: string, limit = 10): Promise<PersonaTransfer[]> {
   const tokenIdBigInt = tokenId.replace(/^0+/, '') || '0';
-  
+
   try {
     const result = await executeQuery(async () => {
-      const { data } = await apolloClient.query({
+      const { data } = await apolloClient.query<PersonaTransfersQueryResult>({
         query: gql`
           query GetPersonaTransfers($tokenId: BigInt!, $chainId: Int!, $limit: Int!) {
             personaTransfers(
@@ -484,7 +504,7 @@ export async function fetchTokenWithdrawals(chainId: string, tokenId: string, us
     }
 
     const result = await executeQuery(async () => {
-      const { data } = await apolloClient.query({
+      const { data } = await apolloClient.query<TokenWithdrawalsQueryResult>({
         query: gql`
           query GetTokenWithdrawals($where: TokenWithdrawalWhereInput!, $limit: Int!) {
             tokenWithdrawals(
@@ -529,7 +549,7 @@ export async function fetchVolumeChart(chainId: string, tokenId: string, days = 
   try {
     const personaId = `${chainId}-${tokenId}`;
     const result = await executeQuery(async () => {
-      const { data } = await apolloClient.query({
+      const { data } = await apolloClient.query<PersonaDailyStatsQueryResult>({
         query: gql`
           query GetPersonaDailyStats($personaId: String!, $days: Int!) {
             personaDailyStats(
@@ -1021,7 +1041,7 @@ export async function fetchPersonaTrades(chainId: string, tokenId: string, limit
 export async function fetchGlobalStats(): Promise<GlobalStats | null> {
   try {
     const result = await executeQuery(async () => {
-      const { data } = await apolloClient.query({
+      const { data } = await apolloClient.query<GlobalStatsQueryResult>({
         query: gql`
           query GetGlobalStats {
             globalStats {

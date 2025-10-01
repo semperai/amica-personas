@@ -2,7 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useAccount, useReadContract, useWriteContract, useBalance, useWaitForTransactionReceipt } from 'wagmi';
 import { formatEther, formatUnits, parseUnits } from 'viem';
-import { useQuery, gql } from '@apollo/client';
+import { gql } from '@apollo/client';
+import { useQuery } from '@apollo/client/react';
 import { FACTORY_ABI, getAddressesForChain } from '../lib/contracts';
 
 interface AgentDepositsProps {
@@ -16,6 +17,25 @@ interface AgentDeposit {
   timestamp: string;
   withdrawn: boolean;
   txHash: string;
+}
+
+// GraphQL query result type
+interface AgentDepositsQueryResult {
+  personas?: Array<{
+    id: string;
+    name: string;
+    symbol: string;
+    agentToken: string;
+    minAgentTokens: string;
+    totalAgentDeposited: string;
+    pairCreated: boolean;
+    agentDeposits: AgentDeposit[];
+  }>;
+  allDeposits?: Array<{
+    id: string;
+    user: string;
+    amount: string;
+  }>;
 }
 
 // Updated query to use BigInt for tokenId
@@ -123,7 +143,7 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
   });
 
   // Query GraphQL for agent deposits
-  const { data: graphqlData, loading: graphqlLoading, refetch: refetchDeposits, error: graphqlError } = useQuery(GET_AGENT_DEPOSITS, {
+  const { data: graphqlData, loading: graphqlLoading, refetch: refetchDeposits, error: graphqlError } = useQuery<AgentDepositsQueryResult>(GET_AGENT_DEPOSITS, {
     variables: {
       tokenId: tokenIdBigInt, // Pass as string representation of BigInt
       chainId: parseInt(chainId),
@@ -158,7 +178,7 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
 
   // Get GraphQL or on-chain data
   const agentToken = graphqlData?.personas?.[0]?.agentToken || personaStruct?.agentToken;
-  const totalAgentDeposited = graphqlData?.personas?.[0]?.totalAgentDeposited 
+  const totalAgentDeposited = graphqlData?.personas?.[0]?.totalAgentDeposited
     ? BigInt(graphqlData.personas[0].totalAgentDeposited)
     : (personaStruct?.totalAgentDeposited || BigInt(0));
 

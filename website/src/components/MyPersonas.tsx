@@ -1,7 +1,7 @@
 // src/components/MyPersonas.tsx
 import { useState } from 'react';
 import Link from 'next/link';
-import { useQuery } from '@apollo/client';
+import { useQuery } from '@apollo/client/react';
 import { formatEther } from 'viem';
 import { GET_USER_PORTFOLIO } from '@/lib/graphql/client';
 import Image from 'next/image';
@@ -19,6 +19,11 @@ interface CreatedPersona {
   totalDeposited: string;
   pairCreated: boolean;
   createdAt: string;
+}
+
+// GraphQL query result type
+interface UserPortfolioQueryResult {
+  createdPersonas?: CreatedPersona[];
 }
 
 // Generate gradient for persona cards
@@ -149,7 +154,7 @@ function PersonaCard({ persona }: PersonaCardProps) {
 }
 
 export function MyPersonas({ address }: MyPersonasProps) {
-  const { data, loading, error } = useQuery(GET_USER_PORTFOLIO, {
+  const { data, loading, error } = useQuery<UserPortfolioQueryResult>(GET_USER_PORTFOLIO, {
     variables: { creator: address.toLowerCase() },
     skip: !address,
     fetchPolicy: 'network-only', // Always fetch fresh data

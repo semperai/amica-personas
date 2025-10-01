@@ -5,7 +5,7 @@
 import { gql } from '@apollo/client';
 import { useParams } from 'next/navigation';
 import { formatEther } from 'viem';
-import { useQuery } from '@apollo/client';
+import { useQuery } from '@apollo/client/react';
 import Layout from '@/components/Layout';
 import PersonaMetadata from '@/components/PersonaMetadata';
 import TradingInterface from '@/components/TradingInterface';
@@ -14,6 +14,36 @@ import AgentDeposits from '@/components/AgentDeposits';
 import PersonaMetadataEditor from '@/components/PersonaMetadataEditor';
 import PersonaTokenBurnAndClaim from '@/components/PersonaTokenBurnAndClaim';
 import Link from 'next/link';
+
+// Type definitions for GraphQL queries
+interface PersonaQueryResult {
+  personas?: Array<{
+    id: string;
+    tokenId: string;
+    name: string;
+    symbol: string;
+    creator: string;
+    owner: string;
+    erc20Token: string;
+    chainId: number;
+    pairCreated: boolean;
+    metadata?: Array<{ key: string; value: string; updatedAt?: string }>;
+  }>;
+}
+
+interface TradesQueryResult {
+  trades?: Array<{
+    id: string;
+    trader: string;
+    amountIn: string;
+    amountOut: string;
+    feeAmount: string;
+    timestamp: string;
+    block: string;
+    txHash: string;
+    chainId: number;
+  }>;
+}
 
 // Updated query to use BigInt for tokenId
 const GET_PERSONA_BY_TOKEN_AND_CHAIN = gql`
@@ -86,7 +116,7 @@ const TradeHistory = ({ chainId, tokenId }: { chainId: string; tokenId: string }
   // Convert tokenId to BigInt string for GraphQL
   const tokenIdBigInt = tokenId.replace(/^0+/, '') || '0';
 
-  const { data, loading, error } = useQuery(GET_PERSONA_TRADES_BY_TOKEN, {
+  const { data, loading, error } = useQuery<TradesQueryResult>(GET_PERSONA_TRADES_BY_TOKEN, {
     variables: {
       tokenId: tokenIdBigInt, // Pass as string representation of BigInt
       chainId: parseInt(chainId),
@@ -227,8 +257,8 @@ const PersonaDetailPage = () => {
   const tokenIdBigInt = tokenIdStr ? tokenIdStr.replace(/^0+/, '') || '0' : '0';
 
   // Query to check if persona exists
-  const { data: graphqlData, loading: isCheckingPersona } = useQuery(GET_PERSONA_BY_TOKEN_AND_CHAIN, {
-    variables: { 
+  const { data: graphqlData, loading: isCheckingPersona } = useQuery<PersonaQueryResult>(GET_PERSONA_BY_TOKEN_AND_CHAIN, {
+    variables: {
       tokenId: tokenIdBigInt, // Pass as string representation of BigInt
       chainId: parseInt(chainIdStr || '0')
     },

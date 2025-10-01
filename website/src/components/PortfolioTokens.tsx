@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useQuery } from '@apollo/client';
+import { useQuery } from '@apollo/client/react';
 import { GET_USER_PORTFOLIO } from '@/lib/graphql/client';
 
 interface TokenBalance {
@@ -17,6 +17,11 @@ interface CreatedPersona {
   symbol: string;
   pairCreated: boolean;
   erc20Token: string;
+}
+
+// GraphQL query result type
+interface UserPortfolioQueryResult {
+  createdPersonas?: CreatedPersona[];
 }
 
 // Helper function for chain extraction
@@ -38,7 +43,7 @@ export function PortfolioTokens({ address }: { address: string }) {
   const [loading, setLoading] = useState(true);
 
   // Query for created personas to show token holdings
-  const { data: portfolioData } = useQuery(GET_USER_PORTFOLIO, {
+  const { data: portfolioData } = useQuery<UserPortfolioQueryResult>(GET_USER_PORTFOLIO, {
     variables: { creator: address.toLowerCase() },
     skip: !address,
   });

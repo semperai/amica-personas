@@ -1,7 +1,8 @@
 // src/components/PriceChart.tsx - Enhanced with buy/sell volume separation
 import { useState } from 'react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { useQuery, gql } from '@apollo/client';
+import { gql } from '@apollo/client';
+import { useQuery } from '@apollo/client/react';
 import { formatEther } from 'viem';
 
 interface PriceChartProps {
@@ -26,6 +27,12 @@ interface Trade {
   amountIn: string;
   trader: string;
   isBuy: boolean;
+}
+
+// GraphQL query result type
+interface PersonaDailyStatsQueryResult {
+  personaDailyStats?: ChartData[];
+  recentTrades?: Trade[];
 }
 
 // Enhanced query with buy/sell separation
@@ -163,7 +170,7 @@ export default function PriceChart({ chainId, tokenId }: PriceChartProps) {
   const tokenIdBigInt = tokenId.replace(/^0+/, '') || '0';
   
   // Fetch data from GraphQL
-  const { data, loading, error } = useQuery(GET_PERSONA_DAILY_STATS, {
+  const { data, loading, error } = useQuery<PersonaDailyStatsQueryResult>(GET_PERSONA_DAILY_STATS, {
     variables: {
       tokenId: tokenIdBigInt,
       chainId: parseInt(chainId),
@@ -510,7 +517,7 @@ export default function PriceChart({ chainId, tokenId }: PriceChartProps) {
               <li>Data is aggregated daily from all trades with buy/sell classification</li>
               <li>Buy trades use pairing tokens to purchase persona tokens</li>
               <li>Sell trades use persona tokens to get pairing tokens back</li>
-              {data?.personaDailyStats?.length === 0 && data?.recentTrades?.length > 0 && (
+              {data?.personaDailyStats?.length === 0 && (data?.recentTrades?.length || 0) > 0 && (
                 <li>Chart generated from recent trade history with buy/sell analysis</li>
               )}
               {isMockMode && <li className="text-purple-400">Using mock data for demonstration</li>}

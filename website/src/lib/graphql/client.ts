@@ -74,8 +74,9 @@ const retryLink = new RetryLink({
     max: 3,
     retryIf: (error) => {
       // Type guard for network error
-      if (error?.networkError) {
-        const networkError = error.networkError as NetworkErrorWithStatus;
+      const apolloError = error as { networkError?: NetworkErrorWithStatus };
+      if (apolloError?.networkError) {
+        const networkError = apolloError.networkError;
         if (networkError.statusCode) {
           return networkError.statusCode >= 500;
         }
@@ -88,7 +89,9 @@ const retryLink = new RetryLink({
 });
 
 // Error handling link
-const errorLink = onError(({ graphQLErrors, networkError }) => {
+const errorLink = onError((errorResponse) => {
+  const graphQLErrors = (errorResponse as { graphQLErrors?: readonly GraphQLErrorDetail[] }).graphQLErrors;
+  const networkError = (errorResponse as { networkError?: Error & { statusCode?: number } }).networkError;
   // Handle GraphQL errors
   if (graphQLErrors) {
     graphQLErrors.forEach(({ message, locations, path, extensions }) => {
@@ -181,7 +184,8 @@ const timeoutLink = new ApolloLink((operation, forward) => {
     },
   });
 
-  return forward(operation).map((data) => {
+  const observable = forward(operation);
+  return (observable as unknown as { map: (fn: (data: unknown) => unknown) => typeof observable }).map((data) => {
     clearTimeout(timeout);
     return data;
   });
@@ -248,7 +252,6 @@ export const apolloClient = new ApolloClient({
     query: {
       fetchPolicy: 'cache-first',
       errorPolicy: 'all',
-      notifyOnNetworkStatusChange: true,
     },
   },
 });
