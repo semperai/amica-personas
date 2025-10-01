@@ -5,7 +5,7 @@ ort.env.wasm.simd = true
 
 import { useContext, useEffect, useRef, useState } from "react";
 import { useMicVAD } from "@ricky0123/vad-react"
-import { IconButton } from "./iconButton";
+import { Mic, Pause, Send, Loader2 } from "lucide-react";
 import { useTranscriber } from "@/hooks/useTranscriber";
 import { cleanTranscript, cleanFromPunctuation, cleanFromWakeWord } from "@/utils/stringProcessing";
 import { hasOnScreenKeyboard } from "@/utils/hasOnScreenKeyboard";
@@ -189,53 +189,58 @@ export default function MessageInput({
 
   return (
     <div className="fixed bottom-2 z-20 w-full">
-      <div className="mx-auto max-w-4xl p-2 backdrop-blur-lg border-0 rounded-lg">
-        <div className="grid grid-flow-col grid-cols-[min-content_1fr_min-content] gap-[8px]">
-          <div>
-            <div className='flex flex-col justify-center items-center'>
-              <IconButton
-                iconName={vad.listening ? "24/PauseAlt" : "24/Microphone"}
-                className="bg-secondary hover:bg-secondary-hover active:bg-secondary-press disabled:bg-secondary-disabled"
-                isProcessing={vad.userSpeaking}
-                disabled={config('stt_backend') === 'none' || vad.loading || Boolean(vad.errored)}
-                onClick={vad.toggle}
-              />
-            </div>
-          </div>
+      <div className="mx-auto max-w-4xl p-2">
+        <div className="bg-white/20 backdrop-blur-xl border border-white/10 rounded-lg shadow-lg p-2">
+          <div className="flex items-center gap-2">
+            <button
+              disabled={config('stt_backend') === 'none' || vad.loading || Boolean(vad.errored)}
+              onClick={vad.toggle}
+              className="flex-shrink-0 p-2 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-slate-900"
+            >
+              {vad.userSpeaking ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : vad.listening ? (
+                <Pause className="h-5 w-5" />
+              ) : (
+                <Mic className="h-5 w-5" />
+              )}
+            </button>
 
-          <input
-            type="text"
-            ref={inputRef}
-            placeholder="Write message here..."
-            onChange={handleInputChange}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                if (hasOnScreenKeyboard()) {
-                  inputRef.current?.blur();
+            <input
+              type="text"
+              ref={inputRef}
+              placeholder="Write message here..."
+              onChange={handleInputChange}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  if (hasOnScreenKeyboard()) {
+                    inputRef.current?.blur();
+                  }
+
+                  if (userMessage === "") {
+                    return false;
+                  }
+
+                  clickedSendButton();
                 }
+              }}
+              disabled={false}
+              className="flex-1 px-3 py-2 text-sm text-slate-900 bg-white/90 backdrop-blur-xl border border-white/30 rounded-lg placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-transparent transition-all"
+              value={userMessage}
+              autoComplete="off"
+            />
 
-                if (userMessage === "") {
-                  return false;
-                }
-
-                clickedSendButton();
-              }
-            }}
-            disabled={false}
-
-            className="disabled block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-1 focus:ring-inset focus:ring-gray-300 focus:outline-none sm:text-sm sm:leading-6 bg-white"
-            value={userMessage}
-            autoComplete="off"
-          />
-
-          <div className='flex flex-col justify-center items-center'>
-            <IconButton
-              iconName="24/Send"
-              className="ml-2 bg-secondary hover:bg-secondary-hover active:bg-secondary-press disabled:bg-secondary-disabled"
-              isProcessing={isChatProcessing || transcriber.isBusy}
+            <button
               disabled={isChatProcessing || !userMessage || transcriber.isModelLoading}
               onClick={clickedSendButton}
-            />
+              className="flex-shrink-0 p-2 rounded-lg bg-rose-500 hover:bg-rose-600 disabled:bg-slate-300 disabled:cursor-not-allowed cursor-pointer transition-colors text-white"
+            >
+              {isChatProcessing || transcriber.isBusy ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Send className="h-5 w-5" />
+              )}
+            </button>
           </div>
         </div>
       </div>

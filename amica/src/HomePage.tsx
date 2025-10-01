@@ -292,7 +292,7 @@ export default function Home() {
 
       {/* main menu */}
       <div className="absolute z-10 m-2">
-        <div className="grid grid-flow-col gap-[8px] place-content-end mt-2 bg-slate-800/40 rounded-md backdrop-blur-md shadow-sm">
+        <div className="grid grid-flow-col gap-[8px] place-content-end mt-2 bg-white/80 rounded-md backdrop-blur-md shadow-sm">
           <div className='flex flex-col justify-center items-center p-1 space-y-3'>
             <MenuButton
               large={isVRHeadset}

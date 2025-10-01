@@ -31,17 +31,21 @@ export function MenuButton({
       <button
         disabled={disabled}
         onClick={onClick}
+        className={clsx(
+          'p-0.5 rounded-lg transition-colors duration-200',
+          !disabled && 'hover:bg-white/60',
+        )}
       >
         <Icon
           className={clsx(
             large ? 'h-14 w-14' : 'h-7 w-7',
-            'text-white',
+            'text-slate-900',
             disabled && 'cursor-not-allowed opacity-20',
-            !disabled && 'opacity-50 hover:opacity-100 active:opacity-100 hover:cursor-pointer',
+            !disabled && 'opacity-80 hover:opacity-100 active:opacity-100 hover:cursor-pointer',
          )}
           aria-hidden="true"
         />
-        <span className="text-white hidden">{label}</span>
+        <span className="text-slate-900 hidden">{label}</span>
       </button>
     </div>
   );

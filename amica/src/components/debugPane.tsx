@@ -30,7 +30,7 @@ function SwitchToggle({ enabled, set }: {
 }) {
   return (
     <Switch
-      className="group ml-1 relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-full focus:outline-none focus:ring-0"
+      className="group ml-1 relative inline-flex h-4 w-8 flex-shrink-0 cursor-pointer items-center justify-center rounded-full focus:outline-none focus:ring-0"
       checked={enabled}
       onChange={set}
     >
@@ -39,15 +39,15 @@ function SwitchToggle({ enabled, set }: {
       <span
         aria-hidden="true"
         className={clsx(
-          enabled ? 'bg-indigo-200' : 'bg-gray-200',
-          'pointer-events-none absolute mx-auto h-4 w-9 rounded-full transition-colors duration-200 ease-in-out'
+          enabled ? 'bg-slate-300' : 'bg-slate-200',
+          'pointer-events-none absolute mx-auto h-3 w-7 rounded-full transition-colors duration-200 ease-in-out'
         )}
       />
       <span
         aria-hidden="true"
         className={clsx(
-          enabled ? 'translate-x-5' : 'translate-x-0',
-          'pointer-events-none absolute left-0 inline-block h-5 w-5 transform rounded-full border border-gray-200 bg-white shadow ring-0 transition-transform duration-200 ease-in-out'
+          enabled ? 'translate-x-4' : 'translate-x-0',
+          'pointer-events-none absolute left-0 inline-block h-4 w-4 transform rounded-full border border-slate-300 bg-white shadow ring-0 transition-transform duration-200 ease-in-out'
         )}
         />
     </Switch>
@@ -126,71 +126,65 @@ export function DebugPane({ onClickClose }: {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center overflow-hidden p-4 md:p-8 animate-in fade-in duration-200">
-      <div ref={modalRef} className="w-full h-full max-w-7xl bg-slate-50 shadow-2xl flex flex-col md:max-h-[90vh] md:rounded-lg overflow-hidden">
+      <div ref={modalRef} className="w-full h-full max-w-6xl bg-white/95 backdrop-blur-xl shadow-2xl flex flex-col md:max-h-[85vh] md:rounded-lg overflow-hidden">
         {/* Header */}
-        <div className="flex-shrink-0 bg-slate-900 text-white p-5 shadow-lg border-b border-slate-700/50">
+        <div className="flex-shrink-0 bg-white/95 backdrop-blur-xl px-3 py-2 border-b border-slate-200/50">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="bg-white/20 backdrop-blur-sm rounded-lg p-2">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
+            <div className="flex items-center gap-2">
               <div>
-                <h2 className="text-xl font-bold tracking-tight">Debug Console</h2>
-                <p className="text-xs text-white/70">System logs and diagnostics</p>
+                <h2 className="text-sm font-bold text-slate-900">Debug Console</h2>
               </div>
               <button
                 onClick={onClickCopy}
-                className="ml-2 bg-white/10 hover:bg-white/20 active:bg-white/30 backdrop-blur-sm text-white rounded-lg px-3 py-2 transition-all hover:scale-105 cursor-pointer text-sm font-medium"
+                className="ml-2 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded px-2 py-1 transition-colors cursor-pointer text-xs font-medium"
                 title="Copy logs to clipboard"
               >
-                Copy Logs
+                Copy
               </button>
             </div>
             <button
               onClick={onClickClose}
-              className="bg-white/10 hover:bg-white/20 active:bg-white/30 backdrop-blur-sm text-white rounded-lg p-2.5 transition-colors cursor-pointer"
+              className="bg-slate-100 hover:bg-slate-200 text-slate-900 rounded p-1 transition-colors cursor-pointer"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
 
           {/* System Info */}
-          <div className="mt-4 flex flex-wrap gap-2 text-xs">
-            <span className="bg-white/15 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/20">
-              <span className="font-semibold text-white/90">LLM:</span> <span className="text-white/70">{config("chatbot_backend")}</span>
+          <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
+            <span className="bg-slate-100 px-2 py-1 rounded border border-slate-200">
+              <span className="font-semibold text-slate-900">LLM:</span> <span className="text-slate-600">{config("chatbot_backend")}</span>
             </span>
-            <span className="bg-white/15 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/20">
-              <span className="font-semibold text-white/90">TTS:</span> <span className="text-white/70">{config("tts_backend")}</span>
+            <span className="bg-slate-100 px-2 py-1 rounded border border-slate-200">
+              <span className="font-semibold text-slate-900">TTS:</span> <span className="text-slate-600">{config("tts_backend")}</span>
             </span>
-            <span className="bg-white/15 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/20">
-              <span className="font-semibold text-white/90">STT:</span> <span className="text-white/70">{config("stt_backend")}</span>
+            <span className="bg-slate-100 px-2 py-1 rounded border border-slate-200">
+              <span className="font-semibold text-slate-900">STT:</span> <span className="text-slate-600">{config("stt_backend")}</span>
             </span>
-            <span className="bg-white/15 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/20">
-              <span className="font-semibold text-white/90">Build:</span> <span className="text-white/70">{import.meta.env.VITE_CONFIG_BUILD_ID}</span>
+            <span className="bg-slate-100 px-2 py-1 rounded border border-slate-200">
+              <span className="font-semibold text-slate-900">Build:</span> <span className="text-slate-600">{import.meta.env.VITE_CONFIG_BUILD_ID}</span>
             </span>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="flex-shrink-0 bg-slate-800 border-b border-slate-700 p-4 shadow-sm">
-          <div className="flex flex-wrap gap-2.5">
-            <span className="inline-flex items-center gap-2 rounded-lg bg-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 shadow-sm border border-slate-600 hover:bg-slate-600 transition-colors">
+        <div className="flex-shrink-0 bg-slate-50 border-b border-slate-200 px-3 py-2">
+          <div className="flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-2 rounded bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 border border-slate-200 hover:bg-slate-200 transition-colors">
               Debug
               <SwitchToggle enabled={typeDebugEnabled} set={setTypeDebugEnabled} />
             </span>
-            <span className="inline-flex items-center gap-2 rounded-lg bg-emerald-900/40 px-4 py-2 text-sm font-semibold text-emerald-300 shadow-sm border border-emerald-700/50 hover:bg-emerald-900/60 transition-colors">
+            <span className="inline-flex items-center gap-2 rounded bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors">
               Info
               <SwitchToggle enabled={typeInfoEnabled} set={setTypeInfoEnabled} />
             </span>
-            <span className="inline-flex items-center gap-2 rounded-lg bg-amber-900/40 px-4 py-2 text-sm font-semibold text-amber-300 shadow-sm border border-amber-700/50 hover:bg-amber-900/60 transition-colors">
+            <span className="inline-flex items-center gap-2 rounded bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors">
               Warning
               <SwitchToggle enabled={typeWarnEnabled} set={setTypeWarnEnabled} />
             </span>
-            <span className="inline-flex items-center gap-2 rounded-lg bg-rose-900/40 px-4 py-2 text-sm font-semibold text-rose-300 shadow-sm border border-rose-700/50 hover:bg-rose-900/60 transition-colors">
+            <span className="inline-flex items-center gap-2 rounded bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 border border-rose-200 hover:bg-rose-100 transition-colors">
               Error
               <SwitchToggle enabled={typeErrorEnabled} set={setTypeErrorEnabled} />
             </span>
@@ -198,16 +192,16 @@ export function DebugPane({ onClickClose }: {
         </div>
 
         {/* Log Content */}
-        <div className="flex-1 overflow-y-auto bg-slate-950 p-5">
+        <div className="flex-1 overflow-y-auto bg-white p-3">
           {!isReady ? (
-            <div className="flex items-center justify-center h-full text-slate-400">
+            <div className="flex items-center justify-center h-full text-slate-600">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-10 w-10 border-3 border-slate-700 border-t-slate-400 mx-auto mb-3"></div>
-                <div className="text-sm font-medium">Loading logs...</div>
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-300 border-t-slate-600 mx-auto mb-2"></div>
+                <div className="text-xs font-medium">Loading logs...</div>
               </div>
             </div>
           ) : (
-            <div className="space-y-1.5 font-mono text-xs">
+            <div className="space-y-1 font-mono text-xs">
               {filteredLogs.map((log: any, idx: number) => {
                 // Prepare log message string (lightweight)
                 let logMessage = '';
@@ -226,39 +220,39 @@ export function DebugPane({ onClickClose }: {
                   <div
                     key={log.ts+idx}
                     className={clsx(
-                      "rounded px-3 py-2 flex items-start gap-3 border transition-colors hover:bg-slate-900/50",
-                      log.type === 'error' && 'bg-red-950/20 border-red-900/30',
-                      log.type === 'warn' && 'bg-amber-950/10 border-amber-900/20',
-                      log.type === 'debug' && 'bg-slate-900/30 border-slate-800/50',
-                      (log.type === 'info' || log.type === 'log') && 'bg-emerald-950/10 border-emerald-900/20',
+                      "rounded px-2 py-1.5 flex items-start gap-2 border transition-colors text-xs",
+                      log.type === 'error' && 'bg-rose-50 border-rose-200 hover:bg-rose-100',
+                      log.type === 'warn' && 'bg-amber-50 border-amber-200 hover:bg-amber-100',
+                      log.type === 'debug' && 'bg-slate-50 border-slate-200 hover:bg-slate-100',
+                      (log.type === 'info' || log.type === 'log') && 'bg-emerald-50 border-emerald-200 hover:bg-emerald-100',
                     )}
                   >
                     {log.type === 'debug' && (
-                      <span className="px-2 py-1 text-[10px] font-bold text-slate-400 bg-slate-800 rounded uppercase flex-shrink-0 border border-slate-700">
+                      <span className="px-1.5 py-0.5 text-[10px] font-bold text-slate-700 bg-slate-200 rounded uppercase flex-shrink-0">
                         DBG
                       </span>
                     )}
                     {(log.type === 'info' || log.type === 'log') && (
-                      <span className="px-2 py-1 text-[10px] font-bold text-emerald-400 bg-emerald-950/60 rounded uppercase flex-shrink-0 border border-emerald-800">
+                      <span className="px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 bg-emerald-200 rounded uppercase flex-shrink-0">
                         INF
                       </span>
                     )}
                     {log.type === 'warn' && (
-                      <span className="px-2 py-1 text-[10px] font-bold text-amber-400 bg-amber-950/60 rounded uppercase flex-shrink-0 border border-amber-800">
+                      <span className="px-1.5 py-0.5 text-[10px] font-bold text-amber-700 bg-amber-200 rounded uppercase flex-shrink-0">
                         WRN
                       </span>
                     )}
                     {log.type === 'error' && (
-                      <span className="px-2 py-1 text-[10px] font-bold text-rose-400 bg-rose-950/60 rounded uppercase flex-shrink-0 border border-rose-800">
+                      <span className="px-1.5 py-0.5 text-[10px] font-bold text-rose-700 bg-rose-200 rounded uppercase flex-shrink-0">
                         ERR
                       </span>
                     )}
 
-                    <span className="text-slate-500 text-[10px] flex-shrink-0 font-semibold pt-1">
+                    <span className="text-slate-500 text-[10px] flex-shrink-0 font-semibold">
                       {new Date(log.ts).toLocaleTimeString()}
                     </span>
 
-                    <span className="text-slate-200 flex-1 break-all leading-relaxed">
+                    <span className="text-slate-900 flex-1 break-all leading-tight">
                       {logMessage}
                     </span>
                   </div>
