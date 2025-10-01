@@ -17,7 +17,7 @@ A multichain dApp for creating and trading AI personas using the Amica protocol.
 ### Prerequisites
 
 - Node.js 16+
-- Yarn or npm
+- npm
 - WalletConnect Project ID (get one at https://cloud.walletconnect.com)
 
 ### Installation
@@ -30,7 +30,7 @@ cd website
 
 2. Install dependencies:
 ```bash
-yarn install
+npm install
 ```
 
 3. Copy the environment file and configure:
@@ -49,7 +49,7 @@ cp .env.example .env.local
 
 Run the development server:
 ```bash
-yarn dev
+npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
@@ -57,8 +57,8 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ### Building for Production
 
 ```bash
-yarn build
-yarn start
+npm run build
+npm start
 ```
 
 ## Project Structure
