@@ -141,23 +141,36 @@ case "${1:-}" in
             | jq '.'
         ;;
 
+    coverage)
+        echo -e "${YELLOW}Checking event coverage...${NC}"
+        npm run test:coverage
+        ;;
+
+    events)
+        echo -e "${YELLOW}Testing event indexing...${NC}"
+        npm run test:events
+        ;;
+
     *)
-        echo "Usage: $0 {start|stop|reset|test|full|logs|query}"
+        echo "Usage: $0 {start|stop|reset|test|full|logs|query|coverage|events}"
         echo ""
         echo "Commands:"
-        echo "  start  - Start database and prepare for indexing"
-        echo "  stop   - Stop all services"
-        echo "  reset  - Reset database (WARNING: deletes all data)"
-        echo "  test   - Run processor in test mode"
-        echo "  full   - Start full stack (db + processor + graphql) with docker"
-        echo "  logs   - Show logs from all services"
-        echo "  query  - Test GraphQL queries"
+        echo "  start    - Start database and prepare for indexing"
+        echo "  stop     - Stop all services"
+        echo "  reset    - Reset database (WARNING: deletes all data)"
+        echo "  test     - Run processor in test mode"
+        echo "  full     - Start full stack (db + processor + graphql) with docker"
+        echo "  logs     - Show logs from all services"
+        echo "  query    - Test GraphQL queries"
+        echo "  coverage - Check event coverage (what events are tracked)"
+        echo "  events   - Test that all event types are being indexed"
         echo ""
         echo "Example workflow:"
-        echo "  1. ./test-local.sh start    # Start database"
-        echo "  2. npm run processor:start  # Start processor (in another terminal)"
-        echo "  3. npm run serve            # Start GraphQL server (in another terminal)"
-        echo "  4. ./test-local.sh query    # Test queries"
+        echo "  1. ./test-local.sh start     # Start database"
+        echo "  2. npm run processor:start   # Start processor (in another terminal)"
+        echo "  3. npm run serve             # Start GraphQL server (in another terminal)"
+        echo "  4. ./test-local.sh events    # Test event indexing"
+        echo "  5. ./test-local.sh query     # Test GraphQL queries"
         exit 1
         ;;
 esac

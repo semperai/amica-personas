@@ -46,7 +46,14 @@ import {
   handleStakingWithdrawLocked,
   handleRewardsClaimed
 } from './handlers/staking'
-import { handleTokensWrapped, handleTokensUnwrapped } from './handlers/bridge'
+import {
+  handleTokensWrapped,
+  handleTokensUnwrapped,
+  handleEmergencyWithdraw,
+  handleBridgeMetricsUpdated,
+  handleBridgeTokensUpdated
+} from './handlers/bridge'
+import { handleAmicaTransfer, handleAmicaTokenClaimed } from './handlers/amica-token'
 import { updateGlobalStats, updateDailyStats } from './handlers/stats'
 import { handleTransfer } from './handlers/transfers'
 import { handleTokensClaimed } from './handlers/withdrawals'
@@ -259,30 +266,60 @@ processor.run(new TypeormDatabase({ supportHotBlocks: true }), async (ctx) => {
           eventsProcessed.bridgeWrapper++
           const topic = log.topics[0]
           ctx.log.debug(`BridgeWrapper event: ${topic} at block ${blockNumber}`)
-          
+
           switch (topic) {
             case bridgeAbi.events.TokensWrapped.topic:
               ctx.log.info('Processing TokensWrapped event')
               await handleTokensWrapped(ctx, log, timestamp, blockNumber)
               datesToUpdate.add(getDateString(timestamp))
               break
-              
+
             case bridgeAbi.events.TokensUnwrapped.topic:
               ctx.log.info('Processing TokensUnwrapped event')
               await handleTokensUnwrapped(ctx, log, timestamp, blockNumber)
               datesToUpdate.add(getDateString(timestamp))
               break
-              
+
+            case bridgeAbi.events.EmergencyWithdraw.topic:
+              ctx.log.info('Processing EmergencyWithdraw event')
+              await handleEmergencyWithdraw(ctx, log, timestamp, blockNumber)
+              break
+
+            case bridgeAbi.events.BridgeMetricsUpdated.topic:
+              ctx.log.info('Processing BridgeMetricsUpdated event')
+              await handleBridgeMetricsUpdated(ctx, log, timestamp, blockNumber)
+              break
+
+            case bridgeAbi.events.BridgeTokensUpdated.topic:
+              ctx.log.info('Processing BridgeTokensUpdated event')
+              await handleBridgeTokensUpdated(ctx, log, timestamp, blockNumber)
+              break
+
             default:
               ctx.log.warn(`Unknown BridgeWrapper event topic: ${topic}`)
           }
         }
-        
+
         // AmicaToken events
         else if (address === DEPLOYMENT.addresses.amicaToken) {
           eventsProcessed.amicaToken++
-          ctx.log.debug(`AmicaToken event at block ${blockNumber}`)
-          // Handle AmicaToken events if needed
+          const topic = log.topics[0]
+          ctx.log.debug(`AmicaToken event: ${topic} at block ${blockNumber}`)
+
+          switch (topic) {
+            case amicaAbi.events.Transfer.topic:
+              ctx.log.info('Processing AMICA Transfer event')
+              await handleAmicaTransfer(ctx, log, timestamp, blockNumber)
+              break
+
+            case amicaAbi.events.TokenClaimed.topic:
+              ctx.log.info('Processing AMICA TokenClaimed event')
+              await handleAmicaTokenClaimed(ctx, log, timestamp, blockNumber)
+              break
+
+            default:
+              ctx.log.warn(`Unknown AmicaToken event topic: ${topic}`)
+          }
         }
         
       } catch (error) {

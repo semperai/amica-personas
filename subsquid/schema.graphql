@@ -178,6 +178,41 @@ type BridgeActivity @entity {
 enum BridgeAction {
   WRAP
   UNWRAP
+  EMERGENCY_WITHDRAW
+  METRICS_UPDATE
+  TOKENS_UPDATE
+}
+
+# Token Transfer tracking
+type AmicaTransfer @entity {
+  id: ID! # txHash-logIndex
+  from: String! @index
+  to: String! @index
+  value: BigInt!
+  timestamp: DateTime!
+  block: BigInt!
+  txHash: String! @index
+  chainId: Int! @index
+  # Context fields
+  isToFactory: Boolean!
+  isFromFactory: Boolean!
+  isToStaking: Boolean!
+  isFromStaking: Boolean!
+  isToBridge: Boolean!
+  isFromBridge: Boolean!
+}
+
+# Burn and Claim tracking
+type AmicaClaim @entity {
+  id: ID! # txHash-logIndex
+  user: String! @index
+  claimedToken: String! @index
+  amountBurned: BigInt!
+  amountClaimed: BigInt!
+  timestamp: DateTime!
+  block: BigInt!
+  txHash: String! @index
+  chainId: Int! @index
 }
 
 # Fee Configuration

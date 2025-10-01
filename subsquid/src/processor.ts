@@ -98,6 +98,17 @@ export const processor = new EvmBatchProcessor()
     topic0: [
       bridgeAbi.events.TokensWrapped.topic,
       bridgeAbi.events.TokensUnwrapped.topic,
+      bridgeAbi.events.EmergencyWithdraw.topic,
+      bridgeAbi.events.BridgeMetricsUpdated.topic,
+      bridgeAbi.events.BridgeTokensUpdated.topic,
+    ]
+  })
+  // AmicaToken events (track all AMICA transfers and claims)
+  .addLog({
+    address: [DEPLOYMENT.addresses.amicaToken],
+    topic0: [
+      amicaAbi.events.Transfer.topic,
+      amicaAbi.events.TokenClaimed.topic,
     ]
   })
 
@@ -106,6 +117,7 @@ console.log('Registered event topics:')
 console.log('- PersonaFactory:', Object.keys(factoryAbi.events).length, 'events')
 console.log('- StakingRewards:', Object.keys(stakingAbi.events).length, 'events')
 console.log('- BridgeWrapper:', Object.keys(bridgeAbi.events).length, 'events')
+console.log('- AmicaToken:', Object.keys(amicaAbi.events).length, 'events')
 
 export type Fields = EvmBatchProcessorFields<typeof processor>
 export type Context = DataHandlerContext<Store, Fields>

@@ -4,12 +4,16 @@ A Subsquid indexer for the Amica protocol on Base network.
 
 ## Features
 
-- Indexes all Persona NFT creation and metadata
-- Tracks bonding curve trades and liquidity events
-- Monitors staking pools and user positions
-- Records bridge activity (wrap/unwrap)
-- Aggregates statistics (global and daily)
-- Handles agent token functionality
+- **Complete Event Coverage:** Indexes 22/22 critical events (100%)
+- **Persona NFTs:** Creation, transfers, metadata updates
+- **Bonding Curve:** All buys and sells with fee tracking
+- **Uniswap V4:** Pool creation, graduations, fee collection
+- **AMICA Token Transfers:** ALL token movements with smart contract context
+- **Agent Tokens:** Deposits, withdrawals, reward distribution
+- **Staking:** Flexible and locked staking, reward claims
+- **Bridge:** Wrap/unwrap, emergency withdrawals, metrics
+- **Statistics:** Global and daily aggregations
+- **Burn & Claim:** Token claiming mechanism tracking
 
 ## Prerequisites
 

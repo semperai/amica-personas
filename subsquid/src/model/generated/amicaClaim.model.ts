@@ -1,9 +1,8 @@
 import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, StringColumn as StringColumn_, Index as Index_, BigIntColumn as BigIntColumn_, DateTimeColumn as DateTimeColumn_, IntColumn as IntColumn_} from "@subsquid/typeorm-store"
-import {BridgeAction} from "./_bridgeAction"
 
 @Entity_()
-export class BridgeActivity {
-    constructor(props?: Partial<BridgeActivity>) {
+export class AmicaClaim {
+    constructor(props?: Partial<AmicaClaim>) {
         Object.assign(this, props)
     }
 
@@ -14,11 +13,15 @@ export class BridgeActivity {
     @StringColumn_({nullable: false})
     user!: string
 
-    @Column_("varchar", {length: 18, nullable: false})
-    action!: BridgeAction
+    @Index_()
+    @StringColumn_({nullable: false})
+    claimedToken!: string
 
     @BigIntColumn_({nullable: false})
-    amount!: bigint
+    amountBurned!: bigint
+
+    @BigIntColumn_({nullable: false})
+    amountClaimed!: bigint
 
     @DateTimeColumn_({nullable: false})
     timestamp!: Date

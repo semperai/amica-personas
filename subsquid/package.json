@@ -16,7 +16,9 @@
     "check-updates": "npx npm-check-updates --filter /subsquid/",
     "bump": "npx npm-check-updates --filter /subsquid/ -u && npm i -f",
     "test:local": "./test-local.sh test",
-    "test:validate": "node scripts/validate-indexing.js"
+    "test:validate": "node scripts/validate-indexing.js",
+    "test:events": "node scripts/test-event-queries.js",
+    "test:coverage": "node scripts/event-coverage-check.js"
   },
   "dependencies": {
     "@subsquid/archive-registry": "^3.3.2",
