@@ -1,5 +1,7 @@
 import * as ort from "onnxruntime-web"
 ort.env.wasm.wasmPaths = '/_next/static/chunks/'
+ort.env.wasm.numThreads = 1
+ort.env.wasm.simd = true
 
 import { useContext, useEffect, useRef, useState } from "react";
 import { useMicVAD } from "@ricky0123/vad-react"
@@ -37,6 +39,8 @@ export default function MessageInput({
 
   const vad = useMicVAD({
     startOnLoad: false,
+    modelURL: '/silero_vad_v5.onnx',
+    workletURL: '/vad.worklet.bundle.min.js',
     onSpeechStart: () => {
       console.debug('vad', 'on_speech_start');
       console.time('performance_speech');

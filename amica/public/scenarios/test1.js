@@ -53,6 +53,6 @@ class Scenario {
   }
 
   update(delta) {
-    console.log('update', this.x);
+    // console.log('update', this.x);
   }
 }

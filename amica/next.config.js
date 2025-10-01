@@ -15,7 +15,6 @@ const nextConfig = {
   publicRuntimeConfig: {
     root: process.env.BASE_PATH || "",
   },
-  optimizeFonts: false,
   webpack: (config, { webpack, buildId }) => {
     // See https://webpack.js.org/configuration/resolve/#resolvealias
     config.resolve.alias = {
