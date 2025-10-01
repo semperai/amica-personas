@@ -236,12 +236,135 @@ npm run typegen
 npm run build
 ```
 
-## Deployment
+## Cloud Deployment
 
-For production deployment on Subsquid Cloud:
-1. Update `squid.yaml` with your squid name
-2. Install Subsquid CLI: `npm i -g @subsquid/cli`
-3. Deploy: `sqd deploy`
+### Initial Deployment
+
+1. **Install Subsquid CLI:**
+```bash
+npm i -g @subsquid/cli
+```
+
+2. **Authenticate with Subsquid Cloud:**
+```bash
+sqd auth
+```
+
+3. **Update squid.yaml with your squid name:**
+Edit the `name` field in `squid.yaml` to your desired squid name.
+
+4. **Deploy:**
+```bash
+sqd deploy .
+```
+
+The deployment process will:
+- Build your squid
+- Upload it to Subsquid Cloud
+- Start the processor and API services
+- Provision a PostgreSQL database
+- Connect to the Base network RPC
+
+### Resyncing a Cloud Instance
+
+There are several scenarios where you may need to resync your cloud squid:
+
+#### Method 1: Restart with Hard Reset (Full Resync)
+
+Use this when you need to reindex all data from scratch:
+
+```bash
+# Restart a specific squid slot (e.g., production slot)
+sqd restart -n amica-base-indexer -s prod
+
+# Or use the full reference
+sqd restart -r amica-base-indexer@prod
+```
+
+This will:
+- Stop the current processor
+- Clear the database
+- Restart from the configured start block
+- Reindex all historical data
+
+#### Method 2: Deploy New Version (Automatic Resync)
+
+When you make changes to your code that affect indexing:
+
+```bash
+# 1. Make sure your changes are committed
+git add .
+git commit -m "Update indexing logic"
+
+# 2. Deploy the new version
+sqd deploy .
+```
+
+Subsquid will automatically:
+- Detect schema changes or processor logic changes
+- Reset the database if necessary
+- Start indexing from the beginning
+
+#### Method 3: Update Without Resync
+
+If you only made changes that don't require reindexing:
+
+```bash
+sqd deploy . --no-reset
+```
+
+### Monitoring Your Cloud Squid
+
+#### View Status
+```bash
+sqd view -n amica-base-indexer
+```
+
+#### Check Logs
+```bash
+# View processor logs
+sqd logs -n amica-base-indexer -s prod --container processor -f
+
+# View API logs
+sqd logs -n amica-base-indexer -s prod --container api -f
+```
+
+#### List All Your Squids
+```bash
+sqd list
+```
+
+### Cloud Troubleshooting
+
+#### Squid Stuck or Not Syncing
+1. Check logs: `sqd logs -n amica-base-indexer -s prod -f`
+2. Verify RPC is working (check Cloud dashboard)
+3. Restart: `sqd restart -n amica-base-indexer -s prod`
+
+#### Database Schema Issues
+If you see migration errors:
+1. Update your schema.graphql
+2. Regenerate models locally: `npm run codegen`
+3. Test locally first
+4. Deploy: `sqd deploy .`
+
+#### Out of Sync with On-Chain Data
+1. Verify the start block in `src/processor.ts`
+2. Check contract addresses are correct
+3. Force a full resync: `sqd restart -n amica-base-indexer -s prod`
+
+#### Rate Limiting or RPC Issues
+- Subsquid Cloud provides RPC through their gateway
+- Check RPC status in Cloud dashboard
+- Consider adding fallback RPC endpoints in your code
+
+### Cloud Best Practices
+
+1. **Test Locally First:** Always test changes locally before deploying
+2. **Use Slots:** Use different slots for staging and production
+3. **Monitor Logs:** Regularly check logs during initial sync
+4. **Version Control:** Tag deployments in git for easier rollback
+5. **Schema Changes:** Test schema migrations locally before deploying
 
 ## License
 
