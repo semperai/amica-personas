@@ -10,19 +10,19 @@ export default defineConfig({
     viteStaticCopy({
       targets: [
         {
-          src: 'node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm',
+          src: 'node_modules/@xenova/transformers/dist/ort-wasm-simd-threaded.wasm',
           dest: 'assets',
         },
         {
-          src: 'node_modules/onnxruntime-web/dist/ort-wasm-threaded.wasm',
+          src: 'node_modules/@xenova/transformers/dist/ort-wasm-threaded.wasm',
           dest: 'assets',
         },
         {
-          src: 'node_modules/onnxruntime-web/dist/ort-wasm.wasm',
+          src: 'node_modules/@xenova/transformers/dist/ort-wasm.wasm',
           dest: 'assets',
         },
         {
-          src: 'node_modules/onnxruntime-web/dist/ort-wasm-simd.wasm',
+          src: 'node_modules/@xenova/transformers/dist/ort-wasm-simd.wasm',
           dest: 'assets',
         },
         {
