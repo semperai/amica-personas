@@ -425,11 +425,11 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
   const priceImpact = calculatePriceImpact();
 
   return (
-    <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
+    <div className="bg-card backdrop-blur-md rounded-2xl border border-border">
       {/* Header */}
-      <div className="p-4 border-b border-white/10">
+      <div className="p-4 border-b border-border">
         <div className="flex justify-between items-center">
-          <h2 className="text-xl font-light text-white">
+          <h2 className="text-xl font-light text-foreground">
             {isBuying ? 'Buy' : 'Sell'} {tokenSymbol}
           </h2>
           <div className="flex items-center gap-2">
@@ -439,9 +439,9 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
             <SwapSettings slippage={slippage} onSlippageChange={setSlippage} />
             <button
               onClick={() => setShowAdvanced(!showAdvanced)}
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              className="p-2 hover:bg-muted rounded-lg transition-colors"
             >
-              <svg className="w-4 h-4 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </button>
@@ -503,9 +503,9 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
               setAmount('');
             }}
             disabled={isGraduated}
-            className="p-3 bg-slate-800 border-4 border-slate-900 rounded-xl hover:bg-slate-700 transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-3 bg-background border-4 border-card rounded-xl hover:bg-muted transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <svg className="w-5 h-5 text-white/70 group-hover:text-white transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
             </svg>
           </button>
@@ -526,10 +526,10 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
 
         {/* Price Info */}
         {amount && outputAmount && parseFloat(amount) > 0 && (
-          <div className="mb-6 p-4 bg-white/5 rounded-xl space-y-2">
+          <div className="mb-6 p-4 bg-muted rounded-xl space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-white/60">Price</span>
-              <span className="text-white">
+              <span className="text-muted-foreground">Price</span>
+              <span className="text-foreground">
                 1 {tokenSymbol} = {pricePerToken} {pairingTokenSymbol || 'AMICA'}
               </span>
             </div>
@@ -537,8 +537,8 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
             {preview && (
               <>
                 <div className="flex justify-between text-sm">
-                  <span className="text-white/60">Fee</span>
-                  <span className="text-white">
+                  <span className="text-muted-foreground">Fee</span>
+                  <span className="text-foreground">
                     {formatEther(preview[0])} {isBuying ? (pairingTokenSymbol || 'AMICA') : tokenSymbol}
                     {feeInfo && feeInfo[8] > 0 && (
                       <span className="text-green-400 ml-1">
@@ -548,8 +548,8 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-white/60">Minimum received</span>
-                  <span className="text-white">
+                  <span className="text-muted-foreground">Minimum received</span>
+                  <span className="text-foreground">
                     {formatEther(BigInt(Math.floor(Number(outputAmount) * (1 - parseFloat(slippage) / 100))))} {targetTokenSymbol}
                   </span>
                 </div>
@@ -558,7 +558,7 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
 
             {priceImpact > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-white/60">Price Impact</span>
+                <span className="text-muted-foreground">Price Impact</span>
                 <span className={`${priceImpact > 5 ? 'text-red-400' : priceImpact > 2 ? 'text-yellow-400' : 'text-green-400'}`}>
                   {priceImpact.toFixed(2)}%
                 </span>
@@ -569,31 +569,31 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
 
         {/* Advanced Info */}
         {showAdvanced && (
-          <div className="mb-6 p-4 bg-white/5 rounded-xl">
-            <h4 className="text-sm font-medium text-white mb-3">Advanced Information</h4>
+          <div className="mb-6 p-4 bg-muted rounded-xl">
+            <h4 className="text-sm font-medium text-foreground mb-3">Advanced Information</h4>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-white/60">Available in curve:</span>
-                <span className="text-white">{formatEther(availableTokens)} {tokenSymbol}</span>
+                <span className="text-muted-foreground">Available in curve:</span>
+                <span className="text-foreground">{formatEther(availableTokens)} {tokenSymbol}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-white/60">Total sold:</span>
-                <span className="text-white">{formatEther(tokensSold)} {tokenSymbol}</span>
+                <span className="text-muted-foreground">Total sold:</span>
+                <span className="text-foreground">{formatEther(tokensSold)} {tokenSymbol}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-white/60">Current TVL:</span>
-                <span className="text-white">{formatEther(totalDeposited)} {pairingTokenSymbol || 'AMICA'}</span>
+                <span className="text-muted-foreground">Current TVL:</span>
+                <span className="text-foreground">{formatEther(totalDeposited)} {pairingTokenSymbol || 'AMICA'}</span>
               </div>
               {agentToken && agentToken !== '0x0000000000000000000000000000000000000000' && (
                 <>
                   <div className="flex justify-between">
-                    <span className="text-white/60">Agent tokens deposited:</span>
-                    <span className="text-white">{formatEther(totalAgentDeposited)}</span>
+                    <span className="text-muted-foreground">Agent tokens deposited:</span>
+                    <span className="text-foreground">{formatEther(totalAgentDeposited)}</span>
                   </div>
                   {minAgentTokens > BigInt(0) && (
                     <div className="flex justify-between">
-                      <span className="text-white/60">Agent tokens required:</span>
-                      <span className="text-white">{formatEther(minAgentTokens)}</span>
+                      <span className="text-muted-foreground">Agent tokens required:</span>
+                      <span className="text-foreground">{formatEther(minAgentTokens)}</span>
                     </div>
                   )}
                 </>
@@ -636,7 +636,7 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
         {!address ? (
           <button
             disabled
-            className="w-full bg-gray-600 text-white py-4 rounded-xl cursor-not-allowed font-light text-lg"
+            className="w-full bg-muted text-foreground py-4 rounded-xl cursor-not-allowed font-light text-lg"
           >
             Connect Wallet
           </button>

@@ -71,10 +71,10 @@ function PortfolioTokens({ address }: { address: string }) {
   if (loading) {
     return (
       <div>
-        <h2 className="text-2xl font-light text-white mb-6">My Tokens</h2>
+        <h2 className="text-2xl font-light text-foreground mb-6">My Tokens</h2>
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-20 bg-white/5 rounded-lg animate-pulse" />
+            <div key={i} className="h-20 bg-card rounded-lg animate-pulse" />
           ))}
         </div>
       </div>
@@ -84,9 +84,9 @@ function PortfolioTokens({ address }: { address: string }) {
   if (tokens.length === 0) {
     return (
       <div>
-        <h2 className="text-2xl font-light text-white mb-6">My Tokens</h2>
+        <h2 className="text-2xl font-light text-foreground mb-6">My Tokens</h2>
         <div className="text-center py-12">
-          <p className="text-white/60">You don&apos;t own any persona tokens yet.</p>
+          <p className="text-muted-foreground">You don&apos;t own any persona tokens yet.</p>
         </div>
       </div>
     );
@@ -95,9 +95,9 @@ function PortfolioTokens({ address }: { address: string }) {
   return (
     <div>
       <div className="flex justify-between items-baseline mb-6">
-        <h2 className="text-2xl font-light text-white">My Tokens</h2>
-        <p className="text-lg text-white/60">
-          Total Value: <span className="text-white font-medium">${totalValue.toFixed(2)}</span>
+        <h2 className="text-2xl font-light text-foreground">My Tokens</h2>
+        <p className="text-lg text-muted-foreground">
+          Total Value: <span className="text-foreground font-medium">${totalValue.toFixed(2)}</span>
         </p>
       </div>
 
@@ -105,19 +105,19 @@ function PortfolioTokens({ address }: { address: string }) {
         {tokens.map((token, index) => (
           <div
             key={index}
-            className="p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:bg-white/10 transition-colors"
+            className="p-4 bg-card backdrop-blur-sm rounded-xl border border-border hover:bg-muted transition-colors"
           >
             <div className="flex justify-between items-center">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="font-medium text-white">{token.symbol}</h3>
-                  <span className="text-xs text-white/50 capitalize">{token.chainId === '1' ? 'ethereum' : token.chainId === '8453' ? 'base' : 'arbitrum'}</span>
+                  <h3 className="font-medium text-foreground">{token.symbol}</h3>
+                  <span className="text-xs text-muted-foreground capitalize">{token.chainId === '1' ? 'ethereum' : token.chainId === '8453' ? 'base' : 'arbitrum'}</span>
                 </div>
-                <p className="text-sm text-white/60">{token.name}</p>
+                <p className="text-sm text-muted-foreground">{token.name}</p>
               </div>
               <div className="text-right">
-                <p className="font-medium text-white">{parseFloat(token.balance).toLocaleString()}</p>
-                <p className="text-sm text-white/60">${token.valueUSD.toFixed(2)}</p>
+                <p className="font-medium text-foreground">{parseFloat(token.balance).toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">${token.valueUSD.toFixed(2)}</p>
               </div>
             </div>
           </div>
@@ -148,9 +148,9 @@ export default function PortfolioPage() {
       <Layout>
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="flex flex-col items-center justify-center min-h-[60vh]">
-            <div className="bg-white/5 backdrop-blur-md rounded-2xl p-12 border border-white/10 text-center">
-              <h2 className="text-2xl font-light text-white mb-4">Connect Your Wallet</h2>
-              <p className="text-white/60 mb-8">Please connect your wallet to view your portfolio</p>
+            <div className="bg-card backdrop-blur-md rounded-2xl p-12 border border-border text-center">
+              <h2 className="text-2xl font-light text-foreground mb-4">Connect Your Wallet</h2>
+              <p className="text-muted-foreground mb-8">Please connect your wallet to view your portfolio</p>
               <div className="p-1 inline-block">
                 <ConnectButton />
               </div>
@@ -164,7 +164,7 @@ export default function PortfolioPage() {
   return (
     <Layout>
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <h1 className="text-4xl font-light text-white mb-8">My Portfolio</h1>
+        <h1 className="text-4xl font-light text-foreground mb-8">My Portfolio</h1>
 
         {/* AMICA Balance Card */}
         <div className="mb-8">
@@ -186,7 +186,7 @@ export default function PortfolioPage() {
               </div>
             </div>
 
-            <div className="mt-6 pt-6 border-t border-white/20">
+            <div className="mt-6 pt-6 border-t border-border">
               <p className="text-sm opacity-90 mb-3">Benefits of holding AMICA:</p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center">
@@ -214,17 +214,17 @@ export default function PortfolioPage() {
           {/* Left column - 2/3 width */}
           <div className="lg:col-span-2 space-y-8">
             {/* My Personas Section */}
-            <div className="bg-white/5 backdrop-blur-md rounded-2xl p-8 border border-white/10">
+            <div className="bg-card backdrop-blur-md rounded-2xl p-8 border border-border">
               <MyPersonas address={address} />
             </div>
 
             {/* My Tokens Section */}
-            <div className="bg-white/5 backdrop-blur-md rounded-2xl p-8 border border-white/10">
+            <div className="bg-card backdrop-blur-md rounded-2xl p-8 border border-border">
               <PortfolioTokens address={address} />
             </div>
 
             {/* Trading History Section */}
-            <div className="bg-white/5 backdrop-blur-md rounded-2xl p-8 border border-white/10">
+            <div className="bg-card backdrop-blur-md rounded-2xl p-8 border border-border">
               <TradingHistory address={address} />
             </div>
           </div>
@@ -232,7 +232,7 @@ export default function PortfolioPage() {
           {/* Right column - 1/3 width */}
           <div className="lg:col-span-1">
             {/* Burn & Claim Section */}
-            <div className="bg-white/5 backdrop-blur-md rounded-2xl p-8 border border-white/10">
+            <div className="bg-card backdrop-blur-md rounded-2xl p-8 border border-border">
               <BurnAndClaim />
             </div>
           </div>

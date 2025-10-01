@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import Image from 'next/image';
+import AmicaLogo from '@/assets/AmicaLogo.png';
 
 interface LayoutProps {
   children: ReactNode;
@@ -50,7 +51,7 @@ const Layout = ({ children }: LayoutProps) => {
             <div className="flex items-center gap-8">
               <Link href="/" className="flex items-center gap-2 group">
                 <Image
-                  src="/logo.png"
+                  src={AmicaLogo}
                   alt="Amica Logo"
                   width={28}
                   height={28}
@@ -133,7 +134,7 @@ const Layout = ({ children }: LayoutProps) => {
             <div className="col-span-1">
               <div className="flex items-center gap-2 mb-4">
                 <Image
-                  src="/logo.png"
+                  src={AmicaLogo}
                   alt="Amica Logo"
                   width={24}
                   height={24}
@@ -191,7 +192,7 @@ const Layout = ({ children }: LayoutProps) => {
                 </li>
                 <li>
                   <a
-                    href="https://catgirl.vc"
+                    href="https://catgirl.boo"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm text-muted-foreground hover:text-foreground transition-colors"

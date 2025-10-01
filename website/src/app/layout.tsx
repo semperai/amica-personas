@@ -14,14 +14,20 @@ import Providers from './providers';
 export const metadata = {
   title: 'Amica Personas',
   description: 'Create, trade, and monetize autonomous AI agents on the blockchain',
-  icons: {
-    icon: '/favicon-96x96.png',
-    shortcut: '/favicon.ico',
-    apple: '/apple-touch-icon.png',
-  },
   manifest: '/site.webmanifest',
   appleWebApp: {
     title: 'Amica',
+  },
+  openGraph: {
+    title: 'Amica Personas',
+    description: 'Create, trade, and monetize autonomous AI agents on the blockchain',
+    type: 'website',
+    siteName: 'Amica Personas',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Amica Personas',
+    description: 'Create, trade, and monetize autonomous AI agents on the blockchain',
   },
 };
 

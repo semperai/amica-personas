@@ -369,55 +369,55 @@ export default function CreatePersonaPage() {
   return (
     <Layout>
       <div className="max-w-2xl mx-auto px-6 py-8">
-        <h1 className="text-4xl font-light text-white mb-8">Create New Persona</h1>
+        <h1 className="text-4xl font-light text-foreground mb-8">Create New Persona</h1>
 
-        <div className="bg-white/5 backdrop-blur-md rounded-2xl p-8 border border-white/10">
+        <div className="bg-card backdrop-blur-md rounded-2xl p-8 border border-border">
           <div className="mb-8">
-            <label className="block text-sm font-light text-white/80 mb-3">Name</label>
+            <label className="block text-sm font-light text-foreground/80 mb-3">Name</label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full p-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/40 focus:border-white/40 focus:outline-none transition-colors"
+              className="w-full p-4 bg-muted backdrop-blur-sm border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:border-border focus:outline-none transition-colors"
               placeholder="My Awesome Persona"
             />
-            <p className="text-xs text-white/50 mt-2">Choose a unique and memorable name</p>
+            <p className="text-xs text-muted-foreground mt-2">Choose a unique and memorable name</p>
           </div>
 
           <div className="mb-8">
-            <label className="block text-sm font-light text-white/80 mb-3">Symbol</label>
+            <label className="block text-sm font-light text-foreground/80 mb-3">Symbol</label>
             <input
               type="text"
               value={formData.symbol}
               onChange={(e) => setFormData({ ...formData, symbol: e.target.value.toUpperCase() })}
-              className="w-full p-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/40 focus:border-white/40 focus:outline-none transition-colors"
+              className="w-full p-4 bg-muted backdrop-blur-sm border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:border-border focus:outline-none transition-colors"
               placeholder="AWESOME"
               maxLength={10}
             />
-            <p className="text-xs text-white/50 mt-2">3-10 characters, letters only</p>
+            <p className="text-xs text-muted-foreground mt-2">3-10 characters, letters only</p>
           </div>
 
           <div className="mb-8">
-            <label className="block text-sm font-light text-white/80 mb-3">Pairing Token</label>
+            <label className="block text-sm font-light text-foreground/80 mb-3">Pairing Token</label>
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setShowPairingDropdown(!showPairingDropdown)}
-                className="w-full p-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white hover:bg-white/15 focus:border-white/40 focus:outline-none transition-all duration-300 flex items-center justify-between"
+                className="w-full p-4 bg-muted backdrop-blur-sm border border-border rounded-xl text-foreground hover:bg-muted focus:border-border focus:outline-none transition-all duration-300 flex items-center justify-between"
               >
                 {selectedPairingToken ? (
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">{selectedPairingToken.icon}</span>
                     <div className="text-left">
                       <div className="font-medium">{selectedPairingToken.symbol}</div>
-                      <div className="text-xs text-white/50">{selectedPairingToken.name}</div>
+                      <div className="text-xs text-muted-foreground">{selectedPairingToken.name}</div>
                     </div>
                   </div>
                 ) : (
-                  <span className="text-white/40">Select a pairing token</span>
+                  <span className="text-muted-foreground">Select a pairing token</span>
                 )}
                 <svg
-                  className={`w-5 h-5 text-white/60 transition-transform ${showPairingDropdown ? 'rotate-180' : ''}`}
+                  className={`w-5 h-5 text-muted-foreground transition-transform ${showPairingDropdown ? 'rotate-180' : ''}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -427,18 +427,18 @@ export default function CreatePersonaPage() {
               </button>
 
               {showPairingDropdown && (
-                <div className="absolute z-10 w-full mt-2 bg-black/90 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl overflow-hidden">
+                <div className="absolute z-10 w-full mt-2 bg-black/90 backdrop-blur-xl border border-border rounded-xl shadow-2xl overflow-hidden">
                   {pairingTokenOptions.map((token) => (
                     <button
                       key={token.address}
                       onClick={() => handlePairingTokenSelect(token)}
-                      className="w-full p-4 hover:bg-white/10 transition-colors flex items-center gap-3 text-left"
+                      className="w-full p-4 hover:bg-muted transition-colors flex items-center gap-3 text-left"
                     >
                       <span className="text-2xl">{token.icon}</span>
                       <div>
-                        <div className="font-medium text-white">{token.symbol}</div>
-                        <div className="text-xs text-white/50">{token.name}</div>
-                        <div className="text-xs text-white/30 font-mono mt-1">
+                        <div className="font-medium text-foreground">{token.symbol}</div>
+                        <div className="text-xs text-muted-foreground">{token.name}</div>
+                        <div className="text-xs text-muted-foreground font-mono mt-1">
                           {token.address.slice(0, 6)}...{token.address.slice(-4)}
                         </div>
                       </div>
@@ -447,25 +447,25 @@ export default function CreatePersonaPage() {
                 </div>
               )}
             </div>
-            <p className="text-xs text-white/50 mt-2">
+            <p className="text-xs text-muted-foreground mt-2">
               The token used for bonding curve trading. Creation cost: {formattedMintCost} {selectedPairingToken?.symbol || 'tokens'}
             </p>
           </div>
 
           {/* Agent Token Configuration */}
-          <div className="mb-8 p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
+          <div className="mb-8 p-6 bg-card backdrop-blur-sm rounded-xl border border-border">
             <div className="flex items-center justify-between mb-4">
               <div className="flex gap-2">
-                <label className="text-sm font-light text-white/80">Enable Agent Token Integration</label>
+                <label className="text-sm font-light text-foreground/80">Enable Agent Token Integration</label>
                 <button
                   type="button"
                   onClick={() => setShowAgentConfig(!showAgentConfig)}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    showAgentConfig ? 'bg-brand-blue/50' : 'bg-white/20'
+                    showAgentConfig ? 'bg-brand-blue/50' : 'bg-muted'
                   }`}
                 >
                   <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    className={`inline-block h-4 w-4 transform rounded-full bg-foreground transition-transform ${
                       showAgentConfig ? 'translate-x-6' : 'translate-x-1'
                     }`}
                   />
@@ -474,7 +474,7 @@ export default function CreatePersonaPage() {
             </div>
             <div>
               <div>
-                <p className="text-xs text-white/50 ">
+                <p className="text-xs text-muted-foreground ">
                   Tokens from Virtuals or independent agent tokens can be used.
                 </p>
               </div>
@@ -483,7 +483,7 @@ export default function CreatePersonaPage() {
             {showAgentConfig && (
               <div className="space-y-4 mt-6">
                 <div>
-                  <label className="block text-sm font-light text-white/80 mb-3">Agent Token Address</label>
+                  <label className="block text-sm font-light text-foreground/80 mb-3">Agent Token Address</label>
                   <input
                     type="text"
                     value={formData.agentToken}
@@ -494,48 +494,48 @@ export default function CreatePersonaPage() {
                         setIsLoadingAgentToken(false);
                       }
                     }}
-                    className="w-full p-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/40 focus:border-white/40 focus:outline-none transition-colors font-mono text-sm"
+                    className="w-full p-4 bg-muted backdrop-blur-sm border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:border-border focus:outline-none transition-colors font-mono text-sm"
                     placeholder="0x..."
                   />
 
                   {isLoadingAgentToken && (
-                    <div className="mt-2 text-xs text-white/50">Loading token details...</div>
+                    <div className="mt-2 text-xs text-muted-foreground">Loading token details...</div>
                   )}
 
                   {agentTokenDetails && (
-                    <div className="mt-3 p-3 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10">
+                    <div className="mt-3 p-3 bg-card backdrop-blur-sm rounded-lg border border-border">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 gradient-brand rounded-full flex items-center justify-center text-white text-xs font-bold">
                           {agentTokenDetails.symbol.slice(0, 2)}
                         </div>
                         <div>
-                          <div className="text-sm font-medium text-white">{agentTokenDetails.name}</div>
-                          <div className="text-xs text-white/50">{agentTokenDetails.symbol} • {agentTokenDetails.decimals} decimals</div>
+                          <div className="text-sm font-medium text-foreground">{agentTokenDetails.name}</div>
+                          <div className="text-xs text-muted-foreground">{agentTokenDetails.symbol} • {agentTokenDetails.decimals} decimals</div>
                         </div>
                       </div>
                     </div>
                   )}
 
-                  <p className="text-xs text-white/50 mt-2">
+                  <p className="text-xs text-muted-foreground mt-2">
                     Enter the contract address of the agent token
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-light text-white/80 mb-3">
+                  <label className="block text-sm font-light text-foreground/80 mb-3">
                     Minimum Agent Tokens Required
-                    {agentTokenDetails && <span className="text-xs text-white/50 ml-2">({agentTokenDetails.symbol})</span>}
+                    {agentTokenDetails && <span className="text-xs text-muted-foreground ml-2">({agentTokenDetails.symbol})</span>}
                   </label>
                   <input
                     type="number"
                     value={formData.minAgentTokens}
                     onChange={(e) => setFormData({ ...formData, minAgentTokens: e.target.value })}
-                    className="w-full p-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/40 focus:border-white/40 focus:outline-none transition-colors"
+                    className="w-full p-4 bg-muted backdrop-blur-sm border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:border-border focus:outline-none transition-colors"
                     placeholder="0"
                     step="0.000001"
                     min="0"
                   />
-                  <p className="text-xs text-white/50 mt-2">
+                  <p className="text-xs text-muted-foreground mt-2">
                     Minimum agent tokens that must be deposited before graduation (0 = no requirement). All collected tokens during bonding will be distributed to AMICA holders.
                     {agentTokenDetails && (
                       <span className="block mt-1">
@@ -546,8 +546,8 @@ export default function CreatePersonaPage() {
                 </div>
 
                 <div className="p-4 bg-brand-blue/10 backdrop-blur-sm rounded-lg border border-brand-blue/20">
-                  <p className="font-light text-white/90 mb-2">Agent Token Benefits:</p>
-                  <ul className="text-xs text-white/70 space-y-1 ml-4 list-disc">
+                  <p className="font-light text-foreground/90 mb-2">Agent Token Benefits:</p>
+                  <ul className="text-xs text-foreground/70 space-y-1 ml-4 list-disc">
                     <li>Modified token distribution: 1/3 liquidity, 2/9 each for bonding, AMICA deposit, and agent rewards</li>
                     <li>Agent token depositors receive persona tokens proportionally after graduation</li>
                     <li>Creates additional utility and alignment with partner projects</li>
@@ -559,45 +559,45 @@ export default function CreatePersonaPage() {
           </div>
 
           <div className="mb-8">
-            <label className="block text-sm font-light text-white/80 mb-3">Initial Buy Amount (optional)</label>
+            <label className="block text-sm font-light text-foreground/80 mb-3">Initial Buy Amount (optional)</label>
             <input
               type="number"
               value={formData.initialBuyAmount}
               onChange={(e) => setFormData({ ...formData, initialBuyAmount: e.target.value })}
-              className="w-full p-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/40 focus:border-white/40 focus:outline-none transition-colors"
+              className="w-full p-4 bg-muted backdrop-blur-sm border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:border-border focus:outline-none transition-colors"
               placeholder="0"
               step="0.01"
               min="0"
             />
-            <p className="text-xs text-white/50 mt-2">
+            <p className="text-xs text-muted-foreground mt-2">
               Amount of {selectedPairingToken?.symbol || 'pairing tokens'} to buy immediately after creation
             </p>
 
             {/* Initial Buy Preview */}
             {formData.initialBuyAmount && parseFloat(formData.initialBuyAmount) > 0 && (
               <div className="mt-4 p-4 gradient-brand-light backdrop-blur-sm rounded-xl border border-brand-blue/20">
-                <h4 className="text-sm font-medium text-white mb-3">Initial Buy Preview</h4>
+                <h4 className="text-sm font-medium text-foreground mb-3">Initial Buy Preview</h4>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-white/60">You will spend</span>
-                    <span className="text-white font-medium">
+                    <span className="text-muted-foreground">You will spend</span>
+                    <span className="text-foreground font-medium">
                       {formData.initialBuyAmount} {selectedPairingToken?.symbol || 'tokens'}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-white/60">Estimated tokens</span>
+                    <span className="text-muted-foreground">Estimated tokens</span>
                     <span className="text-green-400 font-medium">
                       ~{estimatedTokens} {formData.symbol || 'tokens'}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-white/60">Initial price</span>
-                    <span className="text-white">
+                    <span className="text-muted-foreground">Initial price</span>
+                    <span className="text-foreground">
                       ~1 {formData.symbol || 'token'} = {pricePerToken} {selectedPairingToken?.symbol || 'tokens'}
                     </span>
                   </div>
                 </div>
-                <p className="text-xs text-white/50 mt-3">
+                <p className="text-xs text-muted-foreground mt-3">
                   This will be the first transaction on the bonding curve. The price will increase as more people buy.
                 </p>
               </div>
@@ -605,25 +605,25 @@ export default function CreatePersonaPage() {
           </div>
 
           <div className="mb-8">
-            <label className="block text-sm font-light text-white/80 mb-3">Metadata (optional)</label>
+            <label className="block text-sm font-light text-foreground/80 mb-3">Metadata (optional)</label>
             <div className="flex flex-col sm:flex-row gap-2 mb-4">
               <input
                 type="text"
                 value={newMetadataKey}
                 onChange={(e) => setNewMetadataKey(e.target.value)}
-                className="flex-1 p-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/40 focus:border-white/40 focus:outline-none transition-colors"
+                className="flex-1 p-4 bg-muted backdrop-blur-sm border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:border-border focus:outline-none transition-colors"
                 placeholder="Key (e.g., website)"
               />
               <input
                 type="text"
                 value={newMetadataValue}
                 onChange={(e) => setNewMetadataValue(e.target.value)}
-                className="flex-1 p-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/40 focus:border-white/40 focus:outline-none transition-colors"
+                className="flex-1 p-4 bg-muted backdrop-blur-sm border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:border-border focus:outline-none transition-colors"
                 placeholder="Value (e.g., https://...)"
               />
               <button
                 onClick={handleAddMetadata}
-                className="px-6 py-4 bg-white/10 backdrop-blur-sm rounded-xl hover:bg-white/20 transition-all duration-300 text-white/80"
+                className="px-6 py-4 bg-muted backdrop-blur-sm rounded-xl hover:bg-muted transition-all duration-300 text-foreground/80"
               >
                 Add
               </button>
@@ -632,9 +632,9 @@ export default function CreatePersonaPage() {
             {formData.metadataKeys.length > 0 && (
               <div className="space-y-2">
                 {formData.metadataKeys.map((key, index) => (
-                  <div key={index} className="flex justify-between items-center p-4 bg-white/5 backdrop-blur-sm rounded-xl">
-                    <span className="text-sm text-white/80 break-all">
-                      <span className="font-medium text-white/90">{key}:</span> {formData.metadataValues[index]}
+                  <div key={index} className="flex justify-between items-center p-4 bg-card backdrop-blur-sm rounded-xl">
+                    <span className="text-sm text-foreground/80 break-all">
+                      <span className="font-medium text-foreground/90">{key}:</span> {formData.metadataValues[index]}
                     </span>
                     <button
                       onClick={() => {
@@ -657,30 +657,30 @@ export default function CreatePersonaPage() {
           {/* Total Cost Summary */}
           {address && totalRequired > BigInt(0) && (
             <div className="mb-8 p-4 bg-blue-500/10 backdrop-blur-sm rounded-xl border border-blue-500/20">
-              <h4 className="text-sm font-medium text-white mb-2">Total Cost Summary</h4>
+              <h4 className="text-sm font-medium text-foreground mb-2">Total Cost Summary</h4>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-white/60">Creation fee:</span>
-                  <span className="text-white">{formattedMintCost} {selectedPairingToken?.symbol}</span>
+                  <span className="text-muted-foreground">Creation fee:</span>
+                  <span className="text-foreground">{formattedMintCost} {selectedPairingToken?.symbol}</span>
                 </div>
                 {formData.initialBuyAmount && parseFloat(formData.initialBuyAmount) > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-white/60">Initial buy:</span>
-                    <span className="text-white">{formData.initialBuyAmount} {selectedPairingToken?.symbol}</span>
+                    <span className="text-muted-foreground">Initial buy:</span>
+                    <span className="text-foreground">{formData.initialBuyAmount} {selectedPairingToken?.symbol}</span>
                   </div>
                 )}
-                <div className="flex justify-between font-medium pt-2 border-t border-white/10">
-                  <span className="text-white/80">Total required:</span>
-                  <span className="text-white">{formatEther(totalRequired)} {selectedPairingToken?.symbol}</span>
+                <div className="flex justify-between font-medium pt-2 border-t border-border">
+                  <span className="text-foreground/80">Total required:</span>
+                  <span className="text-foreground">{formatEther(totalRequired)} {selectedPairingToken?.symbol}</span>
                 </div>
               </div>
             </div>
           )}
 
           {!address ? (
-            <div className="bg-white/5 backdrop-blur-md rounded-2xl p-12 border border-white/10 text-center">
-              <h2 className="text-2xl font-light text-white mb-4">Connect Your Wallet</h2>
-              <p className="text-white/60 mb-8">
+            <div className="bg-card backdrop-blur-md rounded-2xl p-12 border border-border text-center">
+              <h2 className="text-2xl font-light text-foreground mb-4">Connect Your Wallet</h2>
+              <p className="text-muted-foreground mb-8">
                 Please connect your wallet to create a persona
               </p>
               <div className="flex justify-center">

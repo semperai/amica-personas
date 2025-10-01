@@ -54,11 +54,11 @@ export function FeeInfoDisplay({ feeInfo, factoryAddress, onUpdateSnapshot, isMo
       {showFeeInfo && (
         <div className="mt-3 p-4 bg-purple-500/10 backdrop-blur-sm rounded-xl text-sm space-y-2">
           <div className="flex justify-between">
-            <span className="text-white/60">AMICA Balance:</span>
-            <span className="text-white">{formatEther(feeInfo[0])}</span>
+            <span className="text-muted-foreground">AMICA Balance:</span>
+            <span className="text-foreground">{formatEther(feeInfo[0])}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-white/60">Your Fee Rate:</span>
+            <span className="text-muted-foreground">Your Fee Rate:</span>
             <span className="text-green-400 font-medium">
               {formatFeePercentage(feeInfo[7])}%
               {feeInfo[8] > 0 && (
@@ -76,11 +76,11 @@ export function FeeInfoDisplay({ feeInfo, factoryAddress, onUpdateSnapshot, isMo
             </button>
           )}
 
-          <div className="mt-3 pt-3 border-t border-white/10">
-            <p className="text-xs text-white/50">
+          <div className="mt-3 pt-3 border-t border-border">
+            <p className="text-xs text-muted-foreground">
               Hold AMICA to reduce trading fees:
             </p>
-            <ul className="mt-1 space-y-1 text-xs text-white/40">
+            <ul className="mt-1 space-y-1 text-xs text-muted-foreground/70">
               <li>• 1,000 AMICA = 10% discount</li>
               <li>• 10,000 AMICA = 30% discount</li>
               <li>• 100,000 AMICA = 60% discount</li>

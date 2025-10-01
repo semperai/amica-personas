@@ -105,13 +105,13 @@ export function BurnAndClaim() {
 
   return (
     <div>
-      <h2 className="text-2xl font-light text-white mb-6">Burn & Claim Treasury</h2>
+      <h2 className="text-2xl font-light text-foreground mb-6">Burn & Claim Treasury</h2>
 
       {/* AMICA Balance Display */}
-      <div className="mb-6 p-4 bg-white/5 backdrop-blur-sm rounded-xl">
+      <div className="mb-6 p-4 bg-muted backdrop-blur-sm rounded-xl">
         <div className="flex justify-between items-center">
-          <span className="text-sm text-white/60">Your AMICA Balance</span>
-          <span className="text-xl font-light text-white">
+          <span className="text-sm text-muted-foreground">Your AMICA Balance</span>
+          <span className="text-xl font-light text-foreground">
             {amicaBalance ? formatEther(amicaBalance.value) : '0'} AMICA
           </span>
         </div>
@@ -119,24 +119,24 @@ export function BurnAndClaim() {
 
       {/* Burn Amount Input */}
       <div className="mb-6">
-        <label className="block text-sm font-light text-white/80 mb-3">Amount to Burn</label>
+        <label className="block text-sm font-light text-muted-foreground mb-3">Amount to Burn</label>
         <div className="relative">
           <input
             type="number"
             value={burnAmount}
             onChange={(e) => setBurnAmount(e.target.value)}
             placeholder="0.0"
-            className="w-full p-4 pr-20 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/40 focus:border-white/40 focus:outline-none transition-colors text-lg"
+            className="w-full p-4 pr-20 bg-muted backdrop-blur-sm border border-border rounded-xl text-foreground placeholder-muted-foreground focus:border-border focus:outline-none transition-colors text-lg"
           />
           <button
             onClick={() => setBurnAmount(amicaBalance ? formatEther(amicaBalance.value) : '0')}
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-2 text-sm bg-white/10 rounded-lg hover:bg-white/20 transition-colors text-white/80"
+            className="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-2 text-sm bg-muted rounded-lg hover:bg-muted/80 transition-colors text-foreground/80"
           >
             MAX
           </button>
         </div>
         {burnAmount && parseFloat(burnAmount) > 0 && (
-          <p className="text-sm text-white/50 mt-2">
+          <p className="text-sm text-muted-foreground mt-2">
             You will burn {sharePercentage.toString()}% of the total supply
           </p>
         )}
@@ -145,23 +145,23 @@ export function BurnAndClaim() {
       {/* Claimable Tokens Preview */}
       {claimableTokens.length > 0 && (
         <div className="mb-6">
-          <h3 className="text-sm font-light text-white/80 mb-3">You Will Receive</h3>
+          <h3 className="text-sm font-light text-muted-foreground mb-3">You Will Receive</h3>
           <div className="space-y-2">
             {claimableTokens.map((token, index) => (
               <div
                 key={index}
-                className="p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10"
+                className="p-4 bg-muted backdrop-blur-sm rounded-xl border border-border"
               >
                 <div className="flex justify-between items-center">
                   <div>
-                    <p className="font-light text-white">{token.symbol}</p>
-                    <p className="text-sm text-white/50">{token.name}</p>
+                    <p className="font-light text-foreground">{token.symbol}</p>
+                    <p className="text-sm text-muted-foreground">{token.name}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-light text-white">
+                    <p className="font-light text-foreground">
                       {formatEther(token.amount)}
                     </p>
-                    <p className="text-sm text-white/50">
+                    <p className="text-sm text-muted-foreground">
                       ≈ ${(Number(formatEther(token.amount)) * token.valueUSD).toFixed(2)}
                     </p>
                   </div>
@@ -172,8 +172,8 @@ export function BurnAndClaim() {
             {/* Total Value */}
             <div className="p-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 backdrop-blur-sm rounded-xl border border-purple-500/20 mt-4">
               <div className="flex justify-between items-center">
-                <span className="text-white/80">Total Value</span>
-                <span className="text-xl font-light text-white">
+                <span className="text-foreground/80">Total Value</span>
+                <span className="text-xl font-light text-foreground">
                   ≈ ${totalValueUSD.toFixed(2)}
                 </span>
               </div>

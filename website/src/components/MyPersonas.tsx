@@ -160,10 +160,10 @@ export function MyPersonas({ address }: MyPersonasProps) {
   if (loading) {
     return (
       <div>
-        <h2 className="text-2xl font-light text-white mb-6">My Created Personas</h2>
+        <h2 className="text-2xl font-light text-foreground mb-6">My Created Personas</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="aspect-[3/4] bg-white/5 rounded-2xl animate-pulse" />
+            <div key={i} className="aspect-[3/4] bg-muted rounded-2xl animate-pulse" />
           ))}
         </div>
       </div>
@@ -173,7 +173,7 @@ export function MyPersonas({ address }: MyPersonasProps) {
   if (error) {
     return (
       <div>
-        <h2 className="text-2xl font-light text-white mb-6">My Created Personas</h2>
+        <h2 className="text-2xl font-light text-foreground mb-6">My Created Personas</h2>
         <div className="text-center py-12">
           <p className="text-red-400 mb-4">Error loading personas</p>
           <button
@@ -192,12 +192,12 @@ export function MyPersonas({ address }: MyPersonasProps) {
   if (personas.length === 0) {
     return (
       <div>
-        <h2 className="text-2xl font-light text-white mb-6">My Created Personas</h2>
+        <h2 className="text-2xl font-light text-foreground mb-6">My Created Personas</h2>
         <div className="text-center py-12">
-          <p className="text-white/60 mb-6">You haven&apos;t created any personas yet.</p>
+          <p className="text-muted-foreground mb-6">You haven&apos;t created any personas yet.</p>
           <Link
             href="/create"
-            className="inline-block bg-white/10 backdrop-blur-md text-white px-8 py-3 rounded-full hover:bg-white/20 transition-all duration-300"
+            className="inline-block bg-muted backdrop-blur-md text-foreground px-8 py-3 rounded-full hover:bg-muted/80 transition-all duration-300"
           >
             Create Your First Persona
           </Link>
@@ -208,7 +208,7 @@ export function MyPersonas({ address }: MyPersonasProps) {
 
   return (
     <div>
-      <h2 className="text-2xl font-light text-white mb-6">My Created Personas ({personas.length})</h2>
+      <h2 className="text-2xl font-light text-foreground mb-6">My Created Personas ({personas.length})</h2>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
         {personas.map((persona: CreatedPersona) => (
           <PersonaCard key={persona.id} persona={persona} />

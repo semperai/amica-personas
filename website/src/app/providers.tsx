@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WagmiProvider } from 'wagmi';
-import { RainbowKitProvider, midnightTheme } from '@rainbow-me/rainbowkit';
+import { RainbowKitProvider, lightTheme } from '@rainbow-me/rainbowkit';
 import { ApolloProvider } from '@apollo/client';
 import { config } from '@/lib/wagmi';
 import { apolloClient } from '@/lib/graphql/client';
@@ -61,8 +61,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         <WagmiProvider config={config}>
           <QueryClientProvider client={queryClient}>
             <RainbowKitProvider
-              theme={midnightTheme({
-                borderRadius: 'large',
+              theme={lightTheme({
+                borderRadius: 'medium',
               })}
               appInfo={{
                 appName: 'Amica Personas',

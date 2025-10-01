@@ -2,6 +2,7 @@
 
 import Layout from '@/components/Layout';
 import HeroSection from './HeroSection';
+import EcosystemSection from './EcosystemSection';
 import PersonaGrid from './PersonaGrid';
 
 // Enhanced animation styles
@@ -80,6 +81,7 @@ export default function HomePageClient() {
     <Layout>
       <style jsx>{animationStyles}</style>
       <HeroSection />
+      <EcosystemSection />
       <PersonaGrid />
     </Layout>
   );

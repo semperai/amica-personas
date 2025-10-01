@@ -25,10 +25,10 @@ class ErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full">
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="bg-card rounded-lg shadow-lg p-8 max-w-md w-full border border-border">
             <h2 className="text-2xl font-bold text-red-600 mb-4">Oops! Something went wrong</h2>
-            <p className="text-gray-600 mb-6">
+            <p className="text-muted-foreground mb-6">
               We encountered an unexpected error. This might be due to a network issue or a temporary problem.
             </p>
             <div className="space-y-3">
@@ -40,15 +40,15 @@ class ErrorBoundary extends Component<Props, State> {
               </button>
               <button
                 onClick={() => this.setState({ hasError: false })}
-                className="w-full bg-gray-200 text-gray-800 py-2 rounded hover:bg-gray-300"
+                className="w-full bg-muted text-foreground py-2 rounded hover:bg-muted/80"
               >
                 Try Again
               </button>
             </div>
             {process.env.NODE_ENV === 'development' && this.state.error && (
               <details className="mt-6">
-                <summary className="cursor-pointer text-sm text-gray-500">Error details</summary>
-                <pre className="mt-2 text-xs bg-gray-100 p-2 rounded overflow-auto">
+                <summary className="cursor-pointer text-sm text-muted-foreground">Error details</summary>
+                <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-auto">
                   {this.state.error.toString()}
                 </pre>
               </details>

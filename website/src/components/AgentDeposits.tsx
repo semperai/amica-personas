@@ -292,10 +292,10 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
   // Wait for data to load (but don't error out if GraphQL fails)
   if (graphqlLoading) {
     return (
-      <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
+      <div className="bg-card backdrop-blur-md rounded-2xl p-6 border border-border">
         <div className="animate-pulse">
-          <div className="h-6 bg-white/10 rounded w-1/3 mb-4"></div>
-          <div className="h-20 bg-white/10 rounded"></div>
+          <div className="h-6 bg-muted rounded w-1/3 mb-4"></div>
+          <div className="h-20 bg-muted rounded"></div>
         </div>
       </div>
     );
@@ -341,9 +341,9 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
     : 100;
 
   return (
-    <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
+    <div className="bg-card backdrop-blur-md rounded-2xl p-6 border border-border">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-light text-white">Agent Token Integration</h3>
+        <h3 className="text-lg font-light text-foreground">Agent Token Integration</h3>
         <div className="flex items-center gap-2">
           {isMockMode && (
             <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded">Mock Mode</span>
@@ -357,27 +357,27 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
       </div>
 
       {/* Progress Overview */}
-      <div className="mb-6 p-4 bg-white/5 rounded-xl">
+      <div className="mb-6 p-4 bg-muted rounded-xl">
         <div className="flex justify-between text-sm mb-2">
-          <span className="text-white/60">Total Deposited (All Users)</span>
-          <span className="font-light text-white">{formatTokenAmount(totalAgentDeposited)} {agentTokenSymbol || 'tokens'}</span>
+          <span className="text-muted-foreground">Total Deposited (All Users)</span>
+          <span className="font-light text-foreground">{formatTokenAmount(totalAgentDeposited)} {agentTokenSymbol || 'tokens'}</span>
         </div>
-        
+
         {minAgentTokens > BigInt(0) && (
           <>
             <div className="flex justify-between text-sm mb-2">
-              <span className="text-white/60">Required for Graduation</span>
-              <span className="font-light text-white">{formatTokenAmount(minAgentTokens)} {agentTokenSymbol || 'tokens'}</span>
+              <span className="text-muted-foreground">Required for Graduation</span>
+              <span className="font-light text-foreground">{formatTokenAmount(minAgentTokens)} {agentTokenSymbol || 'tokens'}</span>
             </div>
-            
-            <div className="w-full bg-white/10 rounded-full h-2 mt-3">
+
+            <div className="w-full bg-background rounded-full h-2 mt-3">
               <div
                 className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${progressPercentage}%` }}
               />
             </div>
-            
-            <p className="text-xs text-white/50 mt-2">
+
+            <p className="text-xs text-muted-foreground mt-2">
               {progressPercentage.toFixed(1)}% complete
               {progressPercentage < 100 && (
                 <span className="text-yellow-400 ml-2">⚠️ Graduation blocked until requirement met</span>
@@ -385,9 +385,10 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
             </p>
           </>
         )}
-        
+
+
         {minAgentTokens === BigInt(0) && (
-          <p className="text-xs text-white/50 mt-2">
+          <p className="text-xs text-muted-foreground mt-2">
             No minimum requirement - deposits are optional but earn rewards
           </p>
         )}
@@ -402,7 +403,7 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
               className={`flex-1 py-2 px-4 rounded-lg transition-all ${
                 activeTab === 'deposit'
                   ? 'bg-purple-500/20 text-purple-400 border border-purple-500/50'
-                  : 'bg-white/5 text-white/70 hover:bg-white/10'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
               }`}
             >
               Deposit
@@ -412,7 +413,7 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
               className={`flex-1 py-2 px-4 rounded-lg transition-all ${
                 activeTab === 'withdraw'
                   ? 'bg-purple-500/20 text-purple-400 border border-purple-500/50'
-                  : 'bg-white/5 text-white/70 hover:bg-white/10'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
               }`}
             >
               Withdraw
@@ -423,24 +424,24 @@ export default function AgentDeposits({ chainId, tokenId }: AgentDepositsProps) 
           {activeTab === 'deposit' && (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-light text-white/80 mb-2">Amount to Deposit</label>
+                <label className="block text-sm font-light text-muted-foreground mb-2">Amount to Deposit</label>
                 <div className="flex gap-2">
                   <input
                     type="number"
                     placeholder="0.0"
                     value={depositAmount}
                     onChange={(e) => setDepositAmount(e.target.value)}
-                    className="flex-1 p-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/40 focus:border-white/40 focus:outline-none transition-colors"
+                    className="flex-1 p-3 bg-muted backdrop-blur-sm border border-border rounded-xl text-foreground placeholder-muted-foreground focus:border-border focus:outline-none transition-colors"
                   />
                   <button
                     onClick={() => setDepositAmount(agentTokenBalance ? formatTokenAmount(agentTokenBalance.value) : '0')}
-                    className="px-4 py-3 bg-white/10 rounded-xl hover:bg-white/20 transition-colors text-white/80 text-sm"
+                    className="px-4 py-3 bg-muted rounded-xl hover:bg-muted/80 transition-colors text-foreground/80 text-sm"
                   >
                     MAX
                   </button>
                 </div>
                 {agentTokenBalance && (
-                  <p className="text-xs text-white/50 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     Balance: {formatTokenAmount(agentTokenBalance.value)} {agentTokenSymbol}
                   </p>
                 )}

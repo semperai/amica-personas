@@ -220,10 +220,10 @@ export default function PriceChart({ chainId, tokenId }: PriceChartProps) {
 
   if (loading && !data) {
     return (
-      <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
+      <div className="bg-card backdrop-blur-md rounded-2xl p-6 border border-border">
         <div className="animate-pulse">
-          <div className="h-6 bg-white/10 rounded w-1/4 mb-4"></div>
-          <div className="h-64 bg-white/10 rounded"></div>
+          <div className="h-6 bg-muted rounded w-1/4 mb-4"></div>
+          <div className="h-64 bg-muted rounded"></div>
         </div>
       </div>
     );
@@ -231,7 +231,7 @@ export default function PriceChart({ chainId, tokenId }: PriceChartProps) {
 
   if (error) {
     return (
-      <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
+      <div className="bg-card backdrop-blur-md rounded-2xl p-6 border border-border">
         <div className="text-center">
           <p className="text-red-400 mb-4">Error loading chart data</p>
           <button
@@ -246,21 +246,21 @@ export default function PriceChart({ chainId, tokenId }: PriceChartProps) {
   }
 
   return (
-    <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
+    <div className="bg-card backdrop-blur-md rounded-2xl p-6 border border-border">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-4 gap-4">
-        <h2 className="text-xl font-light text-white">Trading Analytics</h2>
+        <h2 className="text-xl font-light text-foreground">Trading Analytics</h2>
         
         <div className="flex flex-wrap gap-2">
           {/* Chart Type Selector */}
-          <div className="flex gap-1 bg-white/10 rounded-lg p-1">
+          <div className="flex gap-1 bg-muted rounded-lg p-1">
             {(['volume', 'trades', 'combined'] as const).map(type => (
               <button
                 key={type}
                 onClick={() => setChartType(type)}
                 className={`px-3 py-1 rounded text-xs transition-colors capitalize ${
                   chartType === type
-                    ? 'bg-purple-500/50 text-white'
-                    : 'text-white/70 hover:text-white'
+                    ? 'bg-purple-500/50 text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {type}
@@ -274,7 +274,7 @@ export default function PriceChart({ chainId, tokenId }: PriceChartProps) {
             className={`px-3 py-1 rounded-lg text-xs transition-colors ${
               showBuySell
                 ? 'bg-green-500/20 text-green-400 border border-green-500/50'
-                : 'bg-white/5 text-white/70 hover:bg-white/10'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
             }`}
           >
             Buy/Sell Split
@@ -289,7 +289,7 @@ export default function PriceChart({ chainId, tokenId }: PriceChartProps) {
                 className={`px-3 py-1 rounded-lg text-xs transition-colors ${
                   days === d
                     ? 'bg-purple-500/20 text-purple-400 border border-purple-500/50'
-                    : 'bg-white/5 text-white/70 hover:bg-white/10'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
                 }`}
               >
                 {d}D
@@ -301,29 +301,29 @@ export default function PriceChart({ chainId, tokenId }: PriceChartProps) {
 
       {/* Enhanced Summary Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-6">
-        <div className="bg-white/5 rounded-lg p-3">
-          <p className="text-xs text-white/50 mb-1">Total Volume</p>
-          <p className="text-lg font-light text-white">{formatEther(totalVolume)} ETH</p>
+        <div className="bg-muted rounded-lg p-3">
+          <p className="text-xs text-muted-foreground mb-1">Total Volume</p>
+          <p className="text-lg font-light text-foreground">{formatEther(totalVolume)} ETH</p>
         </div>
-        <div className="bg-white/5 rounded-lg p-3">
-          <p className="text-xs text-white/50 mb-1">Buy Volume</p>
+        <div className="bg-muted rounded-lg p-3">
+          <p className="text-xs text-muted-foreground mb-1">Buy Volume</p>
           <p className="text-lg font-light text-green-400">{formatEther(totalBuyVolume)} ETH</p>
         </div>
-        <div className="bg-white/5 rounded-lg p-3">
-          <p className="text-xs text-white/50 mb-1">Sell Volume</p>
+        <div className="bg-muted rounded-lg p-3">
+          <p className="text-xs text-muted-foreground mb-1">Sell Volume</p>
           <p className="text-lg font-light text-red-400">{formatEther(totalSellVolume)} ETH</p>
         </div>
-        <div className="bg-white/5 rounded-lg p-3">
-          <p className="text-xs text-white/50 mb-1">Total Trades</p>
-          <p className="text-lg font-light text-white">{totalTrades}</p>
+        <div className="bg-muted rounded-lg p-3">
+          <p className="text-xs text-muted-foreground mb-1">Total Trades</p>
+          <p className="text-lg font-light text-foreground">{totalTrades}</p>
         </div>
-        <div className="bg-white/5 rounded-lg p-3">
-          <p className="text-xs text-white/50 mb-1">Buy/Sell Ratio</p>
-          <p className="text-lg font-light text-white">{buyPercentage.toFixed(0)}%/{ (100 - buyPercentage).toFixed(0)}%</p>
+        <div className="bg-muted rounded-lg p-3">
+          <p className="text-xs text-muted-foreground mb-1">Buy/Sell Ratio</p>
+          <p className="text-lg font-light text-foreground">{buyPercentage.toFixed(0)}%/{ (100 - buyPercentage).toFixed(0)}%</p>
         </div>
-        <div className="bg-white/5 rounded-lg p-3">
-          <p className="text-xs text-white/50 mb-1">Avg Daily</p>
-          <p className="text-lg font-light text-white">{formatEther(avgDailyVolume)} ETH</p>
+        <div className="bg-muted rounded-lg p-3">
+          <p className="text-xs text-muted-foreground mb-1">Avg Daily</p>
+          <p className="text-lg font-light text-foreground">{formatEther(avgDailyVolume)} ETH</p>
         </div>
       </div>
 
@@ -502,14 +502,14 @@ export default function PriceChart({ chainId, tokenId }: PriceChartProps) {
         </div>
       ) : (
         <div className="h-[300px] flex items-center justify-center">
-          <p className="text-white/50">No trading data available for this period</p>
+          <p className="text-muted-foreground">No trading data available for this period</p>
         </div>
       )}
 
       {/* Additional Info */}
       <div className="mt-4 p-3 bg-blue-500/10 backdrop-blur-sm rounded-lg text-xs border border-blue-500/20">
-        <p className="font-light text-white/90 mb-1">Chart Information:</p>
-        <ul className="text-white/70 space-y-0.5 ml-4 list-disc">
+        <p className="font-light text-foreground/90 mb-1">Chart Information:</p>
+        <ul className="text-muted-foreground space-y-0.5 ml-4 list-disc">
           <li>Volume data shows {showBuySell ? 'buy (green) and sell (red) volumes' : 'total volume'} on the bonding curve</li>
           <li>Data is aggregated daily from all trades with buy/sell classification</li>
           <li>Buy trades use pairing tokens to purchase persona tokens</li>

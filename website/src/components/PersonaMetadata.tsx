@@ -132,19 +132,19 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
   // Loading state with skeleton
   if (loading && !data) {
     return (
-      <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
+      <div className="bg-card backdrop-blur-md rounded-2xl p-6 border border-border">
         <div className="animate-pulse">
-          <div className="h-8 bg-white/10 rounded w-1/2 mb-4"></div>
+          <div className="h-8 bg-muted rounded w-1/2 mb-4"></div>
           <div className="space-y-3">
-            <div className="h-4 bg-white/10 rounded w-3/4"></div>
-            <div className="h-4 bg-white/10 rounded w-1/2"></div>
-            <div className="h-4 bg-white/10 rounded w-2/3"></div>
+            <div className="h-4 bg-muted rounded w-3/4"></div>
+            <div className="h-4 bg-muted rounded w-1/2"></div>
+            <div className="h-4 bg-muted rounded w-2/3"></div>
           </div>
           <div className="mt-6 grid grid-cols-2 gap-4">
-            <div className="h-16 bg-white/10 rounded"></div>
-            <div className="h-16 bg-white/10 rounded"></div>
-            <div className="h-16 bg-white/10 rounded"></div>
-            <div className="h-16 bg-white/10 rounded"></div>
+            <div className="h-16 bg-muted rounded"></div>
+            <div className="h-16 bg-muted rounded"></div>
+            <div className="h-16 bg-muted rounded"></div>
+            <div className="h-16 bg-muted rounded"></div>
           </div>
         </div>
       </div>
@@ -156,16 +156,16 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
   // No data found
   if (!loading && !persona) {
     return (
-      <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
+      <div className="bg-card backdrop-blur-md rounded-2xl p-6 border border-border">
         <div className="text-center py-8">
           <div className="mb-4">
             <svg className="w-16 h-16 mx-auto text-red-400/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} 
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-white mb-2">Persona Not Found</h3>
-          <p className="text-white/60 mb-6 max-w-sm mx-auto">
+          <h3 className="text-lg font-medium text-foreground mb-2">Persona Not Found</h3>
+          <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
             This persona (Token ID: {tokenId} on Chain {chainId}) doesn&apos;t exist or hasn&apos;t been indexed yet.
           </p>
           <div className="flex gap-3 justify-center">
@@ -183,7 +183,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
             </button>
             <button
               onClick={() => window.history.back()}
-              className="px-6 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all"
+              className="px-6 py-2 bg-muted text-foreground rounded-lg hover:bg-muted/80 transition-all"
             >
               Go Back
             </button>
@@ -220,11 +220,11 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
   const chainName = chainNames[chainId] || 'unknown';
 
   return (
-    <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10 relative">
+    <div className="bg-card backdrop-blur-md rounded-2xl p-6 border border-border relative">
       {/* Refetching indicator */}
       {isRefetching && (
         <div className="absolute top-4 right-4">
-          <div className="flex items-center gap-2 text-xs text-white/50">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <div className="w-2 h-2 bg-brand-blue rounded-full animate-pulse"></div>
             Updating...
           </div>
@@ -233,8 +233,8 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
 
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h1 className="text-3xl font-light text-white">{persona.name}</h1>
-          <p className="text-lg text-white/60">${persona.symbol}</p>
+          <h1 className="text-3xl font-light text-foreground">{persona.name}</h1>
+          <p className="text-lg text-muted-foreground">${persona.symbol}</p>
         </div>
         <div className="flex gap-2">
           {isGraduated && (
@@ -258,7 +258,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
       {/* Enhanced grid with new fields */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <div>
-          <p className="text-sm text-white/50">Creator</p>
+          <p className="text-sm text-muted-foreground">Creator</p>
           <a
             href={getAddressExplorerUrl(persona.creator)}
             target="_blank"
@@ -271,7 +271,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
         
         {isOwnerDifferentFromCreator && (
           <div>
-            <p className="text-sm text-white/50">Current Owner</p>
+            <p className="text-sm text-muted-foreground">Current Owner</p>
             <a
               href={getAddressExplorerUrl(persona.owner)}
               target="_blank"
@@ -282,33 +282,33 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
             </a>
           </div>
         )}
-        
+
         <div>
-          <p className="text-sm text-white/50">Chain</p>
-          <p className="text-white font-light capitalize">{chainName}</p>
+          <p className="text-sm text-muted-foreground">Chain</p>
+          <p className="text-foreground font-light capitalize">{chainName}</p>
         </div>
         <div>
-          <p className="text-sm text-white/50">Token ID</p>
-          <p className="text-white font-light">#{tokenId}</p>
+          <p className="text-sm text-muted-foreground">Token ID</p>
+          <p className="text-foreground font-light">#{tokenId}</p>
         </div>
         <div>
-          <p className="text-sm text-white/50">Created</p>
-          <p className="text-white font-light">
+          <p className="text-sm text-muted-foreground">Created</p>
+          <p className="text-foreground font-light">
             {new Date(persona.createdAt).toLocaleDateString()}
           </p>
         </div>
         <div>
-          <p className="text-sm text-white/50">Block</p>
-          <p className="text-white font-light">#{persona.createdAtBlock}</p>
+          <p className="text-sm text-muted-foreground">Block</p>
+          <p className="text-foreground font-light">#{persona.createdAtBlock}</p>
         </div>
       </div>
 
       {/* Contract Addresses */}
-      <div className="mb-6 p-4 bg-white/5 rounded-xl">
-        <h3 className="text-sm font-medium text-white mb-3">Contract Addresses</h3>
+      <div className="mb-6 p-4 bg-muted rounded-xl">
+        <h3 className="text-sm font-medium text-foreground mb-3">Contract Addresses</h3>
         <div className="space-y-2">
           <div className="flex justify-between items-center">
-            <span className="text-white/60 text-sm">ERC20 Token:</span>
+            <span className="text-muted-foreground text-sm">ERC20 Token:</span>
             <a
               href={getAddressExplorerUrl(persona.erc20Token)}
               target="_blank"
@@ -319,7 +319,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
             </a>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-white/60 text-sm">Pairing Token:</span>
+            <span className="text-muted-foreground text-sm">Pairing Token:</span>
             <a
               href={getAddressExplorerUrl(persona.pairToken)}
               target="_blank"
@@ -331,7 +331,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
           </div>
           {isGraduated && persona.pairAddress && (
             <div className="flex justify-between items-center">
-              <span className="text-white/60 text-sm">Uniswap Pair:</span>
+              <span className="text-muted-foreground text-sm">Uniswap Pair:</span>
               <a
                 href={getAddressExplorerUrl(persona.pairAddress)}
                 target="_blank"
@@ -349,32 +349,32 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
       {!isGraduated && (
         <div className="mb-6">
           <div className="flex justify-between text-sm mb-2">
-            <span className="text-white/60">TVL Progress</span>
-            <span className="text-white font-light">{progress.toFixed(1)}%</span>
+            <span className="text-muted-foreground">TVL Progress</span>
+            <span className="text-foreground font-light">{progress.toFixed(1)}%</span>
           </div>
-          <div className="w-full bg-white/10 rounded-full h-2 mb-2">
+          <div className="w-full bg-muted rounded-full h-2 mb-2">
             <div
               className="gradient-brand h-2 rounded-full transition-all duration-300"
               style={{ width: `${Math.min(progress, 100)}%` }}
             />
           </div>
-          <p className="text-xs text-white/50">
+          <p className="text-xs text-muted-foreground">
             {formatEther(BigInt(persona.totalDeposited || 0))} / {formatEther(BigInt(persona.graduationThreshold || 0))} tokens
           </p>
 
           {hasAgentToken && persona.minAgentTokens && Number(persona.minAgentTokens) > 0 && (
             <div className="mt-4">
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-white/60">Agent Token Progress</span>
-                <span className="text-white font-light">{agentTokenProgress.toFixed(1)}%</span>
+                <span className="text-muted-foreground">Agent Token Progress</span>
+                <span className="text-foreground font-light">{agentTokenProgress.toFixed(1)}%</span>
               </div>
-              <div className="w-full bg-white/10 rounded-full h-2 mb-2">
+              <div className="w-full bg-muted rounded-full h-2 mb-2">
                 <div
                   className="gradient-brand h-2 rounded-full transition-all duration-300"
                   style={{ width: `${Math.min(agentTokenProgress, 100)}%` }}
                 />
               </div>
-              <p className="text-xs text-white/50">
+              <p className="text-xs text-muted-foreground">
                 {formatEther(BigInt(persona.totalAgentDeposited || 0))} / {formatEther(BigInt(persona.minAgentTokens))} agent tokens
               </p>
             </div>

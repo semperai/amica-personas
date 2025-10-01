@@ -23,10 +23,10 @@ export function TokenInput({
   className = ""
 }: TokenInputProps) {
   return (
-    <div className={`p-4 bg-white/5 rounded-xl border border-white/10 ${className}`}>
+    <div className={`p-4 bg-muted rounded-xl border border-border ${className}`}>
       <div className="flex justify-between mb-2">
-        <span className="text-sm text-white/60">{label}</span>
-        <span className="text-xs text-white/50">Balance: {balance}</span>
+        <span className="text-sm text-muted-foreground">{label}</span>
+        <span className="text-xs text-muted-foreground">Balance: {balance}</span>
       </div>
       <div className="flex items-center gap-3">
         <input
@@ -35,17 +35,17 @@ export function TokenInput({
           onChange={(e) => onChange?.(e.target.value)}
           readOnly={readOnly}
           placeholder={placeholder}
-          className="flex-1 bg-transparent text-2xl text-white placeholder-white/30 outline-none min-w-0"
+          className="flex-1 bg-transparent text-2xl text-foreground placeholder-muted-foreground outline-none min-w-0"
         />
         {onMaxClick && !readOnly && (
-          <button 
+          <button
             onClick={onMaxClick}
             className="text-xs text-purple-400 hover:text-purple-300 mr-2"
           >
             MAX
           </button>
         )}
-        <div className="flex-shrink-0 px-4 py-2 bg-white/10 rounded-lg text-white">
+        <div className="flex-shrink-0 px-4 py-2 bg-muted/80 rounded-lg text-foreground">
           {tokenSymbol}
         </div>
       </div>
