@@ -1,6 +1,7 @@
 import { Message, Role, Screenplay, Talk, textsToScreenplay } from "./messages";
 import { Viewer } from "@/features/vrmViewer/viewer";
 import { Alert } from "@/features/alert/alert";
+import { HookManager } from "@/features/hooks/hookManager";
 
 import { getEchoChatResponseStream } from "./echoChat";
 import {
@@ -79,6 +80,7 @@ export class Chat {
 
   public viewer?: Viewer;
   public alert?: Alert;
+  public hookManager: HookManager;
 
   public setChatLog?: (messageLog: Message[]) => void;
   public setUserMessage?: (message: string) => void;
@@ -128,6 +130,8 @@ export class Chat {
     this.currentStreamIdx = 0;
 
     this.lastAwake = 0;
+
+    this.hookManager = new HookManager();
   }
 
   public initialize(
@@ -141,6 +145,7 @@ export class Chat {
     setChatSpeaking: (speaking: boolean) => void,
   ) {
     this.viewer = viewer;
+    this.viewer.chat = this; // Set bidirectional reference
     this.alert = alert;
     this.setChatLog = setChatLog;
     this.setUserMessage = setUserMessage;
@@ -352,12 +357,19 @@ export class Chat {
 
     console.log("receiveMessageFromUser", message);
 
+    // Trigger before hook
+    const beforeContext = await this.hookManager.trigger('before:user:message:receive', { message });
+    message = beforeContext.message;
+
     if (!/\[.*?\]/.test(message)) {
       message = `[neutral] ${message}`;
     }
 
     this.updateAwake();
     this.bubbleMessage("user", message);
+
+    // Trigger after hook
+    await this.hookManager.trigger('after:user:message:receive', { message });
 
     // make new stream
     const messages: Message[] = [
@@ -400,6 +412,9 @@ export class Chat {
     const streamIdx = this.currentStreamIdx;
     this.setChatProcessing!(true);
 
+    // Trigger before stream hook
+    await this.hookManager.trigger('before:llm:stream', { streamIdx });
+
     console.time("chat stream processing");
     let reader = this.streams[this.streams.length - 1].getReader();
     this.readers.push(reader);
@@ -429,7 +444,13 @@ export class Chat {
         }
         if (done) break;
 
-        receivedMessage += value;
+        // Trigger chunk hook
+        const chunkContext = await this.hookManager.trigger('on:llm:chunk', {
+          chunk: value,
+          streamIdx
+        });
+
+        receivedMessage += chunkContext.chunk;
         receivedMessage = receivedMessage.trimStart();
 
         const proc = processResponse({
@@ -467,6 +488,12 @@ export class Chat {
           break;
         }
       }
+
+      // Trigger after completion hook
+      await this.hookManager.trigger('after:llm:complete', {
+        response: aiTextLog,
+        streamIdx
+      });
     } catch (e: any) {
       const errMsg = e.toString();
       this.bubbleMessage!("assistant", errMsg);
@@ -494,53 +521,54 @@ export class Chat {
       return null;
     }
 
+    const ttsBackend = config("tts_backend");
+
+    // Trigger before TTS hook
+    const beforeContext = await this.hookManager.trigger('before:tts:generate', {
+      text: talk.message,
+      backend: ttsBackend
+    });
+
     const rvcEnabled = config("rvc_enabled") === "true";
 
+    let audioBuffer: ArrayBuffer | null = null;
     try {
-      switch (config("tts_backend")) {
+      switch (ttsBackend) {
         case "none": {
-          return null;
+          audioBuffer = null;
+          break;
         }
         case "elevenlabs": {
           const voiceId = config("elevenlabs_voiceid");
-          const voice = await elevenlabs(talk.message, voiceId, talk.style);
-          if (rvcEnabled) {
-            return await this.handleRvc(voice.audio);
-          }
-          return voice.audio;
+          const voice = await elevenlabs(beforeContext.text, voiceId, talk.style);
+          audioBuffer = rvcEnabled ? await this.handleRvc(voice.audio) : voice.audio;
+          break;
         }
         case "speecht5": {
           const speakerEmbeddingUrl = config("speecht5_speaker_embedding_url");
-          const voice = await speecht5(talk.message, speakerEmbeddingUrl);
-          if (rvcEnabled) {
-            return await this.handleRvc(voice.audio);
-          }
-          return voice.audio;
+          const voice = await speecht5(beforeContext.text, speakerEmbeddingUrl);
+          audioBuffer = rvcEnabled ? await this.handleRvc(voice.audio) : voice.audio;
+          break;
         }
         case "openai_tts": {
-          const voice = await openaiTTS(talk.message);
-          if (rvcEnabled) {
-            return await this.handleRvc(voice.audio);
-          }
-          return voice.audio;
+          const voice = await openaiTTS(beforeContext.text);
+          audioBuffer = rvcEnabled ? await this.handleRvc(voice.audio) : voice.audio;
+          break;
         }
         case "localXTTS": {
-          const voice = await localXTTSTTS(talk.message);
-          if (rvcEnabled) {
-            return await this.handleRvc(voice.audio);
-          }
-          return voice.audio;
+          const voice = await localXTTSTTS(beforeContext.text);
+          audioBuffer = rvcEnabled ? await this.handleRvc(voice.audio) : voice.audio;
+          break;
         }
         case "piper": {
-          const voice = await piper(talk.message);
-          if (rvcEnabled) {
-            return await this.handleRvc(voice.audio);
-          }
-          return voice.audio;
+          const voice = await piper(beforeContext.text);
+          audioBuffer = rvcEnabled ? await this.handleRvc(voice.audio) : voice.audio;
+          break;
         }
         case "coquiLocal": {
-          const voice = await coquiLocal(talk.message);
-          return voice.audio;
+          const voice = await coquiLocal(beforeContext.text);
+          audioBuffer = voice.audio;
+          break;
         }
       }
     } catch (e: any) {
@@ -548,29 +576,56 @@ export class Chat {
       this.alert?.error("Failed to get TTS response", e.toString());
     }
 
-    return null;
+    // Trigger after TTS hook
+    const afterContext = await this.hookManager.trigger('after:tts:generate', {
+      audioBuffer,
+      text: beforeContext.text
+    });
+
+    return afterContext.audioBuffer;
   }
 
   public async getChatResponseStream(messages: Message[]) {
     console.debug("getChatResponseStream", messages);
     const chatbotBackend = config("chatbot_backend");
 
-    switch (chatbotBackend) {
+    // Trigger before hook
+    const beforeContext = await this.hookManager.trigger('before:llm:request', {
+      messages,
+      backend: chatbotBackend
+    });
+
+    let stream: ReadableStream<Uint8Array>;
+    switch (beforeContext.backend) {
       case "arbius_llm":
-        return getArbiusChatResponseStream(messages);
+        stream = await getArbiusChatResponseStream(beforeContext.messages);
+        break;
       case "chatgpt":
-        return getOpenAiChatResponseStream(messages);
+        stream = await getOpenAiChatResponseStream(beforeContext.messages);
+        break;
       case "llamacpp":
-        return getLlamaCppChatResponseStream(messages);
+        stream = await getLlamaCppChatResponseStream(beforeContext.messages);
+        break;
       case "windowai":
-        return getWindowAiChatResponseStream(messages);
+        stream = await getWindowAiChatResponseStream(beforeContext.messages);
+        break;
       case "ollama":
-        return getOllamaChatResponseStream(messages);
+        stream = await getOllamaChatResponseStream(beforeContext.messages);
+        break;
       case "koboldai":
-        return getKoboldAiChatResponseStream(messages);
+        stream = await getKoboldAiChatResponseStream(beforeContext.messages);
+        break;
+      default:
+        stream = await getEchoChatResponseStream(beforeContext.messages);
     }
 
-    return getEchoChatResponseStream(messages);
+    // Trigger after hook
+    await this.hookManager.trigger('after:llm:request', {
+      messages: beforeContext.messages,
+      backend: beforeContext.backend
+    });
+
+    return stream;
   }
 
   public async getVisionResponse(imageData: string) {
@@ -578,6 +633,9 @@ export class Chat {
       const visionBackend = config("vision_backend");
 
       console.debug("vision_backend", visionBackend);
+
+      // Trigger before vision capture hook
+      const beforeContext = await this.hookManager.trigger('before:vision:capture', { imageData });
 
       let res = "";
       if (visionBackend === "vision_llamacpp") {
@@ -590,7 +648,7 @@ export class Chat {
           },
         ];
 
-        res = await getLlavaCppChatResponse(messages, imageData);
+        res = await getLlavaCppChatResponse(messages, beforeContext.imageData);
       } else if (visionBackend === "vision_ollama") {
         const messages: Message[] = [
           { role: "system", content: config("vision_system_prompt") },
@@ -601,7 +659,7 @@ export class Chat {
           },
         ];
 
-        res = await getOllamaVisionChatResponse(messages, imageData);
+        res = await getOllamaVisionChatResponse(messages, beforeContext.imageData);
       } else if (visionBackend === "vision_openai") {
         const messages: Message[] = [
           { role: "user", content: config("vision_system_prompt") },
@@ -617,7 +675,7 @@ export class Chat {
               {
                 type: "image_url",
                 image_url: {
-                  url: `data:image/jpeg;base64,${imageData}`,
+                  url: `data:image/jpeg;base64,${beforeContext.imageData}`,
                 },
               },
             ],
@@ -630,12 +688,18 @@ export class Chat {
         return;
       }
 
+      // Trigger after vision response hook
+      const afterContext = await this.hookManager.trigger('after:vision:response', {
+        response: res,
+        imageData: beforeContext.imageData
+      });
+
       await this.makeAndHandleStream([
         { role: "system", content: config("system_prompt") },
         ...this.messageList!,
         {
           role: "user",
-          content: `This is a picture I just took from my webcam (described between [[ and ]] ): [[${res}]] Please respond accordingly and as if it were just sent and as though you can see it.`,
+          content: `This is a picture I just took from my webcam (described between [[ and ]] ): [[${afterContext.response}]] Please respond accordingly and as if it were just sent and as though you can see it.`,
         },
       ]);
     } catch (e: any) {

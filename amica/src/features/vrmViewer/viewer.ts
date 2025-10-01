@@ -113,6 +113,7 @@ export class Viewer {
   public isReady: boolean = false;
   public model?: Model;
   public room?: Room;
+  public chat?: any;
 
   public renderer?: THREE.WebGLRenderer;
   private clock: THREE.Clock;
@@ -1196,6 +1197,7 @@ export class Viewer {
     this.scenario = new ClassDefinition({
       scope: this,
       THREE,
+      hookManager: this.chat?.hookManager,
     });
 
     await this.scenario.setup();
