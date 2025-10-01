@@ -1,7 +1,5 @@
 'use client';
 
-import '@/i18n';
-
 import {
   getDefaultConfig,
   RainbowKitProvider,

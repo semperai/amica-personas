@@ -1,5 +1,3 @@
-import { useTranslation } from 'react-i18next';
-
 import { BasicPage, FormRow } from './common';
 import { updateConfig } from "@/utils/config";
 import { TextInput } from '@/components/textInput';
@@ -24,19 +22,17 @@ export function STTWakeWordSettingsPage({
     setTimeBeforeIdle: (timeBeforeIdle: number) => void;
     setSettingsUpdated: (updated: boolean) => void;
 }) {
-    const { t } = useTranslation();
-
     return (
         <BasicPage
-          title={`${t("Wake Word")} ${t("Settings")}`}
-          description={`${t("Configure")} ${t("Wake Word")}`}
+          title={"Wake Word Settings"}
+          description={"Configure Wake Word"}
         >
             <ul role="list" className="divide-y divide-gray-100 max-w-xs">
                 <li className="py-4">
-                    <FormRow label={`${t("Use")} ${t("Wake Word")}`}>
+                    <FormRow label={"Use Wake Word"}>
                         <SwitchBox
                             value={sttWakeWordEnabled}
-                            label={`${t("Wake Word")} ${t("Enabled")}`}
+                            label={"Wake Word Enabled"}
                             onChange={(value: boolean) => {
                                 setSTTWakeWordEnabled(value);
                                 updateConfig("wake_word_enabled", value.toString());
@@ -48,7 +44,7 @@ export function STTWakeWordSettingsPage({
                 { sttWakeWordEnabled && (
                     <>
                         <li className="py-4">
-                            <FormRow label={`${t("Specify")} ${t("Wake Word")}`}>
+                            <FormRow label={"Specify Wake Word"}>
                                 <TextInput
                                     value={sttWakeWord}
                                     onChange={(event: React.ChangeEvent<any>) => {
@@ -60,7 +56,7 @@ export function STTWakeWordSettingsPage({
                             </FormRow>
                         </li>
                         <li className="py-4">
-                            <FormRow label={`${t("Set time before bot go idle")}(${t("sec")})`}>
+                            <FormRow label={"Set time before bot go idle (sec)"}>
                                 <NumberInput
                                     value={timeBeforeIdle}
                                     min={0}

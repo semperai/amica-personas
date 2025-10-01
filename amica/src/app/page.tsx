@@ -9,7 +9,6 @@ import {
 import Link from "next/link";
 import { Menu, Transition } from '@headlessui/react'
 import { clsx } from "clsx";
-import { useTranslation, Trans } from 'react-i18next';
 import {
   ChatBubbleLeftIcon,
   ChatBubbleLeftRightIcon,
@@ -91,8 +90,8 @@ function detectVRHeadset() {
 
 
 export default function Home() {
-  const { t, i18n } = useTranslation();
-  const currLang = i18n.resolvedLanguage;
+  // const { t, i18n } = useTranslation();
+  // const currLang = i18n.resolvedLanguage;
   const { viewer } = useContext(ViewerContext);
   const { alert } = useContext(AlertContext);
   const { chat: bot } = useContext(ChatContext);

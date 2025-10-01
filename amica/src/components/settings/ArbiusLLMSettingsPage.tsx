@@ -1,5 +1,3 @@
-import { useTranslation } from 'react-i18next';
-
 import { BasicPage, FormRow, NotUsingAlert } from './common';
 import { TextInput } from '@/components/textInput';
 import { SecretTextInput } from '@/components/secretTextInput';
@@ -15,12 +13,10 @@ export function ArbiusLLMSettingsPage({
   setArbiusLLMModelId: (key: string) => void;
   setSettingsUpdated: (updated: boolean) => void;
 }) {
-  const { t } = useTranslation();
-
   return (
     <BasicPage
-      title={t("Arbius Settings")}
-      description={t('ArbiusLLMSettings_desc', 'Configure the settings for the Arbius LLM chatbot backend.')}
+      title={"Arbius Settings"}
+      description={"Configure the settings for the Arbius LLM chatbot backend."}
     >
       { config("chatbot_backend") !== "arbius_llm" && (
         <NotUsingAlert>

@@ -1,5 +1,3 @@
-import { useTranslation } from 'react-i18next';
-
 import { BasicPage, FormRow, NotUsingAlert } from "./common";
 import { TextInput } from "@/components/textInput";
 import { SecretTextInput } from "@/components/secretTextInput";
@@ -22,23 +20,21 @@ export function VisionOpenAISettingsPage({
   setVisionOpenAIModel: (url: string) => void;
   setSettingsUpdated: (updated: boolean) => void;
 }) {
-  const { t } = useTranslation();
-
   const description = <>Configure OpenAI vision settings. You can get an API key from <a href="https://platform.openai.com">platform.openai.com</a>. You can generally use other OpenAI compatible URLs and models here too, provided they have vision support, such as <a href="https://openrouter.ai/">OpenRouter</a> or <a href="https://lmstudio.ai/">LM Studio</a>.</>;
 
   return (
     <BasicPage
-      title={t("OpenAI") + " " + t("Settings")}
+      title={"OpenAI" + " " + "Settings"}
       description={description}
     >
       { config("vision_backend") !== "vision_openai" && (
         <NotUsingAlert>
-          {t("not_using_alert", "You are not currently using {{name}} as your {{what}} backend. These settings will not be used.", {name: t("OpenAI"), what: t("Vision")})}
+          You are not currently using OpenAI as your Vision backend. These settings will not be used.
         </NotUsingAlert>
       ) }
       <ul role="list" className="divide-y divide-gray-100 max-w-xs">
         <li className="py-4">
-          <FormRow label={t("API Key")}>
+          <FormRow label={"API Key"}>
             <SecretTextInput
               value={visionOpenAIApiKey}
               onChange={(event: React.ChangeEvent<any>) => {
@@ -51,7 +47,7 @@ export function VisionOpenAISettingsPage({
           </FormRow>
         </li>
         <li className="py-4">
-          <FormRow label={t("API URL")}>
+          <FormRow label={"API URL"}>
             <TextInput
               value={visionOpenAIUrl}
               onChange={(event: React.ChangeEvent<any>) => {
@@ -63,7 +59,7 @@ export function VisionOpenAISettingsPage({
           </FormRow>
         </li>
         <li className="py-4">
-          <FormRow label={t("Model")}>
+          <FormRow label={"Model"}>
             <TextInput
               value={visionOpenAIModel}
               onChange={(event: React.ChangeEvent<any>) => {

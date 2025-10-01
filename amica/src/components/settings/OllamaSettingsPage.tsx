@@ -1,5 +1,3 @@
-import { useTranslation } from 'react-i18next';
-
 import { BasicPage, FormRow, NotUsingAlert } from "./common";
 import { TextInput } from "@/components/textInput";
 import { config, updateConfig } from "@/utils/config";
@@ -17,23 +15,21 @@ export function OllamaSettingsPage({
   setOllamaModel: (url: string) => void;
   setSettingsUpdated: (updated: boolean) => void;
 }) {
-  const { t } = useTranslation();
-
-  const description = <>{t("ollama_desc", "Ollama lets you get up and running with large language models locally. Download from")} <a href="https://ollama.ai/">{t("ollama.ai")}</a></>;
+  const description = <>Ollama lets you get up and running with large language models locally. Download from <a href="https://ollama.ai/">ollama.ai</a></>;
 
   return (
     <BasicPage
-      title={t("Ollama") + " " + t("Settings")}
+      title={"Ollama" + " " + "Settings"}
       description={description}
     >
       { config("chatbot_backend") !== "ollama" && (
         <NotUsingAlert>
-          {t("not_using_alert", "You are not currently using {{name}} as your {{what}} backend. These settings will not be used.", {name: t("Ollama"), what: t("ChatBot")})}
+          You are not currently using Ollama as your ChatBot backend. These settings will not be used.
         </NotUsingAlert>
       ) }
       <ul role="list" className="divide-y divide-gray-100 max-w-xs">
         <li className="py-4">
-          <FormRow label={t("API URL")}>
+          <FormRow label={"API URL"}>
             <TextInput
               value={ollamaUrl}
               onChange={(event: React.ChangeEvent<any>) => {
@@ -45,7 +41,7 @@ export function OllamaSettingsPage({
           </FormRow>
         </li>
         <li className="py-4">
-          <FormRow label={t("Model")}>
+          <FormRow label={"Model"}>
             <TextInput
               value={ollamaModel}
               onChange={(event: React.ChangeEvent<any>) => {

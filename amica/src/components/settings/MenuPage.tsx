@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next';
 import { clsx } from 'clsx';
 
 import { ChevronRightIcon } from '@heroicons/react/20/solid';
@@ -11,7 +10,6 @@ export function MenuPage({
   keys: string[];
   menuClick: (link: Link) => void;
 }) {
-  const { t } = useTranslation();
 
   const links = pagesToLinks(keys);
   return (

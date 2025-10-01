@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next';
 
 import { BasicPage, FormRow, NotUsingAlert } from './common';
 import { TextInput } from "@/components/textInput";
@@ -14,21 +13,20 @@ export function WhisperCppSettingsPage({
   setWhisperCppUrl: (key: string) => void;
   setSettingsUpdated: (updated: boolean) => void;
 }) {
-  const { t } = useTranslation();
 
   return (
     <BasicPage
-      title={t("Whisper.cpp") + " "+ t("Settings")}
+      title={"Whisper.cpp" + " "+ "Settings"}
       description={t("Whisper_cpp_desc", "Configure Whisper.cpp")}
     >
       { config("stt_backend") !== "whispercpp" && (
         <NotUsingAlert>
-          {t("not_using_alert", "You are not currently using {{name}} as your {{what}} backend. These settings will not be used.", {name: t("Whisper.cpp"), what: t("STT")})}
+          {t("not_using_alert", "You are not currently using {{name}} as your {{what}} backend. These settings will not be used.", {name: "Whisper.cpp", what: "STT"})}
         </NotUsingAlert>
       ) }
       <ul role="list" className="divide-y divide-gray-100 max-w-xs">
         <li className="py-4">
-          <FormRow label={t("URL")}>
+          <FormRow label={"URL"}>
             <TextInput
               value={whisperCppUrl}
               onChange={(event: React.ChangeEvent<any>) => {

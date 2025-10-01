@@ -1,5 +1,3 @@
-import { useTranslation } from 'react-i18next';
-
 import { BasicPage, FormRow, NotUsingAlert } from './common';
 import { TextInput } from "@/components/textInput";
 import { SecretTextInput } from "@/components/secretTextInput";
@@ -18,21 +16,19 @@ export function ElevenLabsSettingsPage({
   setElevenlabsVoiceId: (id: string) => void;
   setSettingsUpdated: (updated: boolean) => void;
 }) {
-  const { t } = useTranslation();
-
   return (
     <BasicPage
-      title={t("ElevenLabs") + " "+ t("Settings")}
-      description={t("elevenLabs_desc", "Configure ElevenLabs")}
+      title={"ElevenLabs Settings"}
+      description={"Configure ElevenLabs"}
     >
       { config("tts_backend") !== "elevenlabs" && (
         <NotUsingAlert>
-          {t("not_using_alert", "You are not currently using {{name}} as your {{what}} backend. These settings will not be used.", {name: t("ElevenLabs"), what: t("TTS")})}
+          You are not currently using ElevenLabs as your TTS backend. These settings will not be used.
         </NotUsingAlert>
       ) }
       <ul role="list" className="divide-y divide-gray-100 max-w-xs">
         <li className="py-4">
-          <FormRow label={t("API Key")}>
+          <FormRow label={"API Key"}>
             <SecretTextInput
               value={elevenlabsApiKey}
               onChange={(event: React.ChangeEvent<any>) => {
@@ -44,7 +40,7 @@ export function ElevenLabsSettingsPage({
           </FormRow>
         </li>
         <li className="py-4">
-          <FormRow label={t("Voice ID")}>
+          <FormRow label={"Voice ID"}>
             <TextInput
               value={elevenlabsVoiceId}
               onChange={(event: React.ChangeEvent<any>) => {

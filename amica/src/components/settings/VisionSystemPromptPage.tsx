@@ -1,5 +1,3 @@
-import { useTranslation } from 'react-i18next';
-
 import { BasicPage, FormRow, ResetToDefaultButton } from './common';
 import { updateConfig, defaultConfig } from "@/utils/config";
 
@@ -12,16 +10,14 @@ export function VisionSystemPromptPage({
   setVisionSystemPrompt: (prompt: string) => void;
   setSettingsUpdated: (updated: boolean) => void;
 }) {
-  const { t } = useTranslation();
-
   return (
     <BasicPage
-      title={t("Vision") + " " + t("System Prompt") + " "+ t("Settings")}
-      description={t("Vision_System_Prompt_desc", "Configure the vision system prompt. This is the prompt that is used to generate the image descriptions.")}
+      title={"Vision" + " " + "System Prompt" + " "+ "Settings"}
+      description={"Configure the vision system prompt. This is the prompt that is used to generate the image descriptions."}
     >
       <ul role="list" className="divide-y divide-gray-100 max-w-xs">
         <li className="py-4">
-          <FormRow label={t("Vision") + " " + t("System Prompt")}>
+          <FormRow label={"Vision" + " " + "System Prompt"}>
             <textarea
               value={visionSystemPrompt}
               rows={8}

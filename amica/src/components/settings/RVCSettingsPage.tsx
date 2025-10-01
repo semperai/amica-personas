@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next';
 import { InformationCircleIcon } from '@heroicons/react/20/solid';
 
 import { BasicPage, FormRow } from './common';
@@ -62,7 +61,6 @@ export function RVCSettingsPage({
     setRvcProtect: (rvcProtect: number) => void;
     setSettingsUpdated: (updated: boolean) => void;
 }) {
-    const { t } = useTranslation();
     const [showModelNameInfo, setShowModelNameInfo] = useState(false);
     const [showIndexPathInfo, setShowIndexPathInfo] = useState(false);
     const [showF0UpKeyInfo, setShowF0UpKeyInfo] = useState(false);
@@ -75,15 +73,15 @@ export function RVCSettingsPage({
 
     return (
         <BasicPage
-            title={`${t("RVC")} ${t("Settings")}`}
-            description={`${t("Configure")} ${t("RVC")}`}
+            title={`${"RVC"} ${"Settings"}`}
+            description={`${"Configure"} ${"RVC"}`}
         >
             <ul role="list" className="divide-y divide-gray-100 max-w-xs">
                 <li className="py-4">
-                    <FormRow label={`${t("Use")} ${t("RVC")}`}>
+                    <FormRow label={`${"Use"} ${"RVC"}`}>
                         <SwitchBox
                             value={rvcEnabled}
-                            label={`${t("RVC")} ${t("Enabled")}`}
+                            label={`${"RVC"} ${"Enabled"}`}
                             onChange={(value: boolean) => {
                                 setRvcEnabled(value);
                                 updateConfig("rvc_enabled", value.toString());
@@ -95,7 +93,7 @@ export function RVCSettingsPage({
                 {rvcEnabled && (
                     <>
                         <li className="py-4">
-                            <FormRow label={t("URL")}>
+                            <FormRow label={"URL"}>
                                 <TextInput
                                     value={rvcUrl}
                                     onChange={(event: React.ChangeEvent<any>) => {
@@ -108,7 +106,7 @@ export function RVCSettingsPage({
                             </FormRow>
                         </li>
                         <li className="py-4 relative">
-                            <FormRow label={`${t("Specify")} ${t("Model Name")}`}>
+                            <FormRow label={`${"Specify"} ${"Model Name"}`}>
                                 <div className="flex items-center">
                                     <TextInput
                                         value={rvcModelName}
@@ -122,7 +120,7 @@ export function RVCSettingsPage({
                                         <InformationCircleIcon className="h-5 w-5 text-gray-400 cursor-pointer" onMouseEnter={() => setShowModelNameInfo(true)} onMouseLeave={() => setShowModelNameInfo(false)} />
                                         {showModelNameInfo && (
                                             <div className="absolute bottom-0 left-full ml-2 bg-white rounded-md shadow-md p-2 text-sm text-gray-600 w-60">
-                                                {t("the name of the model which was included in your '/assets/weights' folder")}
+                                                the name of the model which was included in your &apos;/assets/weights&apos; folder
                                             </div>
                                         )}
                                     </div>
@@ -130,7 +128,7 @@ export function RVCSettingsPage({
                             </FormRow>
                         </li>
                         <li className="py-4 relative">
-                            <FormRow label={`${t("Specify")} ${t("Index Path")}`}>
+                            <FormRow label={`${"Specify"} ${"Index Path"}`}>
                                 <div className="flex items-center">
                                     <TextInput
                                         value={rvcIndexPath}
@@ -144,7 +142,7 @@ export function RVCSettingsPage({
                                         <InformationCircleIcon className="h-5 w-5 text-gray-400 cursor-pointer" onMouseEnter={() => setShowIndexPathInfo(true)} onMouseLeave={() => setShowIndexPathInfo(false)} />
                                         {showIndexPathInfo && (
                                             <div className="absolute bottom-0 left-full ml-2 bg-white rounded-md shadow-md p-2 text-sm text-gray-600 w-60">
-                                                {t("the index file of the previously trained model if none then use default dir logs by rvc.")}
+                                                the index file of the previously trained model if none then use default dir logs by rvc.
                                             </div>
                                         )}
                                     </div>
@@ -152,7 +150,7 @@ export function RVCSettingsPage({
                             </FormRow>
                         </li>
                         <li className="py-4 relative">
-                            <FormRow label={`${t("Specify")} ${t("F0 UpKey")}`}>
+                            <FormRow label={`${"Specify"} ${"F0 UpKey"}`}>
                                 <div className="flex items-center">
                                     <NumberInput
                                         value={rvcF0upKey}
@@ -168,7 +166,7 @@ export function RVCSettingsPage({
                                         <InformationCircleIcon className="h-5 w-5 text-gray-400 cursor-pointer" onMouseEnter={() => setShowF0UpKeyInfo(true)} onMouseLeave={() => setShowF0UpKeyInfo(false)} />
                                         {showF0UpKeyInfo && (
                                             <div className="absolute bottom-0 left-full ml-2 bg-white rounded-md shadow-md p-2 text-sm text-gray-600 w-40">
-                                                {t("0 or 1")}
+                                                0 or 1
                                             </div>
                                         )}
                                     </div>
@@ -176,7 +174,7 @@ export function RVCSettingsPage({
                             </FormRow>
                         </li>
                         <li className="py-4 relative">
-                            <FormRow label={`${t("Specify")} ${t("F0 Method")}`}>
+                            <FormRow label={`${"Specify"} ${"F0 Method"}`}>
                                 <div className="flex items-center">
                                     <select
                                         className="mt-2 block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6"
@@ -195,7 +193,7 @@ export function RVCSettingsPage({
                                         <InformationCircleIcon className="h-5 w-5 text-gray-400 cursor-pointer" onMouseEnter={() => setShowF0MethodInfo(true)} onMouseLeave={() => setShowF0MethodInfo(false)} />
                                         {showF0MethodInfo && (
                                             <div className="absolute bottom-0 left-full ml-2 bg-white rounded-md shadow-md p-2 text-sm text-gray-600 w-48">
-                                                {t("Select the pitch extraction algorithm ('pm': faster extraction but lower-quality speech; 'harvest': better bass but extremely slow;)")}
+                                                Select the pitch extraction algorithm (&apos;pm&apos;: faster extraction but lower-quality speech; &apos;harvest&apos;: better bass but extremely slow;)
                                             </div>
                                         )}
                                     </div>
@@ -204,7 +202,7 @@ export function RVCSettingsPage({
                         </li>
 
                         <li className="py-4 relative">
-                            <FormRow label={`${t("Specify")} ${t("Index Rate")}`}>
+                            <FormRow label={`${"Specify"} ${"Index Rate"}`}>
                                 <div className="flex items-center">
                                     <TextInput
                                         value={rvcIndexRate}
@@ -218,7 +216,7 @@ export function RVCSettingsPage({
                                         <InformationCircleIcon className="h-5 w-5 text-gray-400 cursor-pointer" onMouseEnter={() => setShowIndexRateInfo(true)} onMouseLeave={() => setShowIndexRateInfo(false)} />
                                         {showIndexRateInfo && (
                                             <div className="absolute bottom-0 left-full ml-2 bg-white rounded-md shadow-md p-2 text-sm text-gray-600 w-40">
-                                                {t("Default is 0.66")}
+                                                Default is 0.66
                                             </div>
                                         )}
                                     </div>
@@ -226,7 +224,7 @@ export function RVCSettingsPage({
                             </FormRow>
                         </li>
                         <li className="py-4 relative">
-                            <FormRow label={`${t("Specify")} ${t("Filter Radius")}`}>
+                            <FormRow label={`${"Specify"} ${"Filter Radius"}`}>
                                 <div className="flex items-center">
                                     <NumberInput
                                         value={rvcFilterRadius}
@@ -242,7 +240,7 @@ export function RVCSettingsPage({
                                         <InformationCircleIcon className="h-5 w-5 text-gray-400 cursor-pointer" onMouseEnter={() => setShowFilterRadiusInfo(true)} onMouseLeave={() => setShowFilterRadiusInfo(false)} />
                                         {showFilterRadiusInfo && (
                                             <div className="absolute bottom-0 left-full ml-2 bg-white rounded-md shadow-md p-2 text-sm text-gray-600 w-60">
-                                                {t("If >=3: apply median filtering to the harvested pitch results. The value represents the filter radius and can reduce breathiness. [ 0 to 7 ]")}
+                                                If {'>='} 3: apply median filtering to the harvested pitch results. The value represents the filter radius and can reduce breathiness. [ 0 to 7 ]
                                             </div>
                                         )}
                                     </div>
@@ -251,7 +249,7 @@ export function RVCSettingsPage({
                         </li>
 
                         <li className="py-4 relative">
-                            <FormRow label={`${t("Specify")} ${t("Resample Sr")}`}>
+                            <FormRow label={`${"Specify"} ${"Resample Sr"}`}>
                                 <div className="flex items-center">
                                     <NumberInput
                                         value={rvcResampleSr}
@@ -267,7 +265,7 @@ export function RVCSettingsPage({
                                         <InformationCircleIcon className="h-5 w-5 text-gray-400 cursor-pointer" onMouseEnter={() => setShowResampleSrInfo(true)} onMouseLeave={() => setShowResampleSrInfo(false)} />
                                         {showResampleSrInfo && (
                                             <div className="absolute bottom-0 left-full ml-2 bg-white rounded-md shadow-md p-2 text-sm text-gray-600 w-60">
-                                                {t("Resample the output audio in post-processing to the final sample rate. Set to 0 for no resampling [ 0 to 48000 ]")}
+                                                Resample the output audio in post-processing to the final sample rate. Set to 0 for no resampling [ 0 to 48000 ]
                                             </div>
                                         )}
                                     </div>
@@ -276,7 +274,7 @@ export function RVCSettingsPage({
                         </li>
 
                         <li className="py-4 relative">
-                            <FormRow label={`${t("Specify")} ${t("RMS Mix Rate")}`}>
+                            <FormRow label={`${"Specify"} ${"RMS Mix Rate"}`}>
                                 <div className="flex items-center">
                                     <NumberInput
                                         value={rvcRmsMixRate}
@@ -292,7 +290,7 @@ export function RVCSettingsPage({
                                         <InformationCircleIcon className="h-5 w-5 text-gray-400 cursor-pointer" onMouseEnter={() => setShowRmsMixRateInfo(true)} onMouseLeave={() => setShowRmsMixRateInfo(false)} />
                                         {showRmsMixRateInfo && (
                                             <div className="absolute bottom-0 left-full ml-2 bg-white rounded-md shadow-md p-2 text-sm text-gray-600 w-60">
-                                                {t("Adjust the volume envelope scaling. Closer to 0, the more it mimicks the volume of the original vocals. Can help mask noise and make volume sound more natural when set relatively low. Closer to 1 will be more of a consistently loud volume [ 0 to 1]")}
+                                                Adjust the volume envelope scaling. Closer to 0, the more it mimicks the volume of the original vocals. Can help mask noise and make volume sound more natural when set relatively low. Closer to 1 will be more of a consistently loud volume [ 0 to 1]
                                             </div>
                                         )}
                                     </div>
@@ -301,7 +299,7 @@ export function RVCSettingsPage({
                         </li>
 
                         <li className="py-4 relative">
-                            <FormRow label={`${t("Specify")} ${t("Protect")}`}>
+                            <FormRow label={`${"Specify"} ${"Protect"}`}>
                                 <div className="flex items-center">
                                     <NumberInput
                                         value={rvcProtect}
@@ -317,7 +315,7 @@ export function RVCSettingsPage({
                                         <InformationCircleIcon className="h-5 w-5 text-gray-400 cursor-pointer" onMouseEnter={() => setShowProtectInfo(true)} onMouseLeave={() => setShowProtectInfo(false)} />
                                         {showProtectInfo && (
                                             <div className="absolute bottom-0 left-full ml-2 bg-white rounded-md shadow-md p-2 text-sm text-gray-600 w-60">
-                                                {t("Protect voiceless consonants and breath sounds to prevent artifacts such as tearing in electronic music. Set to 0.5 to disable. Decrease the value to increase protection, but it may reduce indexing accuracy [ 0 to 0.5 ]")}
+                                                Protect voiceless consonants and breath sounds to prevent artifacts such as tearing in electronic music. Set to 0.5 to disable. Decrease the value to increase protection, but it may reduce indexing accuracy [ 0 to 0.5 ]
                                             </div>
                                         )}
                                     </div>

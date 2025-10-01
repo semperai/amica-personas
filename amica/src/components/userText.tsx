@@ -1,8 +1,6 @@
-import { useTranslation } from 'react-i18next';
 import { useEffect, useRef } from "react";
 
 export const UserText = ({ message }: { message: string }) => {
-  const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Replace all of the emotion tag in message with ""
@@ -22,7 +20,7 @@ export const UserText = ({ message }: { message: string }) => {
           <div className="bg-white/70 rounded-lg backdrop-blur-lg shadow-lg">
             <div className="px-8 pr-1 py-3 bg-rose/90 rounded-t-lg text-white font-bold tracking-wider">
               <span className="p-4 bg-cyan-600/80 rounded-lg rounded-tl-none rounded-tr-none shadow-sm">
-                {t("YOU")}
+                YOU
               </span>
             </div>
 

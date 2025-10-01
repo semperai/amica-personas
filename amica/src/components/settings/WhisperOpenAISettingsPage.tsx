@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next';
 
 import { BasicPage, FormRow, NotUsingAlert } from './common';
 import { TextInput } from "@/components/textInput";
@@ -22,16 +21,15 @@ export function WhisperOpenAISettingsPage({
   setWhisperOpenAIModel: (model: string) => void;
   setSettingsUpdated: (updated: boolean) => void;
 }) {
-  const { t } = useTranslation();
 
   return (
     <BasicPage
-      title={t("Whisper (OpenAI)") + " "+ t("Settings")}
+      title={"Whisper (OpenAI)" + " "+ "Settings"}
       description={t("Whisper_OpenAI_desc", "Configure Whisper (OpenAI)")}
     >
       { config("stt_backend") !== "whisper_openai" && (
         <NotUsingAlert>
-          {t("not_using_alert", "You are not currently using {{name}} as your {{what}} backend. These settings will not be used.", {name: t("Whisper (OpenAI)"), what: t("STT")})}
+          {t("not_using_alert", "You are not currently using {{name}} as your {{what}} backend. These settings will not be used.", {name: "Whisper (OpenAI)", what: "STT"})}
         </NotUsingAlert>
       ) }
       <ul role="list" className="divide-y divide-gray-100 max-w-xs">
@@ -48,7 +46,7 @@ export function WhisperOpenAISettingsPage({
           </FormRow>
         </li>
         <li className="py-4">
-          <FormRow label={t("API Key")}>
+          <FormRow label={"API Key"}>
             <SecretTextInput
               value={whisperOpenAIApiKey}
               onChange={(event: React.ChangeEvent<any>) => {
@@ -60,7 +58,7 @@ export function WhisperOpenAISettingsPage({
           </FormRow>
         </li>
         <li className="py-4">
-          <FormRow label={t("Model")}>
+          <FormRow label={"Model"}>
             <TextInput
               value={whisperOpenAIModel}
               onChange={(event: React.ChangeEvent<any>) => {

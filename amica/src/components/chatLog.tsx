@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next';
 import { clsx } from "clsx";
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import FlexTextarea from "@/components/flexTextarea/flexTextarea";
@@ -16,7 +15,6 @@ export const ChatLog = ({
 }: {
   messages: Message[];
 }) => {
-  const { t } = useTranslation();
   const { chat: bot } = useContext(ChatContext);
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
@@ -101,7 +99,7 @@ export const ChatLog = ({
       <div className="absolute left-12 top-4 z-10">
         <IconButton
           iconName="24/ReloadLoop"
-          label={t("Restart")}
+          label="Restart"
           isProcessing={false}
           className="bg-slate-600 hover:bg-slate-500 active:bg-slate-500 shadow-xl"
           onClick={() => {
@@ -110,14 +108,14 @@ export const ChatLog = ({
         ></IconButton>
         <IconButton
           iconName="24/UploadAlt"
-          label={t("Load Chat")}
+          label="Load Chat"
           isProcessing={false}
           className="bg-slate-600 hover:bg-slate-500 active:bg-slate-500 shadow-xl"
           onClick={handleClickOpenTxtFile}
         ></IconButton>
         <IconButton
           iconName="24/Save"
-          label={t("Save")}
+          label="Save"
           isProcessing={false}
           className="bg-slate-600 hover:bg-slate-500 active:bg-slate-500 shadow-xl"
           onClick={() => exportMessagesToTxt(messages)}
@@ -164,7 +162,6 @@ function Chat({
   num: number;
   onClickResumeButton: (num: number, message: string) => void;
 }) {
-  const { t } = useTranslation();
   // const [textAreaValue, setTextAreaValue] = useState(message);
 
   const onClickButton = () => {
@@ -187,7 +184,7 @@ function Chat({
       >
         <div className="text-bold text-white">
           {role === "assistant" && config('name').toUpperCase()}
-          {role === "user" && t("YOU")}
+          {role === "user" && "YOU"}
         </div>
         <button
           className="text-right"

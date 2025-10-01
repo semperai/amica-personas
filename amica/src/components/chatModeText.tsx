@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { clsx } from "clsx";
 import { config } from "@/utils/config";
 import { IconButton } from "./iconButton";
-import { useTranslation } from "react-i18next";
 import { Message } from "@/features/chat/messages";
 
 export const ChatModeText = ({ messages }: { messages: Message[] }) => {
@@ -47,7 +46,6 @@ function Chat({
     message: string;
     num: number;
 }) {
-    const { t } = useTranslation();
     const scrollRef = useRef<HTMLDivElement>(null);
     const [unlimited, setUnlimited] = useState(false);
 
@@ -75,7 +73,7 @@ function Chat({
                             role === "assistant" ? "bg-pink-600/80" : "bg-cyan-600/80",
                         )}>
                             {role === "assistant" && config('name').toUpperCase()}
-                            {role === "user" && t("YOU")}
+                            {role === "user" && "YOU"}
                         </span>
 
                         {role === "assistant" && (

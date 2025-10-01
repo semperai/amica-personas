@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next';
 import { clsx } from 'clsx';
 
 import { thumbPrefix } from './common';
@@ -17,7 +16,6 @@ export function BackgroundImgPage({
   setSettingsUpdated: (updated: boolean) => void;
   handleClickOpenBgImgFile: () => void;
 }) {
-  const { t } = useTranslation();
 
   return (
     <>
@@ -56,7 +54,7 @@ export function BackgroundImgPage({
         className="rounded-t-none text-lg ml-4 px-8 shadow-lg bg-secondary hover:bg-secondary-hover active:bg-secondary-active"
         onClick={handleClickOpenBgImgFile}
       >
-        {t("Load image")}
+        Load image
       </TextButton>
     </>
   );
