@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbo",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint .",
+    "check": "tsc --noEmit && eslint ."
   },
   "dependencies": {
     "@apollo/client": "^3.13.8",

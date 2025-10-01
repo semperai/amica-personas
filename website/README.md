@@ -2,6 +2,27 @@
 
 A multichain dApp for creating and trading AI personas using the Amica protocol.
 
+## Design System
+
+See **[DESIGN.md](./DESIGN.md)** for our complete design system documentation, including:
+- Color palette and theming (light/dark mode)
+- Typography and spacing guidelines
+- Component specifications
+- Accessibility standards
+- Performance targets
+
+**Quick Design Summary:**
+- **Style**: Clean, professional, trading-platform-first
+- **Colors**: OKLCH color space with blue/cyan gradients (distinct from CATGIRL's pink/purple)
+- **Typography**: Inter (unified for body & headings)
+- **Framework**: Next.js 15 App Router with Turbopack
+- **Philosophy**: Border-first design, minimal animations, accessibility-first
+
+**Project Relationships:**
+- **Amica Personas**: Token launcher and trading platform (this project)
+- **Amica**: 3D rendering engine for persona visualization
+- **CATGIRL Protocol**: P2P encrypted messaging and blockchain infrastructure for agents
+
 ## Features
 
 - 🌐 **Multichain Support**: Deploy and trade personas on Ethereum, Base, and Arbitrum

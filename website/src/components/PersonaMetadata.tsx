@@ -175,7 +175,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
                 refetch();
               }}
               disabled={isRefetching}
-              className={`px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all ${
+              className={`px-6 py-2 gradient-brand text-white rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all ${
                 isRefetching ? 'animate-pulse' : ''
               }`}
             >
@@ -225,7 +225,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
       {isRefetching && (
         <div className="absolute top-4 right-4">
           <div className="flex items-center gap-2 text-xs text-white/50">
-            <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+            <div className="w-2 h-2 bg-brand-blue rounded-full animate-pulse"></div>
             Updating...
           </div>
         </div>
@@ -248,7 +248,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
             </span>
           )}
           {hasAgentToken && (
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-500/20 text-purple-400 backdrop-blur-sm">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-brand-cyan/20 text-brand-cyan backdrop-blur-sm">
               Agent Token
             </span>
           )}
@@ -263,7 +263,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
             href={getAddressExplorerUrl(persona.creator)}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-purple-400 hover:text-purple-300 font-mono text-sm transition-colors"
+            className="text-brand-cyan hover:text-brand-blue font-mono text-sm transition-colors"
           >
             {persona.creator.slice(0, 6)}...{persona.creator.slice(-4)}
           </a>
@@ -276,7 +276,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
               href={getAddressExplorerUrl(persona.owner)}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-purple-400 hover:text-purple-300 font-mono text-sm transition-colors"
+              className="text-brand-cyan hover:text-brand-blue font-mono text-sm transition-colors"
             >
               {persona.owner.slice(0, 6)}...{persona.owner.slice(-4)}
             </a>
@@ -313,7 +313,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
               href={getAddressExplorerUrl(persona.erc20Token)}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-purple-400 hover:text-purple-300 font-mono text-xs transition-colors"
+              className="text-brand-cyan hover:text-brand-blue font-mono text-xs transition-colors"
             >
               {persona.erc20Token.slice(0, 6)}...{persona.erc20Token.slice(-4)}
             </a>
@@ -324,7 +324,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
               href={getAddressExplorerUrl(persona.pairToken)}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-purple-400 hover:text-purple-300 font-mono text-xs transition-colors"
+              className="text-brand-cyan hover:text-brand-blue font-mono text-xs transition-colors"
             >
               {persona.pairToken.slice(0, 6)}...{persona.pairToken.slice(-4)}
             </a>
@@ -336,7 +336,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
                 href={getAddressExplorerUrl(persona.pairAddress)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-purple-400 hover:text-purple-300 font-mono text-xs transition-colors"
+                className="text-brand-cyan hover:text-brand-blue font-mono text-xs transition-colors"
               >
                 {persona.pairAddress.slice(0, 6)}...{persona.pairAddress.slice(-4)}
               </a>
@@ -354,7 +354,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
           </div>
           <div className="w-full bg-white/10 rounded-full h-2 mb-2">
             <div
-              className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all duration-300"
+              className="gradient-brand h-2 rounded-full transition-all duration-300"
               style={{ width: `${Math.min(progress, 100)}%` }}
             />
           </div>
@@ -370,7 +370,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
               </div>
               <div className="w-full bg-white/10 rounded-full h-2 mb-2">
                 <div
-                  className="bg-gradient-to-r from-purple-500 to-cyan-500 h-2 rounded-full transition-all duration-300"
+                  className="gradient-brand h-2 rounded-full transition-all duration-300"
                   style={{ width: `${Math.min(agentTokenProgress, 100)}%` }}
                 />
               </div>
@@ -400,7 +400,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
         <div className="mb-6">
           <button
             onClick={() => setShowTransfers(!showTransfers)}
-            className="flex items-center gap-2 text-sm text-purple-400 hover:text-purple-300 transition-colors mb-3"
+            className="flex items-center gap-2 text-sm text-brand-cyan hover:text-brand-blue transition-colors mb-3"
           >
             <svg className={`w-4 h-4 transform transition-transform ${showTransfers ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -479,7 +479,7 @@ const PersonaMetadata = ({ chainId, tokenId }: PersonaMetadataProps) => {
             href={getAddressExplorerUrl(persona.erc20Token)}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-3 py-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors text-sm"
+            className="px-3 py-2 bg-brand-blue/20 text-brand-blue rounded-lg hover:bg-brand-blue/30 transition-colors text-sm"
           >
             View Token Contract
           </a>

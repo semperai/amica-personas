@@ -168,7 +168,7 @@ export default function PortfolioPage() {
 
         {/* AMICA Balance Card */}
         <div className="mb-8">
-          <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl shadow-2xl p-8 text-white">
+          <div className="gradient-brand rounded-2xl shadow-2xl p-8 text-white">
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-lg opacity-90 mb-2">AMICA Balance</p>

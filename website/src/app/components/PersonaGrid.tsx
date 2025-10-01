@@ -67,23 +67,29 @@ export default function PersonaGrid() {
   }, [sortBy, filterBy]);
 
   return (
-    <div id="explore" className="max-w-7xl mx-auto px-6 py-8">
+    <div id="explore" className="max-w-7xl mx-auto px-4 md:px-6 py-12 md:py-16">
+      {/* Section Header */}
+      <div className="mb-8">
+        <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-2">Explore Personas</h2>
+        <p className="text-muted-foreground">Discover and trade AI personas on the bonding curve</p>
+      </div>
+
       {/* Enhanced Filters */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
         <div className="relative">
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="appearance-none bg-white/10 backdrop-blur-sm text-white px-6 py-2 pr-10 rounded-lg border border-white/20 focus:outline-none focus:border-white/40 transition-colors cursor-pointer"
+            className="appearance-none bg-card text-foreground px-6 py-2 pr-10 rounded-lg border border-border focus:outline-none focus:border-brand-blue transition-colors cursor-pointer"
           >
-            <option value="trending" className="bg-slate-800">Trending</option>
-            <option value="volume" className="bg-slate-800">24h Volume</option>
-            <option value="tvl" className="bg-slate-800">TVL</option>
-            <option value="new" className="bg-slate-800">Newest</option>
-            <option value="graduated" className="bg-slate-800">All Time Volume</option>
+            <option value="trending">Trending</option>
+            <option value="volume">24h Volume</option>
+            <option value="tvl">TVL</option>
+            <option value="new">Newest</option>
+            <option value="graduated">All Time Volume</option>
           </select>
           <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-            <svg className="w-4 h-4 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </div>
@@ -92,20 +98,20 @@ export default function PersonaGrid() {
 
       {/* Error State */}
       {error && (
-        <div className="bg-red-500/10 backdrop-blur-sm border border-red-500/20 rounded-lg p-6 mb-8">
-          <p className="text-red-400 text-center">{error}</p>
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-6 mb-8">
+          <p className="text-destructive text-center">{error}</p>
         </div>
       )}
 
       {/* Personas Grid */}
       {loading ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
           {[...Array(10)].map((_, i) => (
-            <div key={i} className="aspect-[3/4] bg-white/5 backdrop-blur-sm rounded-2xl animate-pulse" />
+            <div key={i} className="aspect-[3/4] bg-muted rounded-xl animate-pulse" />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
           {personas.map((persona) => (
             <PersonaCard key={persona.id} persona={persona} />
           ))}
@@ -114,13 +120,13 @@ export default function PersonaGrid() {
 
       {!loading && personas.length === 0 && !error && (
         <div className="flex flex-col items-center justify-center h-64">
-          <p className="text-white/60 text-lg mb-4">No personas found for the selected filter</p>
+          <p className="text-muted-foreground text-lg mb-4">No personas found for the selected filter</p>
           <button
             onClick={() => {
               setFilterBy('all');
               setSortBy('trending');
             }}
-            className="px-6 py-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors"
+            className="px-6 py-2 bg-brand-blue/20 text-brand-blue rounded-lg hover:bg-brand-blue/30 transition-colors font-medium"
           >
             Show All Personas
           </button>

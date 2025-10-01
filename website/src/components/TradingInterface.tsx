@@ -434,7 +434,7 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
           </h2>
           <div className="flex items-center gap-2">
             {isMockMode && (
-              <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded">Mock Mode</span>
+              <span className="text-xs bg-brand-blue/20 text-brand-blue px-2 py-1 rounded">Mock Mode</span>
             )}
             <SwapSettings slippage={slippage} onSlippageChange={setSlippage} />
             <button
@@ -655,7 +655,7 @@ export default function TradingInterface({ chainId, tokenId }: TradingInterfaceP
           <button
             onClick={handleTrade}
             disabled={!amount || parseFloat(amount) <= 0 || isPending || isConfirming || isGraduated || (priceImpact > 10)}
-            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-xl hover:from-purple-600 hover:to-pink-600 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transition-all duration-300 font-light text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            className="w-full gradient-brand text-white py-4 rounded-xl hover:opacity-90 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transition-all duration-300 font-light text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
           >
             {isPending || isConfirming 
               ? 'Processing...' 

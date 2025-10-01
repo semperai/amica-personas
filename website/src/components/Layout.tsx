@@ -1,22 +1,20 @@
 // src/components/Layout.tsx
-import { Yomogi } from 'next/font/google'
-import clsx from 'clsx';
+import { Fredoka } from 'next/font/google'
 import { ReactNode, useState } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAccount } from 'wagmi';
-import { hasBridgeWrapper } from '@/lib/contracts';
 import Image from 'next/image';
 
 interface LayoutProps {
   children: ReactNode;
 }
 
-const yomogi = Yomogi({
-  weight: '400',
+const fredoka = Fredoka({
   subsets: ['latin'],
   display: 'swap',
+  variable: '--font-fredoka',
 });
 
 const Layout = ({ children }: LayoutProps) => {
@@ -28,63 +26,54 @@ const Layout = ({ children }: LayoutProps) => {
     return pathname === path;
   };
 
-  // Check if bridge is available on current chain
-  const showBridge = chainId && hasBridgeWrapper(chainId);
-
   const isMockMode = process.env.NEXT_PUBLIC_MOCK_MODE === 'true';
 
   const navItems = [
     { href: '/', label: 'Explore' },
     { href: '/create', label: 'Create' },
     { href: '/portfolio', label: 'Portfolio' },
-    // ...(showBridge ? [{ href: '/bridge', label: 'Bridge' }] : []),
-    // { href: '/staking', label: 'Staking' },
   ];
 
   return (
-    <div className={clsx("min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900", yomogi.className)}>
+    <div className={`min-h-screen bg-background ${fredoka.className}`}>
       {/* Mock Mode Banner */}
       {isMockMode && (
-        <div className="bg-purple-600/20 backdrop-blur-sm text-white px-4 py-2 text-center text-sm border-b border-purple-500/20">
+        <div className="bg-brand-blue/20 backdrop-blur-sm text-white px-4 py-2 text-center text-sm border-b border-brand-blue/20">
           <span>🧪 Mock Mode Enabled - Using test data for development</span>
         </div>
       )}
 
       {/* Navigation */}
-      <nav className="relative z-20">
-        <div className="absolute inset-0 bg-white/5 backdrop-blur-xl border-b border-white/10" />
-        <div className="relative max-w-7xl mx-auto px-6">
-          <div className="flex justify-between items-center h-20">
-            <div className="flex items-center space-x-12">
-              <Link href="/" className="flex items-center group">
-                {/* Logo Image */}
-                <Image 
+      <nav className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 md:px-6">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center gap-8">
+              <Link href="/" className="flex items-center gap-2 group">
+                <Image
                   src="/logo.png"
                   alt="Amica Logo"
-                  width={32}
-                  height={32}
-                  className="mr-3 group-hover:opacity-80 transition-opacity"
+                  width={28}
+                  height={28}
+                  className="group-hover:opacity-80 transition-opacity"
                 />
-                <span className="text-2xl font-extrabold text-white tracking-wider group-hover:text-white/80 transition-colors">AMICA</span>
+                <span className="text-xl font-semibold text-foreground">Amica Personas</span>
               </Link>
 
               {/* Desktop Navigation */}
-              <div className="hidden md:flex items-center">
-                <div className="flex items-center bg-white/10 backdrop-blur-md rounded-full p-1 gap-1">
-                  {navItems.map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`px-5 py-2 rounded-full text-sm font-light transition-all duration-300 ${
-                        isActive(item.href)
-                          ? 'bg-white/20 text-white shadow-lg'
-                          : 'text-white/70 hover:text-white hover:bg-white/10'
-                      }`}
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
-                </div>
+              <div className="hidden md:flex items-center gap-1">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      isActive(item.href)
+                        ? 'bg-muted text-foreground'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
               </div>
             </div>
 
@@ -92,9 +81,10 @@ const Layout = ({ children }: LayoutProps) => {
               {/* Mobile Menu Button */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden text-white/70 hover:text-white p-2"
+                className="md:hidden text-muted-foreground hover:text-foreground p-2"
+                aria-label="Toggle menu"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   {mobileMenuOpen ? (
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   ) : (
@@ -103,7 +93,6 @@ const Layout = ({ children }: LayoutProps) => {
                 </svg>
               </button>
 
-              {/* Connect Button - no wrapper div */}
               <ConnectButton />
             </div>
           </div>
@@ -111,17 +100,17 @@ const Layout = ({ children }: LayoutProps) => {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden absolute top-full left-0 right-0 bg-slate-900/95 backdrop-blur-xl border-b border-white/10">
-            <div className="px-6 py-4 space-y-2">
+          <div className="md:hidden border-t border-border bg-card">
+            <div className="px-4 py-3 space-y-1">
               {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`block px-4 py-3 rounded-lg text-sm font-light transition-all duration-300 ${
+                  className={`block px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                     isActive(item.href)
-                      ? 'bg-white/20 text-white'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
+                      ? 'bg-muted text-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                   }`}
                 >
                   {item.label}
@@ -137,27 +126,111 @@ const Layout = ({ children }: LayoutProps) => {
         {children}
       </main>
 
-      {/* Minimal Footer */}
-      <footer className="relative z-10 border-t border-white/10 mt-20">
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <div className="text-white/40 text-sm">
-              © {(new Date()).getFullYear()} Amica Protocol
+      {/* Footer */}
+      <footer className="border-t border-border mt-20 bg-card">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+            <div className="col-span-1">
+              <div className="flex items-center gap-2 mb-4">
+                <Image
+                  src="/logo.png"
+                  alt="Amica Logo"
+                  width={24}
+                  height={24}
+                />
+                <span className="font-semibold text-foreground">Amica Personas</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Token launcher platform for AI personas
+              </p>
             </div>
-            <div className="flex space-x-6">
-              <a href="#" className="text-white/40 hover:text-white/60 text-sm transition-colors">Docs</a>
-              <a href="#" className="text-white/40 hover:text-white/60 text-sm transition-colors">GitHub</a>
-              <a href="#" className="text-white/40 hover:text-white/60 text-sm transition-colors">Discord</a>
+
+            <div>
+              <h3 className="font-semibold text-foreground mb-3 text-sm">Platform</h3>
+              <ul className="space-y-2">
+                <li>
+                  <Link href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    Explore
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/create" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    Create
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/portfolio" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    Portfolio
+                  </Link>
+                </li>
+              </ul>
             </div>
+
+            <div>
+              <h3 className="font-semibold text-foreground mb-3 text-sm">Ecosystem</h3>
+              <ul className="space-y-2">
+                <li>
+                  <a
+                    href="https://arbius.ai"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Arbius
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://effectiveacceleration.ai"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    e/acc
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://catgirl.vc"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    CATGIRL Protocol
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-foreground mb-3 text-sm">Community</h3>
+              <ul className="space-y-2">
+                <li>
+                  <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    Docs
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    GitHub
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    Discord
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="pt-8 border-t border-border">
+            <p className="text-center text-sm text-muted-foreground">
+              © {(new Date()).getFullYear()} Amica Personas. All rights reserved.
+            </p>
           </div>
         </div>
       </footer>
-
-      {/* Background decoration */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-1/2 -right-1/2 w-full h-full bg-blue-500/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-1/2 -left-1/2 w-full h-full bg-purple-500/10 rounded-full blur-3xl" />
-      </div>
     </div>
   );
 };

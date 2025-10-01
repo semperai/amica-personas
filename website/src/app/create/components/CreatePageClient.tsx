@@ -461,7 +461,7 @@ export default function CreatePersonaPage() {
                   type="button"
                   onClick={() => setShowAgentConfig(!showAgentConfig)}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    showAgentConfig ? 'bg-purple-500/50' : 'bg-white/20'
+                    showAgentConfig ? 'bg-brand-blue/50' : 'bg-white/20'
                   }`}
                 >
                   <span
@@ -505,7 +505,7 @@ export default function CreatePersonaPage() {
                   {agentTokenDetails && (
                     <div className="mt-3 p-3 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                        <div className="w-8 h-8 gradient-brand rounded-full flex items-center justify-center text-white text-xs font-bold">
                           {agentTokenDetails.symbol.slice(0, 2)}
                         </div>
                         <div>
@@ -545,7 +545,7 @@ export default function CreatePersonaPage() {
                   </p>
                 </div>
 
-                <div className="p-4 bg-purple-500/10 backdrop-blur-sm rounded-lg border border-purple-500/20">
+                <div className="p-4 bg-brand-blue/10 backdrop-blur-sm rounded-lg border border-brand-blue/20">
                   <p className="font-light text-white/90 mb-2">Agent Token Benefits:</p>
                   <ul className="text-xs text-white/70 space-y-1 ml-4 list-disc">
                     <li>Modified token distribution: 1/3 liquidity, 2/9 each for bonding, AMICA deposit, and agent rewards</li>
@@ -575,7 +575,7 @@ export default function CreatePersonaPage() {
 
             {/* Initial Buy Preview */}
             {formData.initialBuyAmount && parseFloat(formData.initialBuyAmount) > 0 && (
-              <div className="mt-4 p-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 backdrop-blur-sm rounded-xl border border-purple-500/20">
+              <div className="mt-4 p-4 gradient-brand-light backdrop-blur-sm rounded-xl border border-brand-blue/20">
                 <h4 className="text-sm font-medium text-white mb-3">Initial Buy Preview</h4>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
@@ -695,7 +695,7 @@ export default function CreatePersonaPage() {
                 <button
                   onClick={handleApprove}
                   disabled={isApprovePending || isApprovalPending}
-                  className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-4 rounded-xl hover:from-blue-600 hover:to-purple-600 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transition-all duration-300 font-light text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                  className="w-full gradient-brand text-white py-4 rounded-xl hover:opacity-90 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transition-all duration-300 font-light text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                 >
                   {isApprovePending || isApprovalPending ? 'Approving...' : `Approve ${selectedPairingToken?.symbol || 'tokens'}`}
                 </button>
@@ -704,7 +704,7 @@ export default function CreatePersonaPage() {
               <button
                 onClick={handleCreate}
                 disabled={!address || isCreatePending || isCreateProcessing || !formData.name || !formData.symbol || needsApproval}
-                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-xl hover:from-purple-600 hover:to-pink-600 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transition-all duration-300 font-light text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                className="w-full gradient-brand text-white py-4 rounded-xl hover:opacity-90 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transition-all duration-300 font-light text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
               >
                 {isCreatePending || isCreateProcessing ? 'Creating...' : isCreateSuccess ? 'Created! Redirecting...' : 'Create Persona'}
               </button>

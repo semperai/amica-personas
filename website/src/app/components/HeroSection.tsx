@@ -3,76 +3,59 @@ import AnimatedHeroText from './AnimatedHeroText';
 
 export default function HeroSection() {
   return (
-    <section className="relative overflow-hidden">
-      <div className="absolute inset-0 z-0">
-        <img
-          src="/hero-background.jpg"
-          alt="Hero Background"
-          className="w-full h-full object-cover opacity-30"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-900/50 via-blue-900/70 to-slate-900" />
-      </div>
+    <section className="relative border-b border-border">
+      {/* Gradient Background */}
+      <div className="absolute inset-0 bg-gradient-to-b from-brand-blue/5 via-background to-background" />
+
+      {/* Grid Pattern Overlay */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
 
       {/* Hero Content */}
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-20 md:py-32">
-        <div className="text-center max-w-4xl mx-auto">
-          <h1 className="text-5xl md:text-7xl font-light text-white mb-6 animate-fade-in">
-            Create Your AI Persona
+      <div className="relative max-w-7xl mx-auto px-4 md:px-6 py-24 md:py-32">
+        <div className="text-center max-w-3xl mx-auto">
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-foreground mb-6 leading-tight">
+            Launch & Trade
+            <span className="block text-gradient-brand">AI Personas</span>
           </h1>
-          <AnimatedHeroText />
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 animate-fade-in-delay-2">
+          <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+            Token launcher platform for AI personas with bonding curves, automated graduation, and cross-chain support
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
             <Link
               href="/create"
-              className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full hover:from-purple-600 hover:to-pink-600 transition-all duration-300 font-light text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              className="px-8 py-3 gradient-brand text-white rounded-lg hover:opacity-90 transition-all font-semibold shadow-lg hover:shadow-xl"
             >
               Create Persona
             </Link>
             <Link
               href="#explore"
-              className="px-8 py-4 bg-white/10 backdrop-blur-sm text-white rounded-full hover:bg-white/20 transition-all duration-300 font-light text-lg border border-white/20"
+              className="px-8 py-3 bg-muted text-foreground rounded-lg hover:bg-muted/80 transition-all font-semibold border border-border"
             >
               Explore Personas
             </Link>
           </div>
 
-          {/* Enhanced Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
-            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-              <p className="text-3xl font-light text-white">{'250+'}
-                <span className="text-sm text-green-400 ml-1">
-                  100
-                </span>
-              </p>
-              <p className="text-sm text-white/60">Active Personas</p>
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+            <div className="p-6 rounded-lg bg-card border border-border">
+              <p className="text-3xl md:text-4xl font-bold text-foreground mb-1">250+</p>
+              <p className="text-sm text-muted-foreground">Active Personas</p>
             </div>
-            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-              <p className="text-3xl font-light text-white">
-                12M
-                <span className="text-sm text-green-400 ml-1">+</span>
-              </p>
-              <p className="text-sm text-white/60">Total Volume</p>
+            <div className="p-6 rounded-lg bg-card border border-border">
+              <p className="text-3xl md:text-4xl font-bold text-foreground mb-1">$12M+</p>
+              <p className="text-sm text-muted-foreground">Total Volume</p>
             </div>
-            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-              <p className="text-3xl font-light text-white">777K
-                <span className="text-sm text-green-400 ml-1">+</span>
-              </p>
-              <p className="text-sm text-white/60">Total Trades</p>
+            <div className="p-6 rounded-lg bg-card border border-border">
+              <p className="text-3xl md:text-4xl font-bold text-foreground mb-1">777K+</p>
+              <p className="text-sm text-muted-foreground">Total Trades</p>
             </div>
-            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-              <p className="text-3xl font-light text-white">25%
-                <span className="text-sm text-white/60">100%</span>
-              </p>
-              <p className="text-sm text-white/60">Buy/Sell Ratio</p>
+            <div className="p-6 rounded-lg bg-card border border-border">
+              <p className="text-3xl md:text-4xl font-bold text-foreground mb-1">3</p>
+              <p className="text-sm text-muted-foreground">Chains</p>
             </div>
           </div>
-        </div>
-
-        {/* Scroll Indicator */}
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
-          <svg className="w-6 h-6 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-          </svg>
         </div>
       </div>
     </section>
