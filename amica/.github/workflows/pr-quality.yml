@@ -1,0 +1,130 @@
+name: PR Quality Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm test -- --coverage --silent
+
+      - name: Check test count
+        id: test-count
+        run: |
+          TEST_OUTPUT=$(npm test -- --silent 2>&1 | grep "Tests:" || echo "Tests: 0 total")
+          echo "test_output=$TEST_OUTPUT" >> $GITHUB_OUTPUT
+
+          # Extract numbers
+          PASSING=$(echo "$TEST_OUTPUT" | grep -oP '\d+(?= passed)' || echo "0")
+          FAILING=$(echo "$TEST_OUTPUT" | grep -oP '\d+(?= failed)' || echo "0")
+          SKIPPED=$(echo "$TEST_OUTPUT" | grep -oP '\d+(?= skipped)' || echo "0")
+
+          echo "passing=$PASSING" >> $GITHUB_OUTPUT
+          echo "failing=$FAILING" >> $GITHUB_OUTPUT
+          echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
+
+      - name: PR Comment - Test Results
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const passing = '${{ steps.test-count.outputs.passing }}';
+            const failing = '${{ steps.test-count.outputs.failing }}';
+            const skipped = '${{ steps.test-count.outputs.skipped }}';
+
+            const body = `## 🧪 Test Results
+
+            - ✅ **${passing}** tests passing
+            - ${failing > 0 ? '❌' : '⚪'} **${failing}** tests failing
+            - ⏭️ **${skipped}** tests skipped
+
+            ${failing > 0 ? '⚠️ **Please fix failing tests before merging**' : '✨ All tests passing!'}
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Block merge if tests fail
+        if: steps.test-count.outputs.failing > 0
+        run: |
+          echo "::error::Cannot merge - ${{ steps.test-count.outputs.failing }} tests are failing"
+          exit 1
+
+  coverage:
+    name: Coverage Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate coverage
+        run: npm test -- --coverage --silent
+
+      - name: Extract coverage percentage
+        id: coverage
+        run: |
+          COVERAGE=$(npm test -- --coverage --coverageReporters=text-summary 2>&1 | grep "Lines" | grep -oP '\d+\.\d+(?=%)' || echo "0")
+          echo "percentage=$COVERAGE" >> $GITHUB_OUTPUT
+          echo "Coverage: $COVERAGE%"
+
+      - name: PR Comment - Coverage
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const coverage = '${{ steps.coverage.outputs.percentage }}';
+            const threshold = 80;
+            const emoji = coverage >= threshold ? '✅' : '⚠️';
+
+            const body = `## ${emoji} Code Coverage
+
+            **${coverage}%** coverage (threshold: ${threshold}%)
+
+            ${coverage >= threshold ? '✨ Coverage meets threshold!' : '⚠️ Coverage below threshold'}
+
+            See detailed coverage report in the Actions artifacts.
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: coverage/
