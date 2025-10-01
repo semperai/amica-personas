@@ -4,7 +4,6 @@ import { ViewerContext } from "@/features/vrmViewer/viewerContext";
 import { buildUrl } from "@/utils/buildUrl";
 import { config } from "@/utils/config";
 import { useVrmStoreContext } from "@/features/vrmStore/vrmStoreContext";
-import isTauri from "@/utils/isTauri";
 import { ChatContext } from "@/features/chat/chatContext";
 import clsx from "clsx";
 

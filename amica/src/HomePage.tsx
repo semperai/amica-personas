@@ -45,7 +45,6 @@ import { ChatContext } from "@/features/chat/chatContext";
 import { AlertContext } from "@/features/alert/alertContext";
 
 import { config, updateConfig } from '@/utils/config';
-import { isTauri } from '@/utils/isTauri';
 import { VrmStoreProvider } from "@/features/vrmStore/vrmStoreContext";
 import { ChatModeText } from "@/components/chatModeText";
 

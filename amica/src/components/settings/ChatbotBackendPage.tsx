@@ -1,15 +1,11 @@
-import { useEffect, useState } from 'react';
-import { getWindowAI } from "window.ai";
 import { BasicPage, Link, FormRow, getLinkFromPage } from './common';
 import { updateConfig } from "@/utils/config";
-import { isTauri } from "@/utils/isTauri";
 
 const chatbotBackends = [
   {key: "echo",       label: "Echo"},
   {key: "arbius_llm", label: "Arbius"},
   {key: "chatgpt",    label: "ChatGPT"},
   {key: "llamacpp",   label: "LLama.cpp"},
-  ...isTauri() ? [] : [{key: "windowai", label: "Window.ai"}], // Hides Window.ai when using the desktop app
   {key: "ollama",     label: "Ollama"},
   {key: "koboldai",   label: "KoboldAI"},
 ];
@@ -33,20 +29,6 @@ export function ChatbotBackendPage({
   breadcrumbs: Link[];
   setBreadcrumbs: (breadcrumbs: Link[]) => void;
 }) {
-  const [windowAiDetected, setWindowAiDetected] = useState(false);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const windowAI = await getWindowAI();
-        if (windowAI) {
-          setWindowAiDetected(true);
-        }
-      } catch(e) {
-        console.error("window.ai", e)
-      }
-    })();
-  }, []);
 
   return (
     <BasicPage
@@ -82,18 +64,6 @@ export function ChatbotBackendPage({
             >
               Configure {idToTitle(chatbotBackend)}
             </button>
-          </FormRow>
-        )}
-
-        { chatbotBackend === 'windowai' && ! windowAiDetected && (
-          <FormRow label="Window.ai not found">
-            <a
-              href="https://windowai.io/"
-              target="_blank"
-              className="inline-block rounded px-3 py-1.5 text-xs font-semibold text-white bg-slate-800 hover:bg-slate-700 transition-all cursor-pointer"
-            >
-              Install window.ai
-            </a>
           </FormRow>
         )}
       </div>
