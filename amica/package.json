@@ -13,6 +13,11 @@
     "lint": "eslint src --ext ts,tsx",
     "test": "jest",
     "test:ci": "jest --ci --reporters='./github-actions-reporter.js'",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report",
     "act": "act -j test"
   },
   "dependencies": {
