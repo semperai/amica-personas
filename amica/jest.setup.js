@@ -17,3 +17,9 @@ global.ResizeObserver = jest.fn().mockImplementation(() => ({
   unobserve: jest.fn(),
   disconnect: jest.fn(),
 }));
+
+// Ensure fetch is mockable (jsdom might have it, but we want to allow tests to mock it)
+// Store original if it exists
+if (global.fetch) {
+  global.__originalFetch = global.fetch;
+}

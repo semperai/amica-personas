@@ -184,3 +184,12 @@ export function isConfigLoaded(): boolean {
 export function getConfigError(): string | null {
   return configError;
 }
+
+/**
+ * Set configuration value (TEST ONLY)
+ * This is a test utility function that allows tests to override config values.
+ * DO NOT use in production code.
+ */
+export function setConfig(key: string, value: string): void {
+  loadedConfig[key] = value;
+}

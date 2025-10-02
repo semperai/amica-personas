@@ -4,7 +4,7 @@ import { describe, expect, test, jest, beforeEach, afterEach } from "@jest/globa
 const fetchMock = jest.fn();
 global.fetch = fetchMock as any;
 
-// Mock expandPrompt
+// Mock expandPrompt - must be inline in the factory since jest.mock is hoisted
 jest.mock("@/features/functionCalling/eventHandler", () => ({
   expandPrompt: jest.fn((prompt: string, values: any) => {
     return Promise.resolve(prompt.replace('{context_str}', values.context_str));
