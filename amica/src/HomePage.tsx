@@ -7,8 +7,6 @@ import {
 import { Menu, Transition } from '@headlessui/react'
 import { clsx } from "clsx";
 import {
-  ChatBubbleLeftIcon,
-  ChatBubbleLeftRightIcon,
   CloudArrowDownIcon,
   CodeBracketSquareIcon,
   CubeIcon,
@@ -100,7 +98,6 @@ export default function Home() {
   const [showContent, setShowContent] = useState(false);
 
 
-  const [showChatLog, setShowChatLog] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
   const [showChatMode, setShowChatMode] = useState(false);
 
@@ -158,12 +155,8 @@ export default function Home() {
     });
   };
 
-  const toggleChatLog = () => {
-    toggleState(setShowChatLog, [setShowChatMode]);
-  };
-
   const toggleChatMode = () => {
-    toggleState(setShowChatMode, [setShowChatLog]);
+    toggleState(setShowChatMode, []);
   };
 
   const toggleXR = async (immersiveType: XRSessionMode) => {
@@ -279,22 +272,6 @@ export default function Home() {
       <div className="absolute z-10 m-2">
         <div className="grid grid-flow-col gap-[8px] place-content-end mt-2 bg-white/80 rounded-md backdrop-blur-md shadow-sm">
           <div className='flex flex-col justify-center items-center p-1 space-y-3'>
-            {showChatLog ? (
-              <MenuButton
-                large={isVRHeadset}
-                icon={ChatBubbleLeftIcon}
-                onClick={toggleChatLog}
-                label="hide chat log"
-              />
-            ) : (
-              <MenuButton
-                large={isVRHeadset}
-                icon={ChatBubbleLeftRightIcon}
-                onClick={toggleChatLog}
-                label="show chat log"
-              />
-            )}
-
             { muted ? (
               <MenuButton
                 large={isVRHeadset}
@@ -364,10 +341,8 @@ export default function Home() {
       />
       */}
 
-      {showChatLog && <ChatLog messages={chatLog} />}
-
       {/* Normal chat text */}
-      {! showChatLog && ! showChatMode && (
+      {! showChatMode && (
         <>
           { shownMessage === 'assistant' && (
             <AssistantText message={assistantMessage} />
