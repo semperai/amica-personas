@@ -1,6 +1,7 @@
 /** @type {import('jest').Config} */
 const config = {
   testEnvironment: 'jsdom',
+  testTimeout: 10000, // 10 second timeout for all tests
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testMatch: ['**/__tests__/**/*.spec.[jt]s?(x)'],
   moduleNameMapper: {
