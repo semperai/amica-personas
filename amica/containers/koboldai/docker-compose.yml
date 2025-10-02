@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  koboldai:
+    image: ghcr.io/lostruins/koboldcpp:latest
+    container_name: amica-koboldai
+    ports:
+      - "${KOBOLDAI_PORT:-5001}:5001"
+    volumes:
+      - ./models:/models
+    command: [
+      "/models/${KOBOLDAI_MODEL:-mistral-7b-instruct.gguf}",
+      "--host", "0.0.0.0",
+      "--port", "5001",
+      "--contextsize", "${KOBOLDAI_CONTEXT:-2048}",
+      "--threads", "${KOBOLDAI_THREADS:-4}",
+      "--gpulayers", "${KOBOLDAI_GPU_LAYERS:-0}"
+    ]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/api/v1/model"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s

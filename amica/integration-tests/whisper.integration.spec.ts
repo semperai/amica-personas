@@ -17,9 +17,9 @@ test.describe('Whisper Integration', () => {
     }
 
     // Wait for Whisper service to be ready
-    const ready = await waitForService(INTEGRATION_SERVICES.whispercpp, 60, 2000);
+    const ready = await waitForService(INTEGRATION_SERVICES.whisper, 60, 2000);
     if (!ready) {
-      throw new Error('Whisper service is not available. Run: docker-compose -f docker-compose.integration.yml up -d whispercpp');
+      throw new Error('Whisper service is not available. Run: docker-compose -f docker-compose.integration.yml up -d');
     }
   });
 
@@ -85,7 +85,7 @@ test.describe('Whisper Integration', () => {
   test('should validate Whisper service connectivity', async ({ page }) => {
     // Directly test the Whisper service
     const response = await page.request.get(
-      `${INTEGRATION_SERVICES.whispercpp.url}${INTEGRATION_SERVICES.whispercpp.healthEndpoint}`
+      `${INTEGRATION_SERVICES.whisper.url}${INTEGRATION_SERVICES.whisper.healthEndpoint}`
     );
 
     expect(response.ok()).toBeTruthy();

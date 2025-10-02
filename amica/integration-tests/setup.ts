@@ -13,39 +13,21 @@ export interface ServiceConfig {
 }
 
 export const INTEGRATION_SERVICES: Record<string, ServiceConfig> = {
+  openai_mock: {
+    name: 'OpenAI Mock',
+    url: 'http://localhost:8083',
+    healthEndpoint: '/health',
+    timeout: 10000,
+  },
   ollama: {
     name: 'Ollama',
     url: 'http://localhost:11434',
     healthEndpoint: '/api/tags',
     timeout: 30000,
   },
-  localai: {
-    name: 'LocalAI',
-    url: 'http://localhost:8080',
-    healthEndpoint: '/readyz',
-    timeout: 30000,
-  },
-  koboldai: {
-    name: 'KoboldAI',
-    url: 'http://localhost:5001',
-    healthEndpoint: '/api/v1/model',
-    timeout: 30000,
-  },
-  llamacpp: {
-    name: 'llama.cpp',
-    url: 'http://localhost:8081',
-    healthEndpoint: '/health',
-    timeout: 30000,
-  },
-  whispercpp: {
-    name: 'Whisper.cpp',
+  whisper: {
+    name: 'Whisper',
     url: 'http://localhost:9000',
-    healthEndpoint: '/',
-    timeout: 30000,
-  },
-  coqui: {
-    name: 'Coqui TTS',
-    url: 'http://localhost:5002',
     healthEndpoint: '/',
     timeout: 30000,
   },

@@ -19,7 +19,7 @@ test.describe('Ollama Integration', () => {
     // Wait for Ollama service to be ready
     const ready = await waitForService(INTEGRATION_SERVICES.ollama, 60, 2000);
     if (!ready) {
-      throw new Error('Ollama service is not available. Run: docker-compose -f docker-compose.integration.yml up -d ollama');
+      throw new Error('Ollama service is not available. Run: docker-compose -f docker-compose.integration.yml up -d');
     }
   });
 

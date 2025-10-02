@@ -6,22 +6,25 @@ This directory contains integration tests for Amica's external service integrati
 
 Amica integrates with multiple external services for AI inference, speech recognition, and text-to-speech. These integration tests verify that Amica correctly communicates with these services.
 
+All test services use Docker containers from the `../containers/` directory, which can also be used for local development.
+
 ## Supported Services
 
-The integration test suite supports the following services:
+The integration test suite currently tests:
 
 ### LLM Backends
+- **OpenAI Mock** - Mock OpenAI-compatible API (port 8083)
 - **Ollama** - Local LLM inference (port 11434)
-- **llama.cpp** - Efficient LLM inference (port 8081)
-- **LocalAI** - OpenAI-compatible local API (port 8080)
-- **KoboldAI** - Text generation API (port 5001)
 
 ### Speech-to-Text (STT)
-- **Whisper.cpp** - Speech recognition (port 9000)
+- **Whisper** - Speech recognition (port 9000)
 
 ### Text-to-Speech (TTS)
-- **Coqui TTS** - Neural TTS (port 5002)
 - **Piper** - Fast neural TTS (port 10200)
+
+Additional services available in `../containers/` for local development:
+- llama.cpp, KoboldAI (LLM)
+- Coqui TTS
 
 ## Quick Start
 

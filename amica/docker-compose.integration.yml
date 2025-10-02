@@ -1,6 +1,22 @@
 version: '3.8'
 
+# Integration Testing Docker Compose
+# References container configurations from ./containers/
+# For integration tests only
+
 services:
+  # OpenAI-compatible mock server
+  openai-mock:
+    build: ./containers/openai-compatible
+    container_name: amica-openai-mock
+    ports:
+      - "8083:8080"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
   # Ollama - Local LLM inference
   ollama:
     image: ollama/ollama:latest
@@ -17,59 +33,10 @@ services:
       timeout: 5s
       retries: 5
 
-  # LocalAI - Alternative to OpenAI
-  localai:
-    image: localai/localai:latest
-    container_name: amica-localai
-    ports:
-      - "8080:8080"
-    environment:
-      - THREADS=4
-      - CONTEXT_SIZE=512
-    volumes:
-      - localai-models:/models
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/readyz"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # KoboldAI - Text generation API
-  koboldai:
-    image: koboldai/koboldcpp:latest
-    container_name: amica-koboldai
-    ports:
-      - "5001:5001"
-    volumes:
-      - koboldai-models:/models
-    command: ["--host", "0.0.0.0", "--port", "5001"]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5001/api/v1/model"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-
-  # llama.cpp server
-  llamacpp:
-    image: ghcr.io/ggerganov/llama.cpp:server
-    container_name: amica-llamacpp
-    ports:
-      - "8081:8080"
-    volumes:
-      - llamacpp-models:/models
-    command: ["-m", "/models/default.gguf", "--host", "0.0.0.0", "--port", "8080"]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-
-  # Whisper.cpp - Speech-to-text
-  whispercpp:
+  # Whisper - Speech-to-text
+  whisper:
     image: onerahmet/openai-whisper-asr-webservice:latest
-    container_name: amica-whispercpp
+    container_name: amica-whisper
     ports:
       - "9000:9000"
     environment:
@@ -82,73 +49,28 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
-  # Coqui TTS - Text-to-speech
-  coqui-tts:
-    image: ghcr.io/coqui-ai/tts:latest
-    container_name: amica-coqui
-    ports:
-      - "5002:5002"
-    command: ["--model_name", "tts_models/en/ljspeech/tacotron2-DDC"]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5002/"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
       start_period: 30s
 
-  # Piper TTS - Fast neural TTS
+  # Piper TTS
   piper:
-    image: rhasspy/piper:latest
+    image: rhasspy/wyoming-piper:latest
     container_name: amica-piper
     ports:
       - "10200:10200"
     volumes:
-      - piper-models:/data
-    command: ["--model", "/data/en_US-lessac-medium.onnx", "--port", "10200"]
+      - piper-data:/data
+    command: ["--voice", "en_US-lessac-medium"]
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "10200"]
+      test: ["CMD-SHELL", "echo 'test' | nc -z localhost 10200 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 20s
 
-  # SpeechT5 TTS (via Hugging Face Inference)
-  speecht5:
-    image: ghcr.io/huggingface/text-generation-inference:latest
-    container_name: amica-speecht5
-    ports:
-      - "8082:80"
-    environment:
-      - MODEL_ID=microsoft/speecht5_tts
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 60s
-
-  # Mock OpenAI-compatible API for testing
-  mock-openai:
-    image: nginx:alpine
-    container_name: amica-mock-openai
-    ports:
-      - "8083:80"
-    volumes:
-      - ./integration-tests/mock-openai:/usr/share/nginx/html:ro
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/"]
-      interval: 5s
-      timeout: 3s
-      retries: 3
-
 volumes:
   ollama-data:
-  localai-models:
-  koboldai-models:
-  llamacpp-models:
   whisper-models:
-  piper-models:
+  piper-data:
 
 networks:
   default:

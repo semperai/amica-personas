@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  coqui:
+    image: ghcr.io/coqui-ai/tts:latest
+    container_name: amica-coqui
+    ports:
+      - "${COQUI_PORT:-5002}:5002"
+    command: [
+      "python3", "-m", "TTS.server.server",
+      "--model_name", "${COQUI_MODEL:-tts_models/en/ljspeech/tacotron2-DDC}",
+      "--port", "5002"
+    ]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s

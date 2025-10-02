@@ -1,0 +1,148 @@
+version: '3.8'
+
+# Master docker-compose file for all Amica integration services
+# Use this for development and integration testing
+
+services:
+  # OpenAI-compatible mock server
+  openai-mock:
+    build: ./openai-compatible
+    container_name: amica-openai-mock
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  # Ollama - Local LLM
+  ollama:
+    image: ollama/ollama:latest
+    container_name: amica-ollama
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=${OLLAMA_HOST:-0.0.0.0}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # llama.cpp server
+  llamacpp:
+    image: ghcr.io/ggerganov/llama.cpp:server
+    container_name: amica-llamacpp
+    ports:
+      - "${LLAMACPP_PORT:-8081}:8080"
+    volumes:
+      - ./llama.cpp/models:/models
+    command: [
+      "-m", "/models/${LLAMACPP_MODEL:-model.gguf}",
+      "--host", "0.0.0.0",
+      "--port", "8080",
+      "-c", "${LLAMACPP_CONTEXT:-2048}",
+      "-t", "${LLAMACPP_THREADS:-4}",
+      "-ngl", "${LLAMACPP_GPU_LAYERS:-0}",
+      "-b", "${LLAMACPP_BATCH:-512}"
+    ]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    profiles: ["full", "llm"]
+
+  # KoboldAI
+  koboldai:
+    image: ghcr.io/lostruins/koboldcpp:latest
+    container_name: amica-koboldai
+    ports:
+      - "${KOBOLDAI_PORT:-5001}:5001"
+    volumes:
+      - ./koboldai/models:/models
+    command: [
+      "/models/${KOBOLDAI_MODEL:-model.gguf}",
+      "--host", "0.0.0.0",
+      "--port", "5001",
+      "--contextsize", "${KOBOLDAI_CONTEXT:-2048}",
+      "--threads", "${KOBOLDAI_THREADS:-4}",
+      "--gpulayers", "${KOBOLDAI_GPU_LAYERS:-0}"
+    ]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/api/v1/model"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    profiles: ["full", "llm"]
+
+  # Whisper STT
+  whisper:
+    image: onerahmet/openai-whisper-asr-webservice:latest
+    container_name: amica-whisper
+    ports:
+      - "${WHISPER_PORT:-9000}:9000"
+    environment:
+      - ASR_MODEL=${WHISPER_MODEL:-base}
+      - ASR_ENGINE=faster_whisper
+      - ASR_LANGUAGE=${WHISPER_LANGUAGE:-auto}
+      - ASR_THREADS=${WHISPER_THREADS:-4}
+    volumes:
+      - whisper-models:/root/.cache/whisper
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    profiles: ["full", "stt"]
+
+  # Piper TTS
+  piper:
+    image: rhasspy/wyoming-piper:latest
+    container_name: amica-piper
+    ports:
+      - "${PIPER_PORT:-10200}:10200"
+    volumes:
+      - piper-data:/data
+    command: ["--voice", "${PIPER_VOICE:-en_US-lessac-medium}"]
+    healthcheck:
+      test: ["CMD-SHELL", "echo 'test' | nc -z localhost 10200 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    profiles: ["full", "tts"]
+
+  # Coqui TTS
+  coqui:
+    image: ghcr.io/coqui-ai/tts:latest
+    container_name: amica-coqui
+    ports:
+      - "${COQUI_PORT:-5002}:5002"
+    command: [
+      "python3", "-m", "TTS.server.server",
+      "--model_name", "${COQUI_MODEL:-tts_models/en/ljspeech/tacotron2-DDC}",
+      "--port", "5002"
+    ]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    profiles: ["full", "tts"]
+
+volumes:
+  ollama-data:
+  whisper-models:
+  piper-data:
+
+networks:
+  default:
+    name: amica-services
