@@ -67,6 +67,7 @@ docker-compose --profile full up -d
 | **Ollama** | 11434 | Local LLM inference | Medium-High (4-16GB RAM) |
 | **llama.cpp** | 8081 | Fast GGUF model inference | Medium (4-16GB RAM) |
 | **KoboldAI** | 5001 | Creative text generation | Medium (4-16GB RAM) |
+| **Arbius Testnet** | 8545 | Local Arbius blockchain | Low (~1-2GB RAM) |
 
 ### Speech-to-Text (STT)
 
@@ -80,6 +81,13 @@ docker-compose --profile full up -d
 |---------|------|-------------|----------------|
 | **Piper** | 10200 | Fast neural TTS | Low (~500MB RAM) |
 | **Coqui** | 5002 | High-quality neural TTS | Medium-High (2-4GB RAM) |
+| **AllTalk** | 7851 | XTTS with voice cloning | Medium-High (4-8GB RAM) |
+
+### Voice Conversion
+
+| Service | Port | Description | Resource Usage |
+|---------|------|-------------|----------------|
+| **RVC** | 7865 | Voice conversion/cloning | Medium (2-4GB RAM) |
 
 ## Customization
 
@@ -106,6 +114,12 @@ Each service has its own README with detailed setup instructions:
 - [whisper/README.md](./whisper/README.md) - Whisper.cpp STT setup
 - [piper/README.md](./piper/README.md) - Piper TTS configuration
 - [coqui/README.md](./coqui/README.md) - Coqui TTS setup
+- [alltalk/README.md](./alltalk/README.md) - AllTalk/XTTS TTS setup
+- [rvc/README.md](./rvc/README.md) - RVC voice conversion
+- [arbius/README.md](./arbius/README.md) - Arbius local testnet
+
+### Additional Resources
+- [VISION.md](./VISION.md) - Vision API support guide
 
 ## System Requirements
 

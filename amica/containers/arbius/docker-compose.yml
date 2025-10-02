@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  arbius-testnet:
+    build: .
+    container_name: amica-arbius-testnet
+    ports:
+      - "${ARBIUS_PORT:-8545}:8545"
+    environment:
+      - CHAIN_ID=${ARBIUS_CHAIN_ID:-31337}
+      - NETWORK=${ARBIUS_NETWORK:-localhost}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-X", "POST", "--data", '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}', "http://localhost:8545"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    volumes:
+      - arbius-data:/app/contract/artifacts
+      - arbius-cache:/app/contract/cache
+    stdin_open: true
+    tty: true
+
+volumes:
+  arbius-data:
+  arbius-cache:

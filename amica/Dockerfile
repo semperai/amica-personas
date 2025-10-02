@@ -1,64 +1,35 @@
-FROM node:18-alpine AS base
+# Multi-stage build for Amica (Vite + React)
 
-# Install dependencies only when needed
-FROM base AS deps
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
-RUN apk add --no-cache libc6-compat
+# Stage 1: Build
+FROM node:20-alpine AS builder
+
 WORKDIR /app
 
-# Install dependencies based on the preferred package manager
-COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* ./
-RUN \
-  if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
-  elif [ -f package-lock.json ]; then npm ci; \
-  elif [ -f pnpm-lock.yaml ]; then yarn global add pnpm && pnpm i --frozen-lockfile; \
-  else echo "Lockfile not found." && exit 1; \
-  fi
+# Install dependencies
+COPY package*.json ./
+RUN npm ci
 
-
-# Rebuild the source code only when needed
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+# Copy source code
 COPY . .
 
-# Next.js collects completely anonymous telemetry data about general usage.
-# Learn more here: https://nextjs.org/telemetry
-# Uncomment the following line in case you want to disable telemetry during the build.
-# ENV NEXT_TELEMETRY_DISABLED 1
+# Build the application
+RUN npm run build
 
-RUN yarn build
+# Stage 2: Production
+FROM nginx:alpine
 
-# If using npm comment out above and use below instead
-# RUN npm run build
+# Copy built assets from builder
+COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Production image, copy all the files and run next
-FROM base AS runner
-WORKDIR /app
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-ENV NODE_ENV production
-# Uncomment the following line in case you want to disable telemetry during runtime.
-# ENV NEXT_TELEMETRY_DISABLED 1
+# Expose port 80
+EXPOSE 80
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost/health || exit 1
 
-COPY --from=builder /app/public ./public
-
-# Set the correct permission for prerender cache
-RUN mkdir .next
-RUN chown nextjs:nodejs .next
-
-COPY --from=builder --chown=nextjs:nodejs /app/ /app/
-
-USER nextjs
-
-EXPOSE 3000
-
-ENV PORT 3000
-# set hostname to localhost
-ENV HOSTNAME "0.0.0.0"
-
-# server.js is created by next build from the standalone output
-# https://nextjs.org/docs/pages/api-reference/next-config-js/output
-CMD ["npm", "run", "start"]
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]

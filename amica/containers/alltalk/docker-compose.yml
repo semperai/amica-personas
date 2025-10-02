@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  alltalk:
+    build: .
+    container_name: amica-alltalk
+    ports:
+      - "${ALLTALK_PORT:-7851}:7851"
+    volumes:
+      - alltalk-models:/root/.local/share/tts
+      - ./voices:/app/voices
+    environment:
+      - ALLTALK_MODEL=${ALLTALK_MODEL:-xtts_v2}
+      - ALLTALK_LANGUAGE=${ALLTALK_LANGUAGE:-en}
+      - ALLTALK_LOW_VRAM=${ALLTALK_LOW_VRAM:-false}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7851/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  alltalk-models:

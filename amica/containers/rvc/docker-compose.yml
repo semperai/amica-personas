@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  rvc:
+    build: .
+    container_name: amica-rvc
+    ports:
+      - "${RVC_PORT:-7865}:7865"
+    volumes:
+      - ./weights:/app/assets/weights
+      - ./logs:/app/logs
+      - ./models:/app/models
+    environment:
+      - RVC_MODEL_NAME=${RVC_MODEL_NAME:-}
+      - RVC_INDEX_PATH=${RVC_INDEX_PATH:-}
+      - RVC_F0_UPKEY=${RVC_F0_UPKEY:-0}
+      - RVC_F0_METHOD=${RVC_F0_METHOD:-harvest}
+      - RVC_INDEX_RATE=${RVC_INDEX_RATE:-0.66}
+      - RVC_FILTER_RADIUS=${RVC_FILTER_RADIUS:-3}
+      - RVC_RESAMPLE_SR=${RVC_RESAMPLE_SR:-0}
+      - RVC_RMS_MIX_RATE=${RVC_RMS_MIX_RATE:-0.25}
+      - RVC_PROTECT=${RVC_PROTECT:-0.33}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7865/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s

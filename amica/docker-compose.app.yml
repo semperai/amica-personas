@@ -1,0 +1,85 @@
+version: '3.8'
+
+# Docker Compose for Amica Application
+# This runs the Amica web app with all supporting services
+
+services:
+  # Amica Web Application
+  amica:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: amica-app
+    ports:
+      - "${AMICA_PORT:-3000}:80"
+    environment:
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    depends_on:
+      - openai-mock
+      - ollama
+      - whisper
+      - piper
+    networks:
+      - amica-network
+
+  # OpenAI Mock (for testing without API costs)
+  openai-mock:
+    build: ./containers/openai-compatible
+    container_name: amica-openai-mock
+    ports:
+      - "8083:8080"
+    networks:
+      - amica-network
+
+  # Ollama (local LLM)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: amica-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    networks:
+      - amica-network
+
+  # Whisper (Speech-to-Text)
+  whisper:
+    image: onerahmet/openai-whisper-asr-webservice:latest
+    container_name: amica-whisper
+    ports:
+      - "9000:9000"
+    environment:
+      - ASR_MODEL=base
+      - ASR_ENGINE=faster_whisper
+    volumes:
+      - whisper-models:/root/.cache/whisper
+    networks:
+      - amica-network
+
+  # Piper (Text-to-Speech)
+  piper:
+    image: rhasspy/wyoming-piper:latest
+    container_name: amica-piper
+    ports:
+      - "10200:10200"
+    volumes:
+      - piper-data:/data
+    command: ["--voice", "en_US-lessac-medium"]
+    networks:
+      - amica-network
+
+volumes:
+  ollama-data:
+  whisper-models:
+  piper-data:
+
+networks:
+  amica-network:
+    driver: bridge
