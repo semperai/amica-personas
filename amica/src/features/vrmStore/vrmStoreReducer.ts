@@ -1,4 +1,4 @@
-import { hashCode } from "@/components/settings/common";
+import { hashCode } from "@/utils/hashCode";
 import { VrmData } from "./vrmData";
 import { vrmDataProvider } from "./vrmDataProvider";
 import VrmDbModel from "./vrmDbModel";

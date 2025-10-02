@@ -26,7 +26,6 @@ import { IconBrain } from '@tabler/icons-react';
 
 import { MenuButton } from "@/components/menuButton";
 import { AssistantText } from "@/components/assistantText";
-import { AddToHomescreen } from "@/components/addToHomescreen";
 import { Alert } from "@/components/alert";
 import { UserText } from "@/components/userText";
 import { ChatLog } from "@/components/chatLog";
@@ -328,22 +327,6 @@ export default function Home() {
               />
             )}
 
-            {/*
-            <MenuButton
-              large={isVRHeadset}
-              icon={ShareIcon}
-              href="/share"
-              target={isTauri() ? '' : '_blank'}
-              label="share"
-            />
-            <MenuButton
-              large={isVRHeadset}
-              icon={CloudArrowDownIcon}
-              href="/import"
-              label="import"
-            />
-            */}
-
             <MenuButton
               large={isVRHeadset}
               icon={CubeTransparentIcon}
@@ -366,26 +349,6 @@ export default function Home() {
               onClick={() => setShowDebug(true)}
               label="debug"
             />
-
-            {/*
-            { showChatMode ? (
-              <MenuButton
-                large={isVRHeadset}
-                icon={Squares2X2Icon}
-                disabled={viewer.currentSession !== null}
-                onClick={toggleChatMode}
-                label="hide chat mode"
-              />
-            ) : (
-              <MenuButton
-                large={isVRHeadset}
-                icon={SquaresPlusIcon}
-                disabled={viewer.currentSession !== null}
-                onClick={toggleChatMode}
-                label="show chat mode"
-              />
-            )}
-            */}
           </div>
         </div>
       </div>
@@ -417,10 +380,6 @@ export default function Home() {
 
       {/* Chat mode text */}
       {showChatMode && <ChatModeText messages={chatLog}/>}
-
-      {/*
-      <AddToHomescreen />
-      */}
 
       <Alert />
     </div>

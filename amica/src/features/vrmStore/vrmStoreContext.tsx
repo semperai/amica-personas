@@ -1,10 +1,10 @@
 import { Dispatch, PropsWithChildren, ReactElement, SetStateAction, createContext, useContext, useEffect, useReducer, useState } from "react";
 import { VrmData } from "./vrmData";
 import { vrmList } from "@/paths";
-import { thumbPrefix } from "@/components/settings/common";
+import { thumbPrefix } from "@/utils/thumbPrefix";
 import { AddItemCallbackType, VrmStoreActionType, vrmStoreReducer } from "./vrmStoreReducer";
 import { Viewer } from "../vrmViewer/viewer";
-import { config, updateConfig } from "@/utils/config";
+import { config } from "@/utils/config";
 
 interface VrmStoreContextType {
     getCurrentVrm: () => VrmData | undefined;
@@ -35,9 +35,7 @@ export const VrmStoreProvider = ({ children }: PropsWithChildren<{}>): ReactElem
             })
               .then(() => {return new Promise(resolve => setTimeout(resolve, 300));})
               .then(() => {
-                updateConfig("vrm_url", callbackProp.url);
-                updateConfig("vrm_hash", callbackProp.hash);
-                updateConfig("vrm_save_type", "local");
+                // VRM configuration is now read-only from config file
                 viewer.getScreenshotBlob((thumbBlob: Blob | null) => {
                   if (!thumbBlob) return;
                   vrmListDispatch({ type: VrmStoreActionType.updateVrmThumb, url: callbackProp.url, thumbBlob, vrmList: callbackProp.vrmList, callback: (updatedThumbVrmList: VrmData[]) => {

@@ -9,9 +9,6 @@ const defaults = {
   use_webgpu: 'false',
   mtoon_debug_mode: 'none',
   mtoon_material_type: 'mtoon',
-  show_introduction: import.meta.env.VITE_SHOW_INTRODUCTION ?? 'true',
-  show_arbius_introduction: import.meta.env.VITE_SHOW_ARBIUS_INTRODUCTION ?? 'false',
-  show_add_to_homescreen: import.meta.env.VITE_SHOW_ADD_TO_HOMESCREEN ?? 'true',
   bg_color: import.meta.env.VITE_BG_COLOR ?? '#000000',
   bg_url: import.meta.env.VITE_BG_URL ?? '/bg/bg-room2.jpg',
   vrm_url: import.meta.env.VITE_VRM_HASH ?? '/vrm/AvatarSample_A.vrm',
@@ -20,7 +17,6 @@ const defaults = {
   youtube_videoid: '',
   animation_url: import.meta.env.VITE_ANIMATION_URL ?? '/animations/idle_loop.vrma',
   animation_procedural: import.meta.env.VITE_ANIMATION_PROCEDURAL ?? 'false',
-  voice_url: import.meta.env.VITE_VOICE_URL ?? '',
   chatbot_backend: import.meta.env.VITE_CHATBOT_BACKEND ?? 'chatgpt',
   arbius_llm_model_id: import.meta.env.VITE_ARBIUS_LLM_MODEL_ID ?? 'default',
   openai_apikey: import.meta.env.VITE_OPENAI_APIKEY ?? 'default',
@@ -73,10 +69,6 @@ const defaults = {
   speecht5_speaker_embedding_url: import.meta.env.VITE_SPEECHT5_SPEAKER_EMBEDDING_URL ?? '/speecht5_speaker_embeddings/cmu_us_slt_arctic-wav-arctic_a0001.bin',
   coqui_apikey: import.meta.env.VITE_COQUI_APIKEY ?? "",
   coqui_voice_id: import.meta.env.VITE_COQUI_VOICEID ?? "71c6c3eb-98ca-4a05-8d6b-f8c2b5f9f3a3",
-  min_time_interval_sec: '10',
-  max_time_interval_sec: '20',
-  time_to_sleep_sec: '90',
-  idle_text_prompt: 'No file selected',
   name: import.meta.env.VITE_NAME ?? 'Amica',
   system_prompt: import.meta.env.VITE_SYSTEM_PROMPT ?? `You will behave as a friendly human named Amica and engage in conversation with the user. There are five types of emotions: 'neutral' which indicates normality, 'happy' which indicates joy, 'angry' which indicates anger, 'sad' which indicates sadness, and 'relaxed' which indicates calmness.
 The format of each message is as follows:

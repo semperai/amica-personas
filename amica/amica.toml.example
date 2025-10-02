@@ -213,27 +213,6 @@ wake_word = "Hello"
 # Time in seconds before character goes idle
 time_before_idle_sec = "20"
 
-# Random idle behavior timing (in seconds)
-min_time_interval_sec = "10"
-max_time_interval_sec = "20"
-time_to_sleep_sec = "90"
-
-# ============================================================================
-# UI SETTINGS
-# ============================================================================
-
-# Show introduction dialog on first load
-# Options: "true" or "false"
-show_introduction = "true"
-
-# Show Arbius-specific introduction
-# Options: "true" or "false"
-show_arbius_introduction = "false"
-
-# Show "Add to Home Screen" prompt on mobile
-# Options: "true" or "false"
-show_add_to_homescreen = "true"
-
 # ============================================================================
 # GRAPHICS SETTINGS
 # ============================================================================
