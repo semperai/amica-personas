@@ -36,7 +36,7 @@ This repository now includes:
 
 5. **arbius** - Local Arbius blockchain testnet
    - Port: 8545
-   - Full smart contract deployment
+   - Full smart contract deployment (V1-V6)
    - Test accounts with 10,000 ETH
    - For testing Arbius integration
 
