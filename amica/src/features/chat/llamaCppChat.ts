@@ -58,10 +58,20 @@ export async function getLlamaCppChatResponseStream(messages: Message[]) {
               const messagePiece = json.content;
               combined = "";
               if (!!messagePiece) {
-                controller.enqueue(messagePiece);
+                try {
+                  controller.enqueue(messagePiece);
+                } catch (enqueueError: any) {
+                  // Controller may be closed if stream was cancelled
+                  if (enqueueError?.code !== 'ERR_INVALID_STATE') {
+                    throw enqueueError;
+                  }
+                }
               }
             } catch (error) {
-              console.error(error);
+              // Ignore JSON parsing errors for incomplete chunks
+              if (!(error instanceof SyntaxError)) {
+                console.error(error);
+              }
             }
           }
         }
@@ -115,8 +125,6 @@ export async function getLlavaCppChatResponse(messages: Message[], imageData: st
     throw new Error(`LlamaCpp llava chat error (${res.status})`);
   }
 
-  console.log('body', res.body);
-
   const reader = res.body?.getReader();
   if (res.status !== 200 || ! reader) {
     throw new Error(`LlamaCpp vision error (${res.status})`);
@@ -153,10 +161,20 @@ export async function getLlavaCppChatResponse(messages: Message[], imageData: st
               const messagePiece = json.content;
               combined = "";
               if (!!messagePiece) {
-                controller.enqueue(messagePiece);
+                try {
+                  controller.enqueue(messagePiece);
+                } catch (enqueueError: any) {
+                  // Controller may be closed if stream was cancelled
+                  if (enqueueError?.code !== 'ERR_INVALID_STATE') {
+                    throw enqueueError;
+                  }
+                }
               }
             } catch (error) {
-              console.error(error);
+              // Ignore JSON parsing errors for incomplete chunks
+              if (!(error instanceof SyntaxError)) {
+                console.error(error);
+              }
             }
           }
         }

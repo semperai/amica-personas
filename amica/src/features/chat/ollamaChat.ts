@@ -39,10 +39,20 @@ export async function getOllamaChatResponseStream(messages: Message[]) {
               const json = JSON.parse(jsonResponse);
               const messagePiece = json.message.content;
               if (!!messagePiece) {
-                controller.enqueue(messagePiece);
+                try {
+                  controller.enqueue(messagePiece);
+                } catch (enqueueError: any) {
+                  // Controller may be closed if stream was cancelled
+                  if (enqueueError?.code !== 'ERR_INVALID_STATE') {
+                    throw enqueueError;
+                  }
+                }
               }
             } catch (error) {
-              console.error(error);
+              // Ignore JSON parsing errors for incomplete chunks
+              if (!(error instanceof SyntaxError)) {
+                console.error(error);
+              }
             }
           }
         }

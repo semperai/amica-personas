@@ -52,10 +52,20 @@ async function getExtra(messages: Message[]) {
                 const json = JSON.parse(line.substring(5));
                 const messagePiece = json.token;
                 if (messagePiece) {
-                  controller.enqueue(messagePiece);
+                  try {
+                    controller.enqueue(messagePiece);
+                  } catch (enqueueError: any) {
+                    // Controller may be closed if stream was cancelled
+                    if (enqueueError?.code !== 'ERR_INVALID_STATE') {
+                      throw enqueueError;
+                    }
+                  }
                 }
               } catch (error) {
-                console.error("JSON parsing error:", error, "in line:", line);
+                // Ignore JSON parsing errors for incomplete chunks
+                if (!(error instanceof SyntaxError)) {
+                  console.error("JSON parsing error:", error, "in line:", line);
+                }
               }
             }
           }
@@ -106,7 +116,14 @@ async function getNormal(messages: Message[]) {
     async start(controller: ReadableStreamDefaultController) {
       try {
         text.split(' ').map((word: string) => word + ' ').forEach((word: string) => {
-          controller.enqueue(word);
+          try {
+            controller.enqueue(word);
+          } catch (enqueueError: any) {
+            // Controller may be closed if stream was cancelled
+            if (enqueueError?.code !== 'ERR_INVALID_STATE') {
+              throw enqueueError;
+            }
+          }
         });
       } catch (error) {
         controller.error(error);
