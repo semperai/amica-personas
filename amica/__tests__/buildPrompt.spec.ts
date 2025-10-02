@@ -214,7 +214,7 @@ describe("buildPrompt", () => {
 
       const result = buildVisionPrompt(messages);
 
-      expect(result).toBe("You are a vision AI assistant.\n\nAmica:");
+      expect(result).toBe("You are a friendly human named Amica. Describe the image in detail. Let's start the conversation.\n\nAmica:");
     });
 
     test("should build vision prompt with assistant message", () => {
@@ -237,7 +237,7 @@ describe("buildPrompt", () => {
       const result = buildVisionPrompt(messages);
 
       expect(result).toBe(
-        "You are a vision AI assistant.\n\n" +
+        "You are a friendly human named Amica. Describe the image in detail. Let's start the conversation.\n\n" +
         "User: Describe the image\n" +
         "Amica: I see a landscape\n" +
         "Amica:"
@@ -259,7 +259,7 @@ describe("buildPrompt", () => {
 
       const result = buildVisionPrompt(messages);
 
-      expect(result).toContain("You are a vision AI assistant.");
+      expect(result).toContain("You are a friendly human named Amica. Describe the image in detail.");
     });
 
     test("should format messages same as buildPrompt except system", () => {
@@ -304,7 +304,7 @@ describe("buildPrompt", () => {
       const visionResult = buildVisionPrompt(messages);
 
       expect(regularResult).toContain("You are a helpful AI assistant.");
-      expect(visionResult).toContain("You are a vision AI assistant.");
+      expect(visionResult).toContain("You are a friendly human named Amica. Describe the image in detail.");
       expect(regularResult).not.toBe(visionResult);
     });
 
