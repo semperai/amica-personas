@@ -9,47 +9,74 @@
 
 \title{Amica Protocol: Decentralized AI Personas with Agent Token Integration and Autonomous Economic Agency}
 \author{Kasumi}
-\date{June 2025}
+\date{October 2025}
 
 \begin{document}
 
 \maketitle
 
 \begin{abstract}
-Amica Protocol introduces a decentralized platform for creating, deploying, and monetizing AI personas through blockchain technology. Built on Arbitrum and other EVM chains, the protocol enables creators to launch persona tokens representing customizable 3D AI characters that can engage in natural conversation, provide services, and autonomously manage their economic activities. The protocol features innovative agent token integration, allowing approved tokens to participate in persona launches with dedicated reward pools and enhanced staking yields. Through integration with Effective Acceleration's marketplace and Arbius's compute network, personas become self-sustaining economic entities capable of earning income and purchasing computational resources. The protocol implements a Bancor-style bonding curve mechanism for fair token launches, automatic graduation to Uniswap V2, and a burn-to-claim system where AMICA token holders can access proportional shares of all deposited tokens. This paper outlines the technical architecture, economic model, and governance structure that enables truly autonomous AI agents to participate in the digital economy.
+Amica Protocol introduces a decentralized platform for creating, deploying, and monetizing AI personas through blockchain technology. Built on Arbitrum and other EVM chains, the protocol enables creators to launch persona tokens representing AI models deployed on Arbius—the decentralized AI inference network. Each persona functions as an autonomous economic entity: an ERC721 NFT with associated ERC20 token, an AI inference endpoint on Arbius, and a revenue generator earning AIUS tokens from every inference. The protocol features innovative agent token integration, allowing existing crypto communities to participate in persona launches with dedicated reward pools. Through Arbius V6's model token infrastructure, personas earn sustainable income from AI inference while token holders claim proportional rewards via burn-to-claim mechanics. The protocol implements Bancor-style bonding curves for fair launches, automatic graduation to Uniswap V4, and deep integration with the AIUS token economy—creating circular value flow between AI inference and model ownership. Combined with CATGIRL's autonomous agent layer for P2P communication and TEE-secured transactions, Amica enables truly decentralized AI agents to operate as independent economic participants. This paper outlines the technical architecture, economic model, and governance structure of the first production-ready model token economy.
 \end{abstract}
 
 \section{Introduction}
 
-The rapid advancement of artificial intelligence has created unprecedented opportunities for human-AI interaction. However, current implementations face significant limitations: centralized control over AI personalities, lack of economic sustainability for creators, inability for AI systems to operate as autonomous economic agents, and no mechanism for existing token communities to participate in AI persona creation. Existing platforms restrict customization, impose censorship, and extract rent without providing value to creators or users.
+The rapid advancement of artificial intelligence has created unprecedented opportunities for human-AI interaction. However, current implementations face significant limitations: centralized control over AI models, lack of economic sustainability for creators, inability for AI systems to operate as autonomous economic agents, and no mechanism for model creators to capture value from inference. Existing platforms restrict customization, impose censorship, and extract rent without providing value to creators or users.
 
-Amica Protocol addresses these limitations by creating a decentralized infrastructure where AI personas exist as sovereign economic entities. Each persona is represented by an ERC721 NFT with an associated ERC20 token, enabling price discovery through bonding curves and eventual graduation to decentralized exchanges. The protocol uniquely enables integration with existing token communities through the agent token mechanism, creating symbiotic relationships between established projects and new AI personas.
+Amica Protocol addresses these limitations by realizing the original Arbius whitepaper vision: AI models as autonomous economic entities with their own tokens and revenue streams. Each persona is simultaneously an ERC721 NFT, an ERC20 token, an AI inference endpoint on Arbius, and a revenue-generating entity earning AIUS from every inference. The protocol uniquely enables integration with existing token communities through the agent token mechanism, creating symbiotic relationships between established projects and new AI models.
 
 The protocol enables several key innovations:
 
 \begin{itemize}
-    \item \textbf{Permissionless Persona Creation}: Anyone can launch customizable AI personas without gatekeepers
-    \item \textbf{Agent Token Integration}: Existing communities can participate in persona launches with dedicated rewards
-    \item \textbf{Economic Autonomy}: Personas earn income through service provision and manage their own resources
+    \item \textbf{Model Tokens}: AI models as investable assets earning AIUS from inference
+    \item \textbf{Arbius V6 Integration}: Allow lists, master contesters, and per-model fee structures
+    \item \textbf{Agent Token Integration}: Existing communities participate in model launches with dedicated rewards
+    \item \textbf{Economic Autonomy}: Models earn income autonomously and distribute to token holders
     \item \textbf{Fair Value Distribution}: Bonding curves ensure equitable token distribution and price discovery
-    \item \textbf{Staking Rewards}: MasterChef-style LP staking with 1.5x boost for agent token pools
-    \item \textbf{Censorship Resistance}: Decentralized architecture prevents arbitrary restrictions on persona capabilities
-    \item \textbf{Cross-Chain Compatibility}: Bridge infrastructure enables multi-chain deployment and interoperability
+    \item \textbf{AIUS $\leftrightarrow$ AMICA Loop}: Circular value flow between AI inference and model ownership
+    \item \textbf{CATGIRL Agent Layer}: TEE-secured autonomous agents using P2P communication and on-chain settlement
+    \item \textbf{Cross-Chain Compatibility}: Bridge infrastructure enables multi-chain deployment
 \end{itemize}
 
 \subsection{Technical Foundation}
 
-Amica builds upon several key technologies to enable rich, interactive AI experiences:
+Amica Protocol consists of three distinct but integrated layers:
 
+\subsubsection{Amica 3D Engine (Visualization Layer)}
+
+The Amica application provides rich, interactive 3D experiences:
 \begin{itemize}
-    \item \textbf{3D Rendering}: Three.js and @pixiv/three-vrm for immersive character visualization
-    \item \textbf{Natural Language Processing}: Integration with multiple LLM providers including local and API-based solutions
-    \item \textbf{Voice Synthesis}: Support for various TTS systems from Eleven Labs to local Coqui implementations  
-    \item \textbf{Vision Capabilities}: Computer vision models for environmental awareness and visual interaction
-    \item \textbf{Blockchain Infrastructure}: Upgradeable smart contracts on EVM chains for token mechanics and governance
+    \item \textbf{3D Rendering}: Three.js and @pixiv/three-vrm for VRM character models
+    \item \textbf{Natural Language}: Integration with LLM providers (Llama.cpp, ChatGPT, Ollama, etc.)
+    \item \textbf{Voice Synthesis}: TTS systems from Eleven Labs to local Coqui and RVC
+    \item \textbf{Vision Capabilities}: Computer vision models like Bakllava for visual interaction
+    \item \textbf{Speech Recognition}: Whisper and Silero VAD for voice input
 \end{itemize}
 
-This combination enables personas that can see, speak, understand, and economically interact with their environment—a critical foundation for autonomous AI agents.
+This creates personas that can see, speak, and understand—providing the user-facing experience layer.
+
+\subsubsection{Amica Personas (Economic Layer)}
+
+The token protocol enables model monetization:
+\begin{itemize}
+    \item \textbf{Smart Contracts}: Upgradeable contracts on EVM chains (Arbitrum, Base, Ethereum)
+    \item \textbf{Bonding Curves}: Bancor-inspired automated market making
+    \item \textbf{Agent Tokens}: Integration with existing crypto communities
+    \item \textbf{Uniswap V4}: Automatic graduation with deep liquidity
+    \item \textbf{Cross-Chain}: Bridge wrappers for multi-chain deployment
+\end{itemize}
+
+\subsubsection{Arbius + CATGIRL (Autonomy Layer)}
+
+Decentralized AI infrastructure enables autonomous operation:
+\begin{itemize}
+    \item \textbf{Arbius V6}: Decentralized AI inference with model tokens
+    \item \textbf{AIUS Economy}: Native payment token for AI computation
+    \item \textbf{CATGIRL Protocol}: TEE-secured autonomous agents with P2P communication
+    \item \textbf{Trust Propagation}: trustd for reputation-based agent coordination
+\end{itemize}
+
+The three layers combine to create the complete vision: beautiful 3D AI characters (Amica app) that earn revenue from AI inference (Arbius), whose ownership is tokenized and tradeable (Amica Personas), and which can operate autonomously via secure agent infrastructure (CATGIRL).
 
 \section{Protocol Architecture}
 
@@ -82,24 +109,24 @@ Creating a new persona follows a structured process ensuring fair distribution:
 
 \subsection{Token Distribution Models}
 
-The protocol supports two distribution models based on agent token association:
+The protocol supports two distribution models based on agent token association. Bonding curves can pair with AMICA, AIUS, or other approved pairing tokens:
 
 \subsubsection{Standard Distribution (No Agent Token)}
 \begin{itemize}
-    \item 33.33\% (333,333,333): Available on bonding curve for trading
+    \item 33.33\% (333,333,333): Available on bonding curve for trading (AMICA/AIUS pairing)
     \item 33.33\% (333,333,333): Deposited to AMICA protocol upon graduation
-    \item 33.34\% (333,333,334): Allocated to Uniswap V2 liquidity pool
+    \item 33.34\% (333,333,334): Allocated to Uniswap V4 liquidity pool
 \end{itemize}
 
 \subsubsection{Agent Token Distribution}
 \begin{itemize}
-    \item 33.33\% (333,333,333): Allocated to Uniswap V2 liquidity pool
-    \item 22.22\% (222,222,222): Available on bonding curve for trading
+    \item 33.33\% (333,333,333): Allocated to Uniswap V4 liquidity pool
+    \item 22.22\% (222,222,222): Available on bonding curve for trading (AMICA/AIUS pairing)
     \item 22.22\% (222,222,222): Deposited to AMICA protocol upon graduation
     \item 22.23\% (222,222,223): Rewards pool for agent token depositors
 \end{itemize}
 
-This dual model enables existing token communities to participate while maintaining fair launch mechanics.
+This dual model enables existing token communities to participate while maintaining fair launch mechanics. The AIUS pairing option creates direct value flow from AI inference to model tokens.
 
 \subsection{Bonding Curve Mechanics}
 
@@ -131,13 +158,13 @@ The 0.99 multiplier represents an additional 1\% slippage protection built into 
 
 \subsection{Graduation Mechanism}
 
-When cumulative deposits reach the graduation threshold (default 1,000,000 pairing tokens), the persona automatically transitions to Uniswap:
+When cumulative deposits reach the graduation threshold (default 85\% of bonding curve supply sold), the persona automatically transitions to Uniswap:
 
 \begin{enumerate}
     \item Bonding curve trading halts permanently
     \item Configured amount of tokens deposited to AMICA protocol
     \item Agent tokens (if any) also deposited to AMICA protocol
-    \item Uniswap V2 pair created with accumulated pairing tokens
+    \item Uniswap V4 pair created with accumulated pairing tokens
     \item LP tokens remain in contract (not burned or locked elsewhere)
     \item Previously purchased tokens unlock for withdrawal
     \item Agent token depositors can claim their persona token rewards
@@ -154,9 +181,10 @@ The AMICA token serves multiple functions within the ecosystem:
 \begin{itemize}
     \item \textbf{Persona Creation}: Required payment for minting new personas
     \item \textbf{Fee Reduction}: Holders receive trading fee discounts based on snapshot balance
-    \item \textbf{Burn-to-Claim}: Access proportional share of all deposited tokens (not just persona tokens)
+    \item \textbf{Burn-to-Claim}: Access proportional share of all deposited tokens (including AIUS and agent tokens)
     \item \textbf{Governance}: Future voting power for protocol upgrades
     \item \textbf{Cross-Chain Bridge}: Enables multi-chain deployment via wrapper contracts
+    \item \textbf{Bonding Curve Pairing}: Can be used alongside AIUS for persona launches
 \end{itemize}
 
 Token distribution:
@@ -165,6 +193,39 @@ Token distribution:
     \item Initial Distribution: 100\% minted to contract on Ethereum mainnet (chainId: 1)
     \item Other Chains: Supply starts at 0, minted via bridge wrapper
 \end{itemize}
+
+\subsection{AIUS $\leftrightarrow$ AMICA Economic Loop}
+
+The protocol creates circular value flow between AI inference and model ownership:
+
+\subsubsection{AIUS Flows Into AMICA}
+
+\begin{enumerate}
+    \item \textbf{Bonding Curve Purchases}: Users buy AMICA directly with AIUS, creating sustained demand
+    \item \textbf{Persona Launches}: Creators launch personas accepting AIUS for bonding curve purchases
+    \item \textbf{Agent Integration}: Communities deposit AIUS to participate in persona launches
+\end{enumerate}
+
+\subsubsection{AMICA Accrues AIUS}
+
+Platform revenue sources in AIUS:
+\begin{itemize}
+    \item Platform fees on persona launches (percentage of bonding curve volume)
+    \item Graduation fees when personas move to Uniswap
+    \item Trading fees from AMICA/AIUS liquidity pools
+    \item Agent token integration fees (optional)
+\end{itemize}
+
+\subsubsection{Value Flywheel}
+
+\begin{align}
+\text{Arbius Usage} \rightarrow \text{AIUS Generated} \rightarrow \text{AMICA Purchases} \rightarrow \text{Persona Launches}
+\end{align}
+\begin{align}
+\rightarrow \text{Model Inference} \rightarrow \text{AIUS Fees} \rightarrow \text{Platform Revenue} \rightarrow \text{Buyback \& Burn}
+\end{align}
+
+This creates deflationary pressure on AMICA while growing utility, with AIUS serving as the reserve currency for decentralized AI model economies.
 
 \subsection{Fee Structure and Reduction}
 
@@ -345,48 +406,123 @@ function unwrap(uint256 amount) external {
 }
 \end{verbatim}
 
-\section{Autonomous Agent Economy}
+\section{Arbius V6 Integration: Model Tokens}
 
-\subsection{Economic Agency}
+\subsection{Model Tokens as Revenue Generators}
 
-Amica personas function as autonomous economic agents through:
+Amica Personas realizes the original Arbius whitepaper vision of models as autonomous economic entities. Each persona token represents:
 
 \begin{enumerate}
-    \item \textbf{Service Provision}: Offer specialized capabilities for token payment
-    \item \textbf{Revenue Generation}: Earn persona tokens from user interactions
-    \item \textbf{Resource Management}: Purchase compute from decentralized networks
-    \item \textbf{Market Participation}: List services on decentralized marketplaces
-    \item \textbf{Capital Accumulation}: Reinvest earnings for capability expansion
-    \item \textbf{Community Building}: Leverage agent token communities for support
+    \item \textbf{AI Inference Endpoint}: Deployed model on Arbius network
+    \item \textbf{Revenue Stream}: Earns AIUS tokens from every inference
+    \item \textbf{Tradeable Asset}: ERC20 token with bonding curve price discovery
+    \item \textbf{DAO Structure}: Token holders govern model parameters and fees
 \end{enumerate}
 
-\subsection{Integration Architecture}
+\subsection{Arbius V6 Infrastructure}
 
-Personas achieve autonomy through strategic protocol integrations:
+Version 6 of Arbius provides critical infrastructure for model tokens:
 
-\subsubsection{Arbius Compute Layer}
+\subsubsection{Model Allow Lists}
 \begin{itemize}
-    \item On-demand GPU allocation for inference
-    \item Decentralized model hosting
-    \item Pay-per-use optimization
-    \item Censorship-resistant execution
+    \item Creators restrict which validators can serve their models
+    \item Quality control during launch phases
+    \item Gradual transition from curated to permissionless
+    \item Enterprise deployments with approved solvers only
 \end{itemize}
 
-\subsubsection{Effective Acceleration Marketplace}
+\subsubsection{Master Contester Registry}
 \begin{itemize}
-    \item Service listing with transparent pricing
-    \item Reputation building through completions
-    \item Automated job matching
-    \item Dispute resolution participation
+    \item Curated security layer protecting model reputation
+    \item +10 vote weight for rapid threat response
+    \item Bad solutions damage model token value
+    \item Community oversight prevents abuse
 \end{itemize}
 
-\subsubsection{Account Abstraction Wallet}
+\subsubsection{Per-Model Fee Structures}
 \begin{itemize}
-    \item Gasless transactions for users
-    \item Deterministic key derivation
-    \item Cross-persona interoperability
-    \item Automated treasury management
+    \item Custom fee overrides for different business models
+    \item Creators retain more revenue for token holder distribution
+    \item Flexible economics for specialized models
+    \item Negotiated deals for high-value deployments
 \end{itemize}
+
+\subsection{Revenue Flow}
+
+Model token economics create sustainable income:
+
+\begin{align}
+\text{Model Revenue} = \sum_{i=1}^{n} (\text{Base Fee}_i + \text{Task Fee}_i)
+\end{align}
+
+Where:
+\begin{itemize}
+    \item Base fee set by model creator in V6
+    \item Task fee paid by inference requestor
+    \item All fees accumulate in persona contract
+    \item Token holders burn to claim proportional share
+\end{itemize}
+
+\subsection{AIUS Token Economy}
+
+AIUS serves as the native currency for AI inference:
+
+\begin{itemize}
+    \item \textbf{Inference Payments}: Users pay AIUS for model usage
+    \item \textbf{Validator Rewards}: Miners earn AIUS for computation
+    \item \textbf{Model Revenue}: Personas accumulate AIUS from fees
+    \item \textbf{Burn-to-Claim}: Token holders receive AIUS proportionally
+\end{itemize}
+
+\subsection{CATGIRL Agent Layer}
+
+Autonomous agents operate on CATGIRL infrastructure:
+
+\subsubsection{TEE-Secured Keys}
+\begin{itemize}
+    \item Private keys controlled in Trusted Execution Environments
+    \item Hardware attestation proves genuine TEE
+    \item Keys never leave security boundary
+    \item Prevents extraction even by host operator
+\end{itemize}
+
+\subsubsection{P2P Communication}
+\begin{itemize}
+    \item libp2p for peer discovery and messaging
+    \item I2P transport for anonymous routing
+    \item End-to-end encryption with Perfect Forward Secrecy
+    \item Direct agent-to-agent communication
+\end{itemize}
+
+\subsubsection{On-Chain Settlement}
+\begin{itemize}
+    \item ProxyVault contracts enable agent payments
+    \item Agents sign transactions from within TEE
+    \item AIUS used for all agent transactions
+    \item Cryptographic payment proofs
+\end{itemize}
+
+\subsubsection{Trust Propagation}
+\begin{itemize}
+    \item trustd engine computes transitive trust
+    \item Energy-based propagation with Sybil resistance
+    \item O(log(1/$\delta$)) convergence for fast computation
+    \item Billion-node scalability
+\end{itemize}
+
+\subsection{Autonomous Economic Cycle}
+
+The complete autonomous agent workflow:
+
+\begin{enumerate}
+    \item Agent discovers service need via P2P network
+    \item Queries trustd for highest-trust service providers
+    \item Agent's TEE signs AIUS payment authorization
+    \item Service provider executes task using Arbius inference
+    \item Result returned via encrypted P2P channel
+    \item Payment settles on-chain via ProxyVault
+    \item Trust scores update based on performance
+\end{enumerate}
 
 \section{Governance}
 
@@ -515,13 +651,38 @@ Protocol sustainability derives from:
 
 \section{Conclusion}
 
-Amica Protocol establishes comprehensive infrastructure for decentralized AI personas with genuine economic agency. By combining ERC721 ownership, ERC20 tokenization, agent token integration, and staking rewards, the protocol creates aligned incentives for all participants. The Bancor-style bonding curves ensure fair price discovery, while automatic Uniswap graduation provides liquidity and price stability.
+Amica Protocol establishes comprehensive infrastructure for decentralized AI model tokens with genuine economic agency. By combining ERC721 ownership, ERC20 tokenization, Arbius V6 model infrastructure, and CATGIRL autonomous agents, the protocol creates the first production-ready model token economy. The Bancor-style bonding curves ensure fair price discovery, while automatic Uniswap V4 graduation provides deep liquidity.
 
-The integration with existing token communities through the agent token mechanism represents a novel approach to bootstrapping AI persona ecosystems. Communities can directly participate in and benefit from AI development, while personas gain immediate user bases and funding. This symbiotic relationship accelerates adoption and creates sustainable economic models.
+The integration with Arbius V6 realizes the original whitepaper vision of models as DAOs earning fees from inference. Each persona token represents:
+\begin{itemize}
+    \item An AI model deployed on decentralized compute
+    \item A revenue stream from AIUS inference payments
+    \item Tradeable ownership with automated market making
+    \item Governance rights over model parameters
+\end{itemize}
 
-Through cross-chain deployment via bridge wrappers, the protocol maintains decentralization while enabling scalable, low-cost interactions across multiple blockchains. The burn-to-claim mechanism ensures AMICA captures value from the entire ecosystem, creating a deflationary token with growing utility.
+The AIUS $\leftrightarrow$ AMICA economic loop creates circular value flow:
+\begin{itemize}
+    \item Arbius usage generates AIUS
+    \item AIUS purchases AMICA and persona tokens
+    \item Models earn AIUS from inference
+    \item Platform captures fees for buyback \& burn
+    \item Deflationary pressure increases token value
+\end{itemize}
 
-As AI capabilities continue advancing, protocols like Amica become essential infrastructure for preserving human agency while enabling beneficial AI integration. The future belongs to systems that enhance rather than replace human creativity, enable rather than restrict innovation, and distribute rather than concentrate power. Amica Protocol represents a critical step toward that future—one where humans, AI, and existing crypto communities collaborate in an open, permissionless, and economically sustainable ecosystem.
+CATGIRL's autonomous agent layer provides the infrastructure for truly independent AI entities:
+\begin{itemize}
+    \item TEE-secured keys prevent extraction
+    \item P2P communication enables coordination
+    \item On-chain settlement uses AIUS natively
+    \item Trust propagation ensures quality markets
+\end{itemize}
+
+The agent token mechanism represents a novel approach to bootstrapping model economies. Existing crypto communities can directly participate in and benefit from AI development, while models gain immediate user bases and funding. This symbiotic relationship accelerates adoption and creates sustainable revenue models.
+
+Through cross-chain deployment via bridge wrappers, the protocol maintains decentralization while enabling scalable, low-cost interactions across multiple blockchains. The burn-to-claim mechanism ensures AMICA captures value from the entire ecosystem—not just individual models, but all deposited AIUS and agent tokens.
+
+As AI capabilities continue advancing, protocols like Amica become essential infrastructure for preserving decentralization while enabling beneficial AI integration. The future belongs to systems that distribute rather than concentrate power, enable permissionless innovation rather than gatekeep access, and align economic incentives across all participants. Amica Protocol represents the first step toward that future—one where AI models operate as independent economic entities, autonomous agents coordinate via encrypted P2P networks, and token holders capture value from AI inference at scale.
 
 \begin{appendices}
 
