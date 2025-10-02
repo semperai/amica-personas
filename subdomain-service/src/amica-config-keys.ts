@@ -14,7 +14,6 @@ export const AMICA_CONFIG_KEYS = [
   'use_webgpu',
   'mtoon_debug_mode',
   'mtoon_material_type',
-  'language',
   'show_introduction',
   'show_arbius_introduction',
   'show_add_to_homescreen',

@@ -1,0 +1,266 @@
+# ============================================================================
+# Amica Configuration File (TOML)
+# ============================================================================
+#
+# This file is used for local development configuration.
+# In production, configuration is provided by the subdomain service via /config endpoint.
+#
+# SETUP:
+#   1. Copy this file to `amica.toml` in the project root
+#   2. Customize values below for your local development
+#   3. Run `npm run dev` to start with your config
+#
+# The `amica.toml` file is git-ignored for your personal settings.
+#
+# ============================================================================
+
+# ============================================================================
+# BASIC SETTINGS
+# ============================================================================
+
+# Character name displayed in the UI
+name = "Amica"
+
+# ============================================================================
+# VISUAL APPEARANCE
+# ============================================================================
+
+# Background color (hex format)
+bg_color = "#000000"
+
+# Background image URL
+# Can be a local path like "/bg/bg-room2.jpg" or external URL
+bg_url = "/bg/bg-room2.jpg"
+
+# 3D character model (VRM format)
+# Can be a local path or IPFS hash
+vrm_url = "/vrm/AvatarSample_A.vrm"
+
+# Character animation file (VRMA format)
+animation_url = "/animations/idle_loop.vrma"
+
+# Use procedural animation instead of animation file
+# Options: "true" or "false"
+animation_procedural = "false"
+
+# ============================================================================
+# CHAT / LLM SETTINGS
+# ============================================================================
+
+# AI backend to use for chat
+# Options: "chatgpt", "llamacpp", "ollama", "koboldai"
+chatbot_backend = "chatgpt"
+
+# System prompt that defines the character's personality and behavior
+# This multi-line string defines how the AI should respond
+# Format includes emotion tags: [neutral|happy|angry|sad|relaxed]
+system_prompt = """You will behave as a friendly human named Amica and engage in conversation with the user. There are five types of emotions: 'neutral' which indicates normality, 'happy' which indicates joy, 'angry' which indicates anger, 'sad' which indicates sadness, and 'relaxed' which indicates calmness.
+The format of each message is as follows:
+[neutral|happy|angry|sad|relaxed] {message}
+
+Here are some examples:
+[neutral] Hello. [happy] How are you doing?
+[happy] Isn't this outfit cute?
+[happy] Lately, I'm obsessed with clothes from this shop!
+[sad] Sorry, I forgot.
+[sad] Is there anything interesting lately?
+[angry] What? Don't keep it a secret, that's not fair!
+[neutral] What are your plans for summer vacation? [happy] Should we go to the beach?
+
+Please respond with only one appropriate message. Please do not use overly polite language. Please be open about yourself. Let's start the conversation."""
+
+# ----------------------------------------------------------------------------
+# OpenAI / ChatGPT Settings (when chatbot_backend = "chatgpt")
+# ----------------------------------------------------------------------------
+
+# OpenAI API key (or "default" to use hosted Amica API)
+openai_apikey = "default"
+
+# OpenAI API endpoint URL
+openai_url = "https://api-01.heyamica.com"
+
+# OpenAI model to use
+# Options: "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo", etc.
+openai_model = "gpt-4o"
+
+# ----------------------------------------------------------------------------
+# Arbius Settings (for decentralized on-chain AI)
+# ----------------------------------------------------------------------------
+
+# Arbius LLM model ID to use
+# "default" uses the default model configured on Arbius
+arbius_llm_model_id = "default"
+
+# ----------------------------------------------------------------------------
+# LlamaCPP Settings (when chatbot_backend = "llamacpp")
+# ----------------------------------------------------------------------------
+# Uncomment these lines to use local LlamaCPP server
+
+# llamacpp_url = "http://127.0.0.1:8080"
+# llamacpp_stop_sequence = "(End)||[END]||Note||***||You:||User:||</s>"
+
+# ----------------------------------------------------------------------------
+# Ollama Settings (when chatbot_backend = "ollama")
+# ----------------------------------------------------------------------------
+# Uncomment these lines to use local Ollama server
+
+# ollama_url = "http://localhost:11434"
+# ollama_model = "llama2"
+
+# ----------------------------------------------------------------------------
+# KoboldAI Settings (when chatbot_backend = "koboldai")
+# ----------------------------------------------------------------------------
+# Uncomment these lines to use KoboldAI server
+
+# koboldai_url = "http://localhost:5001"
+# koboldai_use_extra = "false"
+# koboldai_stop_sequence = "(End)||[END]||Note||***||You:||User:||</s>"
+
+# ============================================================================
+# TEXT-TO-SPEECH (TTS) SETTINGS
+# ============================================================================
+
+# TTS backend to use for voice synthesis
+# Options: "openai_tts", "speecht5", "elevenlabs", "coqui", "coquiLocal",
+#          "piper", "localxtts", "rvc"
+tts_backend = "openai_tts"
+
+# Mute TTS output
+# Options: "true" or "false"
+tts_muted = "false"
+
+# ----------------------------------------------------------------------------
+# OpenAI TTS Settings (when tts_backend = "openai_tts")
+# ----------------------------------------------------------------------------
+
+openai_tts_apikey = "default"
+openai_tts_url = "https://api-01.heyamica.com"
+
+# TTS model to use
+# Options: "tts-1", "tts-1-hd"
+openai_tts_model = "tts-1"
+
+# Voice to use
+# Options: "alloy", "echo", "fable", "onyx", "nova", "shimmer"
+openai_tts_voice = "nova"
+
+# ----------------------------------------------------------------------------
+# ElevenLabs TTS Settings (when tts_backend = "elevenlabs")
+# ----------------------------------------------------------------------------
+# Uncomment and configure these lines to use ElevenLabs
+
+# elevenlabs_apikey = ""
+# elevenlabs_voiceid = "21m00Tcm4TlvDq8ikWAM"
+# elevenlabs_model = "eleven_monolingual_v1"
+
+# ============================================================================
+# SPEECH-TO-TEXT (STT) SETTINGS
+# ============================================================================
+
+# STT backend to use for voice recognition
+# Options: "whisper_openai", "whispercpp"
+stt_backend = "whisper_openai"
+
+# ----------------------------------------------------------------------------
+# OpenAI Whisper Settings (when stt_backend = "whisper_openai")
+# ----------------------------------------------------------------------------
+
+openai_whisper_apikey = "default"
+openai_whisper_url = "https://api-01.heyamica.com"
+openai_whisper_model = "whisper-1"
+
+# ----------------------------------------------------------------------------
+# WhisperCPP Settings (when stt_backend = "whispercpp")
+# ----------------------------------------------------------------------------
+# Uncomment to use local WhisperCPP server
+
+# whispercpp_url = "http://localhost:8080"
+
+# ============================================================================
+# VISION SETTINGS
+# ============================================================================
+
+# Vision backend to use for image understanding
+# Options: "vision_openai", "vision_llamacpp", "vision_ollama"
+vision_backend = "vision_openai"
+
+# System prompt for vision tasks
+vision_system_prompt = "You are a friendly human named Amica. Describe the image in detail. Let's start the conversation."
+
+# ----------------------------------------------------------------------------
+# OpenAI Vision Settings (when vision_backend = "vision_openai")
+# ----------------------------------------------------------------------------
+
+vision_openai_apikey = "default"
+vision_openai_url = "https://api-01.heyamica.com"
+vision_openai_model = "gpt-4-vision-preview"
+
+# ============================================================================
+# BEHAVIOR SETTINGS
+# ============================================================================
+
+# Automatically send messages from microphone without button press
+# Options: "true" or "false"
+autosend_from_mic = "true"
+
+# Enable wake word detection
+# Options: "true" or "false"
+wake_word_enabled = "false"
+
+# Wake word to listen for (when wake_word_enabled = "true")
+wake_word = "Hello"
+
+# Time in seconds before character goes idle
+time_before_idle_sec = "20"
+
+# Random idle behavior timing (in seconds)
+min_time_interval_sec = "10"
+max_time_interval_sec = "20"
+time_to_sleep_sec = "90"
+
+# ============================================================================
+# UI SETTINGS
+# ============================================================================
+
+# Show introduction dialog on first load
+# Options: "true" or "false"
+show_introduction = "true"
+
+# Show Arbius-specific introduction
+# Options: "true" or "false"
+show_arbius_introduction = "false"
+
+# Show "Add to Home Screen" prompt on mobile
+# Options: "true" or "false"
+show_add_to_homescreen = "true"
+
+# ============================================================================
+# GRAPHICS SETTINGS
+# ============================================================================
+
+# Enable graphics debugging
+# Options: "true" or "false"
+debug_gfx = "false"
+
+# Use WebGPU instead of WebGL
+# Options: "true" or "false"
+use_webgpu = "false"
+
+# MToon material debug mode
+# Options: "none", "normal", "litShadeRate", "parametricRim", "matcap"
+mtoon_debug_mode = "none"
+
+# MToon material type
+# Options: "mtoon", "standard"
+mtoon_material_type = "mtoon"
+
+# ============================================================================
+# ADVANCED SETTINGS
+# ============================================================================
+
+# VRM save location type
+# Options: "web", "local"
+vrm_save_type = "web"
+
+# Speaker embedding file for SpeechT5 TTS
+speecht5_speaker_embedding_url = "/speecht5_speaker_embeddings/cmu_us_slt_arctic-wav-arctic_a0001.bin"

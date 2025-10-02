@@ -6,7 +6,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { GET_PERSONA_BY_DOMAIN } from './graphql';
 import { PersonasResponse } from './types';
-import { parseSubdomain, getAmicaVersion, buildAmicaConfig, injectConfig, log } from './utils';
+import { parseSubdomain, getAmicaVersion, buildAmicaConfig, log } from './utils';
 
 dotenv.config();
 
@@ -384,13 +384,18 @@ app.get('*', async (req: Request, res: Response, next: NextFunction) => {
     // Build config object
     const config = buildAmicaConfig(persona);
 
-    // If requesting the root, serve index.html with injected config
+    // Serve /config endpoint
+    if (req.path === '/config' || req.path === '/config.json') {
+      log(`Serving config for: ${persona.name}`);
+      return res.json(config);
+    }
+
+    // If requesting the root, serve index.html
     if (req.path === '/' || req.path === '/index.html') {
       const indexPath = path.join(buildsDir, 'index.html');
 
       if (fs.existsSync(indexPath)) {
-        let html = fs.readFileSync(indexPath, 'utf8');
-        html = injectConfig(html, config);
+        const html = fs.readFileSync(indexPath, 'utf8');
         return res.send(html);
       }
     }

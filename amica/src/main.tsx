@@ -4,9 +4,13 @@ import App from './App';
 import '@rainbow-me/rainbowkit/styles.css';
 import './styles/globals.css';
 import '@charcoal-ui/icons';
+import { loadConfig } from './utils/config';
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+// Load configuration before rendering the app
+loadConfig().then(() => {
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
+});

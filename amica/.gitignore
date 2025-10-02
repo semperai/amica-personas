@@ -45,3 +45,6 @@ working/*
 # Playwright
 playwright-report/
 test-results/
+
+# Local configuration
+amica.toml

@@ -21,7 +21,6 @@ import {
   SquaresPlusIcon,
   VideoCameraIcon,
   VideoCameraSlashIcon,
-  WrenchScrewdriverIcon,
 } from "@heroicons/react/24/outline";
 import { IconBrain } from '@tabler/icons-react';
 
@@ -35,7 +34,6 @@ import VrmViewer from "@/components/vrmViewer";
 import { MessageInputContainer } from "@/components/messageInputContainer";
 import { LoadingProgress } from "@/components/loadingProgress";
 import { DebugPane } from "@/components/debugPane";
-import { Settings } from "@/components/settings";
 import { EmbeddedWebcam } from "@/components/embeddedWebcam";
 import { Moshi } from "@/features/moshi/components/Moshi";
 
@@ -44,7 +42,7 @@ import { Message, Role } from "@/features/chat/messages";
 import { ChatContext } from "@/features/chat/chatContext";
 import { AlertContext } from "@/features/alert/alertContext";
 
-import { config, updateConfig } from '@/utils/config';
+import { config } from '@/utils/config';
 import { VrmStoreProvider } from "@/features/vrmStore/vrmStoreContext";
 import { ChatModeText } from "@/components/chatModeText";
 
@@ -103,7 +101,6 @@ export default function Home() {
   const [showContent, setShowContent] = useState(false);
 
 
-  const [showSettings, setShowSettings] = useState(false);
   const [showChatLog, setShowChatLog] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
   const [showChatMode, setShowChatMode] = useState(false);
@@ -147,8 +144,7 @@ export default function Home() {
 
 
   function toggleTTSMute() {
-    updateConfig('tts_muted', config('tts_muted') === 'true' ? 'false' : 'true')
-    setMuted(config('tts_muted') === 'true')
+    setMuted(prev => !prev)
   }
 
   const toggleState = (
@@ -252,11 +248,6 @@ export default function Home() {
       setChatSpeaking,
     );
 
-    // TODO remove in future
-    // this change was just to make naming cleaner
-    if (config("tts_backend") === 'openai') {
-      updateConfig("tts_backend", "openai_tts");
-    }
   }, [bot, viewer]);
 
   // this exists to prevent build errors with ssr
@@ -281,11 +272,6 @@ export default function Home() {
 
       <VrmStoreProvider>
         <VrmViewer chatMode={showChatMode}/>
-        {showSettings && (
-          <Settings
-            onClickClose={() => setShowSettings(false)}
-          />
-        )}
       </VrmStoreProvider>
 
       <MessageInputContainer isChatProcessing={chatProcessing} />
@@ -294,13 +280,6 @@ export default function Home() {
       <div className="absolute z-10 m-2">
         <div className="grid grid-flow-col gap-[8px] place-content-end mt-2 bg-white/80 rounded-md backdrop-blur-md shadow-sm">
           <div className='flex flex-col justify-center items-center p-1 space-y-3'>
-            <MenuButton
-              large={isVRHeadset}
-              icon={WrenchScrewdriverIcon}
-              onClick={() => setShowSettings(true)}
-              label="show settings"
-            />
-
             {showChatLog ? (
               <MenuButton
                 large={isVRHeadset}

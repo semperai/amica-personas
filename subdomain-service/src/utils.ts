@@ -60,52 +60,6 @@ export function buildAmicaConfig(persona: Persona): AmicaConfig {
   };
 }
 
-/**
- * Inject config script into HTML
- * Sets localStorage values that Amica's config system will read
- * @param html - Original HTML content
- * @param config - Configuration to inject
- * @returns Modified HTML with injected config
- */
-export function injectConfig(html: string, config: AmicaConfig): string {
-  // Start with persona name
-  const amicaConfigOverrides: Record<string, string> = {
-    name: config.personaName,
-  };
-
-  // Dynamically inject any metadata that matches valid Amica config keys
-  // This allows new config keys to be added to Amica without updating this server
-  Object.entries(config.metadata).forEach(([key, value]) => {
-    if (isValidConfigKey(key)) {
-      amicaConfigOverrides[key] = value;
-    }
-  });
-
-  // Build localStorage setter script
-  const configScript = `
-    <script>
-      // Store full persona config for potential future use
-      window.__AMICA_PERSONA__ = ${JSON.stringify(config, null, 2)};
-
-      // Set localStorage values that Amica's config system reads
-      ${Object.entries(amicaConfigOverrides)
-        .map(([key, value]) =>
-          `localStorage.setItem('${AMICA_LOCALSTORAGE_PREFIX}${key}', ${JSON.stringify(value)});`
-        )
-        .join('\n      ')}
-    </script>
-  `;
-
-  // Inject before closing </head> tag, or at the beginning of <body> if no </head>
-  if (html.includes('</head>')) {
-    return html.replace('</head>', `${configScript}\n  </head>`);
-  } else if (html.includes('<body>')) {
-    return html.replace('<body>', `<body>${configScript}\n`);
-  } else {
-    // Fallback: prepend to the HTML (trim the script to remove leading whitespace)
-    return configScript.trim() + '\n' + html;
-  }
-}
 
 /**
  * Log with timestamp

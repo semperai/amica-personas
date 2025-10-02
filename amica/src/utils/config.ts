@@ -1,3 +1,5 @@
+import { AmicaConfig } from '@/types/config';
+
 const defaults = {
   autosend_from_mic: 'true',
   wake_word_enabled: 'false',
@@ -7,7 +9,6 @@ const defaults = {
   use_webgpu: 'false',
   mtoon_debug_mode: 'none',
   mtoon_material_type: 'mtoon',
-  language: import.meta.env.VITE_LANGUAGE ?? 'en',
   show_introduction: import.meta.env.VITE_SHOW_INTRODUCTION ?? 'true',
   show_arbius_introduction: import.meta.env.VITE_SHOW_ARBIUS_INTRODUCTION ?? 'false',
   show_add_to_homescreen: import.meta.env.VITE_SHOW_ADD_TO_HOMESCREEN ?? 'true',
@@ -94,15 +95,72 @@ Please respond with only one appropriate message. Please do not use overly polit
   scenario_url: import.meta.env.VITE_SCENARIO_URL ?? '/scenarios/test1.js',
 };
 
-function prefixed(key: string) {
-  return `chatvrm_${key}`;
-}
+// Store for configuration loaded from /config endpoint
+let loadedConfig: Record<string, string> = {};
+let configLoaded = false;
+let configError: string | null = null;
 
-export function config(key: string): string {
-  if (localStorage.hasOwnProperty(prefixed(key))) {
-    return (<any>localStorage).getItem(prefixed(key));
+/**
+ * Load configuration from /config endpoint
+ * Called once on app initialization
+ */
+export async function loadConfig(): Promise<void> {
+  if (configLoaded) {
+    return;
   }
 
+  try {
+    const response = await fetch('/config');
+
+    if (response.ok) {
+      const data: AmicaConfig = await response.json();
+
+      // Flatten configuration from metadata if present
+      if (data.metadata) {
+        Object.entries(data.metadata).forEach(([key, value]) => {
+          loadedConfig[key] = value;
+        });
+      }
+
+      // Also merge direct keys (for TOML-based config)
+      Object.entries(data).forEach(([key, value]) => {
+        if (key !== 'metadata' && typeof value === 'string') {
+          loadedConfig[key] = value;
+        }
+      });
+
+      // If personaName is present, use it for 'name' config
+      if (data.personaName) {
+        loadedConfig.name = data.personaName;
+      }
+
+      console.log('[Config] Loaded configuration from /config endpoint');
+    } else if (response.status === 404) {
+      console.log('[Config] No /config endpoint found, using defaults');
+    } else {
+      console.warn('[Config] Failed to load config:', response.statusText);
+      configError = `HTTP ${response.status}: ${response.statusText}`;
+    }
+  } catch (error) {
+    console.warn('[Config] Error loading config:', error);
+    configError = error instanceof Error ? error.message : 'Unknown error';
+  }
+
+  configLoaded = true;
+}
+
+/**
+ * Get configuration value with fallback chain:
+ * 1. Loaded config from /config endpoint
+ * 2. Defaults
+ */
+export function config(key: string): string {
+  // Check loaded config first
+  if (loadedConfig.hasOwnProperty(key)) {
+    return loadedConfig[key];
+  }
+
+  // Fall back to defaults
   if (defaults.hasOwnProperty(key)) {
     return (<any>defaults)[key];
   }
@@ -110,15 +168,9 @@ export function config(key: string): string {
   throw new Error(`config key not found: ${key}`);
 }
 
-export function updateConfig(key: string, value: string) {
-  if (defaults.hasOwnProperty(key)) {
-    localStorage.setItem(prefixed(key), value);
-    return;
-  }
-
-  throw new Error(`config key not found: ${key}`);
-}
-
+/**
+ * Get default value for a config key
+ */
 export function defaultConfig(key: string): string {
   if (defaults.hasOwnProperty(key)) {
     return (<any>defaults)[key];
@@ -127,8 +179,16 @@ export function defaultConfig(key: string): string {
   throw new Error(`config key not found: ${key}`);
 }
 
-export function resetConfig() {
-  Object.entries(defaults).forEach(([key, value]) => {
-    updateConfig(key, value);
-  });
+/**
+ * Check if config has been loaded
+ */
+export function isConfigLoaded(): boolean {
+  return configLoaded;
+}
+
+/**
+ * Get config loading error if any
+ */
+export function getConfigError(): string | null {
+  return configError;
 }
