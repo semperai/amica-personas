@@ -1,4 +1,4 @@
-import { describe, expect, test } from "@jest/globals";
+import { describe, expect, test } from "vitest";
 import { Talk } from "../src/features/chat/messages";
 import { cleanTalk } from "../src/utils/cleanTalk";
 

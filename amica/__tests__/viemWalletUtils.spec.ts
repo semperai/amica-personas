@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach, jest, afterEach } from "@jest/globals";
+import { describe, expect, test, beforeEach, jest, afterEach } from "vitest";
 
 // Store original location
 const originalLocation = window.location;
@@ -25,16 +25,16 @@ Object.defineProperty(global, 'localStorage', {
 });
 
 // Mock viem functions
-const mockKeccak256 = jest.fn();
-const mockToBytes = jest.fn();
-const mockPrivateKeyToAccount = jest.fn();
+const mockKeccak256 = vi.fn();
+const mockToBytes = vi.fn();
+const mockPrivateKeyToAccount = vi.fn();
 
-jest.mock('viem', () => ({
+vi.mock('viem', () => ({
   keccak256: (...args: any[]) => mockKeccak256(...args),
   toBytes: (...args: any[]) => mockToBytes(...args),
 }));
 
-jest.mock('viem/accounts', () => ({
+vi.mock('viem/accounts', () => ({
   privateKeyToAccount: (...args: any[]) => mockPrivateKeyToAccount(...args),
 }));
 
@@ -65,7 +65,7 @@ describe("viemWalletUtils", () => {
     mockToBytes.mockImplementation((data: any) => new Uint8Array());
     mockPrivateKeyToAccount.mockReturnValue({
       address: '0xMockedAddress',
-      signMessage: jest.fn(),
+      signMessage: vi.fn(),
     });
 
     // Import functions after mocks are set up
@@ -104,7 +104,7 @@ describe("viemWalletUtils", () => {
 
       localStorageMock.setItem('arbiuswallet_derivedWalletCache', JSON.stringify(cachedData));
 
-      const mockSignMessage = jest.fn();
+      const mockSignMessage = vi.fn();
       const result = await initDeterministicWallet('0xOwner', mockSignMessage);
 
       expect(mockSignMessage).not.toHaveBeenCalled();
@@ -113,7 +113,7 @@ describe("viemWalletUtils", () => {
 
     test("should create new wallet if no cache exists", async () => {
       const mockSignature = '0xsignature123';
-      const mockSignMessage = jest.fn().mockResolvedValue(mockSignature);
+      const mockSignMessage = vi.fn().mockResolvedValue(mockSignature);
 
       await initDeterministicWallet('0xNewOwner', mockSignMessage, 'TestApp');
 
@@ -126,7 +126,7 @@ describe("viemWalletUtils", () => {
 
     test("should cache new wallet after creation", async () => {
       const mockSignature = '0xsignature123';
-      const mockSignMessage = jest.fn().mockResolvedValue(mockSignature);
+      const mockSignMessage = vi.fn().mockResolvedValue(mockSignature);
 
       await initDeterministicWallet('0xNewOwner', mockSignMessage, 'TestApp');
 
@@ -139,7 +139,7 @@ describe("viemWalletUtils", () => {
     });
 
     test("should use custom title in message", async () => {
-      const mockSignMessage = jest.fn().mockResolvedValue('0xsig');
+      const mockSignMessage = vi.fn().mockResolvedValue('0xsig');
 
       await initDeterministicWallet('0xOwner', mockSignMessage, 'MyCustomApp');
 
@@ -152,7 +152,7 @@ describe("viemWalletUtils", () => {
     });
 
     test("should default to 'Amica' title if not provided", async () => {
-      const mockSignMessage = jest.fn().mockResolvedValue('0xsig');
+      const mockSignMessage = vi.fn().mockResolvedValue('0xsig');
 
       await initDeterministicWallet('0xOwner', mockSignMessage);
 
@@ -162,7 +162,7 @@ describe("viemWalletUtils", () => {
     });
 
     test("should include domain in message", async () => {
-      const mockSignMessage = jest.fn().mockResolvedValue('0xsig');
+      const mockSignMessage = vi.fn().mockResolvedValue('0xsig');
 
       await initDeterministicWallet('0xOwner', mockSignMessage);
 
@@ -174,7 +174,7 @@ describe("viemWalletUtils", () => {
     test("should handle invalid cached data gracefully", async () => {
       localStorageMock.setItem('arbiuswallet_derivedWalletCache', 'invalid json');
 
-      const mockSignMessage = jest.fn().mockResolvedValue('0xsig');
+      const mockSignMessage = vi.fn().mockResolvedValue('0xsig');
       await initDeterministicWallet('0xOwner', mockSignMessage);
 
       // Should create new wallet and clear invalid cache
@@ -183,7 +183,7 @@ describe("viemWalletUtils", () => {
     });
 
     test("should normalize owner address to lowercase", async () => {
-      const mockSignMessage = jest.fn().mockResolvedValue('0xsig');
+      const mockSignMessage = vi.fn().mockResolvedValue('0xsig');
 
       await initDeterministicWallet('0xABCDEF', mockSignMessage);
 

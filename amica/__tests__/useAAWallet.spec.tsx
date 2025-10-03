@@ -1,24 +1,24 @@
-import { describe, expect, test, beforeEach, jest } from "@jest/globals";
+import { describe, expect, test, beforeEach, vi } from "vitest";
 import { renderHook, waitFor } from '@testing-library/react';
 import React from 'react';
 
 // Mock wagmi hooks
-const mockUseAccount = jest.fn();
-const mockUseWalletClient = jest.fn();
-const mockUsePublicClient = jest.fn();
+const mockUseAccount = vi.fn();
+const mockUseWalletClient = vi.fn();
+const mockUsePublicClient = vi.fn();
 
-jest.mock('wagmi', () => ({
+vi.mock('wagmi', () => ({
   useAccount: () => mockUseAccount(),
   useWalletClient: () => mockUseWalletClient(),
   usePublicClient: () => mockUsePublicClient(),
 }));
 
 // Mock utils
-const mockInitDeterministicWallet = jest.fn();
-const mockGetCachedWalletAddress = jest.fn();
-const mockGetCachedWallet = jest.fn();
+const mockInitDeterministicWallet = vi.fn();
+const mockGetCachedWalletAddress = vi.fn();
+const mockGetCachedWallet = vi.fn();
 
-jest.mock('../src/lib/arbius-wallet/utils/viemWalletUtils', () => ({
+vi.mock('../src/lib/arbius-wallet/utils/viemWalletUtils', () => ({
   initDeterministicWallet: (...args: any[]) => mockInitDeterministicWallet(...args),
   getCachedWalletAddress: (...args: any[]) => mockGetCachedWalletAddress(...args),
   getCachedWallet: (...args: any[]) => mockGetCachedWallet(...args),
@@ -32,7 +32,7 @@ const mockContextValue = {
 
 const MockAAWalletContext = React.createContext(mockContextValue);
 
-jest.mock('../src/lib/arbius-wallet/components/AAWalletProvider', () => ({
+vi.mock('../src/lib/arbius-wallet/components/AAWalletProvider', () => ({
   AAWalletContext: MockAAWalletContext,
 }));
 
@@ -40,7 +40,7 @@ describe("useAAWallet", () => {
   let useAAWallet: any;
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Reset mocks
     mockUseAccount.mockReturnValue({ address: null });
@@ -72,7 +72,7 @@ describe("useAAWallet", () => {
     const mockCachedAddress = '0xCachedWalletAddress';
     const mockCachedAccount = {
       address: mockCachedAddress,
-      signMessage: jest.fn(),
+      signMessage: vi.fn(),
     };
 
     mockUseAccount.mockReturnValue({ address: mockAddress });
@@ -94,11 +94,11 @@ describe("useAAWallet", () => {
     const mockAddress = '0xUserAddress';
     const mockNewAccount = {
       address: '0xNewWalletAddress',
-      signMessage: jest.fn(),
+      signMessage: vi.fn(),
     };
 
     const mockWalletClient = {
-      signMessage: jest.fn().mockResolvedValue('0xsignature'),
+      signMessage: vi.fn().mockResolvedValue('0xsignature'),
     };
 
     mockUseAccount.mockReturnValue({ address: mockAddress });
@@ -123,7 +123,7 @@ describe("useAAWallet", () => {
     const mockAddress = '0xUserAddress';
 
     const mockWalletClient = {
-      signMessage: jest.fn().mockResolvedValue('0xsignature'),
+      signMessage: vi.fn().mockResolvedValue('0xsignature'),
     };
 
     mockUseAccount.mockReturnValue({ address: mockAddress });
@@ -134,7 +134,7 @@ describe("useAAWallet", () => {
     mockInitDeterministicWallet.mockImplementation(() =>
       new Promise(resolve => setTimeout(() => resolve({
         address: '0xNewWallet',
-        signMessage: jest.fn(),
+        signMessage: vi.fn(),
       }), 100))
     );
 
@@ -157,7 +157,7 @@ describe("useAAWallet", () => {
     const errorMessage = 'Failed to sign message';
 
     const mockWalletClient = {
-      signMessage: jest.fn().mockRejectedValue(new Error(errorMessage)),
+      signMessage: vi.fn().mockRejectedValue(new Error(errorMessage)),
     };
 
     mockUseAccount.mockReturnValue({ address: mockAddress });
@@ -177,11 +177,11 @@ describe("useAAWallet", () => {
     const mockAddress = '0xUserAddress';
     const mockAccount = {
       address: '0xWalletAddress',
-      signMessage: jest.fn(),
+      signMessage: vi.fn(),
     };
 
     const mockWalletClient = {
-      signMessage: jest.fn().mockResolvedValue('0xsignature'),
+      signMessage: vi.fn().mockResolvedValue('0xsignature'),
     };
 
     mockUseAccount.mockReturnValue({ address: mockAddress });
@@ -214,7 +214,7 @@ describe("useAAWallet", () => {
   test("signMessageWithAAWallet should sign message with derived account", async () => {
     const mockAddress = '0xUserAddress';
     const mockSignature = '0xmockedsignature';
-    const mockSignMessageFn = jest.fn().mockResolvedValue(mockSignature);
+    const mockSignMessageFn = vi.fn().mockResolvedValue(mockSignature);
 
     const mockAccount = {
       address: '0xWalletAddress',
@@ -222,7 +222,7 @@ describe("useAAWallet", () => {
     };
 
     const mockWalletClient = {
-      signMessage: jest.fn().mockResolvedValue('0xsignature'),
+      signMessage: vi.fn().mockResolvedValue('0xsignature'),
     };
 
     mockUseAccount.mockReturnValue({ address: mockAddress });
@@ -244,7 +244,7 @@ describe("useAAWallet", () => {
 
   test("signMessageWithAAWallet should return null on error", async () => {
     const mockAddress = '0xUserAddress';
-    const mockSignMessageFn = jest.fn().mockRejectedValue(new Error('Signing failed'));
+    const mockSignMessageFn = vi.fn().mockRejectedValue(new Error('Signing failed'));
 
     const mockAccount = {
       address: '0xWalletAddress',
@@ -252,7 +252,7 @@ describe("useAAWallet", () => {
     };
 
     const mockWalletClient = {
-      signMessage: jest.fn().mockResolvedValue('0xsignature'),
+      signMessage: vi.fn().mockResolvedValue('0xsignature'),
     };
 
     mockUseAccount.mockReturnValue({ address: mockAddress });

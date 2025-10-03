@@ -3,21 +3,21 @@
  */
 
 // Mock dependencies BEFORE importing anything
-jest.mock('@/features/chat/chat');
-jest.mock('@/features/vrmViewer/viewer', () => ({
-  Viewer: jest.fn().mockImplementation(() => ({
+vi.mock('@/features/chat/chat');
+vi.mock('@/features/vrmViewer/viewer', () => ({
+  Viewer: vi.fn().mockImplementation(() => ({
     isReady: true,
     model: null,
     room: null,
-    loadVrm: jest.fn(),
-    unloadVRM: jest.fn(),
-    loadRoom: jest.fn(),
-    unloadRoom: jest.fn(),
-    resetCamera: jest.fn(),
-    loadSplat: jest.fn(),
+    loadVrm: vi.fn(),
+    unloadVRM: vi.fn(),
+    loadRoom: vi.fn(),
+    unloadRoom: vi.fn(),
+    resetCamera: vi.fn(),
+    loadSplat: vi.fn(),
   })),
 }));
-jest.mock('@/features/hooks/hookManager');
+vi.mock('@/features/hooks/hookManager');
 
 import { WebSocketTransport } from '@/features/jsonrpc/websocket-transport';
 import { JsonRpcServer } from '@/features/jsonrpc/server';
@@ -69,15 +69,15 @@ class MockWebSocket {
 describe('WebSocketTransport', () => {
   let transport: WebSocketTransport;
   let server: JsonRpcServer;
-  let mockChat: jest.Mocked<Chat>;
-  let mockViewer: jest.Mocked<Viewer>;
-  let mockHookManager: jest.Mocked<HookManager>;
+  let mockChat: MockedObject<Chat>;
+  let mockViewer: MockedObject<Viewer>;
+  let mockHookManager: MockedObject<HookManager>;
   let ws: MockWebSocket;
 
   beforeEach(() => {
-    mockChat = new Chat() as jest.Mocked<Chat>;
-    mockViewer = new Viewer() as jest.Mocked<Viewer>;
-    mockHookManager = new HookManager() as jest.Mocked<HookManager>;
+    mockChat = new Chat() as MockedObject<Chat>;
+    mockViewer = new Viewer() as MockedObject<Viewer>;
+    mockHookManager = new HookManager() as MockedObject<HookManager>;
 
     mockViewer.isReady = true;
     mockViewer.model = null;
@@ -95,7 +95,7 @@ describe('WebSocketTransport', () => {
   });
 
   afterEach(() => {
-    jest.clearAllTimers();
+    vi.clearAllTimers();
   });
 
   describe('Connection Management', () => {
@@ -142,7 +142,7 @@ describe('WebSocketTransport', () => {
     });
 
     it('should handle connection errors', () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation();
 
       transport.handleConnection(ws as any);
       ws.simulateError(new Error('Connection error'));
@@ -211,7 +211,7 @@ describe('WebSocketTransport', () => {
     });
 
     it('should handle parse errors', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation();
 
       // Simulate invalid JSON
       if (ws.onmessage) {
@@ -344,11 +344,11 @@ describe('WebSocketTransport', () => {
 
   describe('Heartbeat', () => {
     beforeEach(() => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
     });
 
     afterEach(() => {
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
 
     it('should send heartbeat messages', () => {
@@ -356,7 +356,7 @@ describe('WebSocketTransport', () => {
       ws.sentMessages = [];
 
       // Fast-forward time
-      jest.advanceTimersByTime(30000);
+      vi.advanceTimersByTime(30000);
 
       expect(ws.sentMessages.length).toBeGreaterThan(0);
       const heartbeat = JSON.parse(ws.sentMessages[ws.sentMessages.length - 1]);
@@ -369,7 +369,7 @@ describe('WebSocketTransport', () => {
 
       ws.close();
 
-      jest.advanceTimersByTime(60000);
+      vi.advanceTimersByTime(60000);
 
       // Should not send heartbeat after close
       expect(ws.sentMessages.length).toBe(0);

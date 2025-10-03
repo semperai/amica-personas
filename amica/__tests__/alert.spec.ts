@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach } from "@jest/globals";
+import { describe, expect, test, beforeEach } from "vitest";
 import { Alert } from "../src/features/alert/alert";
 import type { Notification, NotificationType } from "../src/features/alert/alert";
 

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "@jest/globals";
+import { describe, expect, test } from "vitest";
 import * as fc from "fast-check";
 import { buildUrl } from "@/utils/buildUrl";
 import { cleanTalk } from "@/utils/cleanTalk";

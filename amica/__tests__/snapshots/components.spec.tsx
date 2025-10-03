@@ -1,4 +1,4 @@
-import { describe, expect, test } from "@jest/globals";
+import { describe, expect, test } from "vitest";
 import { render } from "@testing-library/react";
 import { IconButton } from "@/components/iconButton";
 import { TextButton } from "@/components/textButton";
@@ -111,7 +111,7 @@ describe("Button Components", () => {
     });
 
     test("should match snapshot with onClick handler", () => {
-      const handleClick = jest.fn();
+      const handleClick = vi.fn();
       const { container } = render(
         <TextButton onClick={handleClick}>
           Submit

@@ -3,21 +3,21 @@
  */
 
 // Mock dependencies BEFORE importing anything that uses them
-jest.mock('@/features/chat/chat');
-jest.mock('@/features/vrmViewer/viewer', () => ({
-  Viewer: jest.fn().mockImplementation(() => ({
+vi.mock('@/features/chat/chat');
+vi.mock('@/features/vrmViewer/viewer', () => ({
+  Viewer: vi.fn().mockImplementation(() => ({
     isReady: true,
     model: null,
     room: null,
-    loadVrm: jest.fn(),
-    unloadVRM: jest.fn(),
-    loadRoom: jest.fn(),
-    unloadRoom: jest.fn(),
-    resetCamera: jest.fn(),
-    loadSplat: jest.fn(),
+    loadVrm: vi.fn(),
+    unloadVRM: vi.fn(),
+    loadRoom: vi.fn(),
+    unloadRoom: vi.fn(),
+    resetCamera: vi.fn(),
+    loadSplat: vi.fn(),
   })),
 }));
-jest.mock('@/features/hooks/hookManager');
+vi.mock('@/features/hooks/hookManager');
 
 import { JsonRpcServer } from '@/features/jsonrpc/server';
 import { Chat } from '@/features/chat/chat';
@@ -32,35 +32,35 @@ import {
 
 describe('JsonRpcServer', () => {
   let server: JsonRpcServer;
-  let mockChat: jest.Mocked<Chat>;
-  let mockViewer: jest.Mocked<Viewer>;
-  let mockHookManager: jest.Mocked<HookManager>;
+  let mockChat: MockedObject<Chat>;
+  let mockViewer: MockedObject<Viewer>;
+  let mockHookManager: MockedObject<HookManager>;
 
   beforeEach(() => {
-    mockChat = new Chat() as jest.Mocked<Chat>;
-    mockViewer = new Viewer() as jest.Mocked<Viewer>;
-    mockHookManager = new HookManager() as jest.Mocked<HookManager>;
+    mockChat = new Chat() as MockedObject<Chat>;
+    mockViewer = new Viewer() as MockedObject<Viewer>;
+    mockHookManager = new HookManager() as MockedObject<HookManager>;
 
     // Setup mock methods
-    mockChat.sendMessage = jest.fn().mockResolvedValue(undefined);
-    mockChat.interrupt = jest.fn().mockResolvedValue(0);
-    mockChat.getMessageList = jest.fn().mockReturnValue([]);
-    mockChat.getChatProcessing = jest.fn().mockReturnValue(false);
-    mockChat.getSpeaking = jest.fn().mockReturnValue(false);
+    mockChat.sendMessage = vi.fn().mockResolvedValue(undefined);
+    mockChat.interrupt = vi.fn().mockResolvedValue(0);
+    mockChat.getMessageList = vi.fn().mockReturnValue([]);
+    mockChat.getChatProcessing = vi.fn().mockReturnValue(false);
+    mockChat.getSpeaking = vi.fn().mockReturnValue(false);
 
     mockViewer.isReady = true;
     mockViewer.model = null;
     mockViewer.room = null;
-    mockViewer.loadVrm = jest.fn().mockResolvedValue(undefined);
-    mockViewer.unloadVRM = jest.fn();
-    mockViewer.loadRoom = jest.fn().mockResolvedValue(undefined);
-    mockViewer.unloadRoom = jest.fn();
-    mockViewer.resetCamera = jest.fn();
+    mockViewer.loadVrm = vi.fn().mockResolvedValue(undefined);
+    mockViewer.unloadVRM = vi.fn();
+    mockViewer.loadRoom = vi.fn().mockResolvedValue(undefined);
+    mockViewer.unloadRoom = vi.fn();
+    mockViewer.resetCamera = vi.fn();
 
-    mockHookManager.register = jest.fn().mockReturnValue('hook-123');
-    mockHookManager.unregister = jest.fn().mockReturnValue(true);
-    mockHookManager.trigger = jest.fn().mockResolvedValue({});
-    mockHookManager.getHooks = jest.fn().mockReturnValue([]);
+    mockHookManager.register = vi.fn().mockReturnValue('hook-123');
+    mockHookManager.unregister = vi.fn().mockReturnValue(true);
+    mockHookManager.trigger = vi.fn().mockResolvedValue({});
+    mockHookManager.getHooks = vi.fn().mockReturnValue([]);
 
     server = new JsonRpcServer(mockChat, mockViewer, mockHookManager);
   });
@@ -228,7 +228,7 @@ describe('JsonRpcServer', () => {
     });
 
     it('should list hooks', async () => {
-      mockHookManager.getHooks = jest.fn().mockReturnValue([
+      mockHookManager.getHooks = vi.fn().mockReturnValue([
         { id: 'hook-1', event: 'before:llm:request', options: { priority: 100 } },
         { id: 'hook-2', event: 'after:llm:complete', options: { priority: 50 } },
       ]);
@@ -253,7 +253,7 @@ describe('JsonRpcServer', () => {
 
   describe('Chat Methods', () => {
     it('should send message', async () => {
-      mockChat.receiveMessageFromUser = jest.fn().mockResolvedValue(undefined);
+      mockChat.receiveMessageFromUser = vi.fn().mockResolvedValue(undefined);
 
       const request: JsonRpcRequest = {
         jsonrpc: '2.0',
@@ -403,7 +403,7 @@ describe('JsonRpcServer', () => {
     it('should set model position', async () => {
       // Mock a loaded model
       mockViewer.model = {
-        position: { set: jest.fn(), x: 0, y: 0, z: 0 },
+        position: { set: vi.fn(), x: 0, y: 0, z: 0 },
       } as any;
 
       const request: JsonRpcRequest = {
@@ -517,9 +517,9 @@ describe('JsonRpcServer', () => {
 
     it('should set room transform', async () => {
       mockViewer.room = {
-        position: { set: jest.fn(), x: 0, y: 0, z: 0 },
-        rotation: { set: jest.fn(), x: 0, y: 0, z: 0 },
-        scale: { set: jest.fn(), x: 1, y: 1, z: 1 },
+        position: { set: vi.fn(), x: 0, y: 0, z: 0 },
+        rotation: { set: vi.fn(), x: 0, y: 0, z: 0 },
+        scale: { set: vi.fn(), x: 1, y: 1, z: 1 },
       } as any;
 
       const posRequest: JsonRpcRequest = {
@@ -663,7 +663,7 @@ describe('JsonRpcServer', () => {
 
   describe('Error Handling', () => {
     it('should handle handler errors gracefully', async () => {
-      mockChat.receiveMessageFromUser = jest.fn().mockRejectedValue(new Error('Network error'));
+      mockChat.receiveMessageFromUser = vi.fn().mockRejectedValue(new Error('Network error'));
 
       const request: JsonRpcRequest = {
         jsonrpc: '2.0',
@@ -707,7 +707,7 @@ describe('JsonRpcServer', () => {
     });
 
     it('should log warning for unknown notification methods', async () => {
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation();
 
       const notification = {
         jsonrpc: '2.0',
@@ -726,7 +726,7 @@ describe('JsonRpcServer', () => {
 
   describe('Custom Handler Registration', () => {
     it('should allow registering custom handlers', async () => {
-      const customHandler = jest.fn().mockResolvedValue({ custom: 'result' });
+      const customHandler = vi.fn().mockResolvedValue({ custom: 'result' });
       server.registerHandler('custom.method' as AmicaMethod, customHandler);
 
       const request: JsonRpcRequest = {

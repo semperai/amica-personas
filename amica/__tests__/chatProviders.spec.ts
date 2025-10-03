@@ -1,4 +1,4 @@
-import { describe, expect, test, jest, beforeEach, afterEach } from "@jest/globals";
+import { describe, expect, test, jest, beforeEach, afterEach } from "vitest";
 
 // TODO: These tests should be moved to integration tests
 // They test provider-specific implementations and require real provider endpoints
@@ -6,8 +6,8 @@ import { describe, expect, test, jest, beforeEach, afterEach } from "@jest/globa
 // For now, all tests are skipped - see __tests__/integration/ for provider integration tests
 
 // Mock config before imports
-jest.mock("@/utils/config", () => ({
-  config: jest.fn((key: string) => {
+vi.mock("@/utils/config", () => ({
+  config: vi.fn((key: string) => {
     const mockConfig: Record<string, string> = {
       openai_apikey: "test-api-key",
       openai_url: "https://api.openai.com",
@@ -31,11 +31,11 @@ jest.mock("@/utils/config", () => ({
   }),
 }));
 
-jest.mock("@/utils/buildPrompt", () => ({
-  buildPrompt: jest.fn((messages) =>
+vi.mock("@/utils/buildPrompt", () => ({
+  buildPrompt: vi.fn((messages) =>
     messages.map((m: any) => `${m.role}: ${m.content}`).join("\n")
   ),
-  buildVisionPrompt: jest.fn((messages) =>
+  buildVisionPrompt: vi.fn((messages) =>
     messages.map((m: any) => `${m.role}: ${m.content}`).join("\n")
   ),
 }));
@@ -47,7 +47,7 @@ import { getKoboldAiChatResponseStream } from "@/features/chat/koboldAiChat";
 import { Message } from "@/features/chat/messages";
 
 // Mock fetch globally
-const fetchMock = jest.fn();
+const fetchMock = vi.fn();
 global.fetch = fetchMock as any;
 
 describe.skip("OpenAI Chat", () => {
@@ -56,9 +56,9 @@ describe.skip("OpenAI Chat", () => {
   ];
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Suppress console.error to prevent infinite loop from stream parsing errors
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -68,7 +68,7 @@ describe.skip("OpenAI Chat", () => {
   describe("getOpenAiChatResponseStream", () => {
     test("should create streaming response", async () => {
       const mockReader = {
-        read: jest.fn()
+        read: vi.fn()
           .mockResolvedValueOnce({
             done: false,
             value: new TextEncoder().encode('data: {"choices":[{"delta":{"content":"Hello"}}]}\n')
@@ -78,8 +78,8 @@ describe.skip("OpenAI Chat", () => {
             value: new TextEncoder().encode('data: {"choices":[{"delta":{"content":" world"}}]}\n')
           })
           .mockResolvedValueOnce({ done: true, value: undefined }),
-        releaseLock: jest.fn(),
-        cancel: jest.fn(),
+        releaseLock: vi.fn(),
+        cancel: vi.fn(),
       };
 
       fetchMock.mockResolvedValue({
@@ -101,7 +101,7 @@ describe.skip("OpenAI Chat", () => {
 
     test("should handle chunked JSON responses", async () => {
       const mockReader = {
-        read: jest.fn()
+        read: vi.fn()
           .mockResolvedValueOnce({
             done: false,
             // Split JSON across chunks
@@ -112,8 +112,8 @@ describe.skip("OpenAI Chat", () => {
             value: new TextEncoder().encode('tent":"Test"}}]}\n')
           })
           .mockResolvedValueOnce({ done: true, value: undefined }),
-        releaseLock: jest.fn(),
-        cancel: jest.fn(),
+        releaseLock: vi.fn(),
+        cancel: vi.fn(),
       };
 
       fetchMock.mockResolvedValue({
@@ -130,14 +130,14 @@ describe.skip("OpenAI Chat", () => {
 
     test("should skip [DONE] markers", async () => {
       const mockReader = {
-        read: jest.fn()
+        read: vi.fn()
           .mockResolvedValueOnce({
             done: false,
             value: new TextEncoder().encode('data: {"choices":[{"delta":{"content":"Hi"}}]}\ndata: [DONE]\n')
           })
           .mockResolvedValueOnce({ done: true, value: undefined }),
-        releaseLock: jest.fn(),
-        cancel: jest.fn(),
+        releaseLock: vi.fn(),
+        cancel: vi.fn(),
       };
 
       fetchMock.mockResolvedValue({
@@ -157,14 +157,14 @@ describe.skip("OpenAI Chat", () => {
 
     test("should skip SSE comments", async () => {
       const mockReader = {
-        read: jest.fn()
+        read: vi.fn()
           .mockResolvedValueOnce({
             done: false,
             value: new TextEncoder().encode('data: : this is a comment\ndata: {"choices":[{"delta":{"content":"Hi"}}]}\n')
           })
           .mockResolvedValueOnce({ done: true, value: undefined }),
-        releaseLock: jest.fn(),
-        cancel: jest.fn(),
+        releaseLock: vi.fn(),
+        cancel: vi.fn(),
       };
 
       fetchMock.mockResolvedValue({
@@ -206,12 +206,12 @@ describe.skip("OpenAI Chat", () => {
 
     test("should handle stream cancellation", async () => {
       const mockReader = {
-        read: jest.fn().mockResolvedValue({
+        read: vi.fn().mockResolvedValue({
           done: false,
           value: new TextEncoder().encode('data: {"choices":[{"delta":{"content":"Hi"}}]}\n')
         }),
-        releaseLock: jest.fn(),
-        cancel: jest.fn().mockResolvedValue(undefined),
+        releaseLock: vi.fn(),
+        cancel: vi.fn().mockResolvedValue(undefined),
       };
 
       fetchMock.mockResolvedValue({
@@ -229,7 +229,7 @@ describe.skip("OpenAI Chat", () => {
   describe("getOpenAiVisionChatResponse", () => {
     test("should combine streaming chunks into single response", async () => {
       const mockReader = {
-        read: jest.fn()
+        read: vi.fn()
           .mockResolvedValueOnce({
             done: false,
             value: new TextEncoder().encode('data: {"choices":[{"delta":{"content":"I see "}}]}\n')
@@ -239,8 +239,8 @@ describe.skip("OpenAI Chat", () => {
             value: new TextEncoder().encode('data: {"choices":[{"delta":{"content":"a cat"}}]}\n')
           })
           .mockResolvedValueOnce({ done: true, value: undefined }),
-        releaseLock: jest.fn(),
-        cancel: jest.fn(),
+        releaseLock: vi.fn(),
+        cancel: vi.fn(),
       };
 
       fetchMock.mockResolvedValue({
@@ -260,8 +260,8 @@ describe.skip("LlamaCpp Chat", () => {
   ];
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+    vi.clearAllMocks();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -271,7 +271,7 @@ describe.skip("LlamaCpp Chat", () => {
   describe("getLlamaCppChatResponseStream", () => {
     test("should create streaming response", async () => {
       const mockReader = {
-        read: jest.fn()
+        read: vi.fn()
           .mockResolvedValueOnce({
             done: false,
             value: new TextEncoder().encode('data: {"content":"Hello","stop":false}\n')
@@ -288,8 +288,8 @@ describe.skip("LlamaCpp Chat", () => {
             done: true,
             value: undefined
           }),
-        releaseLock: jest.fn(),
-        cancel: jest.fn(),
+        releaseLock: vi.fn(),
+        cancel: vi.fn(),
       };
 
       fetchMock.mockResolvedValue({
@@ -311,7 +311,7 @@ describe.skip("LlamaCpp Chat", () => {
 
     test("should handle stop signal", async () => {
       const mockReader = {
-        read: jest.fn()
+        read: vi.fn()
           .mockResolvedValueOnce({
             done: false,
             value: new TextEncoder().encode('data: {"content":"Hi","stop":true}\n')
@@ -320,8 +320,8 @@ describe.skip("LlamaCpp Chat", () => {
             done: false,
             value: new TextEncoder().encode('data: {"content":" ignored","stop":false}\n')
           }),
-        releaseLock: jest.fn(),
-        cancel: jest.fn(),
+        releaseLock: vi.fn(),
+        cancel: vi.fn(),
       };
 
       fetchMock.mockResolvedValue({
@@ -348,9 +348,9 @@ describe.skip("LlamaCpp Chat", () => {
     test("should use buildPrompt to format messages", async () => {
       const { buildPrompt } = require("@/utils/buildPrompt");
       const mockReader = {
-        read: jest.fn().mockResolvedValue({ done: true, value: undefined }),
-        releaseLock: jest.fn(),
-        cancel: jest.fn(),
+        read: vi.fn().mockResolvedValue({ done: true, value: undefined }),
+        releaseLock: vi.fn(),
+        cancel: vi.fn(),
       };
 
       fetchMock.mockResolvedValue({
@@ -367,7 +367,7 @@ describe.skip("LlamaCpp Chat", () => {
     test("should send image data with request", async () => {
       const imageData = "base64imagedata";
       const mockReader = {
-        read: jest.fn()
+        read: vi.fn()
           .mockResolvedValueOnce({
             done: false,
             value: new TextEncoder().encode('data: {"content":"I see a cat","stop":false}\n')
@@ -376,8 +376,8 @@ describe.skip("LlamaCpp Chat", () => {
             done: false,
             value: new TextEncoder().encode('data: {"content":"","stop":true}\n')
           }),
-        releaseLock: jest.fn(),
-        cancel: jest.fn(),
+        releaseLock: vi.fn(),
+        cancel: vi.fn(),
       };
 
       fetchMock.mockResolvedValue({
@@ -400,7 +400,7 @@ describe.skip("LlamaCpp Chat", () => {
 
     test("should combine streaming chunks", async () => {
       const mockReader = {
-        read: jest.fn()
+        read: vi.fn()
           .mockResolvedValueOnce({
             done: false,
             value: new TextEncoder().encode('data: {"content":"Part 1","stop":false}\n')
@@ -409,8 +409,8 @@ describe.skip("LlamaCpp Chat", () => {
             done: false,
             value: new TextEncoder().encode('data: {"content":" Part 2","stop":true}\n')
           }),
-        releaseLock: jest.fn(),
-        cancel: jest.fn(),
+        releaseLock: vi.fn(),
+        cancel: vi.fn(),
       };
 
       fetchMock.mockResolvedValue({
@@ -442,8 +442,8 @@ describe.skip("Ollama Chat", () => {
   ];
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+    vi.clearAllMocks();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -453,7 +453,7 @@ describe.skip("Ollama Chat", () => {
   describe("getOllamaChatResponseStream", () => {
     test("should parse newline-delimited JSON", async () => {
       const mockReader = {
-        read: jest.fn()
+        read: vi.fn()
           .mockResolvedValueOnce({
             done: false,
             value: new TextEncoder().encode(
@@ -461,8 +461,8 @@ describe.skip("Ollama Chat", () => {
             )
           })
           .mockResolvedValueOnce({ done: true, value: undefined }),
-        releaseLock: jest.fn(),
-        cancel: jest.fn(),
+        releaseLock: vi.fn(),
+        cancel: vi.fn(),
       };
 
       fetchMock.mockResolvedValue({
@@ -484,14 +484,14 @@ describe.skip("Ollama Chat", () => {
 
     test("should handle empty lines", async () => {
       const mockReader = {
-        read: jest.fn()
+        read: vi.fn()
           .mockResolvedValueOnce({
             done: false,
             value: new TextEncoder().encode('{"message":{"content":"Hi"}}\n\n')
           })
           .mockResolvedValueOnce({ done: true, value: undefined }),
-        releaseLock: jest.fn(),
-        cancel: jest.fn(),
+        releaseLock: vi.fn(),
+        cancel: vi.fn(),
       };
 
       fetchMock.mockResolvedValue({
@@ -513,16 +513,16 @@ describe.skip("Ollama Chat", () => {
     });
 
     test("should handle JSON parsing errors gracefully", async () => {
-      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation();
       const mockReader = {
-        read: jest.fn()
+        read: vi.fn()
           .mockResolvedValueOnce({
             done: false,
             value: new TextEncoder().encode('invalid json\n{"message":{"content":"Valid"}}\n')
           })
           .mockResolvedValueOnce({ done: true, value: undefined }),
-        releaseLock: jest.fn(),
-        cancel: jest.fn(),
+        releaseLock: vi.fn(),
+        cancel: vi.fn(),
       };
 
       fetchMock.mockResolvedValue({
@@ -578,8 +578,8 @@ describe.skip("KoboldAI Chat", () => {
   ];
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+    vi.clearAllMocks();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -600,7 +600,7 @@ describe.skip("KoboldAI Chat", () => {
 
     test("should parse SSE stream", async () => {
       const mockReader = {
-        read: jest.fn()
+        read: vi.fn()
           .mockResolvedValueOnce({
             done: false,
             value: new TextEncoder().encode('data:{"token":"Hello"}\n')
@@ -610,8 +610,8 @@ describe.skip("KoboldAI Chat", () => {
             value: new TextEncoder().encode('data:{"token":" world"}\n')
           })
           .mockResolvedValueOnce({ done: true, value: undefined }),
-        releaseLock: jest.fn(),
-        cancel: jest.fn(),
+        releaseLock: vi.fn(),
+        cancel: vi.fn(),
       };
 
       fetchMock.mockResolvedValue({
@@ -633,7 +633,7 @@ describe.skip("KoboldAI Chat", () => {
 
     test("should handle multi-line buffering", async () => {
       const mockReader = {
-        read: jest.fn()
+        read: vi.fn()
           .mockResolvedValueOnce({
             done: false,
             value: new TextEncoder().encode('data:{"to')
@@ -643,8 +643,8 @@ describe.skip("KoboldAI Chat", () => {
             value: new TextEncoder().encode('ken":"Hi"}\n')
           })
           .mockResolvedValueOnce({ done: true, value: undefined }),
-        releaseLock: jest.fn(),
-        cancel: jest.fn(),
+        releaseLock: vi.fn(),
+        cancel: vi.fn(),
       };
 
       fetchMock.mockResolvedValue({

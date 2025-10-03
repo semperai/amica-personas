@@ -1,12 +1,12 @@
-import { describe, expect, test, jest, beforeEach, afterEach } from "@jest/globals";
+import { describe, expect, test, jest, beforeEach, afterEach } from "vitest";
 import { Queue, Chat } from "@/features/chat/chat";
 import { Message } from "@/features/chat/messages";
 import { Viewer } from "@/features/vrmViewer/viewer";
 import { Alert } from "@/features/alert/alert";
 
 // Mock dependencies
-jest.mock("@/utils/config", () => ({
-  config: jest.fn((key: string) => {
+vi.mock("@/utils/config", () => ({
+  config: vi.fn((key: string) => {
     const mockConfig: Record<string, string> = {
       system_prompt: "You are a helpful assistant",
       time_before_idle_sec: "10",
@@ -20,12 +20,12 @@ jest.mock("@/utils/config", () => ({
   }),
 }));
 
-jest.mock("@/utils/cleanTalk", () => ({
-  cleanTalk: jest.fn((talk) => talk),
+vi.mock("@/utils/cleanTalk", () => ({
+  cleanTalk: vi.fn((talk) => talk),
 }));
 
-jest.mock("@/utils/processResponse", () => ({
-  processResponse: jest.fn((params) => ({
+vi.mock("@/utils/processResponse", () => ({
+  processResponse: vi.fn((params) => ({
     sentences: params.sentences,
     aiTextLog: params.aiTextLog + params.receivedMessage,
     receivedMessage: "",
@@ -35,19 +35,19 @@ jest.mock("@/utils/processResponse", () => ({
   })),
 }));
 
-jest.mock("@/utils/wait", () => ({
-  wait: jest.fn((ms: number) => Promise.resolve()),
+vi.mock("@/utils/wait", () => ({
+  wait: vi.fn((ms: number) => Promise.resolve()),
 }));
 
-jest.mock("@/utils/isIdle", () => ({
-  isCharacterIdle: jest.fn(() => false),
-  characterIdleTime: jest.fn(() => 0),
-  resetIdleTimer: jest.fn(),
+vi.mock("@/utils/isIdle", () => ({
+  isCharacterIdle: vi.fn(() => false),
+  characterIdleTime: vi.fn(() => 0),
+  resetIdleTimer: vi.fn(),
 }));
 
 // Mock all chat providers
-jest.mock("@/features/chat/echoChat", () => ({
-  getEchoChatResponseStream: jest.fn(() => {
+vi.mock("@/features/chat/echoChat", () => ({
+  getEchoChatResponseStream: vi.fn(() => {
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       start(controller) {
@@ -61,8 +61,8 @@ jest.mock("@/features/chat/echoChat", () => ({
   }),
 }));
 
-jest.mock("@/features/chat/openAiChat", () => ({
-  getOpenAiChatResponseStream: jest.fn(() => {
+vi.mock("@/features/chat/openAiChat", () => ({
+  getOpenAiChatResponseStream: vi.fn(() => {
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       start(controller) {
@@ -72,11 +72,11 @@ jest.mock("@/features/chat/openAiChat", () => ({
     });
     return Promise.resolve(stream);
   }),
-  getOpenAiVisionChatResponse: jest.fn(() => Promise.resolve("Vision response")),
+  getOpenAiVisionChatResponse: vi.fn(() => Promise.resolve("Vision response")),
 }));
 
-jest.mock("@/features/chat/llamaCppChat", () => ({
-  getLlamaCppChatResponseStream: jest.fn(() => {
+vi.mock("@/features/chat/llamaCppChat", () => ({
+  getLlamaCppChatResponseStream: vi.fn(() => {
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       start(controller) {
@@ -86,11 +86,11 @@ jest.mock("@/features/chat/llamaCppChat", () => ({
     });
     return Promise.resolve(stream);
   }),
-  getLlavaCppChatResponse: jest.fn(() => Promise.resolve("Llava response")),
+  getLlavaCppChatResponse: vi.fn(() => Promise.resolve("Llava response")),
 }));
 
-jest.mock("@/features/chat/ollamaChat", () => ({
-  getOllamaChatResponseStream: jest.fn(() => {
+vi.mock("@/features/chat/ollamaChat", () => ({
+  getOllamaChatResponseStream: vi.fn(() => {
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       start(controller) {
@@ -100,11 +100,11 @@ jest.mock("@/features/chat/ollamaChat", () => ({
     });
     return Promise.resolve(stream);
   }),
-  getOllamaVisionChatResponse: jest.fn(() => Promise.resolve("Ollama vision response")),
+  getOllamaVisionChatResponse: vi.fn(() => Promise.resolve("Ollama vision response")),
 }));
 
-jest.mock("@/features/chat/koboldAiChat", () => ({
-  getKoboldAiChatResponseStream: jest.fn(() => {
+vi.mock("@/features/chat/koboldAiChat", () => ({
+  getKoboldAiChatResponseStream: vi.fn(() => {
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       start(controller) {
@@ -116,8 +116,8 @@ jest.mock("@/features/chat/koboldAiChat", () => ({
   }),
 }));
 
-jest.mock("@/features/chat/arbiusChat", () => ({
-  getArbiusChatResponseStream: jest.fn(() => {
+vi.mock("@/features/chat/arbiusChat", () => ({
+  getArbiusChatResponseStream: vi.fn(() => {
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       start(controller) {
@@ -129,8 +129,8 @@ jest.mock("@/features/chat/arbiusChat", () => ({
   }),
 }));
 
-jest.mock("@/features/chat/windowAiChat", () => ({
-  getWindowAiChatResponseStream: jest.fn(() => {
+vi.mock("@/features/chat/windowAiChat", () => ({
+  getWindowAiChatResponseStream: vi.fn(() => {
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       start(controller) {
@@ -227,20 +227,20 @@ describe("Chat", () => {
 
     mockViewer = {
       model: {
-        speak: jest.fn().mockResolvedValue(undefined),
+        speak: vi.fn().mockResolvedValue(undefined),
       },
     } as any;
 
     mockAlert = {
-      error: jest.fn(),
+      error: vi.fn(),
     } as any;
 
-    mockSetChatLog = jest.fn();
-    mockSetUserMessage = jest.fn();
-    mockSetAssistantMessage = jest.fn();
-    mockSetShownMessage = jest.fn();
-    mockSetChatProcessing = jest.fn();
-    mockSetChatSpeaking = jest.fn();
+    mockSetChatLog = vi.fn();
+    mockSetUserMessage = vi.fn();
+    mockSetAssistantMessage = vi.fn();
+    mockSetShownMessage = vi.fn();
+    mockSetChatProcessing = vi.fn();
+    mockSetChatSpeaking = vi.fn();
   });
 
   describe("initialization", () => {
@@ -418,7 +418,7 @@ describe("Chat", () => {
 
     test("should cancel active reader", async () => {
       const mockReader = {
-        cancel: jest.fn().mockResolvedValue(undefined),
+        cancel: vi.fn().mockResolvedValue(undefined),
         closed: false,
       };
       chat.reader = mockReader as any;
@@ -429,9 +429,9 @@ describe("Chat", () => {
     });
 
     test("should handle cancel error gracefully", async () => {
-      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation();
       const mockReader = {
-        cancel: jest.fn().mockRejectedValue(new Error("Cancel failed")),
+        cancel: vi.fn().mockRejectedValue(new Error("Cancel failed")),
         closed: false,
       };
       chat.reader = mockReader as any;
@@ -520,7 +520,7 @@ describe("Chat", () => {
     });
 
     test("should trigger before hook", async () => {
-      const triggerSpy = jest.spyOn(chat.hookManager, "trigger");
+      const triggerSpy = vi.spyOn(chat.hookManager, "trigger");
       await chat.receiveMessageFromUser("Hello");
 
       expect(triggerSpy).toHaveBeenCalledWith(
@@ -530,7 +530,7 @@ describe("Chat", () => {
     });
 
     test("should trigger after hook", async () => {
-      const triggerSpy = jest.spyOn(chat.hookManager, "trigger");
+      const triggerSpy = vi.spyOn(chat.hookManager, "trigger");
       await chat.receiveMessageFromUser("Hello");
 
       expect(triggerSpy).toHaveBeenCalledWith(
@@ -540,7 +540,7 @@ describe("Chat", () => {
     });
 
     test.skip("should update awake state (skipped: integration test, requires LLM provider)", async () => {
-      const updateSpy = jest.spyOn(chat, "updateAwake");
+      const updateSpy = vi.spyOn(chat, "updateAwake");
       await chat.receiveMessageFromUser("Hello");
       expect(updateSpy).toHaveBeenCalled();
     });
@@ -577,7 +577,7 @@ describe("Chat", () => {
 
     test.skip("should trigger before TTS hook (skipped: requires TTS mock)", async () => {
       // Skipped: fetchAudio makes real network calls without proper mocking
-      const triggerSpy = jest.spyOn(chat.hookManager, "trigger");
+      const triggerSpy = vi.spyOn(chat.hookManager, "trigger");
       await chat.fetchAudio({ message: "Hello", style: "talk" });
 
       expect(triggerSpy).toHaveBeenCalledWith(
@@ -588,7 +588,7 @@ describe("Chat", () => {
 
     test.skip("should trigger after TTS hook (skipped: requires TTS mock)", async () => {
       // Skipped: fetchAudio makes real network calls without proper mocking
-      const triggerSpy = jest.spyOn(chat.hookManager, "trigger");
+      const triggerSpy = vi.spyOn(chat.hookManager, "trigger");
       await chat.fetchAudio({ message: "Hello", style: "talk" });
 
       expect(triggerSpy).toHaveBeenCalledWith(
@@ -658,7 +658,7 @@ describe("Chat", () => {
 
     test.skip("should trigger before LLM request hook (skipped: module mock issue)", async () => {
       // Skipped: Chat provider mocks not being used - similar to news.spec.ts fetch issue
-      const triggerSpy = jest.spyOn(chat.hookManager, "trigger");
+      const triggerSpy = vi.spyOn(chat.hookManager, "trigger");
       const messages: Message[] = [{ role: "user", content: "Hello" }];
 
       await chat.getChatResponseStream(messages);
@@ -674,7 +674,7 @@ describe("Chat", () => {
 
     test.skip("should trigger after LLM request hook (skipped: module mock issue)", async () => {
       // Skipped: Chat provider mocks not being used - similar to news.spec.ts fetch issue
-      const triggerSpy = jest.spyOn(chat.hookManager, "trigger");
+      const triggerSpy = vi.spyOn(chat.hookManager, "trigger");
       const messages: Message[] = [{ role: "user", content: "Hello" }];
 
       await chat.getChatResponseStream(messages);
@@ -707,7 +707,7 @@ describe("Chat", () => {
       // Clean up any remaining streams to prevent memory leaks and hanging tests
       chat.streams = [];
       // Clear any pending timers
-      jest.clearAllTimers();
+      vi.clearAllTimers();
     });
 
     test("should return early if no streams", async () => {
@@ -730,7 +730,7 @@ describe("Chat", () => {
     });
 
     test("should trigger stream hooks", async () => {
-      const triggerSpy = jest.spyOn(chat.hookManager, "trigger");
+      const triggerSpy = vi.spyOn(chat.hookManager, "trigger");
       const stream = new ReadableStream({
         start(controller) {
           controller.enqueue("test");
@@ -748,7 +748,7 @@ describe("Chat", () => {
     });
 
     test("should handle stream errors gracefully", async () => {
-      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation();
       const stream = new ReadableStream({
         start(controller) {
           controller.error(new Error("Stream error"));
@@ -763,7 +763,7 @@ describe("Chat", () => {
     });
 
     test("should stop processing outdated stream", async () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
 
       const stream = new ReadableStream({
         start(controller) {
@@ -785,11 +785,11 @@ describe("Chat", () => {
       await chat.interrupt();
 
       // Fast-forward timers
-      jest.advanceTimersByTime(100);
+      vi.advanceTimersByTime(100);
 
       await streamPromise;
 
-      jest.useRealTimers();
+      vi.useRealTimers();
 
       // Should complete without processing the outdated stream
       expect(true).toBe(true);

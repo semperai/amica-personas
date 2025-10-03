@@ -1,4 +1,4 @@
-import { describe, expect, test, jest, beforeEach, afterEach } from "@jest/globals";
+import { describe, expect, test, vi, beforeEach, afterEach } from "vitest";
 
 /**
  * Advanced Test Scenarios
@@ -14,12 +14,12 @@ import { describe, expect, test, jest, beforeEach, afterEach } from "@jest/globa
 
 describe("Advanced Test Scenarios", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.useFakeTimers();
+    vi.clearAllMocks();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   describe("State Machine Patterns", () => {
@@ -152,13 +152,13 @@ describe("Advanced Test Scenarios", () => {
 
     test("should call onEnter and onExit hooks", () => {
       const onEnter = {
-        loading: jest.fn(),
-        success: jest.fn(),
+        loading: vi.fn(),
+        success: vi.fn(),
       } as any;
 
       const onExit = {
-        idle: jest.fn(),
-        loading: jest.fn(),
+        idle: vi.fn(),
+        loading: vi.fn(),
       } as any;
 
       const transitions: Record<State, Partial<Record<Event, State>>> = {
@@ -310,8 +310,8 @@ describe("Advanced Test Scenarios", () => {
 
     test("should handle connection lifecycle", async () => {
       const ws = new MockWebSocket();
-      const openHandler = jest.fn();
-      const closeHandler = jest.fn();
+      const openHandler = vi.fn();
+      const closeHandler = vi.fn();
 
       ws.on("open", openHandler);
       ws.on("close", closeHandler);
@@ -319,10 +319,10 @@ describe("Advanced Test Scenarios", () => {
       expect(ws.state).toBe("disconnected");
 
       // Mock successful connection
-      Math.random = jest.fn().mockReturnValue(0.5);
+      Math.random = vi.fn().mockReturnValue(0.5);
 
       const connectPromise = ws.connect();
-      await jest.runAllTimersAsync();
+      await vi.runAllTimersAsync();
       await connectPromise;
 
       expect(ws.state).toBe("connected");
@@ -335,7 +335,7 @@ describe("Advanced Test Scenarios", () => {
 
     test("should queue messages when disconnected and flush on connect", async () => {
       const ws = new MockWebSocket();
-      const messageHandler = jest.fn();
+      const messageHandler = vi.fn();
 
       ws.on("message", messageHandler);
 
@@ -347,9 +347,9 @@ describe("Advanced Test Scenarios", () => {
       expect(ws.messageQueue.length).toBe(2);
 
       // Connect and flush queue
-      Math.random = jest.fn().mockReturnValue(0.5);
+      Math.random = vi.fn().mockReturnValue(0.5);
       const connectPromise = ws.connect();
-      await jest.runAllTimersAsync();
+      await vi.runAllTimersAsync();
       await connectPromise;
 
       expect(messageHandler).toHaveBeenCalledTimes(2);
@@ -361,7 +361,7 @@ describe("Advanced Test Scenarios", () => {
       ws.state = "disconnected";
 
       // Always fail connections
-      Math.random = jest.fn().mockReturnValue(0.1);
+      Math.random = vi.fn().mockReturnValue(0.1);
 
       let caughtError: any = null;
 
@@ -370,7 +370,7 @@ describe("Advanced Test Scenarios", () => {
       });
 
       // Wait for the backoff delay and connection attempt
-      await jest.runAllTimersAsync();
+      await vi.runAllTimersAsync();
       await reconnectPromise;
 
       expect(caughtError).not.toBeNull();
@@ -385,7 +385,7 @@ describe("Advanced Test Scenarios", () => {
       ws.maxReconnectAttempts = 3;
 
       // Simulate connection failures
-      Math.random = jest.fn().mockReturnValue(0.1);
+      Math.random = vi.fn().mockReturnValue(0.1);
 
       // Attempt to reconnect until limit
       for (let i = 0; i < 3; i++) {
@@ -393,7 +393,7 @@ describe("Advanced Test Scenarios", () => {
         const promise = ws.reconnect().catch(() => {
           // Expected connection failure
         });
-        await jest.runAllTimersAsync();
+        await vi.runAllTimersAsync();
         await promise;
       }
 
@@ -419,9 +419,9 @@ describe("Advanced Test Scenarios", () => {
         receivedMessages.push(msg.type);
       });
 
-      Math.random = jest.fn().mockReturnValue(0.5);
+      Math.random = vi.fn().mockReturnValue(0.5);
       const connectPromise = ws.connect();
-      await jest.runAllTimersAsync();
+      await vi.runAllTimersAsync();
       await connectPromise;
 
       // Send messages in order
@@ -742,7 +742,7 @@ describe("Advanced Test Scenarios", () => {
     });
 
     test("should open after threshold failures", async () => {
-      jest.setSystemTime(0);
+      vi.setSystemTime(0);
       const breaker = new CircuitBreaker(3, 2, 1000);
 
       const failingOperation = () => Promise.reject(new Error("Operation failed"));
@@ -761,7 +761,7 @@ describe("Advanced Test Scenarios", () => {
     });
 
     test("should reject immediately when open", async () => {
-      jest.setSystemTime(0);
+      vi.setSystemTime(0);
       const breaker = new CircuitBreaker(2, 2, 1000);
 
       const failingOperation = () => Promise.reject(new Error("Operation failed"));
@@ -784,7 +784,7 @@ describe("Advanced Test Scenarios", () => {
     });
 
     test("should transition to half-open after timeout", async () => {
-      jest.setSystemTime(0);
+      vi.setSystemTime(0);
       const breaker = new CircuitBreaker(2, 2, 1000);
 
       const failingOperation = () => Promise.reject(new Error("Fail"));
@@ -802,7 +802,7 @@ describe("Advanced Test Scenarios", () => {
       expect(breaker.getState()).toBe("open");
 
       // Wait for timeout
-      jest.setSystemTime(1000);
+      vi.setSystemTime(1000);
 
       // Next call should transition to half-open and execute
       const result = await breaker.execute(successOperation);
@@ -812,7 +812,7 @@ describe("Advanced Test Scenarios", () => {
     });
 
     test("should close after successful attempts in half-open state", async () => {
-      jest.setSystemTime(0);
+      vi.setSystemTime(0);
       const breaker = new CircuitBreaker(2, 2, 1000);
 
       const failingOperation = () => Promise.reject(new Error("Fail"));
@@ -828,7 +828,7 @@ describe("Advanced Test Scenarios", () => {
       }
 
       // Wait for timeout and transition to half-open
-      jest.setSystemTime(1000);
+      vi.setSystemTime(1000);
 
       // Execute successful operations
       await breaker.execute(successOperation);
@@ -839,7 +839,7 @@ describe("Advanced Test Scenarios", () => {
     });
 
     test("should reopen if failure occurs in half-open state", async () => {
-      jest.setSystemTime(0);
+      vi.setSystemTime(0);
       const breaker = new CircuitBreaker(2, 2, 1000);
 
       const failingOperation = () => Promise.reject(new Error("Fail"));
@@ -855,7 +855,7 @@ describe("Advanced Test Scenarios", () => {
       }
 
       // Transition to half-open
-      jest.setSystemTime(1000);
+      vi.setSystemTime(1000);
       await breaker.execute(successOperation);
 
       expect(breaker.getState()).toBe("half-open");
@@ -873,7 +873,7 @@ describe("Advanced Test Scenarios", () => {
     });
 
     test("should reset all counters on manual reset", async () => {
-      jest.setSystemTime(0);
+      vi.setSystemTime(0);
       const breaker = new CircuitBreaker(2, 2, 1000);
 
       const failingOperation = () => Promise.reject(new Error("Fail"));
@@ -1044,8 +1044,8 @@ describe("Advanced Test Scenarios", () => {
         cleanupFns.length = 0;
       };
 
-      const fetchData = jest.fn().mockResolvedValue({ data: "test" });
-      const setState = jest.fn();
+      const fetchData = vi.fn().mockResolvedValue({ data: "test" });
+      const setState = vi.fn();
 
       // Simulate effect with async operation
       useEffect(() => {
@@ -1065,7 +1065,7 @@ describe("Advanced Test Scenarios", () => {
       // Unmount before fetch completes
       simulateUnmount();
 
-      await jest.runAllTimersAsync();
+      await vi.runAllTimersAsync();
 
       // setState should not be called after unmount
       expect(setState).not.toHaveBeenCalled();
@@ -1091,7 +1091,7 @@ describe("Advanced Test Scenarios", () => {
       }, [count2]);
 
       // Execute effects
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation();
 
       effects[0](); // Uses count1 = 0 (closure captures count1)
       effects[1](); // Uses count2 = 1 (closure captures count2)

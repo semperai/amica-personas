@@ -1,12 +1,12 @@
-import { describe, expect, test, jest, beforeEach, afterEach } from "@jest/globals";
+import { describe, expect, test, jest, beforeEach, afterEach } from "vitest";
 
 // Mock fetch BEFORE importing the module that uses it
-const fetchMock = jest.fn();
+const fetchMock = vi.fn();
 global.fetch = fetchMock as any;
 
 // Mock expandPrompt - must be inline in the factory since jest.mock is hoisted
-jest.mock("@/features/functionCalling/eventHandler", () => ({
-  expandPrompt: jest.fn((prompt: string, values: any) => {
+vi.mock("@/features/functionCalling/eventHandler", () => ({
+  expandPrompt: vi.fn((prompt: string, values: any) => {
     return Promise.resolve(prompt.replace('{context_str}', values.context_str));
   }),
 }));
@@ -15,7 +15,7 @@ import { handleNews } from "@/features/plugins/news";
 
 describe("news", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   const createMockRSS = (items: Array<{title: string, description: string}>) => {
@@ -46,7 +46,7 @@ describe("news", () => {
         text: () => Promise.resolve(mockRSS),
       });
 
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation();
 
       const result = await handleNews();
 
@@ -95,7 +95,7 @@ describe("news", () => {
         statusText: "Not Found",
       });
 
-      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation();
 
       const result = await handleNews();
 
@@ -111,7 +111,7 @@ describe("news", () => {
     test("should handle network error", async () => {
       fetchMock.mockRejectedValue(new Error("Network error"));
 
-      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation();
 
       const result = await handleNews();
 
@@ -384,7 +384,7 @@ describe("news", () => {
     test("should handle timeout error", async () => {
       fetchMock.mockRejectedValue(new Error("Timeout"));
 
-      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation();
 
       const result = await handleNews();
 

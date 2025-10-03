@@ -1,9 +1,9 @@
-import { describe, expect, test, jest } from "@jest/globals";
+import { describe, expect, test, vi } from "vitest";
 import { processResponse } from "@/utils/processResponse";
 
 // Mock textsToScreenplay
-jest.mock("@/features/chat/messages", () => ({
-  textsToScreenplay: jest.fn((texts: string[]) => {
+vi.mock("@/features/chat/messages", () => ({
+  textsToScreenplay: vi.fn((texts: string[]) => {
     return texts.map(text => ({
       text: text,
       talk: { message: text, style: "talk" }
@@ -28,7 +28,7 @@ describe("processResponse", () => {
     receivedMessage: "",
     tag: "",
     rolePlay: "",
-    callback: jest.fn(() => false),
+    callback: vi.fn(() => false),
   });
 
   describe("tag extraction", () => {
@@ -220,7 +220,7 @@ describe("processResponse", () => {
       expect(result.sentences).toEqual(["First."]);
 
       // Process second sentence
-      params = { ...result, receivedMessage: "Second.", callback: jest.fn(() => false) };
+      params = { ...result, receivedMessage: "Second.", callback: vi.fn(() => false) };
       result = processResponse(params);
 
       expect(result.sentences).toEqual(["First.", "Second."]);
@@ -229,7 +229,7 @@ describe("processResponse", () => {
 
   describe("callback invocation", () => {
     test("should call callback with screenplay when sentence is complete", () => {
-      const mockCallback = jest.fn(() => false);
+      const mockCallback = vi.fn(() => false);
       const params = createDefaultParams();
       params.callback = mockCallback;
       params.tag = "[happy]";
@@ -246,7 +246,7 @@ describe("processResponse", () => {
     });
 
     test("should not call callback if no complete sentence", () => {
-      const mockCallback = jest.fn(() => false);
+      const mockCallback = vi.fn(() => false);
       const params = createDefaultParams();
       params.callback = mockCallback;
       params.receivedMessage = "Incomplete";
@@ -257,7 +257,7 @@ describe("processResponse", () => {
     });
 
     test("should set shouldBreak when callback returns true", () => {
-      const mockCallback = jest.fn(() => true);
+      const mockCallback = vi.fn(() => true);
       const params = createDefaultParams();
       params.callback = mockCallback;
       params.receivedMessage = "Hello.";
@@ -268,7 +268,7 @@ describe("processResponse", () => {
     });
 
     test("should not set shouldBreak when callback returns false", () => {
-      const mockCallback = jest.fn(() => false);
+      const mockCallback = vi.fn(() => false);
       const params = createDefaultParams();
       params.callback = mockCallback;
       params.receivedMessage = "Hello.";
@@ -315,7 +315,7 @@ describe("processResponse", () => {
 
   describe("edge cases", () => {
     test("should extract tag with only whitespace", () => {
-      const mockCallback = jest.fn(() => false);
+      const mockCallback = vi.fn(() => false);
       const params = createDefaultParams();
       params.callback = mockCallback;
       params.receivedMessage = "[  ]. Real content.";
@@ -330,7 +330,7 @@ describe("processResponse", () => {
     });
 
     test("should handle empty receivedMessage", () => {
-      const mockCallback = jest.fn(() => false);
+      const mockCallback = vi.fn(() => false);
       const params = createDefaultParams();
       params.callback = mockCallback;
       params.receivedMessage = "";

@@ -1,12 +1,12 @@
-import { describe, expect, test, jest, beforeEach, afterEach } from "@jest/globals";
+import { describe, expect, test, jest, beforeEach, afterEach } from "vitest";
 import { textsToScreenplay } from "../src/features/chat/messages";
 import type { Screenplay, EmotionType } from "../src/features/chat/messages";
 
 describe("messages", () => {
-  let consoleSpy: jest.SpiedFunction<any>;
+  let consoleSpy: MockInstance<any>;
 
   beforeEach(() => {
-    consoleSpy = jest.spyOn(console, "log").mockImplementation();
+    consoleSpy = vi.spyOn(console, "log").mockImplementation();
   });
 
   afterEach(() => {

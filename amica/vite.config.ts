@@ -35,6 +35,14 @@ export default defineConfig({
           src: 'node_modules/@ricky0123/vad-web/dist/*.onnx',
           dest: 'assets',
         },
+        {
+          src: 'node_modules/onnxruntime-web/dist/*.wasm',
+          dest: 'assets',
+        },
+        {
+          src: 'node_modules/onnxruntime-web/dist/*.mjs',
+          dest: 'assets',
+        },
       ],
     }),
   ],
@@ -59,7 +67,7 @@ export default defineConfig({
     port: 3000,
   },
   optimizeDeps: {
-    exclude: ['sharp', 'onnxruntime-node'],
+    exclude: ['sharp', 'onnxruntime-node', 'onnxruntime-web'],
   },
   worker: {
     format: 'es',

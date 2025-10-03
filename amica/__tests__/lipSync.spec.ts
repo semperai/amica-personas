@@ -1,4 +1,4 @@
-import { describe, expect, test, jest, beforeEach } from "@jest/globals";
+import { describe, expect, test, jest, beforeEach } from "vitest";
 import { LipSync } from "@/features/lipSync/lipSync";
 
 // Mock AudioContext and related Web Audio API
@@ -269,7 +269,7 @@ describe("LipSync", () => {
 
     test("should call onEnded callback when playback finishes", async () => {
       const buffer = new ArrayBuffer(1024);
-      const onEnded = jest.fn();
+      const onEnded = vi.fn();
 
       await lipSync.playFromArrayBuffer(buffer, onEnded);
 
@@ -299,7 +299,7 @@ describe("LipSync", () => {
 
     test("should decode audio data", async () => {
       const buffer = new ArrayBuffer(1024);
-      const decodeSpy = jest.spyOn(mockAudioContext, 'decodeAudioData');
+      const decodeSpy = vi.spyOn(mockAudioContext, 'decodeAudioData');
 
       await lipSync.playFromArrayBuffer(buffer);
 
@@ -329,8 +329,8 @@ describe("LipSync", () => {
 
     test("should handle onEnded callback errors gracefully", async () => {
       const buffer = new ArrayBuffer(1024);
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-      const onEnded = jest.fn(() => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation();
+      const onEnded = vi.fn(() => {
         throw new Error("Callback error");
       });
 
@@ -349,7 +349,7 @@ describe("LipSync", () => {
   describe("playFromURL", () => {
     beforeEach(() => {
       // Mock global fetch
-      global.fetch = jest.fn().mockResolvedValue({
+      global.fetch = vi.fn().mockResolvedValue({
         arrayBuffer: () => Promise.resolve(new ArrayBuffer(1024)),
       }) as any;
     });
@@ -361,7 +361,7 @@ describe("LipSync", () => {
     });
 
     test("should call onEnded callback", async () => {
-      const onEnded = jest.fn();
+      const onEnded = vi.fn();
 
       await lipSync.playFromURL("https://example.com/audio.mp3", onEnded);
 
@@ -378,7 +378,7 @@ describe("LipSync", () => {
     });
 
     test("should handle fetch errors", async () => {
-      (global.fetch as jest.MockedFunction<typeof fetch>).mockRejectedValue(
+      (global.fetch as MockedObjectFunction<typeof fetch>).mockRejectedValue(
         new Error("Network error")
       );
 
@@ -403,9 +403,9 @@ describe("LipSync", () => {
 
     test("should convert response to ArrayBuffer", async () => {
       const mockArrayBuffer = new ArrayBuffer(2048);
-      const arrayBufferSpy = jest.fn().mockResolvedValue(mockArrayBuffer);
+      const arrayBufferSpy = vi.fn().mockResolvedValue(mockArrayBuffer);
 
-      (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValue({
+      (global.fetch as MockedObjectFunction<typeof fetch>).mockResolvedValue({
         arrayBuffer: arrayBufferSpy,
       } as any);
 
@@ -417,11 +417,11 @@ describe("LipSync", () => {
     test("should call playFromArrayBuffer with fetched data", async () => {
       const mockBuffer = new ArrayBuffer(1024);
 
-      (global.fetch as jest.MockedFunction<typeof fetch>).mockResolvedValue({
+      (global.fetch as MockedObjectFunction<typeof fetch>).mockResolvedValue({
         arrayBuffer: () => Promise.resolve(mockBuffer),
       } as any);
 
-      const playSpy = jest.spyOn(lipSync, 'playFromArrayBuffer');
+      const playSpy = vi.spyOn(lipSync, 'playFromArrayBuffer');
 
       await lipSync.playFromURL("https://example.com/audio.mp3");
 

@@ -1,20 +1,20 @@
-import { describe, expect, test, jest } from "@jest/globals";
+import { describe, expect, test, vi } from "vitest";
 import { wait } from "../src/utils/wait";
 
 describe("wait", () => {
   beforeEach(() => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   test("should resolve after specified milliseconds", async () => {
     const promise = wait(1000);
 
     // Fast-forward time
-    jest.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(1000);
 
     await expect(promise).resolves.toBeUndefined();
   });
@@ -25,7 +25,7 @@ describe("wait", () => {
       resolved = true;
     });
 
-    jest.advanceTimersByTime(999);
+    vi.advanceTimersByTime(999);
 
     // Need to flush microtasks
     await Promise.resolve();
@@ -36,7 +36,7 @@ describe("wait", () => {
   test("should handle zero milliseconds", async () => {
     const promise = wait(0);
 
-    jest.advanceTimersByTime(0);
+    vi.advanceTimersByTime(0);
 
     await expect(promise).resolves.toBeUndefined();
   });
@@ -48,13 +48,13 @@ describe("wait", () => {
     wait(200).then(() => results.push(2));
     wait(50).then(() => results.push(3));
 
-    await jest.advanceTimersByTimeAsync(50);
+    await vi.advanceTimersByTimeAsync(50);
     expect(results).toEqual([3]);
 
-    await jest.advanceTimersByTimeAsync(50);
+    await vi.advanceTimersByTimeAsync(50);
     expect(results).toEqual([3, 1]);
 
-    await jest.advanceTimersByTimeAsync(100);
+    await vi.advanceTimersByTimeAsync(100);
     expect(results).toEqual([3, 1, 2]);
   });
 
@@ -68,7 +68,7 @@ describe("wait", () => {
     const waitTime = 500;
 
     const waitPromise = wait(waitTime);
-    jest.advanceTimersByTime(waitTime);
+    vi.advanceTimersByTime(waitTime);
 
     await waitPromise;
 

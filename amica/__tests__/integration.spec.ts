@@ -1,4 +1,4 @@
-import { describe, expect, test, jest, beforeEach, afterEach } from "@jest/globals";
+import { describe, expect, test, jest, beforeEach, afterEach } from "vitest";
 
 /**
  * Advanced Integration Tests
@@ -9,12 +9,12 @@ import { describe, expect, test, jest, beforeEach, afterEach } from "@jest/globa
 
 describe("Integration Tests", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.useFakeTimers();
+    vi.clearAllMocks();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   describe("Complex Async Flows", () => {
@@ -30,7 +30,7 @@ describe("Integration Tests", () => {
       const racePromise = Promise.race([slowOperation, timeout]);
 
       // Fast-forward 1000ms to trigger timeout
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
 
       await expect(racePromise).rejects.toThrow("Timeout");
     });
@@ -47,7 +47,7 @@ describe("Integration Tests", () => {
       const racePromise = Promise.race([fastOperation, slowOperation]);
 
       // Fast-forward 100ms to trigger fast operation
-      jest.advanceTimersByTime(100);
+      vi.advanceTimersByTime(100);
 
       await expect(racePromise).resolves.toBe("fast");
     });
@@ -62,7 +62,7 @@ describe("Integration Tests", () => {
       const allPromise = Promise.all(promises);
 
       // Fast-forward to complete all promises
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       await expect(allPromise).resolves.toEqual(["first", "second", "third"]);
     });
@@ -77,7 +77,7 @@ describe("Integration Tests", () => {
       const allPromise = Promise.all(promises);
 
       // Fast-forward to trigger the rejection
-      jest.advanceTimersByTime(200);
+      vi.advanceTimersByTime(200);
 
       await expect(allPromise).rejects.toThrow("Failed");
     });
@@ -92,7 +92,7 @@ describe("Integration Tests", () => {
       const settledPromise = Promise.allSettled(promises);
 
       // Fast-forward to complete all promises
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       const results = await settledPromise;
 
@@ -106,7 +106,7 @@ describe("Integration Tests", () => {
       let attempts = 0;
       const maxAttempts = 3;
 
-      const operation = jest.fn().mockImplementation(() => {
+      const operation = vi.fn().mockImplementation(() => {
         attempts++;
         if (attempts < maxAttempts) {
           return Promise.reject(new Error(`Attempt ${attempts} failed`));
@@ -136,7 +136,7 @@ describe("Integration Tests", () => {
       const retryPromise = retryWithBackoff(operation, maxAttempts);
 
       // Run all timers to completion
-      await jest.runAllTimersAsync();
+      await vi.runAllTimersAsync();
 
       const result = await retryPromise;
 
@@ -145,7 +145,7 @@ describe("Integration Tests", () => {
     });
 
     test("should handle debounce pattern", async () => {
-      const mockFn = jest.fn();
+      const mockFn = vi.fn();
       const debounceDelay = 300;
 
       const debounce = (fn: Function, delay: number) => {
@@ -166,19 +166,19 @@ describe("Integration Tests", () => {
 
       // Call multiple times rapidly
       debouncedFn("first");
-      jest.advanceTimersByTime(100);
+      vi.advanceTimersByTime(100);
 
       debouncedFn("second");
-      jest.advanceTimersByTime(100);
+      vi.advanceTimersByTime(100);
 
       debouncedFn("third");
-      jest.advanceTimersByTime(100);
+      vi.advanceTimersByTime(100);
 
       // At this point, no calls should have been made yet
       expect(mockFn).not.toHaveBeenCalled();
 
       // Wait for debounce delay from last call
-      jest.advanceTimersByTime(200);
+      vi.advanceTimersByTime(200);
 
       // Should have been called once with the last value
       expect(mockFn).toHaveBeenCalledTimes(1);
@@ -186,9 +186,9 @@ describe("Integration Tests", () => {
     });
 
     test("should handle throttle pattern", () => {
-      jest.setSystemTime(1000);
+      vi.setSystemTime(1000);
 
-      const mockFn = jest.fn();
+      const mockFn = vi.fn();
       const throttleDelay = 1000;
 
       const throttle = (fn: Function, delay: number) => {
@@ -212,16 +212,16 @@ describe("Integration Tests", () => {
       expect(mockFn).toHaveBeenCalledWith("first");
 
       // Rapid calls within throttle window should be ignored
-      jest.setSystemTime(1500);
+      vi.setSystemTime(1500);
       throttledFn("second");
       expect(mockFn).toHaveBeenCalledTimes(1);
 
-      jest.setSystemTime(1800);
+      vi.setSystemTime(1800);
       throttledFn("third");
       expect(mockFn).toHaveBeenCalledTimes(1);
 
       // After throttle window, next call should execute
-      jest.setSystemTime(2000);
+      vi.setSystemTime(2000);
       throttledFn("fourth");
       expect(mockFn).toHaveBeenCalledTimes(2);
       expect(mockFn).toHaveBeenCalledWith("fourth");
@@ -278,7 +278,7 @@ describe("Integration Tests", () => {
       const queuePromise = asyncQueue(tasks, 2);
 
       // Execute all timers
-      await jest.runAllTimersAsync();
+      await vi.runAllTimersAsync();
 
       await queuePromise;
 
@@ -310,7 +310,7 @@ describe("Integration Tests", () => {
     });
 
     test("should handle errors in Promise.all with cleanup", async () => {
-      const cleanup = jest.fn();
+      const cleanup = vi.fn();
 
       const taskWithCleanup = (shouldFail: boolean) => {
         return new Promise<string>((resolve, reject) => {
@@ -332,16 +332,16 @@ describe("Integration Tests", () => {
       ];
 
       const allPromise = Promise.all(tasks);
-      jest.advanceTimersByTime(100);
+      vi.advanceTimersByTime(100);
 
       await expect(allPromise).rejects.toThrow("Task failed");
       expect(cleanup).toHaveBeenCalled();
     });
 
     test("should handle nested try-catch with finally", async () => {
-      const outerFinally = jest.fn();
-      const innerFinally = jest.fn();
-      const catchHandler = jest.fn();
+      const outerFinally = vi.fn();
+      const innerFinally = vi.fn();
+      const catchHandler = vi.fn();
 
       const operation = async () => {
         try {
@@ -365,8 +365,8 @@ describe("Integration Tests", () => {
     });
 
     test("should handle error recovery with fallback", async () => {
-      const primaryOperation = jest.fn().mockRejectedValue(new Error("Primary failed"));
-      const fallbackOperation = jest.fn().mockResolvedValue("Fallback success");
+      const primaryOperation = vi.fn().mockRejectedValue(new Error("Primary failed"));
+      const fallbackOperation = vi.fn().mockResolvedValue("Fallback success");
 
       const operationWithFallback = async () => {
         try {
@@ -427,13 +427,13 @@ describe("Integration Tests", () => {
       ];
 
       // Fast-forward through all delays
-      jest.advanceTimersByTime(50);
+      vi.advanceTimersByTime(50);
       await Promise.resolve();
 
-      jest.advanceTimersByTime(50);
+      vi.advanceTimersByTime(50);
       await Promise.resolve();
 
-      jest.advanceTimersByTime(50);
+      vi.advanceTimersByTime(50);
       await Promise.resolve();
 
       await Promise.all(concurrent);
@@ -475,7 +475,7 @@ describe("Integration Tests", () => {
       ];
 
       // Run all operations
-      await jest.runAllTimersAsync();
+      await vi.runAllTimersAsync();
       await Promise.all(concurrent);
 
       // Operations should not interleave
@@ -504,7 +504,7 @@ describe("Integration Tests", () => {
       const operationPromise = longRunningOperation(abortController.signal);
 
       // Abort after 250ms (should be in the middle)
-      jest.advanceTimersByTime(250);
+      vi.advanceTimersByTime(250);
       abortController.abort();
 
       await expect(operationPromise).rejects.toThrow("Operation aborted");
@@ -530,7 +530,7 @@ describe("Integration Tests", () => {
         update("third", 2, 200),   // Middle timestamp, middle speed
       ];
 
-      await jest.runAllTimersAsync();
+      await vi.runAllTimersAsync();
       await Promise.all(updates);
 
       // Should have the write with highest timestamp (first)
@@ -542,8 +542,8 @@ describe("Integration Tests", () => {
   describe("Memory and Resource Management", () => {
     test("should handle cleanup of event listeners", () => {
       const eventTarget = new EventTarget();
-      const handler1 = jest.fn();
-      const handler2 = jest.fn();
+      const handler1 = vi.fn();
+      const handler2 = vi.fn();
 
       eventTarget.addEventListener("test", handler1);
       eventTarget.addEventListener("test", handler2);
@@ -582,8 +582,8 @@ describe("Integration Tests", () => {
     });
 
     test("should handle cleanup on component unmount pattern", () => {
-      const cleanup1 = jest.fn();
-      const cleanup2 = jest.fn();
+      const cleanup1 = vi.fn();
+      const cleanup2 = vi.fn();
       const cleanupFunctions: Array<() => void> = [];
 
       const useEffect = (effect: () => (() => void) | void) => {
@@ -641,7 +641,7 @@ describe("Integration Tests", () => {
 
       const pipelinePromise = pipeline([1, 2, 3, 4, 5]);
 
-      await jest.runAllTimersAsync();
+      await vi.runAllTimersAsync();
 
       const result = await pipelinePromise;
 
@@ -669,7 +669,7 @@ describe("Integration Tests", () => {
       const streamPromise = processStream();
 
       // Run all timers to process the async generator
-      await jest.runAllTimersAsync();
+      await vi.runAllTimersAsync();
       await streamPromise;
 
       expect(chunks).toEqual(["Hello", " ", "World"]);
@@ -718,7 +718,7 @@ describe("Integration Tests", () => {
       processor.add(2);
       processor.add(3); // Should trigger batch flush
 
-      await jest.runAllTimersAsync();
+      await vi.runAllTimersAsync();
 
       expect(batches).toHaveLength(1);
       expect(batches[0]).toEqual([1, 2, 3]);
@@ -728,8 +728,8 @@ describe("Integration Tests", () => {
       processor.add(5);
 
       // Wait for timeout flush
-      jest.advanceTimersByTime(1000);
-      await jest.runAllTimersAsync();
+      vi.advanceTimersByTime(1000);
+      await vi.runAllTimersAsync();
 
       expect(batches).toHaveLength(2);
       expect(batches[1]).toEqual([4, 5]);

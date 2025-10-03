@@ -1,4 +1,4 @@
-import { describe, expect, test, jest, beforeEach, afterEach } from "@jest/globals";
+import { describe, expect, test, jest, beforeEach, afterEach } from "vitest";
 import {
   isCharacterIdle,
   characterIdleTime,
@@ -14,18 +14,18 @@ describe("isIdle", () => {
     setConfig("time_before_idle_sec", "10");
     // Reset the idle timer state before each test
     resetIdleTimer();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Use fake timers for precise time control
-    jest.useFakeTimers();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   describe("isCharacterIdle", () => {
     test("should return false when character just woke up", () => {
-      jest.setSystemTime(1000000); // Set a fixed time
+      vi.setSystemTime(1000000); // Set a fixed time
       const now = Date.now(); // 1000000
       const result = isCharacterIdle(now);
 
@@ -33,7 +33,7 @@ describe("isIdle", () => {
     });
 
     test("should return false when under idle threshold", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const now = Date.now(); // 1000000
       const lastAwake = now - 5000; // 995000 (5 seconds ago)
 
@@ -43,7 +43,7 @@ describe("isIdle", () => {
     });
 
     test("should return true when exceeding idle threshold", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const now = Date.now(); // 1000000
       const lastAwake = now - 15000; // 985000 (15 seconds ago, threshold is 10)
 
@@ -53,7 +53,7 @@ describe("isIdle", () => {
     });
 
     test("should return true when exactly at idle threshold", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const now = Date.now(); // 1000000
       const lastAwake = now - 10000; // 990000 (exactly 10 seconds ago)
 
@@ -63,7 +63,7 @@ describe("isIdle", () => {
     });
 
     test("should return false when just below idle threshold", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const now = Date.now(); // 1000000
       const lastAwake = now - 9999; // 990001 (just under 10 seconds)
 
@@ -73,7 +73,7 @@ describe("isIdle", () => {
     });
 
     test("should handle very long idle times", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const now = Date.now(); // 1000000
       const lastAwake = now - 1000000; // 0 (~16 minutes ago)
 
@@ -83,13 +83,13 @@ describe("isIdle", () => {
     });
 
     test("should account for paused time", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const now = Date.now(); // 1000000
       const lastAwake = now - 15000; // 985000 (15 seconds ago)
 
       // Pause for 6 seconds
       pauseIdleTimer();
-      jest.setSystemTime(1006000); // Advance 6 seconds
+      vi.setSystemTime(1006000); // Advance 6 seconds
       resumeIdleTimer();
 
       // Now at 1006000, lastAwake was 985000
@@ -100,19 +100,19 @@ describe("isIdle", () => {
       // But the test expects false, so let's use less pause time
       // Reset and try again
       resetIdleTimer();
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const lastAwake2 = now - 15000; // 985000
       pauseIdleTimer();
-      jest.setSystemTime(1007000); // Advance 7 seconds
+      vi.setSystemTime(1007000); // Advance 7 seconds
       resumeIdleTimer();
 
       // Real elapsed: 22s, Paused: 7s, Effective: 15s (still idle)
       // We need 9s effective, so pause for 22-9 = 13 seconds
       resetIdleTimer();
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const lastAwake3 = now - 15000; // 985000
       pauseIdleTimer();
-      jest.setSystemTime(1022000); // Advance 22 seconds
+      vi.setSystemTime(1022000); // Advance 22 seconds
       resumeIdleTimer();
 
       // Real elapsed from 985000 to 1022000: 37s
@@ -121,10 +121,10 @@ describe("isIdle", () => {
       // Let's use the paused time to make effective time = 9s
       // lastAwake at 991000 (9 seconds before 1000000)
       resetIdleTimer();
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const lastAwake4 = 991000; // 9 seconds before now
       pauseIdleTimer();
-      jest.setSystemTime(1006000); // Advance 6 seconds
+      vi.setSystemTime(1006000); // Advance 6 seconds
       resumeIdleTimer();
 
       // Real elapsed: 15s, Paused: 6s, Effective: 9s (not idle!)
@@ -136,7 +136,7 @@ describe("isIdle", () => {
 
   describe("characterIdleTime", () => {
     test("should return negative when character just woke up", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const now = Date.now(); // 1000000
       const result = characterIdleTime(now);
 
@@ -147,7 +147,7 @@ describe("isIdle", () => {
     });
 
     test("should return negative when under idle threshold", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const now = Date.now(); // 1000000
       const lastAwake = now - 5000; // 995000 (5 seconds ago)
 
@@ -160,7 +160,7 @@ describe("isIdle", () => {
     });
 
     test("should return positive when exceeding idle threshold", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const now = Date.now(); // 1000000
       const lastAwake = now - 15000; // 985000 (15 seconds ago)
 
@@ -173,7 +173,7 @@ describe("isIdle", () => {
     });
 
     test("should return 0 when exactly at idle threshold", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const now = Date.now(); // 1000000
       const lastAwake = now - 10000; // 990000 (exactly 10 seconds)
 
@@ -185,7 +185,7 @@ describe("isIdle", () => {
     });
 
     test("should return correct idle time for long periods", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const now = Date.now(); // 1000000
       const lastAwake = now - 25000; // 975000 (25 seconds ago)
 
@@ -197,14 +197,14 @@ describe("isIdle", () => {
     });
 
     test("should calculate idle time accounting for paused time", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const now = Date.now(); // 1000000
       const lastAwake = 985000; // 15 seconds before now
 
       // Pause for 5 seconds
       pauseIdleTimer();
       const pauseStart = Date.now(); // 1000000
-      jest.setSystemTime(pauseStart + 5000); // 1005000
+      vi.setSystemTime(pauseStart + 5000); // 1005000
       resumeIdleTimer();
 
       // Now at 1005000, lastAwake was 985000
@@ -222,7 +222,7 @@ describe("isIdle", () => {
 
   describe("pauseIdleTimer", () => {
     test("should mark timer as paused", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const now = Date.now(); // 1000000
       const lastAwake = now - 15000; // 985000 (15 seconds ago)
 
@@ -236,7 +236,7 @@ describe("isIdle", () => {
     });
 
     test("should record pause timestamp", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const beforePause = Date.now(); // 1000000
       pauseIdleTimer();
       const afterPause = Date.now(); // 1000000
@@ -247,12 +247,12 @@ describe("isIdle", () => {
     });
 
     test("should handle multiple pause calls (only first takes effect)", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       pauseIdleTimer();
       const firstPauseTime = Date.now(); // 1000000
 
       // Advance time
-      jest.setSystemTime(firstPauseTime + 5000); // 1005000
+      vi.setSystemTime(firstPauseTime + 5000); // 1005000
 
       pauseIdleTimer(); // Second pause should do nothing
 
@@ -261,7 +261,7 @@ describe("isIdle", () => {
     });
 
     test("should freeze idle time calculation when paused", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const now = Date.now(); // 1000000
       const lastAwake = now - 5000; // 995000 (5 seconds ago, not idle)
 
@@ -269,7 +269,7 @@ describe("isIdle", () => {
 
       // Pause and simulate 10 seconds passing
       pauseIdleTimer();
-      jest.setSystemTime(now + 10000); // 1010000
+      vi.setSystemTime(now + 10000); // 1010000
 
       // Should still not be idle because time was paused
       // Actually, the paused time isn't applied until resume
@@ -284,7 +284,7 @@ describe("isIdle", () => {
 
   describe("resumeIdleTimer", () => {
     test("should add paused time to total", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const now = Date.now(); // 1000000
       const lastAwake = 985000; // 15 seconds before now
 
@@ -294,7 +294,7 @@ describe("isIdle", () => {
       const pauseTime = Date.now(); // 1000000
 
       // Simulate 8 seconds passing while paused (more margin)
-      jest.setSystemTime(pauseTime + 8000); // 1008000
+      vi.setSystemTime(pauseTime + 8000); // 1008000
 
       resumeIdleTimer();
 
@@ -305,12 +305,12 @@ describe("isIdle", () => {
       // We need less pause or different timing
       // Let's test with lastAwake closer: 993000 (7 seconds before 1000000)
       resetIdleTimer();
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const lastAwake2 = 993000;
       expect(isCharacterIdle(lastAwake2)).toBe(false); // 7 < 10
 
       pauseIdleTimer();
-      jest.setSystemTime(1008000); // Advance 8 seconds
+      vi.setSystemTime(1008000); // Advance 8 seconds
       resumeIdleTimer();
 
       // Real elapsed: 15s, Paused: 8s, Effective: 7s (not idle)
@@ -318,7 +318,7 @@ describe("isIdle", () => {
     });
 
     test("should allow resume only if paused", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const now = Date.now(); // 1000000
       const lastAwake = now - 15000; // 985000 (15 seconds ago)
 
@@ -329,38 +329,38 @@ describe("isIdle", () => {
     });
 
     test("should handle multiple resume calls (only first takes effect)", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const now = Date.now(); // 1000000
 
       pauseIdleTimer();
       const pauseTime = Date.now(); // 1000000
 
-      jest.setSystemTime(pauseTime + 5000); // 1005000
+      vi.setSystemTime(pauseTime + 5000); // 1005000
       resumeIdleTimer();
 
       // Second resume should do nothing
-      jest.setSystemTime(pauseTime + 10000); // 1010000
+      vi.setSystemTime(pauseTime + 10000); // 1010000
       resumeIdleTimer();
     });
 
     test("should accumulate multiple pause/resume cycles", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const now = Date.now(); // 1000000
       const lastAwake = 987000; // 13 seconds before now
       let currentTime = now;
 
       // First pause/resume: 3 seconds
-      jest.setSystemTime(currentTime);
+      vi.setSystemTime(currentTime);
       pauseIdleTimer();
       currentTime += 3000;
-      jest.setSystemTime(currentTime); // 1003000
+      vi.setSystemTime(currentTime); // 1003000
       resumeIdleTimer();
 
       // Second pause/resume: 4 seconds
-      jest.setSystemTime(currentTime);
+      vi.setSystemTime(currentTime);
       pauseIdleTimer();
       currentTime += 4000;
-      jest.setSystemTime(currentTime); // 1007000
+      vi.setSystemTime(currentTime); // 1007000
       resumeIdleTimer();
 
       // At 1007000, lastAwake was 987000
@@ -386,13 +386,13 @@ describe("isIdle", () => {
     });
 
     test("should clear paused time accumulation", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const now = Date.now(); // 1000000
       const lastAwake = 992000; // 8 seconds before now
 
       // Pause and accumulate time
       pauseIdleTimer();
-      jest.setSystemTime(now + 12000); // 1012000
+      vi.setSystemTime(now + 12000); // 1012000
       resumeIdleTimer();
 
       // At 1012000, lastAwake was 992000
@@ -410,42 +410,42 @@ describe("isIdle", () => {
     });
 
     test("should allow fresh pause/resume after reset", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const now = Date.now(); // 1000000
 
       // Do some pause/resume
       pauseIdleTimer();
-      jest.setSystemTime(now + 5000); // 1005000
+      vi.setSystemTime(now + 5000); // 1005000
       resumeIdleTimer();
 
       // Reset
       resetIdleTimer();
 
       // Do fresh pause/resume
-      jest.setSystemTime(1010000);
+      vi.setSystemTime(1010000);
       const newNow = Date.now(); // 1010000
-      jest.setSystemTime(newNow);
+      vi.setSystemTime(newNow);
       pauseIdleTimer();
-      jest.setSystemTime(newNow + 3000); // 1013000
+      vi.setSystemTime(newNow + 3000); // 1013000
       resumeIdleTimer();
     });
 
     test("should reset all internal state", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       // Set up complex state
       pauseIdleTimer();
       const pauseTime = Date.now(); // 1000000
-      jest.setSystemTime(pauseTime + 5000); // 1005000
+      vi.setSystemTime(pauseTime + 5000); // 1005000
       resumeIdleTimer();
 
       pauseIdleTimer();
-      jest.setSystemTime(pauseTime + 10000); // 1010000
+      vi.setSystemTime(pauseTime + 10000); // 1010000
 
       // Reset everything
       resetIdleTimer();
 
       // Start fresh with more margin
-      jest.setSystemTime(1020000);
+      vi.setSystemTime(1020000);
       const now = Date.now(); // 1020000
       const lastAwake = now - 20000; // 1000000
 
@@ -456,14 +456,14 @@ describe("isIdle", () => {
 
   describe("complex scenarios", () => {
     test("should handle pause during idle state", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const now = Date.now(); // 1000000
       const lastAwake = 985000; // 15 seconds before now
 
       expect(isCharacterIdle(lastAwake)).toBe(true);
 
       pauseIdleTimer();
-      jest.setSystemTime(now + 12000); // 1012000
+      vi.setSystemTime(now + 12000); // 1012000
       resumeIdleTimer();
 
       // At 1012000, lastAwake was 985000
@@ -472,12 +472,12 @@ describe("isIdle", () => {
       // Effective: 27 - 12 = 15 seconds (still idle!)
       // We need effective time < 10, so lastAwake should be closer
       resetIdleTimer();
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const lastAwake2 = 991000; // 9 seconds before 1000000
       expect(isCharacterIdle(lastAwake2)).toBe(false); // 9 < 10
 
       pauseIdleTimer();
-      jest.setSystemTime(1012000); // Advance 12 seconds
+      vi.setSystemTime(1012000); // Advance 12 seconds
       resumeIdleTimer();
 
       // Real elapsed: 21s, Paused: 12s, Effective: 9s (not idle)
@@ -485,14 +485,14 @@ describe("isIdle", () => {
     });
 
     test("should handle pause during active state", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const now = Date.now(); // 1000000
       const lastAwake = now - 5000; // 995000 (5 seconds ago, active)
 
       expect(isCharacterIdle(lastAwake)).toBe(false);
 
       pauseIdleTimer();
-      jest.setSystemTime(now + 3000); // 1003000
+      vi.setSystemTime(now + 3000); // 1003000
       resumeIdleTimer();
 
       // With 3 seconds paused, effective time is 5 - 3 = 2 seconds (still active)
@@ -500,26 +500,26 @@ describe("isIdle", () => {
     });
 
     test("should calculate correct idle time with complex pause/resume pattern", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const baseTime = Date.now(); // 1000000
       const lastAwake = 983000; // 17 seconds before baseTime
       let time = baseTime;
 
       // Pause for 5 seconds
-      jest.setSystemTime(time);
+      vi.setSystemTime(time);
       pauseIdleTimer();
       time += 5000;
-      jest.setSystemTime(time); // 1005000
+      vi.setSystemTime(time); // 1005000
       resumeIdleTimer();
 
       // Active for 2 seconds
       time += 2000;
 
       // Pause for 8 seconds
-      jest.setSystemTime(time); // 1007000
+      vi.setSystemTime(time); // 1007000
       pauseIdleTimer();
       time += 8000;
-      jest.setSystemTime(time); // 1015000
+      vi.setSystemTime(time); // 1015000
       resumeIdleTimer();
 
       // At 1015000, lastAwake was 983000
@@ -534,14 +534,14 @@ describe("isIdle", () => {
     });
 
     test("should handle reset between calculations", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const now = Date.now(); // 1000000
       const lastAwake = 992000; // 8 seconds before now
 
       expect(isCharacterIdle(lastAwake)).toBe(false); // 8 < 10
 
       pauseIdleTimer();
-      jest.setSystemTime(now + 12000); // 1012000
+      vi.setSystemTime(now + 12000); // 1012000
       resumeIdleTimer();
 
       // Real elapsed: 20s, Paused: 12s, Effective: 8s (not idle)
@@ -557,7 +557,7 @@ describe("isIdle", () => {
 
   describe("edge cases", () => {
     test("should handle lastAwake in the future", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const future = Date.now() + 10000; // 1010000
       const result = isCharacterIdle(future);
 
@@ -565,7 +565,7 @@ describe("isIdle", () => {
     });
 
     test("should handle very old lastAwake timestamp", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const veryOld = Date.now() - 86400000; // 24 hours ago
       const result = isCharacterIdle(veryOld);
 
@@ -573,7 +573,7 @@ describe("isIdle", () => {
     });
 
     test("should handle rapid pause/resume cycles", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       for (let i = 0; i < 10; i++) {
         pauseIdleTimer();
         resumeIdleTimer();
@@ -587,7 +587,7 @@ describe("isIdle", () => {
     });
 
     test("should handle multiple resets", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       resetIdleTimer();
       resetIdleTimer();
       resetIdleTimer();
@@ -599,7 +599,7 @@ describe("isIdle", () => {
     });
 
     test("should handle pause without resume", () => {
-      jest.setSystemTime(1000000);
+      vi.setSystemTime(1000000);
       const now = Date.now(); // 1000000
       const lastAwake = now - 15000; // 985000 (15 seconds ago)
 

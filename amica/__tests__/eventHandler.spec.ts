@@ -1,4 +1,4 @@
-import { describe, expect, test, jest, beforeEach, afterEach } from "@jest/globals";
+import { describe, expect, test, jest, beforeEach, afterEach } from "vitest";
 import { expandPrompt, handleFunctionCalling } from "@/features/functionCalling/eventHandler";
 import * as newsModule from "@/features/plugins/news";
 
@@ -251,7 +251,7 @@ describe("eventHandler", () => {
     });
 
     test("should log unknown event", async () => {
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation();
 
       const result = await handleFunctionCalling("unknown");
 
@@ -262,7 +262,7 @@ describe("eventHandler", () => {
     });
 
     test("should handle empty string event", async () => {
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation();
 
       const result = await handleFunctionCalling("");
 
@@ -273,7 +273,7 @@ describe("eventHandler", () => {
     });
 
     test("should handle case-sensitive event names", async () => {
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation();
 
       await handleFunctionCalling("NEWS"); // uppercase
       await handleFunctionCalling("News"); // mixed case
@@ -309,7 +309,7 @@ describe("eventHandler", () => {
     });
 
     test("should handle special characters in event name", async () => {
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation();
 
       await handleFunctionCalling("news!");
       await handleFunctionCalling("news-event");
@@ -321,7 +321,7 @@ describe("eventHandler", () => {
     });
 
     test("should not modify event string", async () => {
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation();
       const event = "test-event";
 
       await handleFunctionCalling(event);

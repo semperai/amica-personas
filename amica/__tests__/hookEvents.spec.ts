@@ -1,4 +1,4 @@
-import { describe, expect, test } from "@jest/globals";
+import { describe, expect, test } from "vitest";
 import type { HookEvent, HookEventMap } from "../src/features/hooks/hookEvents";
 import type { HookContext, HookCallback } from "../src/features/hooks/hookContext";
 import { HookManager } from "../src/features/hooks/hookManager";

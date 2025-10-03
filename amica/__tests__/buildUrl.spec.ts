@@ -1,5 +1,10 @@
-import { describe, expect, test, afterEach } from "@jest/globals";
-import { buildUrl, setMockBaseUrl } from "@/utils/buildUrl";
+import { describe, expect, test, afterEach, vi } from "vitest";
+import { buildUrl } from "@/utils/buildUrl";
+
+// Helper to mock BASE_URL
+function setMockBaseUrl(url: string) {
+  vi.stubEnv('BASE_URL', url);
+}
 
 describe("buildUrl", () => {
   afterEach(() => {

@@ -1,8 +1,8 @@
-import { describe, expect, test, beforeEach, jest } from "@jest/globals";
+import { describe, expect, test, beforeEach, vi } from "vitest";
 import { Base64ToBlob, BlobToBase64 } from "../src/utils/blobDataUtils";
 
 // Mock global fetch for data URLs
-global.fetch = jest.fn((url: string) => {
+global.fetch = vi.fn((url: string) => {
   return Promise.resolve({
     blob: () => {
       // Parse data URL and create blob

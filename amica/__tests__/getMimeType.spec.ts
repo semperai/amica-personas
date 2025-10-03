@@ -1,15 +1,15 @@
-import { describe, expect, test, jest, beforeEach } from "@jest/globals";
+import { describe, expect, test, jest, beforeEach } from "vitest";
 import { getMimeType, getExtension, mimeTypeCheck } from "../src/utils/getMimeType";
 
 // Mock MediaRecorder
-const mockIsTypeSupported = jest.fn();
+const mockIsTypeSupported = vi.fn();
 global.MediaRecorder = {
   isTypeSupported: mockIsTypeSupported,
 } as any;
 
 describe("getMimeType", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe("getAudioMimeType", () => {
@@ -110,7 +110,7 @@ describe("getMimeType", () => {
 
   describe("mimeTypeCheck", () => {
     test("should log all mime types and their support status", () => {
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation();
       mockIsTypeSupported.mockReturnValue(true);
 
       mimeTypeCheck();

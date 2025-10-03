@@ -1,4 +1,4 @@
-import { describe, expect, test, jest, beforeEach } from "@jest/globals";
+import { describe, expect, test, jest, beforeEach } from "vitest";
 import { HookManager } from "../src/features/hooks/hookManager";
 import type { HookEvent } from "../src/features/hooks/hookEvents";
 
@@ -129,7 +129,7 @@ describe("HookManager", () => {
 
   describe("trigger", () => {
     test("should execute hook callback with context", async () => {
-      const callback = jest.fn((context) => context);
+      const callback = vi.fn((context) => context);
       hookManager.register('before:user:message:receive', callback);
 
       await hookManager.trigger('before:user:message:receive', { message: 'test' });
@@ -186,7 +186,7 @@ describe("HookManager", () => {
     });
 
     test("should skip hooks that don't meet condition", async () => {
-      const callback = jest.fn((context) => context);
+      const callback = vi.fn((context) => context);
       hookManager.register('before:user:message:receive', callback, {
         condition: (context) => context.message.length > 10
       });
@@ -197,7 +197,7 @@ describe("HookManager", () => {
     });
 
     test("should execute hooks that meet condition", async () => {
-      const callback = jest.fn((context) => context);
+      const callback = vi.fn((context) => context);
       hookManager.register('before:user:message:receive', callback, {
         condition: (context) => context.message.length > 5
       });
@@ -230,9 +230,9 @@ describe("HookManager", () => {
     });
 
     test("should isolate errors and continue with other hooks", async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-      const callback1 = jest.fn(() => { throw new Error('Hook error'); });
-      const callback2 = jest.fn((context) => context);
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation();
+      const callback1 = vi.fn(() => { throw new Error('Hook error'); });
+      const callback2 = vi.fn((context) => context);
 
       hookManager.register('before:user:message:receive', callback1, { priority: 10 });
       hookManager.register('before:user:message:receive', callback2, { priority: 20 });
@@ -250,7 +250,7 @@ describe("HookManager", () => {
     });
 
     test("should track errors in metrics", async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation();
       const hookId = hookManager.register('before:user:message:receive', () => {
         throw new Error('Test error');
       });
@@ -265,7 +265,7 @@ describe("HookManager", () => {
     });
 
     test("should timeout hooks that take too long", async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation();
       const hookId = hookManager.register('before:user:message:receive', async () => {
         await new Promise(resolve => setTimeout(resolve, 10000));
         return { message: 'should not reach' };
@@ -282,7 +282,7 @@ describe("HookManager", () => {
 
     test("should return context when disabled", async () => {
       hookManager.setEnabled(false);
-      const callback = jest.fn((context) => ({ ...context, message: 'modified' }));
+      const callback = vi.fn((context) => ({ ...context, message: 'modified' }));
       hookManager.register('before:user:message:receive', callback);
 
       const result = await hookManager.trigger('before:user:message:receive', { message: 'test' });
@@ -348,7 +348,7 @@ describe("HookManager", () => {
     });
 
     test("should aggregate errors across hooks", async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation();
       hookManager.register('before:user:message:receive', () => { throw new Error('Error 1'); });
       hookManager.register('before:user:message:receive', () => { throw new Error('Error 2'); });
 
@@ -388,7 +388,7 @@ describe("HookManager", () => {
 
   describe("setEnabled / isEnabled", () => {
     test("should enable/disable hook execution", async () => {
-      const callback = jest.fn((context) => context);
+      const callback = vi.fn((context) => context);
       hookManager.register('before:user:message:receive', callback);
 
       hookManager.setEnabled(false);

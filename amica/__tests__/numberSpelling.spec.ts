@@ -1,4 +1,4 @@
-import { describe, expect, test } from "@jest/globals";
+import { describe, expect, test } from "vitest";
 import { convertNumberToWordsEN } from "../src/utils/numberSpelling";
 
 describe("convertNumberToWordsEN", () => {

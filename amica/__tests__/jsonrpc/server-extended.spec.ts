@@ -4,23 +4,23 @@
  */
 
 // Mock dependencies BEFORE importing anything that uses them
-jest.mock('@/features/chat/chat');
-jest.mock('@/features/vrmViewer/viewer', () => ({
-  Viewer: jest.fn().mockImplementation(() => ({
+vi.mock('@/features/chat/chat');
+vi.mock('@/features/vrmViewer/viewer', () => ({
+  Viewer: vi.fn().mockImplementation(() => ({
     isReady: true,
     model: null,
     room: null,
-    loadVrm: jest.fn(),
-    unloadVRM: jest.fn(),
-    loadRoom: jest.fn(),
-    unloadRoom: jest.fn(),
-    resetCamera: jest.fn(),
-    loadSplat: jest.fn(),
+    loadVrm: vi.fn(),
+    unloadVRM: vi.fn(),
+    loadRoom: vi.fn(),
+    unloadRoom: vi.fn(),
+    resetCamera: vi.fn(),
+    loadSplat: vi.fn(),
   })),
 }));
-jest.mock('@/features/hooks/hookManager');
-jest.mock('@/utils/config', () => ({
-  config: jest.fn((key: string) => {
+vi.mock('@/features/hooks/hookManager');
+vi.mock('@/utils/config', () => ({
+  config: vi.fn((key: string) => {
     const configs: Record<string, string> = {
       test_key: 'test_value',
     };
@@ -36,46 +36,46 @@ import { JsonRpcRequest } from '@/features/jsonrpc/protocol';
 
 describe('JsonRpcServer Extended Tests', () => {
   let server: JsonRpcServer;
-  let mockChat: jest.Mocked<Chat>;
-  let mockViewer: jest.Mocked<Viewer>;
-  let mockHookManager: jest.Mocked<HookManager>;
+  let mockChat: MockedObject<Chat>;
+  let mockViewer: MockedObject<Viewer>;
+  let mockHookManager: MockedObject<HookManager>;
 
   beforeEach(() => {
-    mockChat = new Chat() as jest.Mocked<Chat>;
-    mockViewer = new Viewer() as jest.Mocked<Viewer>;
-    mockHookManager = new HookManager() as jest.Mocked<HookManager>;
+    mockChat = new Chat() as MockedObject<Chat>;
+    mockViewer = new Viewer() as MockedObject<Viewer>;
+    mockHookManager = new HookManager() as MockedObject<HookManager>;
 
-    mockChat.receiveMessageFromUser = jest.fn().mockResolvedValue(undefined);
-    mockChat.interrupt = jest.fn().mockResolvedValue(0);
-    mockChat.makeAndHandleStream = jest.fn().mockResolvedValue(undefined);
-    mockChat.getMessageList = jest.fn().mockReturnValue([]);
+    mockChat.receiveMessageFromUser = vi.fn().mockResolvedValue(undefined);
+    mockChat.interrupt = vi.fn().mockResolvedValue(0);
+    mockChat.makeAndHandleStream = vi.fn().mockResolvedValue(undefined);
+    mockChat.getMessageList = vi.fn().mockReturnValue([]);
     mockChat.messageList = [];
     mockChat.currentStreamIdx = 0;
-    mockChat.isAwake = jest.fn().mockReturnValue(true);
-    mockChat.idleTime = jest.fn().mockReturnValue(5000);
+    mockChat.isAwake = vi.fn().mockReturnValue(true);
+    mockChat.idleTime = vi.fn().mockReturnValue(5000);
 
     mockViewer.isReady = true;
     mockViewer.model = {
-      position: { set: jest.fn(), x: 0, y: 0, z: 0 },
-      rotation: { set: jest.fn(), x: 0, y: 0, z: 0 },
-      scale: { set: jest.fn(), x: 1, y: 1, z: 1 },
-      speak: jest.fn(),
+      position: { set: vi.fn(), x: 0, y: 0, z: 0 },
+      rotation: { set: vi.fn(), x: 0, y: 0, z: 0 },
+      scale: { set: vi.fn(), x: 1, y: 1, z: 1 },
+      speak: vi.fn(),
     } as any;
     mockViewer.room = null;
-    mockViewer.loadVrm = jest.fn().mockResolvedValue(undefined);
-    mockViewer.unloadVRM = jest.fn();
-    mockViewer.loadRoom = jest.fn().mockResolvedValue(undefined);
-    mockViewer.unloadRoom = jest.fn();
-    mockViewer.resetCamera = jest.fn();
-    mockViewer.loadSplat = jest.fn().mockResolvedValue(undefined);
+    mockViewer.loadVrm = vi.fn().mockResolvedValue(undefined);
+    mockViewer.unloadVRM = vi.fn();
+    mockViewer.loadRoom = vi.fn().mockResolvedValue(undefined);
+    mockViewer.unloadRoom = vi.fn();
+    mockViewer.resetCamera = vi.fn();
+    mockViewer.loadSplat = vi.fn().mockResolvedValue(undefined);
 
-    mockHookManager.register = jest.fn().mockReturnValue('hook-123');
-    mockHookManager.unregister = jest.fn().mockReturnValue(true);
-    mockHookManager.unregisterAll = jest.fn();
-    mockHookManager.trigger = jest.fn().mockResolvedValue({});
-    mockHookManager.getHooks = jest.fn().mockReturnValue([]);
-    mockHookManager.setEnabled = jest.fn();
-    mockHookManager.clear = jest.fn();
+    mockHookManager.register = vi.fn().mockReturnValue('hook-123');
+    mockHookManager.unregister = vi.fn().mockReturnValue(true);
+    mockHookManager.unregisterAll = vi.fn();
+    mockHookManager.trigger = vi.fn().mockResolvedValue({});
+    mockHookManager.getHooks = vi.fn().mockReturnValue([]);
+    mockHookManager.setEnabled = vi.fn();
+    mockHookManager.clear = vi.fn();
 
     server = new JsonRpcServer(mockChat, mockViewer, mockHookManager);
   });
@@ -157,10 +157,10 @@ describe('JsonRpcServer Extended Tests', () => {
   describe('Character Methods Extended', () => {
     beforeEach(() => {
       mockViewer.model = {
-        position: { set: jest.fn(), x: 0, y: 0, z: 0 },
-        rotation: { set: jest.fn(), x: 0, y: 0, z: 0 },
-        scale: { set: jest.fn(), x: 1, y: 1, z: 1 },
-        speak: jest.fn(),
+        position: { set: vi.fn(), x: 0, y: 0, z: 0 },
+        rotation: { set: vi.fn(), x: 0, y: 0, z: 0 },
+        scale: { set: vi.fn(), x: 1, y: 1, z: 1 },
+        speak: vi.fn(),
       } as any;
     });
 
@@ -293,12 +293,12 @@ describe('JsonRpcServer Extended Tests', () => {
 
     beforeEach(() => {
       localStorageMock = {
-        setItem: jest.fn(),
-        getItem: jest.fn(),
-        removeItem: jest.fn(),
-        clear: jest.fn(),
+        setItem: vi.fn(),
+        getItem: vi.fn(),
+        removeItem: vi.fn(),
+        clear: vi.fn(),
         length: 0,
-        key: jest.fn(),
+        key: vi.fn(),
       };
       (global as any).localStorage = localStorageMock;
     });

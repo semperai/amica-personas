@@ -1,12 +1,12 @@
-import { describe, expect, test, jest } from "@jest/globals";
+import { describe, expect, test, vi } from "vitest";
 import { render } from "@testing-library/react";
 import { UserText } from "@/components/userText";
 import { AssistantText } from "@/components/assistantText";
 import { SwitchBox, VerticalSwitchBox } from "@/components/switchBox";
 
 // Mock config
-jest.mock("@/utils/config", () => ({
-  config: jest.fn((key: string) => {
+vi.mock("@/utils/config", () => ({
+  config: vi.fn((key: string) => {
     if (key === "name") return "Amica";
     return "";
   }),
@@ -120,7 +120,7 @@ describe("Text Components", () => {
   });
 
   describe("SwitchBox", () => {
-    const mockOnChange = jest.fn();
+    const mockOnChange = vi.fn();
 
     test("should match snapshot when enabled", () => {
       const { container } = render(
@@ -185,7 +185,7 @@ describe("Text Components", () => {
   });
 
   describe("VerticalSwitchBox", () => {
-    const mockOnChange = jest.fn();
+    const mockOnChange = vi.fn();
 
     test("should match snapshot when enabled", () => {
       const { container } = render(

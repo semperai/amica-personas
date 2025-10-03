@@ -1,4 +1,4 @@
-import { describe, expect, test } from "@jest/globals";
+import { describe, expect, test } from "vitest";
 import { buildPrompt, buildVisionPrompt } from "@/utils/buildPrompt";
 import type { Message } from "@/features/chat/messages";
 
