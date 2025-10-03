@@ -55,6 +55,8 @@ jobs:
   amica:
     name: Amica
     runs-on: ubuntu-latest
+    env:
+      NODE_OPTIONS: --max-old-space-size=8192
     steps:
       - uses: actions/checkout@v4
 
@@ -69,7 +71,7 @@ jobs:
         run: cd amica && npm ci
 
       - name: Run tests with coverage
-        run: cd amica && NODE_OPTIONS="--max-old-space-size=4096" npm run test -- --coverage --reporter=default
+        run: cd amica && npm run test -- --coverage --reporter=default
 
       - name: Upload coverage to Coveralls
         uses: coverallsapp/github-action@v2
