@@ -45,7 +45,8 @@ export default function HeroSection() {
           </h1>
 
           <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto bg-background/90 rounded-lg px-6 py-3 backdrop-blur-sm inline-block">
-            Token launcher platform for AI personas with bonding curves, automated graduation, and cross-chain support
+            Launch interactive AI agent tokens with immersive
+3D/VR/AR, encrypted messaging, and decentralized compute 
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
