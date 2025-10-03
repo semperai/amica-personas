@@ -536,11 +536,11 @@ export class Viewer {
     this.particleRenderer = new BatchedParticleRenderer();
     scene.add(this.particleRenderer);
 
-    new QuarksLoader().load('particles/cartoon_star_field', (obj) => {
-      this.particleCartoonStarField = obj;
-
-      this.newParticleInstance();
-    });
+    // Disabled particle loading - file not found
+    // new QuarksLoader().load('particles/cartoon_star_field', (obj) => {
+    //   this.particleCartoonStarField = obj;
+    //   this.newParticleInstance();
+    // });
 
     window.addEventListener("resize", () => {
       this.resize();
