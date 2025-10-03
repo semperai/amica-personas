@@ -79,6 +79,7 @@ export default function CreatePersonaPage() {
   const [formData, setFormData] = useState({
     name: '',
     symbol: '',
+    domain: '',
     pairingToken: '',
     agentToken: '',
     minAgentTokens: '0',
@@ -92,6 +93,7 @@ export default function CreatePersonaPage() {
   const [showAgentConfig, setShowAgentConfig] = useState(false);
   const [showPairingDropdown, setShowPairingDropdown] = useState(false);
   const [selectedPairingToken, setSelectedPairingToken] = useState<TokenOption | null>(null);
+  const [domainError, setDomainError] = useState<string>('');
   const [agentTokenDetails, setAgentTokenDetails] = useState<{
     name: string;
     symbol: string;
@@ -280,6 +282,42 @@ export default function CreatePersonaPage() {
     }
   }, [agentTokenName, agentTokenSymbol, agentTokenDecimals, formData.agentToken]);
 
+  // Validate domain according to contract rules
+  const validateDomain = (domain: string): string => {
+    if (!domain) return 'Domain is required';
+    if (domain.length < 1) return 'Domain must be at least 1 character';
+    if (domain.length > 32) return 'Domain must be 32 characters or less';
+
+    // Must start with lowercase letter
+    if (!/^[a-z]/.test(domain)) {
+      return 'Domain must start with a lowercase letter (a-z)';
+    }
+
+    // Must end with lowercase letter or digit
+    if (!/[a-z0-9]$/.test(domain)) {
+      return 'Domain must end with a lowercase letter or digit';
+    }
+
+    // Can only contain lowercase letters, digits, and hyphens
+    if (!/^[a-z0-9-]+$/.test(domain)) {
+      return 'Domain can only contain lowercase letters, digits, and hyphens';
+    }
+
+    // Cannot start or end with hyphen (already checked start, check end again)
+    if (domain.startsWith('-') || domain.endsWith('-')) {
+      return 'Domain cannot start or end with a hyphen';
+    }
+
+    return '';
+  };
+
+  // Convert string to bytes32 for contract
+  const stringToBytes32 = (str: string): `0x${string}` => {
+    // Convert string to hex, pad to 32 bytes
+    const hex = str.split('').map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('');
+    return `0x${hex.padEnd(64, '0')}` as `0x${string}`;
+  };
+
   const handleAddMetadata = () => {
     if (newMetadataKey && newMetadataValue) {
       setFormData({
@@ -322,6 +360,13 @@ export default function CreatePersonaPage() {
       return;
     }
 
+    // Validate domain
+    const domainValidationError = validateDomain(formData.domain);
+    if (domainValidationError) {
+      setDomainError(domainValidationError);
+      return;
+    }
+
     // Check if we need approval first
     if (needsApproval) {
       alert('Please approve tokens first');
@@ -337,6 +382,9 @@ export default function CreatePersonaPage() {
         ? parseUnits(formData.minAgentTokens, agentTokenDetails.decimals)
         : BigInt(0);
 
+      // Convert domain to bytes32
+      const domainBytes32 = stringToBytes32(formData.domain);
+
       await writeCreate({
         address: addresses.personaFactory as `0x${string}`,
         abi: FACTORY_ABI,
@@ -345,8 +393,7 @@ export default function CreatePersonaPage() {
           pairingToken as `0x${string}`,
           formData.name,
           formData.symbol,
-          formData.metadataKeys,
-          formData.metadataValues,
+          domainBytes32,
           parseEther(formData.initialBuyAmount),
           agentToken as `0x${string}`,
           minAgentTokens,
@@ -395,6 +442,48 @@ export default function CreatePersonaPage() {
               maxLength={10}
             />
             <p className="text-xs text-muted-foreground mt-2">3-10 characters, letters only</p>
+          </div>
+
+          <div className="mb-8">
+            <label className="block text-sm font-light text-foreground/80 mb-3">Domain</label>
+            <div className="relative">
+              <input
+                type="text"
+                value={formData.domain}
+                onChange={(e) => {
+                  const value = e.target.value.toLowerCase();
+                  setFormData({ ...formData, domain: value });
+                  if (value) {
+                    const error = validateDomain(value);
+                    setDomainError(error);
+                  } else {
+                    setDomainError('');
+                  }
+                }}
+                className={`w-full p-4 bg-muted backdrop-blur-sm border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors ${
+                  domainError ? 'border-red-500/50 focus:border-red-500' : 'border-border focus:border-border'
+                }`}
+                placeholder="my-awesome-persona"
+                maxLength={32}
+              />
+              {formData.domain && (
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                  .amica.bot
+                </div>
+              )}
+            </div>
+            {domainError ? (
+              <p className="text-xs text-red-400 mt-2">{domainError}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-2">
+                Your unique subdomain on amica.bot (lowercase letters, digits, hyphens only)
+              </p>
+            )}
+            {formData.domain && !domainError && (
+              <p className="text-xs text-green-400 mt-2">
+                ✓ Will be available at: {formData.domain}.amica.bot
+              </p>
+            )}
           </div>
 
           <div className="mb-8">
@@ -703,7 +792,7 @@ export default function CreatePersonaPage() {
 
               <button
                 onClick={handleCreate}
-                disabled={!address || isCreatePending || isCreateProcessing || !formData.name || !formData.symbol || needsApproval}
+                disabled={!address || isCreatePending || isCreateProcessing || !formData.name || !formData.symbol || !formData.domain || domainError !== '' || needsApproval}
                 className="w-full gradient-brand text-white py-4 rounded-xl hover:opacity-90 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transition-all duration-300 font-light text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
               >
                 {isCreatePending || isCreateProcessing ? 'Creating...' : isCreateSuccess ? 'Created! Redirecting...' : 'Create Persona'}
