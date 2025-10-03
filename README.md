@@ -6,6 +6,8 @@
 
 > A decentralized platform for creating, trading, and interacting with AI personas through blockchain technology
 
+**Repository**: [https://github.com/semperai/amica-personas](https://github.com/semperai/amica-personas)
+
 ## 🌟 Overview
 
 Amica Protocol revolutionizes AI monetization by enabling creators to launch ERC20 tokens representing AI personas. Each persona is a customizable 3D AI character capable of natural conversation, service provision, and autonomous economic activity. The protocol features bonding curves for fair price discovery, automatic graduation to Uniswap, and innovative agent token integration that allows existing crypto communities to participate in AI persona launches.
@@ -28,9 +30,11 @@ This monorepo contains all components of the Amica Protocol ecosystem:
 ```
 amica-protocol/
 ├── contract/          # Smart contracts (Solidity)
-└── docs/              # Documentation
+├── docs/              # Documentation
 ├── website/           # Frontend dApp (Next.js)
 ├── subsquid/          # Multi-chain indexer
+├── subdomain-service/ # Subdomain service for personas
+├── amica/             # 3D AI persona viewer
 └── paper/             # Technical whitepaper (LaTeX)
 ```
 
@@ -38,7 +42,7 @@ amica-protocol/
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 22+
 - Yarn or npm
 - Docker & Docker Compose
 - Hardhat
@@ -48,8 +52,8 @@ amica-protocol/
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/amica-protocol
-cd amica-protocol
+git clone https://github.com/semperai/amica-personas
+cd amica-personas
 
 # Install dependencies for all packages
 yarn install # or npm install
@@ -124,28 +128,6 @@ Each persona has 1B tokens distributed as:
 - 22.22% - AMICA deposit
 - 22.23% - Agent rewards
 
-## 🛠️ Technical Stack
-
-- **Smart Contracts**: Solidity 0.8.24, OpenZeppelin, Hardhat
-- **Frontend**: Next.js, TypeScript, wagmi, RainbowKit, TailwindCSS
-- **Indexer**: Subsquid, PostgreSQL, GraphQL, TypeORM
-- **Infrastructure**: Docker, Kubernetes (optional)
-- **AI Integration**: Three.js, @pixiv/three-vrm, LLM providers
-
-## 📊 Architecture
-
-```mermaid
-graph TD
-    A[User] -->|Creates/Trades| B[Frontend dApp]
-    B -->|Interacts| C[Smart Contracts]
-    C -->|Events| D[Indexer]
-    D -->|API| B
-    C -->|Graduates to| E[Uniswap V2]
-    F[Agent Token Holders] -->|Deposit| C
-    G[AMICA Holders] -->|Burn & Claim| C
-    H[LP Stakers] -->|Stake| I[Staking Contract]
-```
-
 ## 🔗 Contract Addresses
 
 ### Mainnet (Ethereum)
@@ -198,13 +180,14 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 - [Frontend](./website/README.md) - dApp development guide
 - [Indexer](./subsquid/README.md) - Multi-chain indexing setup
 - [Whitepaper](./paper/amica.pdf) - Technical and economic details
-- [Docs](https://docs.heyamica.com) - Comprehensive protocol documentation
+- [Docs](https://personas.heyamica.com/docs) - Comprehensive protocol documentation
 
 ## 🌐 Links
 
 - Website: [heyamica.com](https://heyamica.com)
-- Documentation: [docs.heyamica.com](https://docs.heyamica.com)
+- Documentation: [personas.heyamica.com/docs](https://personas.heyamica.com/docs)
 - Twitter: [@heyamica](https://twitter.com/heyamica)
+- Repository: [github.com/semperai/amica-personas](https://github.com/semperai/amica-personas)
 
 ## ⚠️ Disclaimer
 
