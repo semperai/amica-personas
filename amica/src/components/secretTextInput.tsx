@@ -1,4 +1,3 @@
-import { KnownIconType } from "@charcoal-ui/icons";
 import { useState, ButtonHTMLAttributes } from "react";
 import { Switch } from '@headlessui/react';
 import { clsx } from "clsx";

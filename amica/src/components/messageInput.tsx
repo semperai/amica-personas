@@ -1,8 +1,3 @@
-import * as ort from "onnxruntime-web"
-ort.env.wasm.wasmPaths = '/_next/static/chunks/'
-ort.env.wasm.numThreads = 1
-ort.env.wasm.simd = true
-
 import { useContext, useEffect, useRef, useState } from "react";
 import { useMicVAD } from "@ricky0123/vad-react"
 import { Mic, Pause, Send, Loader2 } from "lucide-react";
@@ -39,14 +34,14 @@ export default function MessageInput({
 
   const vad = useMicVAD({
     startOnLoad: false,
-    // modelURL: '/silero_vad_v5.onnx',
-    // workletURL: '/vad.worklet.bundle.min.js',
+    onnxWASMBasePath: 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/',
+    baseAssetPath: 'https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.28/dist/',
     onSpeechStart: () => {
-      console.debug('vad', 'on_speech_start');
+      console.log('[VAD] Speech started');
       console.time('performance_speech');
     },
     onSpeechEnd: (audio: Float32Array) => {
-      console.debug('vad', 'on_speech_end');
+      console.log('[VAD] Speech ended, audio length:', audio.length);
       console.timeEnd('performance_speech');
       console.time('performance_transcribe');
       (window as any).chatvrm_latency_tracker = {
@@ -55,61 +50,73 @@ export default function MessageInput({
       };
 
       try {
-        switch (config("stt_backend")) {
+        const sttBackend = config("stt_backend");
+        console.log('[STT] Using backend:', sttBackend);
+
+        switch (sttBackend) {
           case 'whisper_browser': {
-            console.debug('whisper_browser attempt');
+            console.log('[STT] Starting whisper_browser transcription');
             // since VAD sample rate is same as whisper we do nothing here
             // both are 16000
             const audioCtx = new AudioContext();
             const buffer = audioCtx.createBuffer(1, audio.length, 16000);
             buffer.copyToChannel(new Float32Array(audio), 0, 0);
             transcriber.start(buffer);
+            console.log('[STT] whisper_browser transcription started');
             break;
           }
           case 'whisper_openai': {
-            console.debug('whisper_openai attempt');
+            console.log('[STT] Starting whisper_openai transcription');
             const wav = new WaveFile();
             wav.fromScratch(1, 16000, '32f', audio);
             const file = new File([new Uint8Array(wav.toBuffer())], "input.wav", { type: "audio/wav" });
+            console.log('[STT] Created WAV file, size:', file.size);
 
             let prompt;
             // TODO load prompt if it exists
 
             (async () => {
               try {
+                console.log('[STT] Calling OpenAI Whisper API...');
                 const transcript = await openaiWhisper(file, prompt);
+                console.log('[STT] OpenAI Whisper response:', transcript);
                 setWhisperOpenAIOutput(transcript);
               } catch (e: any) {
-                console.error('whisper_openai error', e);
+                console.error('[STT] whisper_openai error', e);
                 alert.error('whisper_openai error', e.toString());
               }
             })();
             break;
           }
           case 'whispercpp': {
-            console.debug('whispercpp attempt');
+            console.log('[STT] Starting whispercpp transcription');
             const wav = new WaveFile();
             wav.fromScratch(1, 16000, '32f', audio);
             wav.toBitDepth('16');
             const file = new File([new Uint8Array(wav.toBuffer())], "input.wav", { type: "audio/wav" });
+            console.log('[STT] Created WAV file, size:', file.size);
 
             let prompt;
             // TODO load prompt if it exists
 
             (async () => {
               try {
+                console.log('[STT] Calling Whisper.cpp API...');
                 const transcript = await whispercpp(file, prompt);
+                console.log('[STT] Whisper.cpp response:', transcript);
                 setWhisperCppOutput(transcript);
               } catch (e: any) {
-                console.error('whispercpp error', e);
+                console.error('[STT] whispercpp error', e);
                 alert.error('whispercpp error', e.toString());
               }
             })();
             break;
           }
+          default:
+            console.log('[STT] Unknown or no backend configured:', sttBackend);
         }
       } catch (e: any) {
-        console.error('stt_backend error', e);
+        console.error('[STT] stt_backend error', e);
         alert.error('STT backend error', e.toString());
       }
     },
@@ -120,10 +127,13 @@ export default function MessageInput({
   }
 
   function handleTranscriptionResult(preprocessed: string) {
+    console.log('[Transcription] Raw result:', preprocessed);
     const cleanText = cleanTranscript(preprocessed);
+    console.log('[Transcription] Cleaned text:', cleanText);
     const wakeWordEnabled = config("wake_word_enabled") === 'true';
     const textStartsWithWakeWord = wakeWordEnabled && cleanFromPunctuation(cleanText).startsWith(cleanFromPunctuation(config("wake_word")));
     const text = wakeWordEnabled && textStartsWithWakeWord ? cleanFromWakeWord(cleanText, config("wake_word")) : cleanText;
+    console.log('[Transcription] Final text:', text, 'Wake word enabled:', wakeWordEnabled);
 
     if (wakeWordEnabled) {
       // Text start with wake word

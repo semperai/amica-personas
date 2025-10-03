@@ -1,7 +1,6 @@
-import { KnownIconType } from "@charcoal-ui/icons";
 import { ButtonHTMLAttributes } from "react";
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
-  iconName: keyof KnownIconType;
+  iconName: string;
   isProcessing: boolean;
   label?: string;
 };
