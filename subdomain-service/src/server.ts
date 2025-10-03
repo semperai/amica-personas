@@ -1,9 +1,13 @@
+// IMPORTANT: Import instrument at the very top
+import './instrument';
+
 import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import fs from 'fs';
 import { GraphQLClient } from 'graphql-request';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import * as Sentry from '@sentry/node';
 import { GET_PERSONA_BY_DOMAIN } from './graphql';
 import { PersonasResponse } from './types';
 import { parseSubdomain, getAmicaVersion, buildAmicaConfig, log } from './utils';
@@ -407,6 +411,17 @@ app.get('*', async (req: Request, res: Response, next: NextFunction) => {
     log('Error:', error);
     return res.status(500).send(renderErrorPage(error as Error));
   }
+});
+
+// The error handler must be registered before any other error middleware and after all controllers
+Sentry.setupExpressErrorHandler(app);
+
+// Optional fallthrough error handler
+app.use(function onError(err: Error, req: Request, res: Response, next: NextFunction) {
+  // The error id is attached to `res.sentry` to be returned
+  // and optionally displayed to the user for support.
+  res.statusCode = 500;
+  res.end((res as any).sentry + "\n");
 });
 
 app.listen(PORT, () => {
