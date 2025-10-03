@@ -10,6 +10,18 @@ export default defineConfig({
     setupFiles: ['./vitest.setup.ts'],
     include: ['**/__tests__/**/*.spec.[jt]s?(x)'],
     testTimeout: 10000,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov', 'html'],
+      exclude: [
+        'node_modules/**',
+        'dist/**',
+        '**/*.spec.ts',
+        '**/*.spec.tsx',
+        'vitest.config.ts',
+        'vitest.setup.ts',
+      ],
+    },
   },
   resolve: {
     alias: {
