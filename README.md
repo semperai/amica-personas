@@ -3,6 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.24-blue)](https://soliditylang.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue)](https://www.typescriptlang.org/)
+[![Coverage Status](https://coveralls.io/repos/github/semperai/amica-personas/badge.svg?branch=master)](https://coveralls.io/github/semperai/amica-personas?branch=master)
 
 > A decentralized platform for creating, trading, and interacting with AI personas through blockchain technology
 

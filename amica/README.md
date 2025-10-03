@@ -12,7 +12,6 @@
 
 [![twitter](https://img.shields.io/badge/Twitter%20-black)](https://twitter.com/arbius_ai)
 [![License](https://img.shields.io/github/license/semperai/amica)](https://github.com/semperai/amica/blob/main/LICENSE)
-[![Coverage Status](https://coveralls.io/repos/github/semperai/amica-personas/badge.svg?branch=master)](https://coveralls.io/github/semperai/amica-personas?branch=master)
 [![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Fsemperai%2Famica&count_bg=%2379C83D&title_bg=%23555555&icon=&icon_color=%23E7E7E7&title=hits&edge_flat=false)](https://hits.seeyoufarm.com)
 [![GitHub issues](https://img.shields.io/github/issues/semperai/amica?color=critical&label=Issues)](https://github.com/semperai/amica/issues?q=is%3Aopen+is%3Aissue)
 [![GitHub closed issues](https://img.shields.io/github/issues-closed/semperai/amica?color=success&label=Issues)](https://github.com/semperai/amica/issues?q=is%3Aissue+is%3Aclosed)
