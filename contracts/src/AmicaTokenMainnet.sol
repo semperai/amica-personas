@@ -7,7 +7,8 @@ import {OwnableUpgradeable} from
 import {PausableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeERC20} from
+    "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
  * @title AmicaTokenMainnet
@@ -275,8 +276,7 @@ contract AmicaTokenMainnet is
         TokenConfig memory config = tokenConfigs[token];
         if (!config.enabled || amount == 0) return 0;
 
-        amountToMint =
-            (amount * config.exchangeRate) / (10 ** config.decimals);
+        amountToMint = (amount * config.exchangeRate) / (10 ** config.decimals);
     }
 
     /**

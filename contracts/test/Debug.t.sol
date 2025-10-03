@@ -48,10 +48,16 @@ contract DebugTest is Fixtures {
         vm.stopPrank();
 
         console.log("After deposit - checking agentDeposits");
-        console.log("agentDeposits[tokenId][user2]:", personaFactory.agentDeposits(tokenId, user2));
+        console.log(
+            "agentDeposits[tokenId][user2]:",
+            personaFactory.agentDeposits(tokenId, user2)
+        );
 
-        (, uint256 tokensPurchased1, uint256 totalAgentDeposited1) = personaFactory.preGraduationStates(tokenId);
-        console.log("totalAgentDeposited before graduation:", totalAgentDeposited1);
+        (, uint256 tokensPurchased1, uint256 totalAgentDeposited1) =
+            personaFactory.preGraduationStates(tokenId);
+        console.log(
+            "totalAgentDeposited before graduation:", totalAgentDeposited1
+        );
 
         // User3 buys to graduate
         vm.prank(user3);
@@ -65,10 +71,16 @@ contract DebugTest is Fixtures {
         require(graduationTimestamp > 0, "Must be graduated");
 
         console.log("\nAfter graduation - checking state");
-        console.log("agentDeposits[tokenId][user2]:", personaFactory.agentDeposits(tokenId, user2));
+        console.log(
+            "agentDeposits[tokenId][user2]:",
+            personaFactory.agentDeposits(tokenId, user2)
+        );
 
-        (, uint256 tokensPurchased2, uint256 totalAgentDeposited2) = personaFactory.preGraduationStates(tokenId);
-        console.log("totalAgentDeposited after graduation:", totalAgentDeposited2);
+        (, uint256 tokensPurchased2, uint256 totalAgentDeposited2) =
+            personaFactory.preGraduationStates(tokenId);
+        console.log(
+            "totalAgentDeposited after graduation:", totalAgentDeposited2
+        );
 
         // Wait for claim delay
         vm.warp(block.timestamp + 1 days + 1);

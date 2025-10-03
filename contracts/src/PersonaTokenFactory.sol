@@ -346,10 +346,7 @@ contract PersonaTokenFactory is
      * @param amount1 Amount of token1 collected
      */
     event FeesCollected(
-        uint256 indexed tokenId,
-        PoolId poolId,
-        uint256 amount0,
-        uint256 amount1
+        uint256 indexed tokenId, PoolId poolId, uint256 amount0, uint256 amount1
     );
 
     /**

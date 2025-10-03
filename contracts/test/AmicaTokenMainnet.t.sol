@@ -30,7 +30,9 @@ contract AmicaTokenMainnetTest is Test {
         // Deploy using upgradeable proxy
         address proxy = Upgrades.deployUUPSProxy(
             "AmicaTokenMainnet.sol",
-            abi.encodeCall(AmicaTokenMainnet.initialize, (owner, INITIAL_SUPPLY))
+            abi.encodeCall(
+                AmicaTokenMainnet.initialize, (owner, INITIAL_SUPPLY)
+            )
         );
 
         amica = AmicaTokenMainnet(proxy);
@@ -164,7 +166,8 @@ contract AmicaTokenMainnetTest is Test {
         tokens[0] = address(mockToken);
 
         // Preview burning 1% of supply
-        uint256[] memory amounts = amica.previewBurnAndClaim(10_000_000e18, tokens);
+        uint256[] memory amounts =
+            amica.previewBurnAndClaim(10_000_000e18, tokens);
 
         assertEq(amounts[0], 10e18); // 1% of 1000
     }
