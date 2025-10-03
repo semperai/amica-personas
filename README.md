@@ -1,53 +1,55 @@
-# Amica Protocol 🤖💫
+# Amica Personas
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.24-blue)](https://soliditylang.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue)](https://www.typescriptlang.org/)
 [![Coverage Status](https://coveralls.io/repos/github/semperai/amica-personas/badge.svg?branch=master)](https://coveralls.io/github/semperai/amica-personas?branch=master)
 
-> A decentralized platform for creating, trading, and interacting with AI personas through blockchain technology
+> Launch interactive AI agent tokens with immersive 3D/VR/AR, encrypted messaging, and decentralized compute
 
-**Repository**: [https://github.com/semperai/amica-personas](https://github.com/semperai/amica-personas)
+**Website**: [personas.heyamica.com](https://personas.heyamica.com)
+**Repository**: [github.com/semperai/amica-personas](https://github.com/semperai/amica-personas)
 
-## 🌟 Overview
+## Overview
 
-Amica Protocol revolutionizes AI monetization by enabling creators to launch ERC20 tokens representing AI personas. Each persona is a customizable 3D AI character capable of natural conversation, service provision, and autonomous economic activity. The protocol features bonding curves for fair price discovery, automatic graduation to Uniswap, and innovative agent token integration that allows existing crypto communities to participate in AI persona launches.
+Amica Personas is a decentralized platform for launching AI agent tokens on the blockchain. Each persona is a unique AI agent with its own personality, 3D avatar, and ERC-20 token that can be traded on decentralized exchanges.
 
-### Key Innovations
+### Why Personas Matter
 
-- 🎭 **AI Persona NFTs**: Each persona is an ERC721 NFT with an associated ERC20 token
-- 📈 **Bonding Curves**: Bancor-style automated market making for fair launches
-- 🤝 **Agent Token Integration**: Existing token communities can participate with dedicated rewards
-- 🔄 **Auto-Graduation**: Automatic Uniswap V2 pair creation at configurable thresholds
-- 💰 **Fee Reduction**: AMICA holders enjoy trading fee discounts up to 100%
-- 🔥 **Burn & Claim**: Burn AMICA to claim proportional share of all deposited tokens
-- 🌾 **Staking Rewards**: MasterChef-style LP staking with 1.5x boost for agent pools
-- 🌐 **Multi-Chain**: Deploy seamlessly across Ethereum, Base, Arbitrum, and other EVM chains
+Personas make AI agents easier for humans to communicate with. By giving agents distinct personalities and visual identities, we create natural interfaces that are more relatable than faceless APIs. This helps build trust, set clear expectations, and makes AI interactions more human-friendly.
 
-## 📁 Repository Structure
+### Key Features
 
-This monorepo contains all components of the Amica Protocol ecosystem:
+- **AI Persona Tokens**: Launch ERC-20 tokens representing interactive AI agents
+- **ENS-Like Domains**: Each persona gets a unique subdomain at .amica.bot (e.g., "assistant.amica.bot")
+- **3D Avatars**: VRM format support for immersive 3D/VR/AR experiences
+- **AMICA Holder Benefits**: 33% of every persona launched goes to AMICA token holders via Burn & Claim
+- **Bonding Curves**: Fair price discovery through automated market making
+- **Auto-Graduation**: Automatic Uniswap V3 liquidity pool creation
+- **Agent Token Integration**: Optional staking requirements for specialized communities
+- **NFT Ownership**: Persona creators receive an NFT with metadata update rights and fee collection
+
+## Repository Structure
+
+This monorepo contains all components of the Amica Personas ecosystem:
 
 ```
-amica-protocol/
-├── contract/          # Smart contracts (Solidity)
-├── docs/              # Documentation
-├── website/           # Frontend dApp (Next.js)
+amica-personas/
+├── contracts/         # Smart contracts (Foundry/Solidity)
+├── amica/             # 3D AI persona viewer (React/Three.js)
+├── website/           # Platform frontend (Next.js)
 ├── subsquid/          # Multi-chain indexer
-├── subdomain-service/ # Subdomain service for personas
-├── amica/             # 3D AI persona viewer
-└── paper/             # Technical whitepaper (LaTeX)
+└── subdomain-service/ # .amica.bot domain service
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
 - Node.js 22+
-- Yarn or npm
-- Docker & Docker Compose
-- Hardhat
-- RPC endpoints for target chains
+- npm or yarn
+- Foundry (for contracts)
+- Docker & Docker Compose (for subsquid)
 
 ### Installation
 
@@ -56,118 +58,159 @@ amica-protocol/
 git clone https://github.com/semperai/amica-personas
 cd amica-personas
 
-# Install dependencies for all packages
-yarn install # or npm install
+# Initialize submodules
+git submodule update --init --recursive
 ```
 
-### Contract Deployment
+### Smart Contracts
 
 ```bash
-cd contract
+cd contracts
 
-# Copy and configure environment
-cp .env.example .env
-# Edit .env with your RPC URLs and private keys
+# Install dependencies
+forge install
 
 # Compile contracts
-npx hardhat compile
+forge build
 
-# Deploy to a network (e.g., Base)
-npx hardhat run scripts/deploy.ts --network base
+# Run tests
+forge test
 
-# Verify contracts
-npx hardhat verify --network base DEPLOYED_ADDRESS
+# Deploy (example: Arbitrum)
+forge script script/Deploy.s.sol --rpc-url arbitrum --broadcast
 ```
 
-### Run the Frontend
+### Frontend Website
 
 ```bash
 cd website
 
+# Install dependencies
+npm install
+
 # Configure environment
 cp .env.example .env.local
-# Add your WalletConnect Project ID and API URL
+# Edit .env.local with your configuration
 
 # Start development server
-yarn dev
+npm run dev
 # Visit http://localhost:3000
 ```
 
-### Start the Indexer
+### 3D Persona Viewer
+
+```bash
+cd amica
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+# Visit http://localhost:5173
+```
+
+### Indexer (Subsquid)
 
 ```bash
 cd subsquid
 
 # Configure environment
 cp .env.example .env
-# Add your RPC endpoints and contract addresses
+# Edit .env with your RPC endpoints
 
-# Start services
+# Start database
 docker-compose up -d
 
-# Run the indexer
+# Run indexer
+npm install
+npm run build
 npm run dev
 ```
 
-## 💸 Tokenomics
+## AMICA Token Utility
 
-### AMICA Token
-- **Total Supply**: 1,000,000,000 AMICA
-- **Utility**: Persona creation, fee discounts, burn-to-claim, governance
+Holding AMICA tokens gives you proportional ownership of every persona launched on the platform:
 
-### Persona Tokens
-Each persona has 1B tokens distributed as:
+- **33% Distribution**: 33% of each persona's token supply is allocated to AMICA holders
+- **Burn & Claim**: Burn AMICA to claim your proportional share of all deposited persona tokens
+- **Fee Discounts**: AMICA holders enjoy reduced trading fees (coming soon)
+- **Governance**: Participate in protocol governance decisions (coming soon)
 
-**Without Agent Token:**
-- 33.33% - Bonding curve
-- 33.33% - AMICA deposit
-- 33.34% - Uniswap liquidity
+This creates continuous value accrual as new personas launch and gain traction.
+
+## Creating Personas
+
+Each persona consists of:
+
+### Basic Information
+- **Domain**: Unique subdomain at .amica.bot (like ENS for AI agents)
+- **Name**: Display name (3-32 characters)
+- **Symbol**: Token ticker (2-8 characters)
+- **Description**: Purpose and personality
+- **Avatar**: VRM 3D model
+
+### Token Distribution (1B total supply)
+
+**Standard Distribution:**
+- 33% - Bonding curve
+- 33% - AMICA holders (via Burn & Claim)
+- 33% - Uniswap liquidity
 
 **With Agent Token:**
-- 33.33% - Uniswap liquidity
-- 22.22% - Bonding curve
-- 22.22% - AMICA deposit
-- 22.23% - Agent rewards
+- 33% - Uniswap liquidity
+- 33% - AMICA holders (via Burn & Claim)
+- 17% - Bonding curve
+- 17% - Agent token stakers
 
-## 🔗 Contract Addresses
+### Metadata System
 
-### Mainnet (Ethereum)
-- AMICA Token: `0x...`
-- PersonaTokenFactory: `0x...`
-- PersonaStakingRewards: `0x...`
+Personas support comprehensive metadata for full customization:
+- Visual identity (avatar, backgrounds, themes)
+- Personality traits and behavior
+- Capabilities and services
+- Integration endpoints (Arbius models, APIs)
+- Social links and documentation
 
-### Base
-- AMICA Token: `0x...`
-- PersonaTokenFactory: `0x...`
-- AmicaBridgeWrapper: `0x...`
+The NFT owner can update metadata at any time, allowing personas to evolve post-launch.
 
-### Arbitrum
-- AMICA Token: `0x...`
-- PersonaTokenFactory: `0x...`
-- AmicaBridgeWrapper: `0x...`
+## Testing
 
-*See [contract/README.md](./contract/README.md) for full deployment details*
-
-## 🧪 Testing
-
-### Smart Contracts
+### Contracts
 ```bash
-cd contract
-npm test
-npm run test:coverage
-npm run test:gas
+cd contracts
+forge test                    # Run all tests
+forge test -vvv              # Verbose output
+forge coverage               # Coverage report
 ```
 
 ### Frontend
 ```bash
 cd website
-npm test
-npm run lint
+npm test                     # Run tests
+npm run lint                 # Lint check
+npm run build                # Production build
 ```
 
-## 🤝 Contributing
+### Amica Viewer
+```bash
+cd amica
+npm test                     # Run tests with Vitest
+npm run test -- --coverage   # Coverage report
+```
 
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md).
+## Contract Addresses
+
+### Arbitrum (Primary Network)
+- AMICA Token: `TBD`
+- PersonaFactory: `TBD`
+- PersonaStaking: `TBD`
+
+*See [contracts/README.md](./contracts/README.md) for full deployment details*
+
+## Contributing
+
+We welcome contributions! To contribute:
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
@@ -175,24 +218,30 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📚 Documentation
+## Documentation
 
-- [Smart Contracts](./contract/README.md) - Contract architecture and deployment
-- [Frontend](./website/README.md) - dApp development guide
-- [Indexer](./subsquid/README.md) - Multi-chain indexing setup
-- [Whitepaper](./paper/amica.pdf) - Technical and economic details
-- [Docs](https://personas.heyamica.com/docs) - Comprehensive protocol documentation
+- [Getting Started](https://personas.heyamica.com/docs/getting-started) - Connect wallet and create your first persona
+- [Creating Personas](https://personas.heyamica.com/docs/creating-personas) - Detailed creation guide
+- [Burn & Claim](https://personas.heyamica.com/docs/burn-and-claim) - How to claim persona tokens
+- [Smart Contracts](./contracts/README.md) - Contract architecture
+- [Frontend](./website/README.md) - dApp development
+- [Full Documentation](https://personas.heyamica.com/docs) - Complete protocol docs
 
-## 🌐 Links
+## Links
 
-- Website: [heyamica.com](https://heyamica.com)
+- Website: [personas.heyamica.com](https://personas.heyamica.com)
 - Documentation: [personas.heyamica.com/docs](https://personas.heyamica.com/docs)
 - Twitter: [@heyamica](https://twitter.com/heyamica)
+- Telegram: [t.me/arbius_ai](https://t.me/arbius_ai)
 - Repository: [github.com/semperai/amica-personas](https://github.com/semperai/amica-personas)
 
-## ⚠️ Disclaimer
+## Disclaimer
 
 This software is provided "as is", without warranty of any kind. Use at your own risk. Always do your own research and audit smart contracts before interacting with them.
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details
 
 ---
 
