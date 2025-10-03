@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { buildPrompt, buildVisionPrompt } from "@/utils/buildPrompt";
 import type { Message } from "@/features/chat/messages";
+import { config } from "@/utils/config";
 
 describe("buildPrompt", () => {
   describe("buildPrompt", () => {
@@ -21,7 +22,7 @@ describe("buildPrompt", () => {
 
       const result = buildPrompt(messages);
 
-      expect(result).toBe("You are a helpful AI assistant.\n\nAmica:");
+      expect(result).toBe(`${config("system_prompt")}\n\n${config("name")}:`);
     });
 
     test("should build prompt with assistant message", () => {
@@ -45,11 +46,11 @@ describe("buildPrompt", () => {
       const result = buildPrompt(messages);
 
       expect(result).toBe(
-        "You are a helpful AI assistant.\n\n" +
+        `${config("system_prompt")}\n\n` +
         "User: Hello\n" +
-        "Amica: Hi there!\n" +
+        `${config("name")}: Hi there!\n` +
         "User: How are you?\n" +
-        "Amica:"
+        `${config("name")}:`
       );
     });
 
@@ -80,9 +81,9 @@ describe("buildPrompt", () => {
       const result = buildPrompt(messages);
 
       expect(result).toBe(
-        "You are a helpful AI assistant.\n\n" +
-        "You are a helpful AI assistant.\n\n" +
-        "Amica:"
+        `${config("system_prompt")}\n\n` +
+        `${config("system_prompt")}\n\n` +
+        `${config("name")}:`
       );
     });
 
@@ -303,8 +304,8 @@ describe("buildPrompt", () => {
       const regularResult = buildPrompt(messages);
       const visionResult = buildVisionPrompt(messages);
 
-      expect(regularResult).toContain("You are a helpful AI assistant.");
-      expect(visionResult).toContain("You are a friendly human named Amica. Describe the image in detail.");
+      expect(regularResult).toContain(config("system_prompt"));
+      expect(visionResult).toContain(config("vision_system_prompt"));
       expect(regularResult).not.toBe(visionResult);
     });
 

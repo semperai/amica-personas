@@ -1,4 +1,4 @@
-import { describe, expect, test, jest, beforeEach, afterEach } from "vitest";
+import { describe, expect, test, vi, beforeEach, afterEach } from "vitest";
 
 // Mock fetch BEFORE importing the module that uses it
 const fetchMock = vi.fn();

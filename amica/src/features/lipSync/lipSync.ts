@@ -25,7 +25,7 @@ export class LipSync {
 
     // cook
     volume = 1 / (1 + Math.exp(-45 * volume + 5));
-    if (volume < 0.1) volume = 0;
+    if (volume < 0.1 || !isFinite(volume)) volume = 0;
 
     return {
       volume,
