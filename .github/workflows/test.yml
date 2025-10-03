@@ -113,7 +113,7 @@ jobs:
           node-version: '22'
 
       - name: Install dependencies
-        run: cd subsquid && npm ci
+        run: cd subsquid && npm install
 
       - name: Build subsquid
         run: cd subsquid && npm run build
