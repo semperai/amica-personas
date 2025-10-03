@@ -16,3 +16,6 @@
 [submodule "persona-contracts/lib/hookmate"]
 	path = contracts/lib/hookmate
 	url = https://github.com/akshatmittal/hookmate
+[submodule "persona-contracts/lib/prb-math"]
+	path = contracts/lib/prb-math
+	url = https://github.com/PaulRBerg/prb-math
