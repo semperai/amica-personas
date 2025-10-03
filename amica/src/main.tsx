@@ -4,7 +4,6 @@ import * as Sentry from "@sentry/react";
 import App from './App';
 import '@rainbow-me/rainbowkit/styles.css';
 import './styles/globals.css';
-import '@charcoal-ui/icons';
 import { loadConfig } from './utils/config';
 
 Sentry.init({
