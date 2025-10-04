@@ -52,7 +52,7 @@
     "react-qr-code": "^2.0.18",
     "react-webcam": "^7.2.0",
     "stats.js": "^0.17.0",
-    "three": "^0.169.0",
+    "three": "^0.180.0",
     "three-mesh-bvh": "^0.9.1",
     "three.quarks": "^0.16.0",
     "uuid": "^13.0.0",
