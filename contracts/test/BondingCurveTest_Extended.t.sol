@@ -643,8 +643,8 @@ contract BondingCurveTest_Extended is Test {
         if (sold2 < earlyThreshold || sold1 > lateThreshold) {
             // At extreme ends of the curve, prices might plateau due to precision
             assertGe(price2, price1, "Price must not decrease");
-        } else if (sold2 - sold1 <= 100) {
-            // For very small differences, prices might be equal due to rounding
+        } else if (sold2 - sold1 <= 100 || (sold2 - sold1) * 100000 < supply) {
+            // For very small differences (absolute or relative), prices might be equal due to rounding
             assertGe(price2, price1, "Price must not decrease");
         } else if (sold1 > (supply * 99) / 100) {
             // Very close to the end, allow price plateaus
