@@ -89,7 +89,8 @@
     "undici": "^7.16.0",
     "vite": "^6.0.11",
     "vite-plugin-static-copy": "^2.0.0",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "wait-on": "^8.0.1"
   },
   "engines": {
     "node": ">=v22.18.0"
