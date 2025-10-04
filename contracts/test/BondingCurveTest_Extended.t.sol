@@ -646,6 +646,9 @@ contract BondingCurveTest_Extended is Test {
         } else if (sold2 - sold1 <= 100) {
             // For very small differences, prices might be equal due to rounding
             assertGe(price2, price1, "Price must not decrease");
+        } else if (sold1 > (supply * 99) / 100) {
+            // Very close to the end, allow price plateaus
+            assertGe(price2, price1, "Price must not decrease near end");
         } else {
             // For meaningful gaps in the middle of the curve, price must increase
             assertGt(

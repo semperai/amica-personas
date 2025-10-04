@@ -277,6 +277,101 @@ contract BondingCurveTest is Test {
         );
     }
 
+    // ==================== View Functions Tests ====================
+
+    function test_GetCurrentMultiplier_AtStart() public view {
+        uint256 multiplier = bondingCurve.getCurrentMultiplier(0, TOTAL_SUPPLY);
+        // At start, multiplier should be 1x
+        assertApproxEqRel(
+            multiplier,
+            PRECISION,
+            0.01 ether,
+            "Multiplier at start should be ~1x"
+        );
+        console.log("Multiplier at start:", multiplier);
+    }
+
+    function test_GetCurrentMultiplier_AtHalfway() public view {
+        uint256 multiplier =
+            bondingCurve.getCurrentMultiplier(TOTAL_SUPPLY / 2, TOTAL_SUPPLY);
+        // At halfway, multiplier should be between 1x and 233x
+        assertGt(multiplier, PRECISION, "Multiplier should be > 1x");
+        assertLt(
+            multiplier,
+            CURVE_MULTIPLIER * PRECISION,
+            "Multiplier should be < 233x"
+        );
+        console.log("Multiplier at halfway:", multiplier);
+    }
+
+    function test_GetCurrentMultiplier_AtEnd() public view {
+        uint256 multiplier =
+            bondingCurve.getCurrentMultiplier(TOTAL_SUPPLY, TOTAL_SUPPLY);
+        // At end, multiplier should be ~233x
+        assertApproxEqRel(
+            multiplier,
+            CURVE_MULTIPLIER * PRECISION,
+            0.05 ether,
+            "Multiplier at end should be ~233x"
+        );
+        console.log("Multiplier at end:", multiplier);
+    }
+
+    function test_GetCurrentMultiplier_Progression() public view {
+        // Test that multiplier increases monotonically
+        uint256 prev = bondingCurve.getCurrentMultiplier(0, TOTAL_SUPPLY);
+
+        for (uint256 i = 1; i <= 10; i++) {
+            uint256 current = bondingCurve.getCurrentMultiplier(
+                (TOTAL_SUPPLY * i) / 10, TOTAL_SUPPLY
+            );
+            assertGt(current, prev, "Multiplier should increase");
+            prev = current;
+        }
+    }
+
+    function test_GetCurveProgress_AtZero() public view {
+        uint256 progress = bondingCurve.getCurveProgress(0, TOTAL_SUPPLY);
+        assertEq(progress, 0, "Progress should be 0 at start");
+    }
+
+    function test_GetCurveProgress_AtHalfway() public view {
+        uint256 progress =
+            bondingCurve.getCurveProgress(TOTAL_SUPPLY / 2, TOTAL_SUPPLY);
+        assertEq(progress, 5000, "Progress should be 5000 (50%)");
+    }
+
+    function test_GetCurveProgress_AtEnd() public view {
+        uint256 progress =
+            bondingCurve.getCurveProgress(TOTAL_SUPPLY, TOTAL_SUPPLY);
+        assertEq(progress, 10000, "Progress should be 10000 (100%)");
+    }
+
+    function test_GetCurveProgress_QuarterPoints() public view {
+        uint256 progress25 =
+            bondingCurve.getCurveProgress(TOTAL_SUPPLY / 4, TOTAL_SUPPLY);
+        assertEq(progress25, 2500, "Progress should be 2500 (25%)");
+
+        uint256 progress75 =
+            bondingCurve.getCurveProgress(TOTAL_SUPPLY * 3 / 4, TOTAL_SUPPLY);
+        assertEq(progress75, 7500, "Progress should be 7500 (75%)");
+    }
+
+    function test_GetCurveProgress_Precision() public view {
+        // Test with various precise values
+        uint256 progress1 =
+            bondingCurve.getCurveProgress(TOTAL_SUPPLY / 3, TOTAL_SUPPLY);
+        assertApproxEqAbs(
+            progress1, 3333, 1, "Progress should be ~3333 (33.33%)"
+        );
+
+        uint256 progress2 =
+            bondingCurve.getCurveProgress(TOTAL_SUPPLY / 7, TOTAL_SUPPLY);
+        assertApproxEqAbs(
+            progress2, 1428, 2, "Progress should be ~1428 (14.28%)"
+        );
+    }
+
     // ==================== Fuzzing Test ====================
 
     function testFuzz_BuySellSymmetry(uint256 buyAmount, uint256 initialSold)
