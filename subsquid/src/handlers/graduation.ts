@@ -20,12 +20,10 @@ export async function handleGraduated(
   }
 
   // Update persona with graduation information
-  // Note: poolId and graduationTimestamp don't exist in current model schema
-  // The model needs to be regenerated to include these fields
   persona.totalDeposited = event.totalDeposited
   persona.tokensSold = event.tokensSold
-  // persona.poolId = event.poolId  // Field doesn't exist yet
-  // persona.graduationTimestamp = timestamp  // Field doesn't exist yet
+  persona.poolId = event.poolId
+  persona.graduationTimestamp = BigInt(Math.floor(timestamp.getTime() / 1000))
 
   await ctx.store.save(persona)
 

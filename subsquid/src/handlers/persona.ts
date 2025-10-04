@@ -41,8 +41,8 @@ export async function handlePersonaCreated(
       name: '', // Name needs to be fetched from the ERC20 token or metadata
       symbol: '', // Symbol needs to be fetched from the ERC20 token or metadata
       erc20Token: event.token.toLowerCase(),
-      // Note: domain, poolId, graduationTimestamp, agentTokenThreshold don't exist in current model
-      // The model needs to be regenerated with these fields
+      domain: event.domain,
+      poolId: personaData.poolId || null,
       pairToken: personaData.pairToken.toLowerCase(),
       agentToken: personaData.agentToken !== '0x0000000000000000000000000000000000000000'
         ? personaData.agentToken.toLowerCase()
@@ -52,6 +52,7 @@ export async function handlePersonaCreated(
       chainId: DEPLOYMENT.chainId,
       createdAt: timestamp,
       createdAtBlock: blockNumber,
+      graduationTimestamp: personaData.graduationTimestamp > 0n ? personaData.graduationTimestamp : null,
       totalDeposited: 0n,
       tokensSold: 0n,
       graduationThreshold: 0n, // This field exists but is deprecated
@@ -78,6 +79,8 @@ export async function handlePersonaCreated(
       name: '',
       symbol: '',
       erc20Token: event.token.toLowerCase(),
+      domain: event.domain,
+      poolId: null,
       pairToken: '0x0000000000000000000000000000000000000000',
       agentToken: null,
       pairCreated: false,
@@ -85,6 +88,7 @@ export async function handlePersonaCreated(
       chainId: DEPLOYMENT.chainId,
       createdAt: timestamp,
       createdAtBlock: blockNumber,
+      graduationTimestamp: null,
       totalDeposited: 0n,
       tokensSold: 0n,
       graduationThreshold: 0n,

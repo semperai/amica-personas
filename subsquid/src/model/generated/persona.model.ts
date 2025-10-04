@@ -45,6 +45,13 @@ export class Persona {
     @StringColumn_({nullable: true})
     agentToken!: string | undefined | null
 
+    @Index_()
+    @StringColumn_({nullable: false})
+    domain!: string
+
+    @StringColumn_({nullable: true})
+    poolId!: string | undefined | null
+
     @BooleanColumn_({nullable: false})
     pairCreated!: boolean
 
@@ -60,6 +67,9 @@ export class Persona {
 
     @BigIntColumn_({nullable: false})
     createdAtBlock!: bigint
+
+    @BigIntColumn_({nullable: true})
+    graduationTimestamp!: bigint | undefined | null
 
     @BigIntColumn_({nullable: false})
     totalDeposited!: bigint

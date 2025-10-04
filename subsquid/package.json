@@ -16,9 +16,9 @@
     "check-updates": "npx npm-check-updates --filter /subsquid/",
     "bump": "npx npm-check-updates --filter /subsquid/ -u && npm i -f",
     "test:local": "./test-local.sh test",
-    "test:validate": "node scripts/validate-indexing.js",
-    "test:events": "node scripts/test-event-queries.js",
-    "test:coverage": "node scripts/event-coverage-check.js"
+    "test:validate": "ts-node scripts/validate-indexing.ts",
+    "test:events": "ts-node scripts/test-event-queries.ts",
+    "test:coverage": "ts-node scripts/event-coverage-check.ts"
   },
   "dependencies": {
     "@subsquid/archive-registry": "^3.3.2",
@@ -37,6 +37,8 @@
     "@subsquid/evm-typegen": "^4.4.0",
     "@subsquid/typeorm-codegen": "^2.0.2",
     "@types/node": "^20.14.10",
+    "@types/pg": "^8.11.10",
+    "ts-node": "^10.9.2",
     "typescript": "^5.5.3"
   },
   "engines": {

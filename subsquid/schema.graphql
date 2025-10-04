@@ -10,18 +10,23 @@ type Persona @entity {
   erc20Token: String! @index
   pairToken: String! @index
   agentToken: String
-  
+
+  # Domain and Pool Info
+  domain: String! @index
+  poolId: String
+
   # Status
   pairCreated: Boolean!
   pairAddress: String
-  
+
   # Chain tracking
   chainId: Int! @index
-  
+
   # Timestamps
   createdAt: DateTime!
   createdAtBlock: BigInt!
-  
+  graduationTimestamp: BigInt
+
   # Stats
   totalDeposited: BigInt!
   tokensSold: BigInt!

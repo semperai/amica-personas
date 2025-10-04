@@ -5,8 +5,8 @@
  * the events we're actually indexing in the processor.
  */
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 const COLORS = {
   green: '\x1b[32m',
@@ -16,29 +16,29 @@ const COLORS = {
   reset: '\x1b[0m'
 };
 
-function log(color, message) {
+function log(color: keyof typeof COLORS, message: string): void {
   console.log(`${COLORS[color]}${message}${COLORS.reset}`);
 }
 
 // Load ABIs
-const personaFactoryAbi = require('../src/abi/PersonaTokenFactory.json');
-const amicaTokenAbi = require('../src/abi/AmicaToken.json');
-const bridgeWrapperAbi = require('../src/abi/AmicaBridgeWrapper.json');
+const personaFactoryAbi = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/abi/PersonaTokenFactory.json'), 'utf8'));
+const amicaTokenAbi = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/abi/AmicaToken.json'), 'utf8'));
+const bridgeWrapperAbi = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/abi/AmicaBridgeWrapper.json'), 'utf8'));
 
 // Extract events from processor.ts
 const processorFile = fs.readFileSync(path.join(__dirname, '../src/processor.ts'), 'utf8');
 const mainFile = fs.readFileSync(path.join(__dirname, '../src/main.ts'), 'utf8');
 
 // Helper to get event names from ABI
-function getEventNames(abi) {
+function getEventNames(abi: any): string[] {
   return abi.abi
-    .filter(item => item.type === 'event')
-    .map(item => item.name)
+    .filter((item: any) => item.type === 'event')
+    .map((item: any) => item.name)
     .sort();
 }
 
 // Helper to check if event is indexed in processor
-function isEventIndexed(eventName, processorContent) {
+function isEventIndexed(eventName: string, processorContent: string): boolean {
   const patterns = [
     `factoryAbi.events.${eventName}.topic`,
     `stakingAbi.events.${eventName}.topic`,
@@ -49,7 +49,7 @@ function isEventIndexed(eventName, processorContent) {
 }
 
 // Helper to check if event has handler in main.ts
-function hasEventHandler(eventName, mainContent) {
+function hasEventHandler(eventName: string, mainContent: string): boolean {
   const patterns = [
     `case factoryAbi.events.${eventName}.topic:`,
     `case stakingAbi.events.${eventName}.topic:`,

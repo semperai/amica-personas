@@ -5,8 +5,7 @@
  * the database for sample data from each entity type.
  */
 
-import pkg from 'pg';
-const { Pool } = pkg;
+import { Pool } from 'pg';
 
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
@@ -33,8 +32,8 @@ const eventTests = [
   {
     name: 'PersonaCreated Events',
     table: 'persona',
-    query: 'SELECT COUNT(*) as count, MIN(created_at) as first_event, MAX(created_at) as last_event FROM persona',
-    details: 'SELECT id, token_id, name, symbol, creator FROM persona ORDER BY created_at DESC LIMIT 3',
+    query: 'SELECT COUNT(*) as count, MIN(created_at) as first_event, MAX(created_at) as last_event, COUNT(CASE WHEN domain IS NOT NULL THEN 1 END) as with_domain FROM persona',
+    details: 'SELECT id, token_id, name, symbol, creator, domain, pool_id, graduation_timestamp FROM persona ORDER BY created_at DESC LIMIT 3',
   },
   {
     name: 'TokensPurchased/Sold Events (Trades)',
@@ -57,8 +56,8 @@ const eventTests = [
   {
     name: 'V4PoolCreated Events (Graduations)',
     table: 'persona',
-    query: 'SELECT COUNT(*) as count FROM persona WHERE pair_created = true',
-    details: 'SELECT id, name, symbol, pair_created, pair_address FROM persona WHERE pair_created = true ORDER BY created_at DESC LIMIT 3',
+    query: 'SELECT COUNT(*) as count, COUNT(CASE WHEN pool_id IS NOT NULL THEN 1 END) as with_pool_id, COUNT(CASE WHEN graduation_timestamp IS NOT NULL THEN 1 END) as graduated FROM persona WHERE pair_created = true',
+    details: 'SELECT id, name, symbol, pair_created, pool_id, graduation_timestamp, pair_address FROM persona WHERE pair_created = true ORDER BY created_at DESC LIMIT 3',
   },
   {
     name: 'TokensClaimed Events (Post-Graduation)',

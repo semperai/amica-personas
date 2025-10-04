@@ -19,7 +19,7 @@ export async function handleV4PoolCreated(
 
   // Update with V4 pool information
   persona.pairCreated = true
-  // persona.poolId = event.poolId  // Field doesn't exist in current model yet
+  persona.poolId = event.poolId
   await ctx.store.save(persona)
 
   ctx.log.info(`Persona ${personaId} V4 pool created! Pool ID: ${event.poolId}, Liquidity: ${event.liquidity}`)

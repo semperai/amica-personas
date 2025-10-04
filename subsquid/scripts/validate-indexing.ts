@@ -8,8 +8,7 @@
  * - Tests GraphQL server connectivity
  */
 
-import pkg from 'pg';
-const { Pool } = pkg;
+import { Pool } from 'pg';
 
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
@@ -88,7 +87,7 @@ async function getLatestBlock() {
 async function getRecentPersonas() {
   try {
     const result = await pool.query(`
-      SELECT id, token_id, name, symbol, creator, created_at
+      SELECT id, token_id, name, symbol, creator, domain, pool_id, graduation_timestamp, created_at
       FROM persona
       ORDER BY created_at DESC
       LIMIT 5
@@ -98,6 +97,7 @@ async function getRecentPersonas() {
       log('blue', '\nRecent Personas:');
       result.rows.forEach(persona => {
         log('blue', `  - ${persona.name} (${persona.symbol}) - Token ID: ${persona.token_id}`);
+        log('blue', `    Domain: ${persona.domain || 'N/A'}, Pool ID: ${persona.pool_id || 'Not graduated'}`);
       });
     }
 
