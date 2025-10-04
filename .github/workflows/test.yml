@@ -52,6 +52,7 @@ jobs:
 
       - name: Upload coverage to Coveralls
         uses: coverallsapp/github-action@v2
+        if: hashFiles('contracts/lcov.info') != ''
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: ./contracts/lcov.info
@@ -82,6 +83,7 @@ jobs:
 
       - name: Upload coverage to Coveralls
         uses: coverallsapp/github-action@v2
+        if: hashFiles('amica/coverage/lcov.info') != ''
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: ./amica/coverage/lcov.info
