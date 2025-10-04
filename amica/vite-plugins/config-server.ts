@@ -13,13 +13,24 @@ export function configServerPlugin(): Plugin {
   return {
     name: 'amica-config-server',
     configureServer(server) {
+      const configPath = path.join(process.cwd(), 'amica.toml');
+
+      // Watch amica.toml for changes and trigger full reload
+      server.watcher.add(configPath);
+      server.watcher.on('change', (file) => {
+        if (file === configPath) {
+          server.ws.send({
+            type: 'full-reload',
+            path: '*'
+          });
+        }
+      });
+
       server.middlewares.use((req, res, next) => {
         // Only handle /config and /config.json
         if (req.url !== '/config' && req.url !== '/config.json') {
           return next();
         }
-
-        const configPath = path.join(process.cwd(), 'amica.toml');
 
         // If no amica.toml file, return 404
         if (!fs.existsSync(configPath)) {
