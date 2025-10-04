@@ -1,15 +1,22 @@
-import { describe, expect, test, vi, beforeEach, afterEach } from "vitest";
+import { describe, expect, test, vi, beforeEach } from "vitest";
 
 // Mock fetch BEFORE importing the module that uses it
 const fetchMock = vi.fn();
 global.fetch = fetchMock as any;
 
-// Mock expandPrompt - must be inline in the factory since vi.mock is hoisted
-vi.mock("@/features/functionCalling/eventHandler", () => ({
-  expandPrompt: vi.fn((prompt: string, values: any) => {
+// Create expandPrompt mock with persistent implementation
+vi.mock("@/features/functionCalling/eventHandler", () => {
+  // Create a persistent mock that will keep its implementation
+  const mockFn = vi.fn();
+  // Set default implementation immediately
+  mockFn.mockImplementation((prompt: string, values: any) => {
     return Promise.resolve(prompt.replace('{context_str}', values.context_str));
-  }),
-}));
+  });
+
+  return {
+    expandPrompt: mockFn,
+  };
+});
 
 import { handleNews } from "@/features/plugins/news";
 import { expandPrompt } from "@/features/functionCalling/eventHandler";
@@ -17,11 +24,8 @@ import { expandPrompt } from "@/features/functionCalling/eventHandler";
 describe("news", () => {
   beforeEach(() => {
     fetchMock.mockClear();
+    // Only clear call history, don't touch implementation
     vi.mocked(expandPrompt).mockClear();
-    // Re-apply the mock implementation to ensure it works in the full test suite
-    vi.mocked(expandPrompt).mockImplementation((prompt: string, values: any) => {
-      return Promise.resolve(prompt.replace('{context_str}', values.context_str));
-    });
   });
 
   const createMockRSS = (items: Array<{title: string, description: string}>) => {
