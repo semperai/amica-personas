@@ -14,6 +14,7 @@ import {UUPSUpgradeable} from
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {BurnAndClaimBase} from "./BurnAndClaimBase.sol";
 
 /**
  * @title AmicaTokenBridged
@@ -41,15 +42,14 @@ import {SafeERC20} from
  * - This is the L2 version (Arbitrum One / Base)
  * - Deployed at the same address as mainnet version using CREATE2
  * - Total supply across all chains cannot exceed 1 billion
- * - No burn-and-claim on L2 (mainnet-only feature)
+ * - Burn-and-claim functionality allows claiming deposited tokens proportionally
  *
  * @custom:security-contact kasumi-null@yandex.com
  */
 contract AmicaTokenBridged is
-    ERC20Upgradeable,
+    BurnAndClaimBase,
     OwnableUpgradeable,
     PausableUpgradeable,
-    ReentrancyGuardUpgradeable,
     UUPSUpgradeable
 {
     using SafeERC20 for IERC20;
@@ -120,11 +120,12 @@ contract AmicaTokenBridged is
      * @custom:requirement initialOwner must not be the zero address
      * @custom:requirement Can only be called once due to initializer modifier
      */
-    function initialize(address initialOwner) external virtual initializer {
+    function initialize(address initialOwner) external initializer {
         __ERC20_init("Amica", "AMICA");
         __Ownable_init(initialOwner);
         __ReentrancyGuard_init();
         __Pausable_init();
+        __UUPSUpgradeable_init();
     }
 
     /**

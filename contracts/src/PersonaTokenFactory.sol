@@ -112,6 +112,7 @@ contract PersonaTokenFactory is
      * @param graduationTimestamp Timestamp when graduated (0 = not graduated)
      * @param agentTokenThreshold Agent token threshold required for graduation
      * @param poolId Uniswap V4 pool ID for persona/pairToken
+     * @param positionTokenId Uniswap V4 Position Manager NFT token ID (0 = no position)
      */
     struct PersonaData {
         address token;
@@ -120,6 +121,7 @@ contract PersonaTokenFactory is
         uint256 graduationTimestamp;
         uint256 agentTokenThreshold;
         PoolId poolId;
+        uint256 positionTokenId;
     }
 
     /**
@@ -1031,6 +1033,7 @@ contract PersonaTokenFactory is
 
         PersonaData storage persona = personas[tokenId];
         if (PoolId.unwrap(persona.poolId) == bytes32(0)) revert NotAllowed(11);
+        if (persona.positionTokenId == 0) revert NotAllowed(11);
         if (to == address(0)) revert Invalid(12);
 
         (address token0, address token1) =
@@ -1051,7 +1054,8 @@ contract PersonaTokenFactory is
         bytes[] memory params = new bytes[](2);
 
         // DECREASE_LIQUIDITY with 0 liquidity to collect only fees
-        params[0] = abi.encode(persona.poolId, 0, 0, 0, "");
+        // params: (tokenId, liquidityToDecrease, amount0Min, amount1Min, hookData)
+        params[0] = abi.encode(persona.positionTokenId, 0, 0, 0, "");
 
         // TAKE_PAIR to withdraw collected fees
         params[1] = abi.encode(poolKey.currency0, poolKey.currency1, to);
@@ -1187,9 +1191,14 @@ contract PersonaTokenFactory is
             type(uint48).max
         );
 
+        // Capture the tokenId that will be minted
+        // nextTokenId is the ID that will be used for the next mint, then incremented
+        uint256 mintedTokenId = positionManager.nextTokenId();
+
         positionManager.multicall{value: 0 /* not ETH*/ }(params);
 
         persona.poolId = poolKey.toId();
+        persona.positionTokenId = mintedTokenId;
 
         emit V4PoolCreated(tokenId, persona.poolId, liquidity);
     }

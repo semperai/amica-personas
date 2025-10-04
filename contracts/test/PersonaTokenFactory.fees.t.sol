@@ -78,14 +78,14 @@ contract PersonaTokenFactoryFeesTest is Fixtures {
         returns (address personaToken, PoolId poolId)
     {
         // Get persona token before graduation
-        (address token,,,,,) = personaFactory.personas(tokenId);
+        (address token,,,,,,) = personaFactory.personas(tokenId);
         personaToken = token;
 
         // Buy tokens progressively to trigger graduation
         uint256 buyAmount = 100_000 ether;
         for (uint256 i = 0; i < 20; i++) {
             // Check if already graduated
-            (,,, uint256 gradTimestamp,,) = personaFactory.personas(tokenId);
+            (,,, uint256 gradTimestamp,,,) = personaFactory.personas(tokenId);
             if (gradTimestamp > 0) break;
 
             vm.prank(user2);
@@ -95,7 +95,7 @@ contract PersonaTokenFactoryFeesTest is Fixtures {
         }
 
         // Verify graduation and get pool ID
-        (,,, uint256 graduationTimestamp,, PoolId pid) =
+        (,,, uint256 graduationTimestamp,, PoolId pid,) =
             personaFactory.personas(tokenId);
         require(graduationTimestamp > 0, "Must be graduated");
         poolId = pid;
@@ -299,7 +299,7 @@ contract PersonaTokenFactoryFeesTest is Fixtures {
         usdc.approve(address(personaFactory), type(uint256).max);
         uint256 buyAmount = 100_000 ether;
         for (uint256 i = 0; i < 20; i++) {
-            (,,, uint256 gradTime,,) = personaFactory.personas(tokenId);
+            (,,, uint256 gradTime,,,) = personaFactory.personas(tokenId);
             if (gradTime > 0) break;
 
             personaFactory.swapExactTokensForTokens(
@@ -309,7 +309,7 @@ contract PersonaTokenFactoryFeesTest is Fixtures {
         vm.stopPrank();
 
         // Verify pool was created with USDC
-        (,,, uint256 graduationTimestamp,, PoolId poolId) =
+        (,,, uint256 graduationTimestamp,, PoolId poolId,) =
             personaFactory.personas(tokenId);
         assertTrue(graduationTimestamp > 0, "Should be graduated");
         assertTrue(PoolId.unwrap(poolId) != bytes32(0), "Pool should exist");

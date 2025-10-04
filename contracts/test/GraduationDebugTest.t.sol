@@ -3,6 +3,7 @@ pragma solidity ^0.8.26;
 
 import {Fixtures} from "./shared/Fixtures.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
 import {console} from "forge-std/console.sol";
 import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
@@ -67,7 +68,7 @@ contract GraduationDebugTest is Fixtures {
         );
 
         // Get persona data
-        (data.personaToken, data.pairToken,, data.graduationTimestamp,,) =
+        (data.personaToken, data.pairToken,, data.graduationTimestamp,,,) =
             personaFactory.personas(data.tokenId);
 
         // Check immediate state
@@ -106,7 +107,7 @@ contract GraduationDebugTest is Fixtures {
                 console.log("  Buy failed - checking if graduated");
             }
 
-            (,,, data.graduationTimestamp,,) =
+            (,,, data.graduationTimestamp,,,) =
                 personaFactory.personas(data.tokenId);
         }
 
@@ -188,11 +189,23 @@ contract GraduationDebugTest is Fixtures {
     }
 
     function _checkLiquidityPool(TestData memory data) private view {
-        (,,,,, PoolId poolId) = personaFactory.personas(data.tokenId);
+        (,,,,, PoolId poolId, uint256 positionTokenId) = personaFactory.personas(data.tokenId);
 
         if (PoolId.unwrap(poolId) != bytes32(0)) {
             console.log("\nLiquidity pool created:");
             console.log("  Pool ID:", uint256(uint256(PoolId.unwrap(poolId))));
+            console.log("  Position NFT tokenId:", positionTokenId);
+
+            // Check position NFT ownership
+            address positionOwner = IERC721(address(positionManager)).ownerOf(positionTokenId);
+            console.log("  Position NFT owner:", positionOwner);
+            console.log("  Factory address:", address(personaFactory));
+
+            if (positionOwner == address(personaFactory)) {
+                console.log("  [OK] Position NFT owned by factory");
+            } else {
+                console.log("  [FAIL] Position NFT NOT owned by factory!");
+            }
 
             // Get pool key
             PoolKey memory poolKey =
@@ -316,5 +329,60 @@ contract GraduationDebugTest is Fixtures {
             currency0 = Currency.wrap(tokenB);
             currency1 = Currency.wrap(tokenA);
         }
+    }
+
+    // Test to verify position NFT ownership after graduation
+    function testPositionNFTOwnership() public {
+        console.log("=== POSITION NFT OWNERSHIP TEST ===");
+
+        vm.startPrank(user1);
+        amicaToken.approve(address(personaFactory), type(uint256).max);
+
+        // Create and graduate a persona
+        uint256 initialBuy = 500_000 ether;
+        uint256 tokenId = personaFactory.createPersona(
+            address(amicaToken),
+            "NFT Test",
+            "NFTTEST",
+            bytes32("nfttest"),
+            initialBuy,
+            address(0),
+            0
+        );
+
+        // Buy until graduation
+        uint256 buyCount = 0;
+        uint256 graduationTimestamp;
+        while (graduationTimestamp == 0 && buyCount < 20) {
+            buyCount++;
+            try personaFactory.swapExactTokensForTokens(
+                tokenId,
+                9_000_000 ether,
+                0,
+                user1,
+                block.timestamp + 300
+            ) {} catch {}
+
+            (,,, graduationTimestamp,,,) = personaFactory.personas(tokenId);
+        }
+
+        require(graduationTimestamp > 0, "Must be graduated");
+
+        // Verify position NFT ownership
+        (,,,,, PoolId poolId, uint256 positionTokenId) = personaFactory.personas(tokenId);
+
+        console.log("Pool ID:", uint256(PoolId.unwrap(poolId)));
+        console.log("Position Token ID:", positionTokenId);
+
+        // Check NFT owner
+        address positionOwner = IERC721(address(positionManager)).ownerOf(positionTokenId);
+        console.log("Position owner:", positionOwner);
+        console.log("Factory address:", address(personaFactory));
+
+        // Verify factory owns the position NFT
+        assertEq(positionOwner, address(personaFactory), "Factory should own position NFT");
+        console.log("[OK] Position NFT correctly owned by factory");
+
+        vm.stopPrank();
     }
 }

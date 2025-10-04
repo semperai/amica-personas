@@ -47,7 +47,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         );
 
         // Get persona data
-        (address token,,,,,) = personaFactory.personas(tokenId);
+        (address token,,,,,,) = personaFactory.personas(tokenId);
 
         personaToken = token;
     }
@@ -67,7 +67,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
                 tokenId, buyAmount, 0, user2, block.timestamp + 1
             ) {
                 // Check if graduated
-                (,,, uint256 graduationTimestamp,,) =
+                (,,, uint256 graduationTimestamp,,,) =
                     personaFactory.personas(tokenId);
                 if (graduationTimestamp > 0) break;
             } catch {
@@ -77,7 +77,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         }
 
         // Verify graduation
-        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        (,,, uint256 graduationTimestamp,,,) = personaFactory.personas(tokenId);
         assertTrue(graduationTimestamp > 0, "Should have graduated");
     }
 
@@ -94,7 +94,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
             try personaFactory.swapExactTokensForTokens(
                 tokenId, buyAmount, 0, user2, block.timestamp + 1
             ) {
-                (,,, uint256 graduationTimestamp,,) =
+                (,,, uint256 graduationTimestamp,,,) =
                     personaFactory.personas(tokenId);
                 if (graduationTimestamp > 0) break;
             } catch {
@@ -128,7 +128,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         }
 
         // Verify graduated
-        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        (,,, uint256 graduationTimestamp,,,) = personaFactory.personas(tokenId);
         assertTrue(graduationTimestamp > 0);
     }
 
@@ -144,7 +144,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
 
         // Buy until we're close to the threshold
         while (totalBought < targetTokens) {
-            (,,, uint256 gradTime,,) = personaFactory.personas(tokenId);
+            (,,, uint256 gradTime,,,) = personaFactory.personas(tokenId);
             if (gradTime > 0) break; // Already graduated
 
             // Get current tokens purchased
@@ -168,7 +168,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         }
 
         // Verify graduated
-        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        (,,, uint256 graduationTimestamp,,,) = personaFactory.personas(tokenId);
         assertTrue(graduationTimestamp > 0, "Should have graduated");
 
         // Check that we graduated close to the threshold
@@ -198,7 +198,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
             try personaFactory.swapExactTokensForTokens(
                 tokenId, buyAmount, 0, user2, block.timestamp + 1
             ) {
-                (,,, uint256 graduationTimestamp,,) =
+                (,,, uint256 graduationTimestamp,,,) =
                     personaFactory.personas(tokenId);
                 if (graduationTimestamp > 0) break;
             } catch {
@@ -207,7 +207,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         }
 
         // Verify graduated
-        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        (,,, uint256 graduationTimestamp,,,) = personaFactory.personas(tokenId);
         require(graduationTimestamp > 0, "Must be graduated");
 
         // Try to buy more tokens after graduation
@@ -234,7 +234,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
             try personaFactory.swapExactTokensForTokens(
                 tokenId, buyAmount, 0, user3, block.timestamp + 1
             ) {
-                (,,, uint256 graduationTimestamp,,) =
+                (,,, uint256 graduationTimestamp,,,) =
                     personaFactory.personas(tokenId);
                 if (graduationTimestamp > 0) break;
             } catch {
@@ -243,7 +243,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         }
 
         // Verify graduated
-        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        (,,, uint256 graduationTimestamp,,,) = personaFactory.personas(tokenId);
         require(graduationTimestamp > 0, "Must be graduated");
 
         // Wait for claim delay
@@ -279,7 +279,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
             try personaFactory.swapExactTokensForTokens(
                 tokenId, gradBuyAmount, 0, user3, block.timestamp + 1
             ) {
-                (,,, uint256 graduationTimestamp,,) =
+                (,,, uint256 graduationTimestamp,,,) =
                     personaFactory.personas(tokenId);
                 if (graduationTimestamp > 0) break;
             } catch {
@@ -288,7 +288,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         }
 
         // Verify graduated
-        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        (,,, uint256 graduationTimestamp,,,) = personaFactory.personas(tokenId);
         require(graduationTimestamp > 0, "Must be graduated");
 
         // Wait for claim delay
@@ -358,7 +358,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
             try personaFactory.swapExactTokensForTokens(
                 tokenId, buyAmount, 0, user2, block.timestamp + 1
             ) {
-                (,,, uint256 graduationTimestamp,,) =
+                (,,, uint256 graduationTimestamp,,,) =
                     personaFactory.personas(tokenId);
                 if (graduationTimestamp > 0) break;
             } catch {
@@ -369,11 +369,11 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         vm.stopPrank();
 
         // Verify graduated
-        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        (,,, uint256 graduationTimestamp,,,) = personaFactory.personas(tokenId);
         assertTrue(graduationTimestamp > 0, "Should have graduated with USDC");
 
         // Verify pool was created
-        (,,,,, PoolId poolId) = personaFactory.personas(tokenId);
+        (,,,,, PoolId poolId,) = personaFactory.personas(tokenId);
         assertTrue(
             PoolId.unwrap(poolId) != bytes32(0), "Pool should be created"
         );
@@ -419,7 +419,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         console.log("Purchase percent before agent deposit:", purchasePercent);
 
         // Should not be graduated yet (missing agent tokens)
-        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        (,,, uint256 graduationTimestamp,,,) = personaFactory.personas(tokenId);
         assertFalse(
             graduationTimestamp > 0, "Should not graduate without agent tokens"
         );
@@ -431,13 +431,13 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         vm.stopPrank();
 
         // Now it should graduate automatically if token threshold was met
-        (,,, graduationTimestamp,,) = personaFactory.personas(tokenId);
+        (,,, graduationTimestamp,,,) = personaFactory.personas(tokenId);
         assertTrue(
             graduationTimestamp > 0, "Should graduate after agent deposit"
         );
 
         // Verify pool was created
-        (,,,,, PoolId poolId) = personaFactory.personas(tokenId);
+        (,,,,, PoolId poolId,) = personaFactory.personas(tokenId);
         assertTrue(
             PoolId.unwrap(poolId) != bytes32(0), "Pool should be created"
         );
@@ -495,7 +495,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
             try personaFactory.swapExactTokensForTokens(
                 tokenId, buyAmount, 0, user2, block.timestamp + 1
             ) {
-                (,,, uint256 graduationTimestamp,,) =
+                (,,, uint256 graduationTimestamp,,,) =
                     personaFactory.personas(tokenId);
                 if (graduationTimestamp > 0) break;
             } catch {
@@ -504,7 +504,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         }
 
         // Verify graduated
-        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        (,,, uint256 graduationTimestamp,,,) = personaFactory.personas(tokenId);
         require(graduationTimestamp > 0, "Must be graduated");
 
         // Try to claim immediately after graduation (before 24 hour delay)
@@ -537,7 +537,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
             try personaFactory.swapExactTokensForTokens(
                 tokenId, buyAmount, 0, user1, block.timestamp + 1
             ) {
-                (,,, uint256 graduationTimestamp,,) =
+                (,,, uint256 graduationTimestamp,,,) =
                     personaFactory.personas(tokenId);
                 if (graduationTimestamp > 0) break;
             } catch {
@@ -546,7 +546,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         }
 
         // Verify graduated
-        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        (,,, uint256 graduationTimestamp,,,) = personaFactory.personas(tokenId);
         require(graduationTimestamp > 0, "Must be graduated");
 
         // Wait for claim delay
@@ -580,7 +580,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
             try personaFactory.swapExactTokensForTokens(
                 tokenId, buyAmount, 0, user2, block.timestamp + 1
             ) {
-                (,,, uint256 graduationTimestamp,,) =
+                (,,, uint256 graduationTimestamp,,,) =
                     personaFactory.personas(tokenId);
                 if (graduationTimestamp > 0) break;
             } catch {
@@ -628,7 +628,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
             try personaFactory.swapExactTokensForTokens(
                 tokenId, buyAmount, 0, user2, block.timestamp + 1
             ) {
-                (,,, uint256 graduationTimestamp,,) =
+                (,,, uint256 graduationTimestamp,,,) =
                     personaFactory.personas(tokenId);
                 if (graduationTimestamp > 0) break;
             } catch {
@@ -637,7 +637,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         }
 
         // Verify graduated
-        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        (,,, uint256 graduationTimestamp,,,) = personaFactory.personas(tokenId);
         require(graduationTimestamp > 0, "Must be graduated");
 
         // Try to sell after graduation
@@ -658,7 +658,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
             try personaFactory.swapExactTokensForTokens(
                 tokenId, buyAmount, 0, user2, block.timestamp + 1
             ) {
-                (,,, uint256 graduationTimestamp,,) =
+                (,,, uint256 graduationTimestamp,,,) =
                     personaFactory.personas(tokenId);
                 if (graduationTimestamp > 0) break;
             } catch {
@@ -667,7 +667,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         }
 
         // Verify graduated
-        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        (,,, uint256 graduationTimestamp,,,) = personaFactory.personas(tokenId);
         require(graduationTimestamp > 0, "Must be graduated");
 
         // Since the PositionManager doesn't actually mint NFTs in our test environment,
@@ -675,7 +675,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
         // In production, the PositionManager would mint an NFT that the owner could use
         // to collect fees. For now, we'll just verify the pool was created.
 
-        (,,,,, PoolId poolId) = personaFactory.personas(tokenId);
+        (,,,,, PoolId poolId,) = personaFactory.personas(tokenId);
         assertTrue(
             PoolId.unwrap(poolId) != bytes32(0), "Pool should be created"
         );
@@ -691,7 +691,7 @@ contract PersonaTokenFactoryGraduationTest is Fixtures {
             try personaFactory.swapExactTokensForTokens(
                 tokenId, buyAmount, 0, user2, block.timestamp + 1
             ) {
-                (,,, uint256 graduationTimestamp,,) =
+                (,,, uint256 graduationTimestamp,,,) =
                     personaFactory.personas(tokenId);
                 if (graduationTimestamp > 0) break;
             } catch {

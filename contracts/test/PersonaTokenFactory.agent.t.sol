@@ -145,7 +145,8 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
             address storedAgentToken,
             uint256 graduationTimestamp,
             uint256 agentTokenThreshold,
-            PoolId poolId
+            PoolId poolId,
+            // positionTokenId
         ) = personaFactory.personas(tokenId);
 
         assertTrue(token != address(0));
@@ -180,7 +181,7 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         vm.stopPrank();
 
         // Verify no agent token is set
-        (,, address storedAgentToken,,,) = personaFactory.personas(tokenId);
+        (,, address storedAgentToken,,,,) = personaFactory.personas(tokenId);
         assertEq(storedAgentToken, address(0));
     }
 
@@ -202,7 +203,7 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         vm.stopPrank();
 
         // Verify minimum requirement is set
-        (,,,, uint256 agentTokenThreshold,) = personaFactory.personas(tokenId);
+        (,,,, uint256 agentTokenThreshold,,) = personaFactory.personas(tokenId);
         assertEq(agentTokenThreshold, minRequired);
     }
 
@@ -319,7 +320,7 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         vm.stopPrank();
 
         // Verify graduated
-        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        (,,, uint256 graduationTimestamp,,,) = personaFactory.personas(tokenId);
         assertTrue(graduationTimestamp > 0, "Should be graduated");
 
         // Try to deposit after graduation
@@ -474,7 +475,7 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         );
 
         // Verify graduated
-        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        (,,, uint256 graduationTimestamp,,,) = personaFactory.personas(tokenId);
         assertTrue(graduationTimestamp > 0, "Should be graduated");
 
         // Try to withdraw
@@ -541,7 +542,7 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         );
 
         // Verify NOT graduated
-        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        (,,, uint256 graduationTimestamp,,,) = personaFactory.personas(tokenId);
         assertEq(graduationTimestamp, 0);
     }
 
@@ -582,7 +583,7 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         );
 
         // Verify graduated
-        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        (,,, uint256 graduationTimestamp,,,) = personaFactory.personas(tokenId);
         assertTrue(graduationTimestamp > 0);
     }
 
@@ -617,7 +618,7 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         );
 
         // Verify NOT graduated
-        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        (,,, uint256 graduationTimestamp,,,) = personaFactory.personas(tokenId);
         assertEq(graduationTimestamp, 0);
 
         // Deposit again to meet minimum - this should trigger graduation
@@ -632,7 +633,7 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         vm.stopPrank();
 
         // Verify graduated (deposit triggered graduation)
-        (,,, uint256 graduationTimestamp2,,) = personaFactory.personas(tokenId);
+        (,,, uint256 graduationTimestamp2,,,) = personaFactory.personas(tokenId);
         assertTrue(graduationTimestamp2 > 0);
     }
 
@@ -664,7 +665,7 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         );
 
         // Get persona token
-        (address personaTokenAddress,,,,,) = personaFactory.personas(tokenId);
+        (address personaTokenAddress,,,,,,) = personaFactory.personas(tokenId);
         PersonaToken pToken = PersonaToken(personaTokenAddress);
 
         // Wait for claim delay
@@ -716,7 +717,7 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         );
 
         // Get persona token
-        (address personaTokenAddress,,,,,) = personaFactory.personas(tokenId);
+        (address personaTokenAddress,,,,,,) = personaFactory.personas(tokenId);
         PersonaToken pToken = PersonaToken(personaTokenAddress);
 
         // Wait for claim delay
@@ -777,7 +778,7 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         vm.stopPrank();
 
         // Get persona token
-        (address personaTokenAddress,,,,,) = personaFactory.personas(tokenId);
+        (address personaTokenAddress,,,,,,) = personaFactory.personas(tokenId);
         PersonaToken pToken = PersonaToken(personaTokenAddress);
 
         // Wait for claim delay
@@ -921,7 +922,7 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         );
 
         // Check not graduated
-        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        (,,, uint256 graduationTimestamp,,,) = personaFactory.personas(tokenId);
         assertEq(graduationTimestamp, 0);
     }
 
@@ -955,7 +956,7 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         );
 
         // Check not graduated
-        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        (,,, uint256 graduationTimestamp,,,) = personaFactory.personas(tokenId);
         assertEq(graduationTimestamp, 0);
     }
 
@@ -999,7 +1000,7 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         );
 
         // Get persona token
-        (address personaTokenAddress,,,,,) = personaFactory.personas(tokenId);
+        (address personaTokenAddress,,,,,,) = personaFactory.personas(tokenId);
         PersonaToken pToken = PersonaToken(personaTokenAddress);
 
         // Wait for claim delay
@@ -1054,7 +1055,7 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         vm.stopPrank();
 
         // Get persona token address
-        (address personaTokenAddress,,,,,) = personaFactory.personas(tokenId);
+        (address personaTokenAddress,,,,,,) = personaFactory.personas(tokenId);
 
         // Check persona token balance before graduation
         uint256 personaAgentBalanceBefore =
@@ -1100,7 +1101,7 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         );
 
         // Should graduate successfully
-        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        (,,, uint256 graduationTimestamp,,,) = personaFactory.personas(tokenId);
         assertTrue(graduationTimestamp > 0);
 
         // No agent tokens sent to persona token (since none were deposited)
@@ -1129,7 +1130,7 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         );
 
         // Should not be graduated yet (missing agent tokens)
-        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        (,,, uint256 graduationTimestamp,,,) = personaFactory.personas(tokenId);
         assertEq(graduationTimestamp, 0);
 
         // Now deposit enough agent tokens to trigger graduation
@@ -1144,7 +1145,7 @@ contract PersonaTokenFactoryAgentTest is Fixtures {
         vm.stopPrank();
 
         // Should be graduated now
-        (,,, graduationTimestamp,,) = personaFactory.personas(tokenId);
+        (,,, graduationTimestamp,,,) = personaFactory.personas(tokenId);
         assertTrue(graduationTimestamp > 0);
     }
 }

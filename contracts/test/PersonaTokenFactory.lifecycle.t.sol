@@ -174,7 +174,7 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
 
         while (true) {
             // Check if graduated
-            (,,, uint256 graduationTimestamp,,) =
+            (,,, uint256 graduationTimestamp,,,) =
                 testFactory.personas(state.tokenId);
             if (graduationTimestamp > 0) break;
 
@@ -312,7 +312,7 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
         testFactory.claimRewards(tokenId);
 
         // Final balances
-        (address personaTokenAddr,,,,,) = testFactory.personas(tokenId);
+        (address personaTokenAddr,,,,,,) = testFactory.personas(tokenId);
         uint256 userBalance = IERC20(personaTokenAddr).balanceOf(user1);
 
         console.log("\n=== Final Results ===");
@@ -459,7 +459,7 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
                 }
 
                 // Check if graduated
-                (,,, uint256 graduationTimestamp,,) =
+                (,,, uint256 graduationTimestamp,,,) =
                     testFactory.personas(tokenId);
                 if (graduationTimestamp > 0) {
                     graduated = true;
@@ -486,7 +486,7 @@ contract PersonaTokenFactoryLifecycleTest is Fixtures {
             // Claim rewards
             try testFactory.claimRewards(tokenId) {
                 // Get persona token
-                (address personaTokenAddr,,,,,) = testFactory.personas(tokenId);
+                (address personaTokenAddr,,,,,,) = testFactory.personas(tokenId);
                 result.personaReceived =
                     IERC20(personaTokenAddr).balanceOf(user1);
                 result.success = true;

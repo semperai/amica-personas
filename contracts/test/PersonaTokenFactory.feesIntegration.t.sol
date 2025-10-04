@@ -188,14 +188,14 @@ contract PersonaTokenFactoryFeesIntegrationTest is Fixtures {
         returns (address personaToken, PoolId poolId)
     {
         // Get persona token
-        (address token,,,,,) = personaFactory.personas(tokenId);
+        (address token,,,,,,) = personaFactory.personas(tokenId);
         personaToken = token;
 
         // Buy tokens to trigger graduation
         uint256 buyAmount = 100_000 ether;
         for (uint256 i = 0; i < 20; i++) {
             // Check if already graduated
-            (,,, uint256 gradTimestamp,,) = personaFactory.personas(tokenId);
+            (,,, uint256 gradTimestamp,,,) = personaFactory.personas(tokenId);
             if (gradTimestamp > 0) break;
 
             vm.prank(user2);
@@ -205,7 +205,7 @@ contract PersonaTokenFactoryFeesIntegrationTest is Fixtures {
         }
 
         // Verify graduation
-        (,,, uint256 graduationTimestamp,, PoolId pid) =
+        (,,, uint256 graduationTimestamp,, PoolId pid,) =
             personaFactory.personas(tokenId);
         require(graduationTimestamp > 0, "Must be graduated");
         poolId = pid;

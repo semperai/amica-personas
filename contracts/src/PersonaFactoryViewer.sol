@@ -18,6 +18,14 @@ contract PersonaFactoryViewer {
     /// @notice Precision for calculations
     uint256 private constant PRECISION = 1e18;
 
+    /// @notice Graduation eligibility status codes
+    enum GraduationStatus {
+        ELIGIBLE,
+        ALREADY_GRADUATED,
+        BELOW_TOKEN_THRESHOLD,
+        INSUFFICIENT_AGENT_TOKENS
+    }
+
     /**
      * @notice Initializes the viewer with factory address
      * @param _factory Address of the PersonaTokenFactory contract
@@ -65,7 +73,7 @@ contract PersonaFactoryViewer {
             uint256 agentRewardsAmount
         )
     {
-        (,, address agentToken,,,) = factory.personas(tokenId);
+        (,, address agentToken,,,,) = factory.personas(tokenId);
 
         if (agentToken != address(0)) {
             // With agent token: 1/3, 1/6, 1/3, 1/6
@@ -102,7 +110,7 @@ contract PersonaFactoryViewer {
             factory.preGraduationStates(tokenId);
 
         // Calculate available tokens
-        (address token,, address agentToken, uint256 graduationTimestamp,,) =
+        (address token,, address agentToken, uint256 graduationTimestamp,,,) =
             factory.personas(tokenId);
         if (graduationTimestamp > 0 || token == address(0)) {
             availableTokens = 0;
@@ -146,7 +154,9 @@ contract PersonaFactoryViewer {
             address pairToken,
             address agentToken,
             uint256 graduationTimestamp,
-            ,
+            , // agentTokenThreshold
+            , // poolId
+            // positionTokenId
         ) = factory.personas(tokenId);
         if (graduationTimestamp > 0 || token == address(0)) return 0;
 
@@ -170,12 +180,12 @@ contract PersonaFactoryViewer {
      * @notice Checks if a persona can graduate
      * @param tokenId ID of the persona
      * @return eligible Whether graduation is possible
-     * @return reason Reason if not eligible
+     * @return status Status code indicating eligibility or reason for ineligibility
      */
     function canGraduate(uint256 tokenId)
         external
         view
-        returns (bool eligible, string memory reason)
+        returns (bool eligible, GraduationStatus status)
     {
         (
             ,
@@ -183,10 +193,12 @@ contract PersonaFactoryViewer {
             address agentToken,
             uint256 graduationTimestamp,
             uint256 agentTokenThreshold,
+            , // poolId
+            // positionTokenId
         ) = factory.personas(tokenId);
 
         if (graduationTimestamp > 0) {
-            return (false, "Already graduated");
+            return (false, GraduationStatus.ALREADY_GRADUATED);
         }
 
         (, uint256 tokensPurchased, uint256 totalAgentDeposited) =
@@ -197,16 +209,16 @@ contract PersonaFactoryViewer {
         uint256 graduationThreshold = (bondingSupplyAmount * 85) / 100; // 85% threshold
 
         if (tokensPurchased < graduationThreshold) {
-            return (false, "Below 85% tokens sold");
+            return (false, GraduationStatus.BELOW_TOKEN_THRESHOLD);
         }
 
         if (agentToken != address(0) && agentTokenThreshold > 0) {
             if (totalAgentDeposited < agentTokenThreshold) {
-                return (false, "Insufficient agent tokens deposited");
+                return (false, GraduationStatus.INSUFFICIENT_AGENT_TOKENS);
             }
         }
 
-        return (true, "");
+        return (true, GraduationStatus.ELIGIBLE);
     }
 
     /**
@@ -225,7 +237,7 @@ contract PersonaFactoryViewer {
             uint256 agentRequired
         )
     {
-        (,, address agentToken,, uint256 agentTokenThreshold,) =
+        (,, address agentToken,, uint256 agentTokenThreshold,,) =
             factory.personas(tokenId);
 
         (, uint256 tokensPurchased, uint256 totalAgentDeposited) =
@@ -327,7 +339,9 @@ contract PersonaFactoryViewer {
             address pairToken,
             address agentToken,
             uint256 graduationTimestamp,
-            ,
+            , // agentTokenThreshold
+            , // poolId
+            // positionTokenId
         ) = factory.personas(tokenId);
         if (graduationTimestamp > 0 || token == address(0)) return 0;
 
@@ -361,7 +375,9 @@ contract PersonaFactoryViewer {
             address pairToken,
             address agentToken,
             uint256 graduationTimestamp,
-            ,
+            , // agentTokenThreshold
+            , // poolId
+            // positionTokenId
         ) = factory.personas(tokenId);
         if (graduationTimestamp > 0 || token == address(0)) return 0;
 
@@ -396,7 +412,9 @@ contract PersonaFactoryViewer {
             address pairToken,
             address agentToken,
             uint256 graduationTimestamp,
-            ,
+            , // agentTokenThreshold
+            , // poolId
+            // positionTokenId
         ) = factory.personas(tokenId);
         if (graduationTimestamp > 0 || token == address(0)) return 0;
 
@@ -429,7 +447,7 @@ contract PersonaFactoryViewer {
         graduatedStatus = new bool[](length);
 
         for (uint256 i = 0; i < length; i++) {
-            (address erc20Token,,, uint256 graduationTimestamp,,) =
+            (address erc20Token,,, uint256 graduationTimestamp,,,) =
                 factory.personas(tokenIds[i]);
             erc20Tokens[i] = erc20Token;
             graduatedStatus[i] = graduationTimestamp > 0;
@@ -462,7 +480,7 @@ contract PersonaFactoryViewer {
                 factory.preGraduationStates(tokenIds[i]);
 
             // Calculate available tokens inline
-            (address token,, address agentToken, uint256 graduationTimestamp,,)
+            (address token,, address agentToken, uint256 graduationTimestamp,,,)
             = factory.personas(tokenIds[i]);
             if (graduationTimestamp > 0 || token == address(0)) {
                 availableTokens[i] = 0;
@@ -567,7 +585,7 @@ contract PersonaFactoryViewer {
         view
         returns (bool allowed, uint256 timeRemaining)
     {
-        (,,, uint256 graduationTimestamp,,) = factory.personas(tokenId);
+        (,,, uint256 graduationTimestamp,,,) = factory.personas(tokenId);
 
         if (graduationTimestamp == 0) {
             return (false, 0); // Not graduated yet
@@ -591,7 +609,7 @@ contract PersonaFactoryViewer {
         view
         returns (uint256 timestamp)
     {
-        (,,, timestamp,,) = factory.personas(tokenId);
+        (,,, timestamp,,,) = factory.personas(tokenId);
     }
 
     /**

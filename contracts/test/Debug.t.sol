@@ -66,7 +66,7 @@ contract DebugTest is Fixtures {
         );
 
         // Check if graduated
-        (,,, uint256 graduationTimestamp,,) = personaFactory.personas(tokenId);
+        (,,, uint256 graduationTimestamp,,,) = personaFactory.personas(tokenId);
         console.log("graduationTimestamp:", graduationTimestamp);
         require(graduationTimestamp > 0, "Must be graduated");
 
