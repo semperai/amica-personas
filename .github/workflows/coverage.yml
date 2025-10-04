@@ -32,6 +32,10 @@ jobs:
       - name: Install dependencies
         run: cd ${{ matrix.package }} && npm ci
 
+      - name: Compile contracts
+        if: matrix.package == 'contracts'
+        run: cd ${{ matrix.package }} && forge build
+
       - name: Run coverage
         run: cd ${{ matrix.package }} && npm run test:coverage
 
