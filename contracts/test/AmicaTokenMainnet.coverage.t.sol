@@ -3,9 +3,12 @@ pragma solidity ^0.8.26;
 
 import "forge-std/Test.sol";
 import {AmicaTokenMainnet} from "../src/AmicaTokenMainnet.sol";
+import {AmicaTokenMainnetV2} from "../src/AmicaTokenMainnetV2.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 import {ERC1967Proxy} from
     "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {UUPSUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 /**
  * @notice Coverage tests for AmicaTokenMainnet without UUPS upgrade validation
@@ -428,4 +431,112 @@ contract AmicaTokenMainnetCoverageTest is Test {
         assertFalse(amica.paused());
         vm.stopPrank();
     }
+
+    // ============ Initialization Tests ============
+
+    function test_Initialize_RevertExceedsMaxSupply() public {
+        vm.prank(owner);
+        AmicaTokenMainnet implementation = new AmicaTokenMainnet();
+
+        vm.expectRevert("Exceeds max supply");
+        new ERC1967Proxy(
+            address(implementation),
+            abi.encodeCall(
+                AmicaTokenMainnet.initialize,
+                (owner, MAX_SUPPLY + 1)
+            )
+        );
+    }
+
+    function test_Initialize_ExactlyMaxSupply() public {
+        vm.prank(owner);
+        AmicaTokenMainnet implementation = new AmicaTokenMainnet();
+
+        ERC1967Proxy proxy = new ERC1967Proxy(
+            address(implementation),
+            abi.encodeCall(AmicaTokenMainnet.initialize, (owner, MAX_SUPPLY))
+        );
+
+        AmicaTokenMainnet amicaMax = AmicaTokenMainnet(address(proxy));
+        assertEq(amicaMax.totalSupply(), MAX_SUPPLY);
+        assertEq(amicaMax.remainingSupply(), 0);
+    }
+
+    // ============ UUPS Upgrade Tests ============
+
+    function test_UpgradeToV2_Success() public {
+        // Deploy V2 implementation
+        vm.prank(owner);
+        AmicaTokenMainnetV2 v2Implementation = new AmicaTokenMainnetV2();
+
+        // Upgrade to V2
+        vm.prank(owner);
+        UUPSUpgradeable(address(amica)).upgradeToAndCall(
+            address(v2Implementation), ""
+        );
+
+        // Cast to V2 and verify upgrade
+        AmicaTokenMainnetV2 amicaV2 = AmicaTokenMainnetV2(address(amica));
+        assertEq(amicaV2.upgradeTest(), "Upgrade success");
+        assertEq(amicaV2.version(), "2.0.0");
+
+        // Verify existing state is preserved
+        assertEq(amicaV2.owner(), owner);
+        assertEq(amicaV2.totalSupply(), INITIAL_SUPPLY);
+    }
+
+    function test_UpgradeToV2_RevertNotOwner() public {
+        vm.prank(owner);
+        AmicaTokenMainnetV2 v2Implementation = new AmicaTokenMainnetV2();
+
+        // Try to upgrade as non-owner
+        vm.prank(user1);
+        vm.expectRevert();
+        UUPSUpgradeable(address(amica)).upgradeToAndCall(
+            address(v2Implementation), ""
+        );
+    }
+
+    function test_UpgradeToV2_PreservesDeposits() public {
+        // Configure token and make a deposit
+        vm.prank(owner);
+        amica.configureToken(address(mockToken), true, 1e18, 18);
+
+        vm.prank(owner);
+        mockToken.mint(user1, 1000e18);
+
+        vm.startPrank(user1);
+        mockToken.approve(address(amica), 1000e18);
+        amica.depositAndMint(address(mockToken), 1000e18);
+        vm.stopPrank();
+
+        uint256 balanceBefore = amica.balanceOf(user1);
+        assertEq(balanceBefore, 1000e18);
+
+        // Upgrade to V2
+        vm.prank(owner);
+        AmicaTokenMainnetV2 v2Implementation = new AmicaTokenMainnetV2();
+
+        vm.prank(owner);
+        UUPSUpgradeable(address(amica)).upgradeToAndCall(
+            address(v2Implementation), ""
+        );
+
+        // Verify balance preserved after upgrade
+        AmicaTokenMainnetV2 amicaV2 = AmicaTokenMainnetV2(address(amica));
+        assertEq(amicaV2.balanceOf(user1), balanceBefore);
+        assertEq(amicaV2.upgradeTest(), "Upgrade success");
+
+        // Verify functionality still works - mint more tokens first
+        vm.prank(owner);
+        mockToken.mint(user1, 500e18);
+
+        vm.startPrank(user1);
+        mockToken.approve(address(amica), 500e18);
+        amicaV2.depositAndMint(address(mockToken), 500e18);
+        vm.stopPrank();
+
+        assertEq(amicaV2.balanceOf(user1), 1500e18);
+    }
 }
+

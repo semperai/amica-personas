@@ -122,8 +122,8 @@ contract AmicaTokenBridged is
      */
     function initialize(address initialOwner) external initializer {
         __ERC20_init("Amica", "AMICA");
-        __Ownable_init(initialOwner);
         __ReentrancyGuard_init();
+        __Ownable_init(initialOwner);
         __Pausable_init();
         __UUPSUpgradeable_init();
     }

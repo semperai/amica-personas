@@ -6,9 +6,11 @@ import {AmicaTokenMainnet} from "../src/AmicaTokenMainnet.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
-// NOTE: These tests are temporarily disabled due to upgrade safety validation requiring
-// a full compilation. Will be re-enabled once V2 contracts exist for proper upgrade testing.
-contract Skip_AmicaTokenMainnetTest is Test {
+/**
+ * @notice Full integration tests using OpenZeppelin Upgrades plugin
+ * @dev Now working after adding UUPSUpgradeable to AmicaTokenMainnet
+ */
+contract AmicaTokenMainnetTest is Test {
     AmicaTokenMainnet public amica;
     ERC20Mock public mockToken;
 

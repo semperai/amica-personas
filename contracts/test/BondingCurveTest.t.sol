@@ -372,6 +372,22 @@ contract BondingCurveTest is Test {
         );
     }
 
+    // ==================== Error Condition Tests ====================
+
+    function test_GetCurrentMultiplier_ZeroReserveTotal() public {
+        // Attempt to get multiplier with zero reserveTotal
+        // This hits Solidity's division by zero panic before custom check
+        vm.expectRevert();
+        bondingCurve.getCurrentMultiplier(0, 0);
+    }
+
+    function test_GetCurveProgress_ZeroReserveTotal() public {
+        // Attempt to get progress with zero reserveTotal
+        // This should revert with DivisionByZero
+        vm.expectRevert(BondingCurve.DivisionByZero.selector);
+        bondingCurve.getCurveProgress(100 ether, 0);
+    }
+
     // ==================== Fuzzing Test ====================
 
     function testFuzz_BuySellSymmetry(uint256 buyAmount, uint256 initialSold)

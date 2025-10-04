@@ -6,6 +6,8 @@ import {OwnableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {PausableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {UUPSUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -39,7 +41,8 @@ import {SafeERC20} from
 contract AmicaTokenMainnet is
     BurnAndClaimBase,
     OwnableUpgradeable,
-    PausableUpgradeable
+    PausableUpgradeable,
+    UUPSUpgradeable
 {
     using SafeERC20 for IERC20;
 
@@ -347,4 +350,15 @@ contract AmicaTokenMainnet is
     {
         super._update(from, to, value);
     }
+
+    /**
+     * @notice Authorizes an upgrade to a new implementation
+     * @dev Required by UUPSUpgradeable - only owner can upgrade
+     * @param newImplementation Address of the new implementation contract
+     */
+    function _authorizeUpgrade(address newImplementation)
+        internal
+        override
+        onlyOwner
+    {}
 }

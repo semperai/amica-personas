@@ -762,4 +762,49 @@ contract PersonaFactoryViewerTest is Fixtures {
         assertEq(tokensPurchased, 0);
         assertEq(totalAgentDeposited, 0);
     }
+
+    // ==================== Branch Coverage Tests ====================
+
+    function test_IsClaimAllowed_BeforeDelay() public {
+        // Create and graduate a persona
+        vm.prank(user1);
+        uint256 tokenId = personaFactory.createPersona(
+            address(amicaToken),
+            "Test",
+            "TEST",
+            bytes32("testclaimdelay"),
+            0,
+            address(0),
+            0
+        );
+
+        // Buy some tokens
+        vm.prank(user2);
+        personaFactory.swapExactTokensForTokens(
+            tokenId, 1000 ether, 0, user2, block.timestamp + 300
+        );
+
+        // Graduate
+        uint256 graduationThreshold = (333_333_333 ether * 85) / 100;
+        vm.prank(user2);
+        personaFactory.swapExactTokensForTokens(
+            tokenId,
+            graduationThreshold,
+            0,
+            user2,
+            block.timestamp + 300
+        );
+
+        // Check claim allowed immediately (should be false due to 1 day delay)
+        (bool allowed, uint256 timeRemaining) = viewer.isClaimAllowed(tokenId);
+        assertFalse(allowed); // Should be false before delay
+        assertGt(timeRemaining, 0);
+
+        // Fast forward past delay
+        vm.warp(block.timestamp + 1 days + 1);
+
+        (allowed, timeRemaining) = viewer.isClaimAllowed(tokenId);
+        assertTrue(allowed); // Should be true after delay
+        assertEq(timeRemaining, 0);
+    }
 }
