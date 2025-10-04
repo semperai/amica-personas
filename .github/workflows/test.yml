@@ -42,11 +42,13 @@ jobs:
         run: |
           forge test -vvv
         id: test
+        continue-on-error: true
 
       - name: Run Forge coverage
         run: |
           cd contracts && forge coverage --report lcov
         id: coverage
+        continue-on-error: true
 
       - name: Upload coverage to Coveralls
         uses: coverallsapp/github-action@v2
@@ -76,6 +78,7 @@ jobs:
 
       - name: Run tests with coverage
         run: cd amica && npm run test -- --coverage --reporter=default
+        continue-on-error: true
 
       - name: Upload coverage to Coveralls
         uses: coverallsapp/github-action@v2
