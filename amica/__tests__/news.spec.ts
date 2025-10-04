@@ -1,4 +1,4 @@
-import { describe, expect, test, vi, beforeEach } from "vitest";
+import { describe, expect, test, vi, beforeEach, beforeAll, afterAll } from "vitest";
 
 // Use vi.hoisted to create the mocks before they're hoisted
 const { fetchMock, expandPromptMock } = vi.hoisted(() => {
@@ -10,9 +10,6 @@ const { fetchMock, expandPromptMock } = vi.hoisted(() => {
   };
 });
 
-// Mock fetch globally
-vi.stubGlobal('fetch', fetchMock);
-
 // Mock the module to use our hoisted mock
 vi.mock("@/features/functionCalling/eventHandler", () => ({
   expandPrompt: expandPromptMock,
@@ -21,10 +18,25 @@ vi.mock("@/features/functionCalling/eventHandler", () => ({
 import { handleNews } from "@/features/plugins/news";
 
 describe("news", () => {
+  beforeAll(() => {
+    // Mock fetch globally before all tests
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterAll(() => {
+    // Restore fetch after all tests
+    vi.unstubAllGlobals();
+  });
+
   beforeEach(() => {
     fetchMock.mockClear();
-    // Only clear the call history, keep the implementation
+    fetchMock.mockReset();
+    // Reset the expandPrompt mock to ensure clean state
     expandPromptMock.mockClear();
+    expandPromptMock.mockReset();
+    expandPromptMock.mockImplementation((prompt: string, values: any) => {
+      return Promise.resolve(prompt.replace('{context_str}', values.context_str));
+    });
   });
 
   const createMockRSS = (items: Array<{title: string, description: string}>) => {
