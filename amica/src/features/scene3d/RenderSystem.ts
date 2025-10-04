@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls";
 import { InteractiveGroup } from "three/addons/interactive/InteractiveGroup.js";
 import { config } from "@/utils/config";
-import { Model } from "./model";
+import { Model } from "./VrmCharacterModel";
 
 export class RenderSystem {
   public renderer: THREE.WebGLRenderer;

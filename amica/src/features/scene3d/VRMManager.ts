@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { Model } from "./model";
+import { Model } from "./VrmCharacterModel";
 import { loadVRMAnimation } from "@/lib/VRMAnimation/loadVRMAnimation";
 import { loadMixamoAnimation } from "@/lib/VRMAnimation/loadMixamoAnimation";
 import { config } from "@/utils/config";

@@ -3,7 +3,7 @@ import { MeshBVHHelper, StaticGeometryGenerator } from "three-mesh-bvh";
 import { GenerateMeshBVHWorker } from "@/workers/bvh/GenerateMeshBVHWorker";
 import { WorkerBase } from "@/workers/bvh/utils/WorkerBase";
 import { VRMHumanBoneName } from "@pixiv/three-vrm";
-import { Model } from "./model";
+import { Model } from "./VrmCharacterModel";
 import { config } from "@/utils/config";
 
 const amicaBones: VRMHumanBoneName[] = [

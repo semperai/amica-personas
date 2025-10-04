@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { Talk } from "../src/features/chat/messages";
-import { cleanTalk } from "../src/utils/cleanTalk";
+import { removeEmojiFromText } from "../src/utils/removeEmojiFromText";
 
 function makeTalk(message: string): Talk {
   return {
@@ -12,22 +12,22 @@ function makeTalk(message: string): Talk {
 describe("Cleaning Talk Tests", () => {
   test("should return same thing", () => {
     const t = makeTalk("Hello");
-    expect(cleanTalk(t).message).toBe("Hello");
+    expect(removeEmojiFromText(t).message).toBe("Hello");
   });
   test("should remove emoji", () => {
     const t = makeTalk("Hello 😊 Goodbye");
-    expect(cleanTalk(t).message).toBe("Hello Goodbye");
+    expect(removeEmojiFromText(t).message).toBe("Hello Goodbye");
   });
   test("should remove smiley", () => {
     const t = makeTalk("Hello :) how are you");
-    expect(cleanTalk(t).message).toBe("Hello how are you");
+    expect(removeEmojiFromText(t).message).toBe("Hello how are you");
   });
   test("should not remove non smiley", () => {
     const t = makeTalk("(WOOD)");
-    expect(cleanTalk(t).message).toBe("(WOOD)");
+    expect(removeEmojiFromText(t).message).toBe("(WOOD)");
   });
   test("should remove smiley start of sentence", () => {
     const t = makeTalk(":D");
-    expect(cleanTalk(t).message).toBe("");
+    expect(removeEmojiFromText(t).message).toBe("");
   });
 });

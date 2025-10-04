@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { Room } from "./room";
+import { Room } from "./EnvironmentRoom";
 
 export class EnvironmentManager {
   private room?: Room;

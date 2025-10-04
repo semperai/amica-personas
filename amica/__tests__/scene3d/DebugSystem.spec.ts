@@ -1,6 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as THREE from 'three';
 
+// Mock HTMLMesh to avoid canvas context issues
+vi.mock('three/addons/interactive/HTMLMesh.js', () => ({
+  HTMLMesh: vi.fn().mockImplementation((element) => {
+    const mesh = new THREE.Mesh();
+    (mesh as any).element = element;
+    return mesh;
+  }),
+}));
+
 // Mock stats.js and lil-gui BEFORE importing DebugSystem
 vi.mock('stats.js', () => {
   const mockStatsPanel = {

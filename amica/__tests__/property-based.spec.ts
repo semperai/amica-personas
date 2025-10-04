@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import * as fc from "fast-check";
 import { buildUrl } from "@/utils/buildUrl";
-import { cleanTalk } from "@/utils/cleanTalk";
+import { removeEmojiFromText } from "@/utils/removeEmojiFromText";
 
 /**
  * Property-Based Tests
@@ -74,7 +74,7 @@ describe("Property-Based Tests", () => {
           fc.string(),
           (message) => {
             const talk = { style: 'neutral' as const, message };
-            const result = cleanTalk(talk);
+            const result = removeEmojiFromText(talk);
 
             // Property: Should always return a Talk object
             expect(result).not.toBeNull();
@@ -92,7 +92,7 @@ describe("Property-Based Tests", () => {
           fc.string({ minLength: 0, maxLength: 500 }),
           (message) => {
             const talk = { style: 'neutral' as const, message };
-            const result = cleanTalk(talk);
+            const result = removeEmojiFromText(talk);
 
             // Property: Cleaning should never increase length
             expect(result.message.length).toBeLessThanOrEqual(message.length);
@@ -108,9 +108,9 @@ describe("Property-Based Tests", () => {
           fc.string({ maxLength: 200 }),
           (message) => {
             const talk1 = { style: 'neutral' as const, message };
-            const once = cleanTalk(talk1);
+            const once = removeEmojiFromText(talk1);
             const talk2 = { style: 'neutral' as const, message: once.message };
-            const twice = cleanTalk(talk2);
+            const twice = removeEmojiFromText(talk2);
 
             // Property: Cleaning an already cleaned string shouldn't change it
             expect(twice.message).toBe(once.message);
@@ -127,7 +127,7 @@ describe("Property-Based Tests", () => {
           (chars) => {
             const message = chars.join('');
             const talk = { style: 'neutral' as const, message };
-            const result = cleanTalk(talk);
+            const result = removeEmojiFromText(talk);
 
             // Property: Simple alphanumeric strings should be preserved
             // except cleanTalk collapses double spaces to single spaces

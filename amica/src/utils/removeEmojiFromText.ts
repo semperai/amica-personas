@@ -1,6 +1,6 @@
 import { Talk } from '@/features/chat/messages';
 
-export function cleanTalk(talk: Talk) {
+export function removeEmojiFromText(talk: Talk) {
   // remove emoticons
   talk.message = talk.message.replace(/[\u{1F600}-\u{1F64F}]/gu, '');
 

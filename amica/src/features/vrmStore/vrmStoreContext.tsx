@@ -1,7 +1,7 @@
 import { Dispatch, PropsWithChildren, ReactElement, SetStateAction, createContext, useContext, useEffect, useReducer, useState } from "react";
 import { VrmData } from "./vrmData";
 import { vrmList } from "@/paths";
-import { thumbPrefix } from "@/utils/thumbPrefix";
+import { addThumbnailPrefix } from "@/utils/addThumbnailPrefix";
 import { AddItemCallbackType, VrmStoreActionType, vrmStoreReducer } from "./vrmStoreReducer";
 import { SceneCoordinator } from "@/features/scene3d/SceneCoordinator";
 import { config } from "@/utils/config";
@@ -15,7 +15,7 @@ interface VrmStoreContextType {
 };
 
 const vrmInitList = vrmList.map((url: string) => {
-    return new VrmData(url, url, `${thumbPrefix(url)}.jpg`, 'web');
+    return new VrmData(url, url, `${addThumbnailPrefix(url)}.jpg`, 'web');
 });
 
 export const VrmStoreContext = createContext<VrmStoreContextType>({

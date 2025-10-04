@@ -31,7 +31,7 @@ import { openaiTTS } from "@/features/openaiTTS/openaiTTS";
 import { localXTTSTTS } from "@/features/localXTTS/localXTTS";
 
 import { config } from "@/utils/config";
-import { cleanTalk } from "@/utils/cleanTalk";
+import { removeEmojiFromText } from "@/utils/removeEmojiFromText";
 import { processResponse } from "@/utils/processResponse";
 import { wait } from "@/utils/wait";
 import {
@@ -516,7 +516,7 @@ export class Chat {
     // since this depends on the tts backend, we should do it
     // in their respective functions
     // this is just a simple solution for now
-    talk = cleanTalk(talk);
+    talk = removeEmojiFromText(talk);
     if (talk.message.trim() === "" || config("tts_muted") === "true") {
       return null;
     }
