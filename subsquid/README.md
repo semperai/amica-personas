@@ -180,6 +180,25 @@ query {
 - Regenerate types: `npm run codegen && npm run typegen`
 - Rebuild: `npm run build`
 
+### Schema mismatch errors
+If you see errors like "column does not exist" when syncing, your database schema is out of sync with the code.
+
+**For local:**
+```bash
+# Drop and recreate the database
+docker-compose down -v
+docker-compose up -d db
+npx squid-typeorm-migration apply
+```
+
+**For cloud:**
+```bash
+# Reset the cloud database
+sqd deploy --hard-reset .
+```
+
+The `--hard-reset` flag will drop all data and recreate the database from scratch with your current schema.
+
 ## Development
 
 ### Adding new events:
