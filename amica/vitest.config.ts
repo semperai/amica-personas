@@ -26,6 +26,7 @@ export default defineConfig({
         'github-actions-reporter.js',
         'postcss.config.js',
         'tailwind.config.js',
+        'lighthouserc.js',
         'vite-plugins/**',
         'public/**',
         'scripts/**',
