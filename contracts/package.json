@@ -1,0 +1,10 @@
+{
+  "name": "amica-personas-contracts",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Amica Personas Smart Contracts",
+  "scripts": {
+    "test": "forge test",
+    "test:coverage": "forge coverage --report lcov"
+  }
+}

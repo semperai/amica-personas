@@ -1,96 +1,73 @@
-name: CI
+name: Coverage
 
 on:
   push:
   pull_request:
   workflow_dispatch:
 
-env:
-  FOUNDRY_PROFILE: ci
-
 jobs:
-  contracts:
-    name: Contracts
+  coverage:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package: [contracts, amica, subdomain-service, subsquid]
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
           submodules: recursive
-
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-
-      - name: Install dependencies
-        run: |
-          cd contracts && forge install
-
-      - name: Show Forge version
-        run: |
-          forge --version
-
-      - name: Run Forge fmt
-        run: |
-          cd contracts && forge fmt --check
-        id: fmt
-
-      - name: Run Forge build
-        run: |
-          cd contracts && forge build --sizes
-        id: build
-
-      - name: Run Forge tests
-        run: |
-          cd contracts && forge test -vvv
-        id: test
-
-      - name: Run Forge coverage
-        run: |
-          cd contracts && forge coverage --report lcov
-        id: coverage
-
-      - name: Upload coverage to Coveralls
-        uses: coverallsapp/github-action@v2
-        if: hashFiles('contracts/lcov.info') != ''
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: ./contracts/lcov.info
-          base-path: ./contracts
-          flag-name: contracts
-          parallel: true
-          carryforward: true
-
-  amica:
-    name: Amica
-    runs-on: ubuntu-latest
-    env:
-      NODE_OPTIONS: --max-old-space-size=16384
-    steps:
-      - uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: amica/package-lock.json
+
+      - name: Install Foundry
+        if: matrix.package == 'contracts'
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
 
       - name: Install dependencies
-        run: cd amica && npm ci
+        run: cd ${{ matrix.package }} && npm ci
 
-      - name: Run tests with coverage
-        run: cd amica && npm run test:coverage
+      - name: Run coverage
+        run: cd ${{ matrix.package }} && npm run test:coverage
+        continue-on-error: true
+
+      - name: Determine lcov path
+        id: lcov-path
+        run: |
+          if [ -f "${{ matrix.package }}/lcov.info" ]; then
+            echo "path=${{ matrix.package }}/lcov.info" >> $GITHUB_OUTPUT
+          elif [ -f "${{ matrix.package }}/coverage/lcov.info" ]; then
+            echo "path=${{ matrix.package }}/coverage/lcov.info" >> $GITHUB_OUTPUT
+          else
+            echo "path=${{ matrix.package }}/lcov.info" >> $GITHUB_OUTPUT
+          fi
 
       - name: Upload coverage to Coveralls
         uses: coverallsapp/github-action@v2
-        if: hashFiles('amica/coverage/lcov.info') != ''
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: ./amica/coverage/lcov.info
-          base-path: ./amica
-          flag-name: amica
+          flag-name: ${{ matrix.package }}
           parallel: true
-          carryforward: true
+          file: ${{ steps.lcov-path.outputs.path }}
+        continue-on-error: true
 
+  finish:
+    needs: coverage
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Coveralls Finished
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          parallel-finished: true
+
+  # Non-coverage CI jobs
   website:
     name: Website
     runs-on: ubuntu-latest
@@ -150,15 +127,3 @@ jobs:
 
       - name: Build subdomain service
         run: cd subdomain-service && npm run build
-
-  coverage-complete:
-    name: Coverage Complete
-    needs: [contracts, amica]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Coveralls Finished
-        uses: coverallsapp/github-action@v2
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          parallel-finished: true

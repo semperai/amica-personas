@@ -15,10 +15,13 @@
     "serve:prod": "npx squid-graphql-server --production",
     "check-updates": "npx npm-check-updates --filter /subsquid/",
     "bump": "npx npm-check-updates --filter /subsquid/ -u && npm i -f",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "test:local": "./test-local.sh test",
     "test:validate": "ts-node scripts/validate-indexing.ts",
     "test:events": "ts-node scripts/test-event-queries.ts",
-    "test:coverage": "ts-node scripts/event-coverage-check.ts"
+    "test:event-coverage": "ts-node scripts/event-coverage-check.ts"
   },
   "dependencies": {
     "@subsquid/archive-registry": "^3.3.2",
@@ -38,8 +41,10 @@
     "@subsquid/typeorm-codegen": "^2.0.2",
     "@types/node": "^20.14.10",
     "@types/pg": "^8.11.10",
+    "@vitest/coverage-v8": "^2.1.8",
     "ts-node": "^10.9.2",
-    "typescript": "^5.5.3"
+    "typescript": "^5.5.3",
+    "vitest": "^2.1.8"
   },
   "engines": {
     "node": ">=22.0.0"
