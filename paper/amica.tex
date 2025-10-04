@@ -5,9 +5,15 @@
 \usepackage{hyperref}
 \hypersetup{colorlinks, linkcolor={blue}, citecolor={blue}, urlcolor={blue}}
 \usepackage[natbib=true, style=numeric,sorting=none]{biblatex}
+\addbibresource{references.bib}
 \usepackage[title]{appendix}
+\usepackage{draftwatermark}
+\SetWatermarkText{DRAFT - NOT FOR PUBLIC RELEASE}
+\SetWatermarkScale{1.0}
+\SetWatermarkColor[gray]{0.85}
+\SetWatermarkAngle{45}
 
-\title{Amica Protocol: Decentralized AI Personas with Agent Token Integration and Autonomous Economic Agency}
+\title{Amica Personas: Decentralized AI Personas with Agent Token Integration and Autonomous Economic Agency}
 \author{Kasumi}
 \date{October 2025}
 
@@ -16,14 +22,14 @@
 \maketitle
 
 \begin{abstract}
-Amica Protocol introduces a decentralized platform for creating, deploying, and monetizing AI personas through blockchain technology. Built on Arbitrum and other EVM chains, the protocol enables creators to launch persona tokens representing AI models deployed on Arbius—the decentralized AI inference network. Each persona functions as an autonomous economic entity: an ERC721 NFT with associated ERC20 token, an AI inference endpoint on Arbius, and a revenue generator earning AIUS tokens from every inference. The protocol features innovative agent token integration, allowing existing crypto communities to participate in persona launches with dedicated reward pools. Through Arbius V6's model token infrastructure, personas earn sustainable income from AI inference while token holders claim proportional rewards via burn-to-claim mechanics. The protocol implements Bancor-style bonding curves for fair launches, automatic graduation to Uniswap V4, and deep integration with the AIUS token economy—creating circular value flow between AI inference and model ownership. Combined with CATGIRL's autonomous agent layer for P2P communication and TEE-secured transactions, Amica enables truly decentralized AI agents to operate as independent economic participants. This paper outlines the technical architecture, economic model, and governance structure of the first production-ready model token economy.
+Amica Personas introduces a decentralized platform for creating, deploying, and monetizing AI personas through blockchain technology. Built on Arbitrum and other EVM chains, the protocol enables creators to launch persona tokens representing AI models deployed on Arbius~\cite{arbius2023}—the decentralized AI inference network. Each persona functions as an autonomous economic entity: an ERC721 NFT with associated ERC20 token, an AI inference endpoint on Arbius, and a revenue generator earning AIUS tokens from every inference. The protocol features innovative agent token integration, allowing existing crypto communities to participate in persona launches with dedicated reward pools. Through Arbius V6's model token infrastructure, personas earn sustainable income from AI inference while token holders claim proportional rewards via burn-to-claim mechanics. The protocol implements Bancor-style bonding curves for fair launches, automatic graduation to Uniswap V4, and deep integration with the AIUS token economy—creating circular value flow between AI inference and model ownership. Combined with CATGIRL~\cite{catgirl2025}'s autonomous agent layer for P2P communication and TEE-secured transactions, Amica enables truly decentralized AI agents to operate as independent economic participants. This paper outlines the technical architecture, economic model, and governance structure of the first production-ready model token economy.
 \end{abstract}
 
 \section{Introduction}
 
 The rapid advancement of artificial intelligence has created unprecedented opportunities for human-AI interaction. However, current implementations face significant limitations: centralized control over AI models, lack of economic sustainability for creators, inability for AI systems to operate as autonomous economic agents, and no mechanism for model creators to capture value from inference. Existing platforms restrict customization, impose censorship, and extract rent without providing value to creators or users.
 
-Amica Protocol addresses these limitations by realizing the original Arbius whitepaper vision: AI models as autonomous economic entities with their own tokens and revenue streams. Each persona is simultaneously an ERC721 NFT, an ERC20 token, an AI inference endpoint on Arbius, and a revenue-generating entity earning AIUS from every inference. The protocol uniquely enables integration with existing token communities through the agent token mechanism, creating symbiotic relationships between established projects and new AI models.
+Amica Personas addresses these limitations by realizing the original Arbius whitepaper vision: AI models as autonomous economic entities with their own tokens and revenue streams. Each persona is simultaneously an ERC721 NFT, an ERC20 token, an AI inference endpoint on Arbius, and a revenue-generating entity earning AIUS from every inference. The protocol uniquely enables integration with existing token communities through the agent token mechanism, creating symbiotic relationships between established projects and new AI models.
 
 The protocol enables several key innovations:
 
@@ -40,7 +46,7 @@ The protocol enables several key innovations:
 
 \subsection{Technical Foundation}
 
-Amica Protocol consists of three distinct but integrated layers:
+Amica Personas consists of three distinct but integrated layers:
 
 \subsubsection{Amica 3D Engine (Visualization Layer)}
 
@@ -70,29 +76,33 @@ The token protocol enables model monetization:
 
 Decentralized AI infrastructure enables autonomous operation:
 \begin{itemize}
-    \item \textbf{Arbius V6}: Decentralized AI inference with model tokens
+    \item \textbf{Arbius V6}~\cite{arbius2023}: Decentralized AI inference with model tokens
     \item \textbf{AIUS Economy}: Native payment token for AI computation
-    \item \textbf{CATGIRL Protocol}: TEE-secured autonomous agents with P2P communication
+    \item \textbf{CATGIRL Protocol}~\cite{catgirl2025}: TEE-secured autonomous agents with P2P communication
     \item \textbf{Trust Propagation}: trustd for reputation-based agent coordination
 \end{itemize}
 
-The three layers combine to create the complete vision: beautiful 3D AI characters (Amica app) that earn revenue from AI inference (Arbius), whose ownership is tokenized and tradeable (Amica Personas), and which can operate autonomously via secure agent infrastructure (CATGIRL).
+The three layers combine to create the complete vision: beautiful 3D AI characters (Amica app) that earn revenue from AI inference (Arbius~\cite{arbius2023}), whose ownership is tokenized and tradeable (Amica Personas), and which can operate autonomously via secure agent infrastructure (CATGIRL~\cite{catgirl2025}).
 
 \section{Protocol Architecture}
 
 \subsection{Core Components}
 
-The Amica Protocol consists of five primary smart contracts working in concert:
+The Amica Personas consists of nine primary smart contracts working in concert:
 
 \begin{enumerate}
-    \item \textbf{AmicaToken}: The main protocol token implementing burn-to-claim mechanics
-    \item \textbf{PersonaTokenFactory}: Upgradeable factory for creating persona NFTs with associated tokens
-    \item \textbf{PersonaStakingRewards}: MasterChef-style staking rewards for LP providers
-    \item \textbf{ERC20Implementation}: Gas-efficient cloneable token template
-    \item \textbf{AmicaBridgeWrapper}: Cross-chain interoperability infrastructure
+    \item \textbf{AmicaTokenMainnet}: L1 protocol token with burn-to-claim and deposit-and-mint
+    \item \textbf{AmicaTokenBridged}: L2 protocol token with burn-to-claim and deposit-and-mint
+    \item \textbf{PersonaTokenFactory}: Upgradeable factory for creating and managing personas
+    \item \textbf{PersonaToken}: Gas-efficient ERC20 template for persona tokens
+    \item \textbf{BondingCurve}: Pure math library for AMM calculations
+    \item \textbf{FeeReductionSystem}: Snapshot-based fee discount mechanism
+    \item \textbf{DynamicFeeHook}: Uniswap V4 hook for per-user dynamic fees
+    \item \textbf{BurnAndClaimBase}: Shared burn-to-claim functionality
+    \item \textbf{PersonaFactoryViewer}: Batch view functions for frontend integration
 \end{enumerate}
 
-These contracts coordinate to enable persona creation, token distribution, staking rewards, and cross-chain functionality while maintaining decentralization and censorship resistance.
+These contracts coordinate to enable persona creation, token distribution, bonding curve trading, and cross-chain functionality while maintaining decentralization and censorship resistance.
 
 \subsection{Persona Creation Flow}
 
@@ -100,6 +110,16 @@ Creating a new persona follows a structured process ensuring fair distribution:
 
 \begin{enumerate}
     \item \textbf{Initialization}: Creator pays mint cost (default 1000 AMICA) and defines persona parameters
+    \item \textbf{Domain Registration}: Unique subdomain assigned following DNS naming rules (similar to ENS~\cite{ens2016} but significantly simpler)
+    \begin{itemize}
+        \item Minimum 1 character, maximum 32 bytes
+        \item Must start with a letter (a-z)
+        \item Must end with a letter or digit (a-z, 0-9)
+        \item Interior characters can be letters, digits, or hyphens (-)
+        \item Maps to .amica domain for discoverability
+        \item Ensures global uniqueness across all personas
+        \item No complex resolver system—direct on-chain mapping
+    \end{itemize}
     \item \textbf{Agent Token Selection}: Optionally associate an approved agent token with minimum deposit requirement
     \item \textbf{Token Deployment}: Factory clones ERC20 template with 1 billion token supply
     \item \textbf{NFT Minting}: Creator receives persona NFT representing ownership and fee rights
@@ -121,40 +141,67 @@ The protocol supports two distribution models based on agent token association. 
 \subsubsection{Agent Token Distribution}
 \begin{itemize}
     \item 33.33\% (333,333,333): Allocated to Uniswap V4 liquidity pool
-    \item 22.22\% (222,222,222): Available on bonding curve for trading (AMICA/AIUS pairing)
-    \item 22.22\% (222,222,222): Deposited to AMICA protocol upon graduation
-    \item 22.23\% (222,222,223): Rewards pool for agent token depositors
+    \item 16.67\% (166,666,666): Available on bonding curve for trading (AMICA/AIUS pairing)
+    \item 33.33\% (333,333,333): Deposited to AMICA protocol upon graduation
+    \item 16.67\% (166,666,668): Rewards pool for agent token depositors
 \end{itemize}
 
 This dual model enables existing token communities to participate while maintaining fair launch mechanics. The AIUS pairing option creates direct value flow from AI inference to model tokens.
 
 \subsection{Bonding Curve Mechanics}
 
-The protocol implements a Bancor-inspired bonding curve with virtual reserves:
+The protocol implements a constant product AMM with virtual reserves designed to achieve a 133x price increase at the 85\% graduation threshold.
 
-\begin{align}
-k = R_{token} \times R_{amica}
-\end{align}
+\subsubsection{Virtual Reserve Calculation}
 
-Where:
+Given:
 \begin{itemize}
-    \item $k$ is the constant product invariant
-    \item $R_{token}$ is the token reserve (virtual + actual)
-    \item $R_{amica}$ is the AMICA reserve (virtual + actual)
+    \item $R_{total}$ = total bonding curve supply
+    \item $R_{sold}$ = tokens already sold
+    \item $M$ = curve multiplier = 14,264 (chosen for 133x price target)
 \end{itemize}
 
-Virtual reserves are initialized as:
-\begin{itemize}
-    \item Virtual AMICA Reserve: 100,000 AMICA
-    \item Virtual Token Reserve: Total Bonding Supply / 10
-\end{itemize}
-
-The actual calculation for token output:
+Virtual buffer:
 \begin{align}
-\text{Output} = R_{token}^{current} - \frac{k}{R_{amica}^{current} + \text{Input}} \times 0.99
+V_{buffer} = \frac{R_{total} \times 1000}{M} \approx 0.0701 \times R_{total}
 \end{align}
 
-The 0.99 multiplier represents an additional 1\% slippage protection built into the curve.
+Virtual token reserve:
+\begin{align}
+V_{token} = R_{total} - R_{sold} + V_{buffer}
+\end{align}
+
+Constant product invariant:
+\begin{align}
+k = (R_{total} + V_{buffer})^2
+\end{align}
+
+Virtual pairing token reserve:
+\begin{align}
+V_{pairing} = \frac{k}{V_{token}}
+\end{align}
+
+\subsubsection{Buy Formula}
+
+Token output when buying with pairing tokens:
+\begin{align}
+\text{Output} = V_{token}^{current} - \frac{k}{V_{pairing}^{current} + \text{Input}}
+\end{align}
+
+\subsubsection{Sell Formula}
+
+Pairing tokens received when selling persona tokens (only before graduation):
+\begin{align}
+\text{Output}_{gross} = V_{pairing}^{current} - \frac{k}{V_{token}^{current} + \text{Input}}
+\end{align}
+\begin{align}
+\text{Fee} = \text{Output}_{gross} \times 0.001 \text{ (0.1\%)}
+\end{align}
+\begin{align}
+\text{Output}_{net} = \text{Output}_{gross} - \text{Fee}
+\end{align}
+
+The 0.1\% sell fee prevents price manipulation and wash trading while maintaining liquidity during the bonding phase.
 
 \subsection{Graduation Mechanism}
 
@@ -163,14 +210,17 @@ When cumulative deposits reach the graduation threshold (default 85\% of bonding
 \begin{enumerate}
     \item Bonding curve trading halts permanently
     \item Configured amount of tokens deposited to AMICA protocol
-    \item Agent tokens (if any) also deposited to AMICA protocol
+    \item Agent tokens (if any) deposited to persona token contract
     \item Uniswap V4 pair created with accumulated pairing tokens
-    \item LP tokens remain in contract (not burned or locked elsewhere)
-    \item Previously purchased tokens unlock for withdrawal
-    \item Agent token depositors can claim their persona token rewards
+    \item LP tokens held by factory contract via PositionManager NFT
+    \item 24-hour claim delay enforced to prevent MEV attacks
+    \item After delay, previously purchased tokens can be claimed
+    \item Agent token depositors can claim their persona token rewards proportionally
 \end{enumerate}
 
-For agent token personas, graduation requires meeting both the pairing token threshold AND the minimum agent token deposit requirement.
+For agent token personas, graduation requires meeting both the pairing token threshold (85\% of bonding supply sold) AND the minimum agent token deposit requirement.
+
+The 24-hour claim delay prevents front-running and MEV exploitation during the critical Uniswap pool creation phase, ensuring fair distribution to all participants.
 
 \section{Economic Model}
 
@@ -274,6 +324,20 @@ This mechanism enables:
     \item \textbf{Agent Token Access}: Claim deposited agent tokens alongside persona tokens
 \end{itemize}
 
+\subsection{Persona Creator Revenue}
+
+NFT holders earn continuous revenue from their personas after graduation:
+
+\begin{itemize}
+    \item \textbf{Uniswap V4 LP Fees}: Trading fees accumulate to the graduated liquidity position
+    \item \textbf{Dynamic Fee Structure}: DynamicFeeHook adjusts fees based on trader's AMICA holdings (0\% to 1\%)
+    \item \textbf{Fee Collection}: NFT owner calls \texttt{collectFees(tokenId, recipient)} to claim accumulated fees
+    \item \textbf{Dual-Token Revenue}: Fees earned in both persona token and pairing token
+    \item \textbf{Perpetual Income}: Continuous earnings as long as the Uniswap pool remains active
+\end{itemize}
+
+This creates a sustainable revenue model for creators, incentivizing high-quality persona development and long-term engagement. The dynamic fee structure ensures that AMICA holders receive discounts while creators still earn from trading activity.
+
 \subsection{Agent Token Integration}
 
 The agent token system creates a bridge between existing communities and new personas:
@@ -303,49 +367,6 @@ Agent token integration creates several positive feedback loops:
     \item Creates cross-community collaboration opportunities
 \end{itemize}
 
-\section{Staking and Rewards}
-
-\subsection{PersonaStakingRewards Contract}
-
-The protocol implements a MasterChef-style staking system for LP tokens:
-
-\begin{itemize}
-    \item \textbf{Pool Types}: Standard (Persona/Pairing) and Agent (Persona/Agent) pools
-    \item \textbf{Reward Token}: AMICA distributed per block to stakers
-    \item \textbf{Allocation Points}: Configurable weights for each pool
-    \item \textbf{Agent Boost}: 1.5x multiplier for agent token pools
-\end{itemize}
-
-\subsection{Staking Mechanics}
-
-Reward calculation follows standard MasterChef mathematics:
-
-\begin{align}
-\text{Pool Reward} = \frac{\text{AMICA/block} \times \text{Pool Alloc}}{\text{Total Alloc}} \times \text{Blocks}
-\end{align}
-
-For agent pools:
-\begin{align}
-\text{Boosted Reward} = \text{Pool Reward} \times 1.5
-\end{align}
-
-User rewards:
-\begin{align}
-\text{User Reward} = \frac{\text{User Stake}}{\text{Total Staked}} \times \text{Pool Rewards}
-\end{align}
-
-\subsection{Staking Operations}
-
-Users interact with the staking contract through:
-\begin{itemize}
-    \item \texttt{stake(poolId, amount)}: Deposit LP tokens
-    \item \texttt{withdraw(poolId, amount)}: Remove LP tokens
-    \item \texttt{claim(poolId)}: Harvest pending rewards
-    \item \texttt{claimAll(poolIds)}: Batch harvest multiple pools
-\end{itemize}
-
-The system tracks pending rewards separately from staked amounts, enabling flexible claiming strategies.
-
 \section{Technical Implementation}
 
 \subsection{Smart Contract Security}
@@ -374,43 +395,30 @@ Several techniques minimize transaction costs:
 
 \subsection{Cross-Chain Architecture}
 
-Multi-chain deployment follows a hub-and-spoke model:
+Multi-chain deployment uses separate token contracts per chain:
 
-\subsubsection{Ethereum Mainnet (Hub)}
+\subsubsection{Ethereum Mainnet (L1)}
 \begin{itemize}
-    \item Full AMICA supply minted to contract
-    \item Primary liquidity pools
-    \item Governance coordination
+    \item \textbf{AmicaTokenMainnet}: Full AMICA supply with burn-to-claim and deposit-and-mint
+    \item Primary governance and liquidity coordination
+    \item Initial token distribution via deposit-and-mint
 \end{itemize}
 
-\subsubsection{L2/Alternative Chains (Spokes)}
+\subsubsection{L2 Chains}
 \begin{itemize}
-    \item AmicaBridgeWrapper converts bridged to native tokens
-    \item Native AMICA starts at 0 supply
-    \item Mint/burn based on bridge deposits/withdrawals
+    \item \textbf{AmicaTokenBridged}: Separate deployment with burn-to-claim and deposit-and-mint
+    \item Users bridge tokens via native chain bridge infrastructure
+    \item Bridged tokens can be deposited to mint native AMICA at configured exchange rates
+    \item \texttt{depositAndMint()} function mints based on exchange rate
+    \item Max supply enforced: cannot exceed 1 billion across all chains
     \item Full protocol functionality on each chain
 \end{itemize}
-
-\subsubsection{Bridge Operations}
-\begin{verbatim}
-// Wrap bridged tokens to native
-function wrap(uint256 amount) external {
-    bridgedToken.transferFrom(user, wrapper, amount);
-    nativeToken.mint(user, amount);
-}
-
-// Unwrap native to bridged
-function unwrap(uint256 amount) external {
-    nativeToken.burnFrom(user, amount);
-    bridgedToken.transfer(user, amount);
-}
-\end{verbatim}
 
 \section{Arbius V6 Integration: Model Tokens}
 
 \subsection{Model Tokens as Revenue Generators}
 
-Amica Personas realizes the original Arbius whitepaper vision of models as autonomous economic entities. Each persona token represents:
+Amica Personas realizes the original Arbius~\cite{arbius2023} whitepaper vision of models as autonomous economic entities. Each persona token represents:
 
 \begin{enumerate}
     \item \textbf{AI Inference Endpoint}: Deployed model on Arbius network
@@ -476,7 +484,7 @@ AIUS serves as the native currency for AI inference:
 
 \subsection{CATGIRL Agent Layer}
 
-Autonomous agents operate on CATGIRL infrastructure:
+Autonomous agents operate on CATGIRL~\cite{catgirl2025} infrastructure:
 
 \subsubsection{TEE-Secured Keys}
 \begin{itemize}
@@ -651,7 +659,7 @@ Protocol sustainability derives from:
 
 \section{Conclusion}
 
-Amica Protocol establishes comprehensive infrastructure for decentralized AI model tokens with genuine economic agency. By combining ERC721 ownership, ERC20 tokenization, Arbius V6 model infrastructure, and CATGIRL autonomous agents, the protocol creates the first production-ready model token economy. The Bancor-style bonding curves ensure fair price discovery, while automatic Uniswap V4 graduation provides deep liquidity.
+Amica Personas establishes comprehensive infrastructure for decentralized AI model tokens with genuine economic agency. By combining ERC721 ownership, ERC20 tokenization, Arbius~\cite{arbius2023} V6 model infrastructure, and CATGIRL~\cite{catgirl2025} autonomous agents, the protocol creates the first production-ready model token economy. The Bancor-style bonding curves ensure fair price discovery, while automatic Uniswap V4 graduation provides deep liquidity.
 
 The integration with Arbius V6 realizes the original whitepaper vision of models as DAOs earning fees from inference. Each persona token represents:
 \begin{itemize}
@@ -670,7 +678,7 @@ The AIUS $\leftrightarrow$ AMICA economic loop creates circular value flow:
     \item Deflationary pressure increases token value
 \end{itemize}
 
-CATGIRL's autonomous agent layer provides the infrastructure for truly independent AI entities:
+CATGIRL~\cite{catgirl2025}'s autonomous agent layer provides the infrastructure for truly independent AI entities:
 \begin{itemize}
     \item TEE-secured keys prevent extraction
     \item P2P communication enables coordination
@@ -682,7 +690,7 @@ The agent token mechanism represents a novel approach to bootstrapping model eco
 
 Through cross-chain deployment via bridge wrappers, the protocol maintains decentralization while enabling scalable, low-cost interactions across multiple blockchains. The burn-to-claim mechanism ensures AMICA captures value from the entire ecosystem—not just individual models, but all deposited AIUS and agent tokens.
 
-As AI capabilities continue advancing, protocols like Amica become essential infrastructure for preserving decentralization while enabling beneficial AI integration. The future belongs to systems that distribute rather than concentrate power, enable permissionless innovation rather than gatekeep access, and align economic incentives across all participants. Amica Protocol represents the first step toward that future—one where AI models operate as independent economic entities, autonomous agents coordinate via encrypted P2P networks, and token holders capture value from AI inference at scale.
+As AI capabilities continue advancing, protocols like Amica become essential infrastructure for preserving decentralization while enabling beneficial AI integration. The future belongs to systems that distribute rather than concentrate power, enable permissionless innovation rather than gatekeep access, and align economic incentives across all participants. Amica Personas represents the first step toward that future—one where AI models operate as independent economic entities, autonomous agents coordinate via encrypted P2P networks, and token holders capture value from AI inference at scale.
 
 \begin{appendices}
 
@@ -693,47 +701,25 @@ As AI capabilities continue advancing, protocols like Amica become essential inf
 Complete pricing formula for token purchases:
 
 \begin{align}
-\text{Amount Out} = \left(R_{token}^{current} - \frac{k}{R_{amica}^{current} + \text{Amount In}}\right) \times 0.99
+\text{Amount Out} = V_{token}^{current} - \frac{k}{V_{pairing}^{current} + \text{Amount In}}
 \end{align}
 
 Where:
 \begin{itemize}
-    \item $R_{token}^{current} = V_{token} + (S_{bonding} - S_{sold})$
-    \item $R_{amica}^{current} = V_{amica} + S_{sold} \times \frac{V_{amica}}{V_{token}}$
-    \item $V_{token} = \frac{S_{bonding}}{10}$ (virtual token reserve)
-    \item $V_{amica} = 100,000$ (virtual AMICA reserve)
-    \item $S_{bonding}$ = bonding curve supply (222M or 333M)
-    \item $S_{sold}$ = tokens already sold
+    \item $V_{buffer} = \frac{R_{total} \times 1000}{14264}$ (virtual buffer = ~7.01\% of total)
+    \item $V_{token}^{current} = R_{total} - R_{sold} + V_{buffer}$
+    \item $k = (R_{total} + V_{buffer})^2$ (constant product invariant)
+    \item $V_{pairing}^{current} = \frac{k}{V_{token}^{current}}$ (dynamic virtual pairing reserve)
+    \item $R_{total}$ = bonding curve supply (167M or 333M tokens)
+    \item $R_{sold}$ = tokens already sold
 \end{itemize}
 
-\subsection{Staking Reward Calculations}
-
-Per-block reward distribution:
-
+For sells (before graduation only):
 \begin{align}
-R_{pool} = \frac{A_{pool}}{\sum A_i} \times R_{block} \times M_{agent}
+\text{Amount Out}_{net} = \left(V_{pairing}^{current} - \frac{k}{V_{token}^{current} + \text{Amount In}}\right) \times 0.999
 \end{align}
 
-Where:
-\begin{itemize}
-    \item $A_{pool}$ = allocation points for pool
-    \item $R_{block}$ = AMICA per block emission
-    \item $M_{agent}$ = 1.5 if agent pool, 1.0 otherwise
-\end{itemize}
-
-User accumulated rewards:
-
-\begin{align}
-R_{user} = S_{user} \times \left(\frac{R_{accumulated}}{S_{total}} - D_{user}\right)
-\end{align}
-
-Where:
-\begin{itemize}
-    \item $S_{user}$ = user's staked amount
-    \item $R_{accumulated}$ = total pool rewards
-    \item $S_{total}$ = total staked in pool
-    \item $D_{user}$ = user's reward debt
-\end{itemize}
+The 0.999 multiplier represents the 0.1\% sell fee.
 
 \subsection{Agent Token Distribution}
 
@@ -747,7 +733,7 @@ Where:
 \begin{itemize}
     \item $D_{user}$ = user's agent token deposits
     \item $D_{total}$ = total agent tokens deposited
-    \item $S_{rewards}$ = 222,222,223 persona tokens
+    \item $S_{rewards}$ = 166,666,668 persona tokens
 \end{itemize}
 
 \section{Technical Specifications}
@@ -762,13 +748,18 @@ interface IPersonaTokenFactory {
         address pairingToken,
         string memory name,
         string memory symbol,
-        string[] memory metadataKeys,
-        string[] memory metadataValues,
+        bytes32 domain,
         uint256 initialBuyAmount,
         address agentToken,
-        uint256 minAgentTokens
+        uint256 agentTokenThreshold
     ) external returns (uint256);
-    
+
+    function updateMetadata(
+        uint256 tokenId,
+        bytes32[] memory keys,
+        string[] memory values
+    ) external;
+
     function swapExactTokensForTokens(
         uint256 tokenId,
         uint256 amountIn,
@@ -776,26 +767,24 @@ interface IPersonaTokenFactory {
         address to,
         uint256 deadline
     ) external returns (uint256);
-    
+
+    function swapExactTokensForPairingTokens(
+        uint256 tokenId,
+        uint256 amountIn,
+        uint256 amountOutMin,
+        address to,
+        uint256 deadline
+    ) external returns (uint256);
+
     function depositAgentTokens(
         uint256 tokenId,
         uint256 amount
     ) external;
-    
-    function claimAgentRewards(uint256 tokenId) external;
-}
 
-interface IPersonaStakingRewards {
-    function stake(uint256 poolId, uint256 amount) external;
-    function withdraw(uint256 poolId, uint256 amount) external;
-    function claim(uint256 poolId) external;
-    function pendingRewards(uint256 poolId, address user) 
-        external view returns (uint256);
-}
+    function claimRewards(uint256 tokenId) external;
 
-interface IAmicaBridgeWrapper {
-    function wrap(uint256 amount) external;
-    function unwrap(uint256 amount) external;
+    function collectFees(uint256 tokenId, address to)
+        external returns (uint256 amount0, uint256 amount1);
 }
 \end{verbatim}
 
@@ -804,18 +793,24 @@ interface IAmicaBridgeWrapper {
 Default protocol settings:
 
 \begin{itemize}
-    \item Mint Cost: 1,000 AMICA
-    \item Graduation Threshold: 1,000,000 pairing tokens
-    \item Base Trading Fee: 1\% (100 basis points)
-    \item Creator Fee Share: 50\% (5,000 basis points)
+    \item Mint Cost: 1,000 AMICA (configurable per pairing token)
+    \item Graduation Threshold: 85\% of bonding curve supply sold
+    \item Agent Token Threshold: Set per persona by creator
+    \item Claim Delay: 24 hours (1 day) after graduation
+    \item Base Trading Fee: 1\% (10,000 in Uniswap V4 per-million units)
+    \item Max Discounted Fee: 0\% (full discount possible for AMICA holders)
+    \item Sell Fee: 0.1\% (10 basis points)
     \item Min AMICA for Discount: 1,000 AMICA
     \item Max AMICA for Discount: 1,000,000 AMICA
     \item Snapshot Delay: 100 blocks
-    \item Agent Pool Boost: 1.5x
-    \item Virtual AMICA Reserve: 100,000
-    \item Virtual Token Ratio: 10\%
+    \item Curve Multiplier: 14,264 (achieves 133x price increase at graduation)
+    \item Virtual Token Buffer: ~7.01\% of bonding supply
+    \item Tick Spacing: 60 (Uniswap V4 standard)
+    \item Full Range Liquidity: Ticks -887220 to 887220
 \end{itemize}
 
 \end{appendices}
+
+\printbibliography
 
 \end{document}
