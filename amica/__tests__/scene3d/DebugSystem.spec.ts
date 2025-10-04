@@ -207,9 +207,31 @@ describe('DebugSystem', () => {
 
   describe('updateGUIDisplay', () => {
     it('should update all GUI controllers', () => {
+      // Add mock controllers with updateDisplay method
+      const mockController = { updateDisplay: vi.fn() };
+      mockGUI.controllers = [mockController, mockController];
+
       debugSystem.updateGUIDisplay();
-      // GUI controllers forEach is called
-      expect(mockGUI.controllers).toBeDefined();
+
+      // Verify updateDisplay was called on each controller
+      expect(mockController.updateDisplay).toHaveBeenCalledTimes(2);
+    });
+
+    it('should handle empty controllers array', () => {
+      mockGUI.controllers = [];
+      expect(() => debugSystem.updateGUIDisplay()).not.toThrow();
+    });
+  });
+
+  describe('addToInteractiveGroup', () => {
+    it('should add GUI and stats meshes to interactive group', () => {
+      const mockIGroup = {
+        add: vi.fn()
+      };
+
+      debugSystem.addToInteractiveGroup(mockIGroup as any);
+
+      expect(mockIGroup.add).toHaveBeenCalledTimes(2);
     });
   });
 
