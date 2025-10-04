@@ -52,11 +52,11 @@ export class RenderSystem {
     renderer.shadowMap.enabled = false;
     renderer.setSize(width, height);
     renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.xr.enabled = true;
-    renderer.xr.setFramebufferScaleFactor(2.0);
 
-    // webgpu does not support foveation yet
+    // XR features are only available in WebGL renderer
     if (config("use_webgpu") !== "true") {
+      renderer.xr.enabled = true;
+      renderer.xr.setFramebufferScaleFactor(2.0);
       renderer.xr.setFoveation(0);
     }
 
