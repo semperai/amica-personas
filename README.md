@@ -1,5 +1,7 @@
 # Amica Personas
 
+![Amica Personas](website/src/app/opengraph-image.jpg)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.24-blue)](https://soliditylang.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue)](https://www.typescriptlang.org/)
@@ -8,7 +10,6 @@
 > Launch interactive AI agent tokens with immersive 3D/VR/AR, encrypted messaging, and decentralized compute
 
 **Website**: [personas.heyamica.com](https://personas.heyamica.com)
-**Repository**: [github.com/semperai/amica-personas](https://github.com/semperai/amica-personas)
 
 ## Overview
 
@@ -141,63 +142,22 @@ This creates continuous value accrual as new personas launch and gain traction.
 
 ## Creating Personas
 
-Each persona consists of:
+Each persona consists of a unique subdomain (.amica.bot), name, symbol, description, and VRM 3D avatar. Token distribution includes bonding curve, AMICA holders (33%), and Uniswap liquidity. Creators receive an NFT with metadata update rights.
 
-### Basic Information
-- **Domain**: Unique subdomain at .amica.bot (like ENS for AI agents)
-- **Name**: Display name (3-32 characters)
-- **Symbol**: Token ticker (2-8 characters)
-- **Description**: Purpose and personality
-- **Avatar**: VRM 3D model
-
-### Token Distribution (1B total supply)
-
-**Standard Distribution:**
-- 33% - Bonding curve
-- 33% - AMICA holders (via Burn & Claim)
-- 33% - Uniswap liquidity
-
-**With Agent Token:**
-- 33% - Uniswap liquidity
-- 33% - AMICA holders (via Burn & Claim)
-- 17% - Bonding curve
-- 17% - Agent token stakers
-
-### Metadata System
-
-Personas support comprehensive metadata for full customization:
-- Visual identity (avatar, backgrounds, themes)
-- Personality traits and behavior
-- Capabilities and services
-- Integration endpoints (Arbius models, APIs)
-- Social links and documentation
-
-The NFT owner can update metadata at any time, allowing personas to evolve post-launch.
+*See [Creating Personas guide](https://personas.heyamica.com/docs/creating-personas) for full details*
 
 ## Testing
 
-### Contracts
 ```bash
-cd contracts
-forge test                    # Run all tests
-forge test -vvv              # Verbose output
-forge coverage               # Coverage report
+# Contracts
+cd contracts && forge test
+
+# Frontend & Amica Viewer
+cd website && npm test
+cd amica && npm test
 ```
 
-### Frontend
-```bash
-cd website
-npm test                     # Run tests
-npm run lint                 # Lint check
-npm run build                # Production build
-```
-
-### Amica Viewer
-```bash
-cd amica
-npm test                     # Run tests with Vitest
-npm run test -- --coverage   # Coverage report
-```
+*See individual component READMEs for detailed testing instructions*
 
 ## Contract Addresses
 
@@ -243,6 +203,10 @@ This software is provided "as is", without warranty of any kind. Use at your own
 
 MIT License - see [LICENSE](LICENSE) for details
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=semperai/amica-personas&type=Date)](https://star-history.com/#semperai/amica-personas&Date)
+
 ---
 
-*Built with ❤️ by the Amica team*
+*Built with ❤️ by the [Arbius](https://arbius.ai/) team*

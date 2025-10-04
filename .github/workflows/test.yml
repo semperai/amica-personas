@@ -42,13 +42,11 @@ jobs:
         run: |
           cd contracts && forge test -vvv
         id: test
-        continue-on-error: true
 
       - name: Run Forge coverage
         run: |
           cd contracts && forge coverage --report lcov
         id: coverage
-        continue-on-error: true
 
       - name: Upload coverage to Coveralls
         uses: coverallsapp/github-action@v2
@@ -58,6 +56,8 @@ jobs:
           path-to-lcov: ./contracts/lcov.info
           base-path: ./contracts
           flag-name: contracts
+          parallel: true
+          carryforward: true
 
   amica:
     name: Amica
@@ -78,8 +78,7 @@ jobs:
         run: cd amica && npm ci
 
       - name: Run tests with coverage
-        run: cd amica && npm run test -- --coverage --reporter=default
-        continue-on-error: true
+        run: cd amica && npx vitest run --coverage
 
       - name: Upload coverage to Coveralls
         uses: coverallsapp/github-action@v2
@@ -89,6 +88,8 @@ jobs:
           path-to-lcov: ./amica/coverage/lcov.info
           base-path: ./amica
           flag-name: amica
+          parallel: true
+          carryforward: true
 
   website:
     name: Website
@@ -122,12 +123,33 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: subsquid/package-lock.json
 
       - name: Install dependencies
-        run: cd subsquid && npm install
+        run: cd subsquid && npm ci
 
       - name: Build subsquid
         run: cd subsquid && npm run build
+
+  subdomain-service:
+    name: Subdomain Service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: subdomain-service/package-lock.json
+
+      - name: Install dependencies
+        run: cd subdomain-service && npm ci
+
+      - name: Build subdomain service
+        run: cd subdomain-service && npm run build
 
   coverage-complete:
     name: Coverage Complete
