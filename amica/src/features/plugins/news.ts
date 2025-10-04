@@ -28,10 +28,16 @@ export async function handleNews(): Promise<string> {
 function getRandomArticle(items: string[]) {
   const randomItem = items[Math.floor(Math.random() * items.length)];
 
-  const extractContent = (item: string, tag: string) => {
-    const start = item.indexOf(`<${tag}>`) + `<${tag}>`.length;
-    const end = item.indexOf(`</${tag}>`, start);
-    return item.substring(start, end);
+  const extractContent = (item: string | undefined, tag: string) => {
+    if (!item) return "";
+    const startTag = `<${tag}>`;
+    const endTag = `</${tag}>`;
+    const start = item.indexOf(startTag);
+    if (start === -1) return "";
+    const contentStart = start + startTag.length;
+    const end = item.indexOf(endTag, contentStart);
+    if (end === -1) return "";
+    return item.substring(contentStart, end).trim();
   };
 
   const title = extractContent(randomItem, "title");

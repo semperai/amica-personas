@@ -15,7 +15,7 @@ import { handleNews } from "@/features/plugins/news";
 
 describe("news", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    fetchMock.mockClear();
   });
 
   const createMockRSS = (items: Array<{title: string, description: string}>) => {
