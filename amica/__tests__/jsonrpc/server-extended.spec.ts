@@ -5,17 +5,23 @@
 
 // Mock dependencies BEFORE importing anything that uses them
 vi.mock('@/features/chat/chat');
-vi.mock('@/features/vrmViewer/viewer', () => ({
-  Viewer: vi.fn().mockImplementation(() => ({
+vi.mock('@/features/scene3d/SceneCoordinator', () => ({
+  SceneCoordinator: vi.fn().mockImplementation(() => ({
     isReady: true,
-    model: null,
-    room: null,
-    loadVrm: vi.fn(),
-    unloadVRM: vi.fn(),
-    loadRoom: vi.fn(),
-    unloadRoom: vi.fn(),
-    resetCamera: vi.fn(),
-    loadSplat: vi.fn(),
+    vrm: {
+      getModel: vi.fn(() => null),
+      loadVrm: vi.fn(),
+      unloadVRM: vi.fn(),
+    },
+    environment: {
+      getRoom: vi.fn(() => null),
+      loadRoom: vi.fn(),
+      unloadRoom: vi.fn(),
+      loadSplat: vi.fn(),
+    },
+    render: {
+      resetCamera: vi.fn(),
+    },
   })),
 }));
 vi.mock('@/features/hooks/hookManager');
@@ -30,19 +36,19 @@ vi.mock('@/utils/config', () => ({
 
 import { JsonRpcServer } from '@/features/jsonrpc/server';
 import { Chat } from '@/features/chat/chat';
-import { Viewer } from '@/features/vrmViewer/viewer';
+import { SceneCoordinator } from '@/features/scene3d/SceneCoordinator';
 import { HookManager } from '@/features/hooks/hookManager';
 import { JsonRpcRequest } from '@/features/jsonrpc/protocol';
 
 describe('JsonRpcServer Extended Tests', () => {
   let server: JsonRpcServer;
   let mockChat: MockedObject<Chat>;
-  let mockViewer: MockedObject<Viewer>;
+  let mockSceneCoordinator: MockedObject<SceneCoordinator>;
   let mockHookManager: MockedObject<HookManager>;
 
   beforeEach(() => {
     mockChat = new Chat() as MockedObject<Chat>;
-    mockViewer = new Viewer() as MockedObject<Viewer>;
+    mockSceneCoordinator = new SceneCoordinator() as MockedObject<SceneCoordinator>;
     mockHookManager = new HookManager() as MockedObject<HookManager>;
 
     mockChat.receiveMessageFromUser = vi.fn().mockResolvedValue(undefined);
@@ -54,20 +60,27 @@ describe('JsonRpcServer Extended Tests', () => {
     mockChat.isAwake = vi.fn().mockReturnValue(true);
     mockChat.idleTime = vi.fn().mockReturnValue(5000);
 
-    mockViewer.isReady = true;
-    mockViewer.model = {
+    mockSceneCoordinator.isReady = true;
+    const mockModel = {
       position: { set: vi.fn(), x: 0, y: 0, z: 0 },
       rotation: { set: vi.fn(), x: 0, y: 0, z: 0 },
       scale: { set: vi.fn(), x: 1, y: 1, z: 1 },
       speak: vi.fn(),
     } as any;
-    mockViewer.room = null;
-    mockViewer.loadVrm = vi.fn().mockResolvedValue(undefined);
-    mockViewer.unloadVRM = vi.fn();
-    mockViewer.loadRoom = vi.fn().mockResolvedValue(undefined);
-    mockViewer.unloadRoom = vi.fn();
-    mockViewer.resetCamera = vi.fn();
-    mockViewer.loadSplat = vi.fn().mockResolvedValue(undefined);
+    mockSceneCoordinator.vrm = {
+      getModel: vi.fn(() => mockModel),
+      loadVrm: vi.fn().mockResolvedValue(undefined),
+      unloadVRM: vi.fn(),
+    } as any;
+    mockSceneCoordinator.environment = {
+      getRoom: vi.fn(() => null),
+      loadRoom: vi.fn().mockResolvedValue(undefined),
+      unloadRoom: vi.fn(),
+      loadSplat: vi.fn().mockResolvedValue(undefined),
+    } as any;
+    mockSceneCoordinator.render = {
+      resetCamera: vi.fn(),
+    } as any;
 
     mockHookManager.register = vi.fn().mockReturnValue('hook-123');
     mockHookManager.unregister = vi.fn().mockReturnValue(true);
@@ -77,7 +90,7 @@ describe('JsonRpcServer Extended Tests', () => {
     mockHookManager.setEnabled = vi.fn();
     mockHookManager.clear = vi.fn();
 
-    server = new JsonRpcServer(mockChat, mockViewer, mockHookManager);
+    server = new JsonRpcServer(mockChat, mockSceneCoordinator, mockHookManager);
   });
 
   describe('Audio Methods', () => {
@@ -136,7 +149,7 @@ describe('JsonRpcServer Extended Tests', () => {
     });
 
     it.skip('should reject audio.playback without model', async () => {
-      mockViewer.model = null;
+      const mockModel = null;
 
       const request: JsonRpcRequest = {
         jsonrpc: '2.0',
@@ -156,7 +169,7 @@ describe('JsonRpcServer Extended Tests', () => {
 
   describe('Character Methods Extended', () => {
     beforeEach(() => {
-      mockViewer.model = {
+      const mockModel = {
         position: { set: vi.fn(), x: 0, y: 0, z: 0 },
         rotation: { set: vi.fn(), x: 0, y: 0, z: 0 },
         scale: { set: vi.fn(), x: 1, y: 1, z: 1 },
@@ -559,7 +572,7 @@ describe('JsonRpcServer Extended Tests', () => {
     });
   });
 
-  describe('Viewer Methods Extended', () => {
+  describe('SceneCoordinator Methods Extended', () => {
     it('should handle viewer.setCamera', async () => {
       const request: JsonRpcRequest = {
         jsonrpc: '2.0',

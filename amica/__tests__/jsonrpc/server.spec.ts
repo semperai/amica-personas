@@ -4,24 +4,30 @@
 
 // Mock dependencies BEFORE importing anything that uses them
 vi.mock('@/features/chat/chat');
-vi.mock('@/features/vrmViewer/viewer', () => ({
-  Viewer: vi.fn().mockImplementation(() => ({
+vi.mock('@/features/scene3d/SceneCoordinator', () => ({
+  SceneCoordinator: vi.fn().mockImplementation(() => ({
     isReady: true,
-    model: null,
-    room: null,
-    loadVrm: vi.fn(),
-    unloadVRM: vi.fn(),
-    loadRoom: vi.fn(),
-    unloadRoom: vi.fn(),
-    resetCamera: vi.fn(),
-    loadSplat: vi.fn(),
+    vrm: {
+      getModel: vi.fn(() => null),
+      loadVrm: vi.fn(),
+      unloadVRM: vi.fn(),
+    },
+    environment: {
+      getRoom: vi.fn(() => null),
+      loadRoom: vi.fn(),
+      unloadRoom: vi.fn(),
+      loadSplat: vi.fn(),
+    },
+    render: {
+      resetCamera: vi.fn(),
+    },
   })),
 }));
 vi.mock('@/features/hooks/hookManager');
 
 import { JsonRpcServer } from '@/features/jsonrpc/server';
 import { Chat } from '@/features/chat/chat';
-import { Viewer } from '@/features/vrmViewer/viewer';
+import { SceneCoordinator } from '@/features/scene3d/SceneCoordinator';
 import { HookManager } from '@/features/hooks/hookManager';
 import {
   JsonRpcRequest,
@@ -33,12 +39,12 @@ import {
 describe('JsonRpcServer', () => {
   let server: JsonRpcServer;
   let mockChat: MockedObject<Chat>;
-  let mockViewer: MockedObject<Viewer>;
+  let mockSceneCoordinator: MockedObject<SceneCoordinator>;
   let mockHookManager: MockedObject<HookManager>;
 
   beforeEach(() => {
     mockChat = new Chat() as MockedObject<Chat>;
-    mockViewer = new Viewer() as MockedObject<Viewer>;
+    mockSceneCoordinator = new SceneCoordinator() as MockedObject<SceneCoordinator>;
     mockHookManager = new HookManager() as MockedObject<HookManager>;
 
     // Setup mock methods
@@ -48,21 +54,28 @@ describe('JsonRpcServer', () => {
     mockChat.getChatProcessing = vi.fn().mockReturnValue(false);
     mockChat.getSpeaking = vi.fn().mockReturnValue(false);
 
-    mockViewer.isReady = true;
-    mockViewer.model = null;
-    mockViewer.room = null;
-    mockViewer.loadVrm = vi.fn().mockResolvedValue(undefined);
-    mockViewer.unloadVRM = vi.fn();
-    mockViewer.loadRoom = vi.fn().mockResolvedValue(undefined);
-    mockViewer.unloadRoom = vi.fn();
-    mockViewer.resetCamera = vi.fn();
+    mockSceneCoordinator.isReady = true;
+    mockSceneCoordinator.vrm = {
+      getModel: vi.fn(() => null),
+      loadVrm: vi.fn().mockResolvedValue(undefined),
+      unloadVRM: vi.fn(),
+    } as any;
+    mockSceneCoordinator.environment = {
+      getRoom: vi.fn(() => null),
+      loadRoom: vi.fn().mockResolvedValue(undefined),
+      unloadRoom: vi.fn(),
+      loadSplat: vi.fn(),
+    } as any;
+    mockSceneCoordinator.render = {
+      resetCamera: vi.fn(),
+    } as any;
 
     mockHookManager.register = vi.fn().mockReturnValue('hook-123');
     mockHookManager.unregister = vi.fn().mockReturnValue(true);
     mockHookManager.trigger = vi.fn().mockResolvedValue({});
     mockHookManager.getHooks = vi.fn().mockReturnValue([]);
 
-    server = new JsonRpcServer(mockChat, mockViewer, mockHookManager);
+    server = new JsonRpcServer(mockChat, mockSceneCoordinator, mockHookManager);
   });
 
   describe('Request Validation', () => {
@@ -311,9 +324,10 @@ describe('JsonRpcServer', () => {
   describe('Character Methods', () => {
     beforeEach(() => {
       // Ensure model is loaded for character methods
-      mockViewer.model = {
+      const mockModel = {
         position: { x: 0, y: 0, z: 0 },
       } as any;
+      mockSceneCoordinator.vrm!.getModel = vi.fn(() => mockModel);
     });
 
     it('should set expression', async () => {
@@ -384,7 +398,7 @@ describe('JsonRpcServer', () => {
 
       expect(response.result.success).toBe(true);
       expect(response.result.modelUrl).toBe('https://example.com/model.vrm');
-      expect(mockViewer.loadVrm).toHaveBeenCalled();
+      expect(mockSceneCoordinator.vrm!.loadVrm).toHaveBeenCalled();
     });
 
     it('should unload model', async () => {
@@ -397,14 +411,15 @@ describe('JsonRpcServer', () => {
       const response = await server.handleRequest(request);
 
       expect(response.result.success).toBe(true);
-      expect(mockViewer.unloadVRM).toHaveBeenCalled();
+      expect(mockSceneCoordinator.vrm!.unloadVRM).toHaveBeenCalled();
     });
 
     it('should set model position', async () => {
       // Mock a loaded model
-      mockViewer.model = {
+      const mockModel = {
         position: { set: vi.fn(), x: 0, y: 0, z: 0 },
       } as any;
+      mockSceneCoordinator.vrm!.getModel = vi.fn(() => mockModel);
 
       const request: JsonRpcRequest = {
         jsonrpc: '2.0',
@@ -419,11 +434,12 @@ describe('JsonRpcServer', () => {
 
       expect(response.result.success).toBe(true);
       expect(response.result.position).toEqual({ x: 1, y: 2, z: 3 });
-      expect(mockViewer.model.position.set).toHaveBeenCalledWith(1, 2, 3);
+      const model = mockSceneCoordinator.vrm!.getModel();
+      expect(model!.position.set).toHaveBeenCalledWith(1, 2, 3);
     });
 
     it('should reject model operations without model', async () => {
-      mockViewer.model = null;
+      mockSceneCoordinator.vrm!.getModel = vi.fn(() => null);
 
       const request: JsonRpcRequest = {
         jsonrpc: '2.0',
@@ -441,11 +457,12 @@ describe('JsonRpcServer', () => {
     });
 
     it('should get model transform', async () => {
-      mockViewer.model = {
+      const mockModel = {
         position: { x: 1, y: 2, z: 3 },
         rotation: { x: 0, y: 0, z: 0 },
         scale: { x: 1, y: 1, z: 1 },
       } as any;
+      mockSceneCoordinator.vrm!.getModel = vi.fn(() => mockModel);
 
       const request: JsonRpcRequest = {
         jsonrpc: '2.0',
@@ -477,7 +494,7 @@ describe('JsonRpcServer', () => {
 
       expect(response.result.success).toBe(true);
       expect(response.result.roomUrl).toBe('https://example.com/room.glb');
-      expect(mockViewer.loadRoom).toHaveBeenCalled();
+      expect(mockSceneCoordinator.environment!.loadRoom).toHaveBeenCalled();
     });
 
     it('should load room with default transform', async () => {
@@ -493,7 +510,7 @@ describe('JsonRpcServer', () => {
       const response = await server.handleRequest(request);
 
       expect(response.result.success).toBe(true);
-      expect(mockViewer.loadRoom).toHaveBeenCalledWith(
+      expect(mockSceneCoordinator.environment!.loadRoom).toHaveBeenCalledWith(
         'https://example.com/room.glb',
         { x: 0, y: 0, z: 0 },
         { x: 0, y: 0, z: 0 },
@@ -512,15 +529,16 @@ describe('JsonRpcServer', () => {
       const response = await server.handleRequest(request);
 
       expect(response.result.success).toBe(true);
-      expect(mockViewer.unloadRoom).toHaveBeenCalled();
+      expect(mockSceneCoordinator.environment!.unloadRoom).toHaveBeenCalled();
     });
 
     it('should set room transform', async () => {
-      mockViewer.room = {
+      const mockRoom = {
         position: { set: vi.fn(), x: 0, y: 0, z: 0 },
         rotation: { set: vi.fn(), x: 0, y: 0, z: 0 },
         scale: { set: vi.fn(), x: 1, y: 1, z: 1 },
       } as any;
+      mockSceneCoordinator.environment!.getRoom = vi.fn(() => mockRoom);
 
       const posRequest: JsonRpcRequest = {
         jsonrpc: '2.0',
@@ -532,7 +550,7 @@ describe('JsonRpcServer', () => {
       const response = await server.handleRequest(posRequest);
 
       expect(response.result.success).toBe(true);
-      expect(mockViewer.room.position.set).toHaveBeenCalledWith(5, 0, -3);
+      expect(mockRoom.position.set).toHaveBeenCalledWith(5, 0, -3);
     });
   });
 
@@ -605,7 +623,7 @@ describe('JsonRpcServer', () => {
       const response = await server.handleRequest(request);
 
       expect(response.result.success).toBe(true);
-      expect(mockViewer.resetCamera).toHaveBeenCalled();
+      expect(mockSceneCoordinator.render!.resetCamera).toHaveBeenCalled();
     });
   });
 
@@ -680,7 +698,7 @@ describe('JsonRpcServer', () => {
     });
 
     it('should handle missing viewer methods', async () => {
-      mockViewer.loadVrm = undefined as any;
+      mockSceneCoordinator.vrm!.loadVrm = undefined as any;
 
       const request: JsonRpcRequest = {
         jsonrpc: '2.0',

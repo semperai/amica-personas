@@ -3,13 +3,13 @@ import { VrmData } from "./vrmData";
 import { vrmList } from "@/paths";
 import { thumbPrefix } from "@/utils/thumbPrefix";
 import { AddItemCallbackType, VrmStoreActionType, vrmStoreReducer } from "./vrmStoreReducer";
-import { Viewer } from "../vrmViewer/viewer";
+import { SceneCoordinator } from "@/features/scene3d/SceneCoordinator";
 import { config } from "@/utils/config";
 
 interface VrmStoreContextType {
     getCurrentVrm: () => VrmData | undefined;
     vrmList: VrmData[];
-    vrmListAddFile: (file: File, viewer: Viewer) => void;
+    vrmListAddFile: (file: File, viewer: SceneCoordinator) => void;
     isLoadingVrmList: boolean;
     setIsLoadingVrmList: Dispatch<SetStateAction<boolean>>;
 };
@@ -28,7 +28,7 @@ export const VrmStoreContext = createContext<VrmStoreContextType>({
 export const VrmStoreProvider = ({ children }: PropsWithChildren<{}>): ReactElement => {
     const [isLoadingVrmList, setIsLoadingVrmList] = useState(true);
     const [loadedVrmList, vrmListDispatch] = useReducer(vrmStoreReducer, vrmInitList);
-    const vrmListAddFile = (file: File, viewer: Viewer) => {
+    const vrmListAddFile = (file: File, viewer: SceneCoordinator) => {
         vrmListDispatch({ type: VrmStoreActionType.addItem, itemFile: file, callback: (callbackProp: AddItemCallbackType) => {
             viewer.loadVrm(callbackProp.url, (progress: string) => {
               // TODO handle loading progress
@@ -36,7 +36,7 @@ export const VrmStoreProvider = ({ children }: PropsWithChildren<{}>): ReactElem
               .then(() => {return new Promise(resolve => setTimeout(resolve, 300));})
               .then(() => {
                 // VRM configuration is now read-only from config file
-                viewer.getScreenshotBlob((thumbBlob: Blob | null) => {
+                viewer.captureScreenshot((thumbBlob: Blob | null) => {
                   if (!thumbBlob) return;
                   vrmListDispatch({ type: VrmStoreActionType.updateVrmThumb, url: callbackProp.url, thumbBlob, vrmList: callbackProp.vrmList, callback: (updatedThumbVrmList: VrmData[]) => {
                     vrmListDispatch({ type: VrmStoreActionType.setVrmList, vrmList: updatedThumbVrmList });

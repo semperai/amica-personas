@@ -27,14 +27,14 @@ import { AssistantText } from "@/components/assistantText";
 import { Alert } from "@/components/alert";
 import { UserText } from "@/components/userText";
 import { ChatLog } from "@/components/chatLog";
-import VrmViewer from "@/components/vrmViewer";
+import VrmViewer from "@/components/scene3d";
 import { MessageInputContainer } from "@/components/messageInputContainer";
 import { LoadingProgress } from "@/components/loadingProgress";
 import { DebugPane } from "@/components/debugPane";
 import { EmbeddedWebcam } from "@/components/embeddedWebcam";
 import { Moshi } from "@/features/moshi/components/Moshi";
 
-import { ViewerContext } from "@/features/vrmViewer/viewerContext";
+import { ViewerContext } from "@/features/scene3d/SceneCoordinatorContext";
 import { Message, Role } from "@/features/chat/messages";
 import { ChatContext } from "@/features/chat/chatContext";
 import { AlertContext } from "@/features/alert/alertContext";

@@ -4,17 +4,23 @@
 
 // Mock dependencies BEFORE importing anything
 vi.mock('@/features/chat/chat');
-vi.mock('@/features/vrmViewer/viewer', () => ({
-  Viewer: vi.fn().mockImplementation(() => ({
+vi.mock('@/features/scene3d/SceneCoordinator', () => ({
+  SceneCoordinator: vi.fn().mockImplementation(() => ({
     isReady: true,
-    model: null,
-    room: null,
-    loadVrm: vi.fn(),
-    unloadVRM: vi.fn(),
-    loadRoom: vi.fn(),
-    unloadRoom: vi.fn(),
-    resetCamera: vi.fn(),
-    loadSplat: vi.fn(),
+    vrm: {
+      getModel: vi.fn(() => null),
+      loadVrm: vi.fn(),
+      unloadVRM: vi.fn(),
+    },
+    environment: {
+      getRoom: vi.fn(() => null),
+      loadRoom: vi.fn(),
+      unloadRoom: vi.fn(),
+      loadSplat: vi.fn(),
+    },
+    render: {
+      resetCamera: vi.fn(),
+    },
   })),
 }));
 vi.mock('@/features/hooks/hookManager');
@@ -22,7 +28,7 @@ vi.mock('@/features/hooks/hookManager');
 import { WebSocketTransport } from '@/features/jsonrpc/websocket-transport';
 import { JsonRpcServer } from '@/features/jsonrpc/server';
 import { Chat } from '@/features/chat/chat';
-import { Viewer } from '@/features/vrmViewer/viewer';
+import { SceneCoordinator } from '@/features/scene3d/SceneCoordinator';
 import { HookManager } from '@/features/hooks/hookManager';
 import { HookEvent } from '@/features/hooks/hookEvents';
 
@@ -70,20 +76,20 @@ describe('WebSocketTransport', () => {
   let transport: WebSocketTransport;
   let server: JsonRpcServer;
   let mockChat: MockedObject<Chat>;
-  let mockViewer: MockedObject<Viewer>;
+  let mockSceneCoordinator: MockedObject<SceneCoordinator>;
   let mockHookManager: MockedObject<HookManager>;
   let ws: MockWebSocket;
 
   beforeEach(() => {
     mockChat = new Chat() as MockedObject<Chat>;
-    mockViewer = new Viewer() as MockedObject<Viewer>;
+    mockSceneCoordinator = new SceneCoordinator() as MockedObject<SceneCoordinator>;
     mockHookManager = new HookManager() as MockedObject<HookManager>;
 
-    mockViewer.isReady = true;
-    mockViewer.model = null;
-    mockViewer.room = null;
+    mockSceneCoordinator.isReady = true;
+    const mockModel = null;
+    mockSceneCoordinator.room = null;
 
-    server = new JsonRpcServer(mockChat, mockViewer, mockHookManager);
+    server = new JsonRpcServer(mockChat, mockSceneCoordinator, mockHookManager);
     transport = new WebSocketTransport(server, {
       port: 8765,
       path: '/test',

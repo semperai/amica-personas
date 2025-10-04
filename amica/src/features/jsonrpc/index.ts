@@ -13,7 +13,7 @@ import { JsonRpcServer } from './server';
 import { WebSocketTransport } from './websocket-transport';
 import { HttpTransport } from './http-transport';
 import { Chat } from '@/features/chat/chat';
-import { Viewer } from '@/features/vrmViewer/viewer';
+import { SceneCoordinator } from "@/features/scene3d/SceneCoordinator";
 import { HookManager } from '@/features/hooks/hookManager';
 
 /**
@@ -21,7 +21,7 @@ import { HookManager } from '@/features/hooks/hookManager';
  */
 export function initializeJsonRpc(
   chat: Chat,
-  viewer: Viewer,
+  viewer: SceneCoordinator,
   hookManager: HookManager
 ): {
   server: JsonRpcServer;

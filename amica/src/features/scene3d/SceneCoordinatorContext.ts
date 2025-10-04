@@ -1,6 +1,6 @@
 import { createContext } from "react";
-import { Viewer } from "./viewer";
+import { SceneCoordinator } from "./SceneCoordinator";
 
-const viewer = new Viewer();
+const viewer = new SceneCoordinator();
 
 export const ViewerContext = createContext({ viewer });

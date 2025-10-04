@@ -1,5 +1,5 @@
 import { Message, Role, Screenplay, Talk, textsToScreenplay } from "./messages";
-import { Viewer } from "@/features/vrmViewer/viewer";
+import { SceneCoordinator } from "@/features/scene3d/SceneCoordinator";
 import { Alert } from "@/features/alert/alert";
 import { HookManager } from "@/features/hooks/hookManager";
 
@@ -78,7 +78,7 @@ export class Queue<T> {
 export class Chat {
   public initialized: boolean;
 
-  public viewer?: Viewer;
+  public viewer?: SceneCoordinator;
   public alert?: Alert;
   public hookManager: HookManager;
 
@@ -135,7 +135,7 @@ export class Chat {
   }
 
   public initialize(
-    viewer: Viewer,
+    viewer: SceneCoordinator,
     alert: Alert,
     setChatLog: (messageLog: Message[]) => void,
     setUserMessage: (message: string) => void,

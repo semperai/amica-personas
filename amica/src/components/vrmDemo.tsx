@@ -1,5 +1,5 @@
 import { useContext, useCallback, useEffect, useState } from "react";
-import { ViewerContext } from "@/features/vrmViewer/viewerContext";
+import { ViewerContext } from "@/features/scene3d/SceneCoordinatorContext";
 import { buildUrl } from "@/utils/buildUrl";
 
 export default function VrmDemo({
@@ -30,7 +30,7 @@ export default function VrmDemo({
         viewer.setup(canvas);
         (new Promise(async (resolve, reject) => {
           try {
-            await viewer.loadVrm(buildUrl(vrmUrl), setLoadingProgress);
+            await viewer.vrm?.loadVrm(buildUrl(vrmUrl), setLoadingProgress);
             resolve(true);
           } catch (e) {
             reject();
@@ -43,7 +43,7 @@ export default function VrmDemo({
           onLoaded && onLoaded();
         })
         .then(() => {if (onScreenShot) return new Promise(resolve => setTimeout(resolve, 300));})
-        .then(() => {if (onScreenShot) viewer.getScreenshotBlob(onScreenShot);})
+        .then(() => {if (onScreenShot) viewer.render?.captureScreenshot(onScreenShot);})
         .catch((e) => {
           console.error("vrm loading error", e);
           setLoadingError(true);
