@@ -135,7 +135,7 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
             uint256 graduationTimestamp,
             uint256 agentTokenThreshold,
             , // poolId
-            // positionTokenId
+                // positionTokenId
         ) = personaFactory.personas(tokenId);
 
         assertTrue(token != address(0));
@@ -192,7 +192,7 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
             uint256 graduationTimestamp,
             uint256 agentTokenThreshold,
             , // poolId
-            // positionTokenId
+                // positionTokenId
         ) = personaFactory.personas(tokenId);
 
         assertTrue(token != address(0));
@@ -411,7 +411,8 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
             try personaFactory.swapExactTokensForTokens(
                 tokenId, buyAmount, 0, user3, block.timestamp + 300
             ) {
-                (,,, uint256 gradTimestamp,,,) = personaFactory.personas(tokenId);
+                (,,, uint256 gradTimestamp,,,) =
+                    personaFactory.personas(tokenId);
                 if (gradTimestamp > 0) break;
             } catch {
                 break;
@@ -523,7 +524,8 @@ contract PersonaTokenFactoryCreationTest is Fixtures {
             // Only test claim if there's something to claim
             if (totalClaimable > 0) {
                 vm.prank(user2);
-                uint256 balanceBefore = IERC20(personaTokenAddr).balanceOf(user2);
+                uint256 balanceBefore =
+                    IERC20(personaTokenAddr).balanceOf(user2);
                 personaFactory.claimRewards(tokenId);
                 uint256 balanceAfter = IERC20(personaTokenAddr).balanceOf(user2);
 

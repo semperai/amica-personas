@@ -82,11 +82,11 @@ contract BridgeToArbitrum is Script {
         require(balance >= amount, "Insufficient balance");
 
         // Calculate submission cost (bridge fee)
-        uint256 maxSubmissionCost =
-            IL1GatewayRouter(L1_GATEWAY_ROUTER).calculateRetryableSubmissionFee(
-                0, // data length (empty for standard ERC20 bridge)
-                block.basefee // current base fee
-            );
+        uint256 maxSubmissionCost = IL1GatewayRouter(L1_GATEWAY_ROUTER)
+            .calculateRetryableSubmissionFee(
+            0, // data length (empty for standard ERC20 bridge)
+            block.basefee // current base fee
+        );
 
         // Total ETH needed = maxSubmissionCost + (MAX_GAS * GAS_PRICE_BID)
         uint256 totalEthNeeded = maxSubmissionCost + (MAX_GAS * GAS_PRICE_BID);
@@ -107,7 +107,8 @@ contract BridgeToArbitrum is Script {
         console2.log("Sending", totalEthNeeded / 1e18, "ETH for fees...");
 
         // Build data payload
-        bytes memory outboundData = _buildOutboundData(maxSubmissionCost, l2TokenAddress);
+        bytes memory outboundData =
+            _buildOutboundData(maxSubmissionCost, l2TokenAddress);
 
         IL1GatewayRouter(L1_GATEWAY_ROUTER).outboundTransferCustomRefund{
             value: totalEthNeeded
@@ -156,10 +157,11 @@ contract BridgeToArbitrum is Script {
      * @param maxSubmissionCost Maximum submission cost for the L2 transaction
      * @param l2Token Address of the token on L2
      */
-    function _buildOutboundData(
-        uint256 maxSubmissionCost,
-        address l2Token
-    ) internal pure returns (bytes memory) {
+    function _buildOutboundData(uint256 maxSubmissionCost, address l2Token)
+        internal
+        pure
+        returns (bytes memory)
+    {
         // Encode: maxSubmissionCost, extraData (which contains L2 token address)
         bytes memory extraData = abi.encode(l2Token);
         return abi.encode(maxSubmissionCost, extraData);

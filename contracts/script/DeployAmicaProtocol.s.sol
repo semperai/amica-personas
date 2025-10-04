@@ -142,7 +142,8 @@ contract DeployAmicaProtocol is DeployConfig {
         address proxy = Upgrades.deployUUPSProxy(
             "AmicaTokenMainnet.sol",
             abi.encodeCall(
-                AmicaTokenMainnet.initialize, (deployer, config.amicaTotalSupply)
+                AmicaTokenMainnet.initialize,
+                (deployer, config.amicaTotalSupply)
             ),
             opts
         );

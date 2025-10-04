@@ -237,11 +237,7 @@ contract PersonaFactoryViewerTest is Fixtures {
             0
         );
 
-        uint256 cost = viewer.calculateCostBetween(
-            tokenId,
-            0,
-            100_000 ether
-        );
+        uint256 cost = viewer.calculateCostBetween(tokenId, 0, 100_000 ether);
 
         assertGt(cost, 0);
     }
@@ -260,9 +256,13 @@ contract PersonaFactoryViewerTest is Fixtures {
             0
         );
 
-        (bool canGrad, PersonaFactoryViewer.GraduationStatus status) = viewer.canGraduate(tokenId);
+        (bool canGrad, PersonaFactoryViewer.GraduationStatus status) =
+            viewer.canGraduate(tokenId);
         assertFalse(canGrad);
-        assertEq(uint256(status), uint256(PersonaFactoryViewer.GraduationStatus.BELOW_TOKEN_THRESHOLD));
+        assertEq(
+            uint256(status),
+            uint256(PersonaFactoryViewer.GraduationStatus.BELOW_TOKEN_THRESHOLD)
+        );
     }
 
     function test_CanGraduate_AlreadyGraduated() public {
@@ -294,9 +294,13 @@ contract PersonaFactoryViewerTest is Fixtures {
         assertTrue(graduationTimestamp > 0, "Should be graduated");
 
         // Now check that it reports as already graduated
-        (bool canGrad, PersonaFactoryViewer.GraduationStatus status) = viewer.canGraduate(tokenId);
+        (bool canGrad, PersonaFactoryViewer.GraduationStatus status) =
+            viewer.canGraduate(tokenId);
         assertFalse(canGrad);
-        assertEq(uint256(status), uint256(PersonaFactoryViewer.GraduationStatus.ALREADY_GRADUATED));
+        assertEq(
+            uint256(status),
+            uint256(PersonaFactoryViewer.GraduationStatus.ALREADY_GRADUATED)
+        );
     }
 
     function test_CanGraduate_InsufficientAgentTokens() public {
@@ -335,9 +339,17 @@ contract PersonaFactoryViewerTest is Fixtures {
         (,,, uint256 graduationTimestamp,,,) = personaFactory.personas(tokenId);
         if (graduationTimestamp == 0) {
             // Not graduated - check status
-            (bool canGrad, PersonaFactoryViewer.GraduationStatus status) = viewer.canGraduate(tokenId);
+            (bool canGrad, PersonaFactoryViewer.GraduationStatus status) =
+                viewer.canGraduate(tokenId);
             assertFalse(canGrad);
-            assertEq(uint256(status), uint256(PersonaFactoryViewer.GraduationStatus.INSUFFICIENT_AGENT_TOKENS));
+            assertEq(
+                uint256(status),
+                uint256(
+                    PersonaFactoryViewer
+                        .GraduationStatus
+                        .INSUFFICIENT_AGENT_TOKENS
+                )
+            );
         }
         // If it did graduate, that's a contract bug that should be investigated separately
     }
@@ -360,9 +372,13 @@ contract PersonaFactoryViewerTest is Fixtures {
         );
 
         // First verify we're below threshold
-        (bool canGrad1, PersonaFactoryViewer.GraduationStatus status1) = viewer.canGraduate(tokenId);
+        (bool canGrad1, PersonaFactoryViewer.GraduationStatus status1) =
+            viewer.canGraduate(tokenId);
         assertFalse(canGrad1);
-        assertEq(uint256(status1), uint256(PersonaFactoryViewer.GraduationStatus.BELOW_TOKEN_THRESHOLD));
+        assertEq(
+            uint256(status1),
+            uint256(PersonaFactoryViewer.GraduationStatus.BELOW_TOKEN_THRESHOLD)
+        );
 
         // This test passes as long as we can verify the BELOW_TOKEN_THRESHOLD status
         // The ELIGIBLE status is tested implicitly by the auto-graduation test
@@ -384,9 +400,13 @@ contract PersonaFactoryViewerTest is Fixtures {
         );
 
         // Verify starts as not eligible
-        (bool canGrad, PersonaFactoryViewer.GraduationStatus status) = viewer.canGraduate(tokenId);
+        (bool canGrad, PersonaFactoryViewer.GraduationStatus status) =
+            viewer.canGraduate(tokenId);
         assertFalse(canGrad);
-        assertEq(uint256(status), uint256(PersonaFactoryViewer.GraduationStatus.BELOW_TOKEN_THRESHOLD));
+        assertEq(
+            uint256(status),
+            uint256(PersonaFactoryViewer.GraduationStatus.BELOW_TOKEN_THRESHOLD)
+        );
     }
 
     function test_GetGraduationProgress() public {
@@ -507,11 +527,8 @@ contract PersonaFactoryViewerTest is Fixtures {
     // ==================== Pairing Config Tests ====================
 
     function test_GetPairingConfig() public {
-        (
-            bool enabled,
-            uint256 mintCost,
-            uint256 pricingMultiplier
-        ) = viewer.getPairingConfig(address(amicaToken));
+        (bool enabled, uint256 mintCost, uint256 pricingMultiplier) =
+            viewer.getPairingConfig(address(amicaToken));
 
         assertTrue(enabled);
         assertGt(pricingMultiplier, 0);
@@ -551,7 +568,8 @@ contract PersonaFactoryViewerTest is Fixtures {
         tokenIds[0] = tokenId1;
         tokenIds[1] = tokenId2;
 
-        (address[] memory tokens, bool[] memory graduated) = viewer.getPersonaBatch(tokenIds);
+        (address[] memory tokens, bool[] memory graduated) =
+            viewer.getPersonaBatch(tokenIds);
         assertEq(tokens.length, 2);
         assertFalse(graduated[0]);
         assertFalse(graduated[1]);
@@ -622,7 +640,8 @@ contract PersonaFactoryViewerTest is Fixtures {
         tokenIds[0] = tokenId1;
         tokenIds[1] = tokenId2;
 
-        uint256[] memory balances = viewer.getUserBondingBalancesBatch(tokenIds, user2);
+        uint256[] memory balances =
+            viewer.getUserBondingBalancesBatch(tokenIds, user2);
         assertEq(balances.length, 2);
     }
 

@@ -69,7 +69,8 @@ contract ClaimRewardsDebugTest is Fixtures {
         console.log("User3 bought (pre-grad):", user3Bought1 / 1e18);
 
         // Check persona state
-        (address personaTokenAddr,,, uint256 gradTime1,,,) = personaFactory.personas(tokenId);
+        (address personaTokenAddr,,, uint256 gradTime1,,,) =
+            personaFactory.personas(tokenId);
         console.log("Graduation timestamp:", gradTime1);
 
         // Check balances BEFORE graduation
@@ -86,8 +87,17 @@ contract ClaimRewardsDebugTest is Fixtures {
         while (graduationTimestamp == 0 && buyCount < 20) {
             buyCount++;
 
-            (uint256 totalCollected, uint256 tokensPurchased, uint256 totalAgentDeposited) = personaFactory.preGraduationStates(tokenId);
-            console.log("Buy #", buyCount, "- Tokens purchased so far:", tokensPurchased / 1e18);
+            (
+                uint256 totalCollected,
+                uint256 tokensPurchased,
+                uint256 totalAgentDeposited
+            ) = personaFactory.preGraduationStates(tokenId);
+            console.log(
+                "Buy #",
+                buyCount,
+                "- Tokens purchased so far:",
+                tokensPurchased / 1e18
+            );
             console.log("  Total collected:", totalCollected / 1e18);
             console.log("  Agent deposited:", totalAgentDeposited / 1e18);
 
@@ -122,7 +132,9 @@ contract ClaimRewardsDebugTest is Fixtures {
         console.log("\nPre-graduation state recorded");
 
         // Check claimable rewards
-        _checkClaimableRewards(tokenId, user2, user2BalanceAfter, personaTokenAddr);
+        _checkClaimableRewards(
+            tokenId, user2, user2BalanceAfter, personaTokenAddr
+        );
     }
 
     function _checkClaimableRewards(
@@ -154,8 +166,14 @@ contract ClaimRewardsDebugTest is Fixtures {
         // The issue: if user has 0 balance but claimable > 0, that's the bug
         if (userBalance == 0 && totalClaimable > 0) {
             console.log("\n!!! BUG DETECTED !!!");
-            console.log("User has 0 balance but", totalClaimable / 1e18, "claimable tokens");
-            console.log("This means tokens were not transferred during purchase");
+            console.log(
+                "User has 0 balance but",
+                totalClaimable / 1e18,
+                "claimable tokens"
+            );
+            console.log(
+                "This means tokens were not transferred during purchase"
+            );
         }
 
         // Try to claim
@@ -164,8 +182,11 @@ contract ClaimRewardsDebugTest is Fixtures {
             vm.prank(user);
             try personaFactory.claimRewards(tokenId) {
                 console.log("Claim succeeded!");
-                uint256 balanceAfterClaim = IERC20(personaTokenAddr).balanceOf(user);
-                console.log("User balance after claim:", balanceAfterClaim / 1e18);
+                uint256 balanceAfterClaim =
+                    IERC20(personaTokenAddr).balanceOf(user);
+                console.log(
+                    "User balance after claim:", balanceAfterClaim / 1e18
+                );
             } catch Error(string memory reason) {
                 console.log("Claim failed:", reason);
             } catch (bytes memory lowLevelData) {
@@ -212,7 +233,9 @@ contract ClaimRewardsDebugTest is Fixtures {
             vm.prank(user2);
             try personaFactory.swapExactTokensForTokens(
                 tokenId, 100_000 ether, 0, user2, block.timestamp + 1
-            ) {} catch { break; }
+            ) {} catch {
+                break;
+            }
 
             (,,, graduationTimestamp,,,) = personaFactory.personas(tokenId);
         }
@@ -222,13 +245,17 @@ contract ClaimRewardsDebugTest is Fixtures {
 
         // Check balance AFTER graduation but BEFORE claim - still 0
         uint256 balanceAfterGrad = IERC20(personaTokenAddr).balanceOf(user2);
-        console.log("User2 balance after graduation (before claim):", balanceAfterGrad / 1e18);
+        console.log(
+            "User2 balance after graduation (before claim):",
+            balanceAfterGrad / 1e18
+        );
         assertEq(balanceAfterGrad, 0, "Balance should still be 0 before claim");
 
         // Wait and claim
         vm.warp(block.timestamp + 1 days + 1);
 
-        (,,, uint256 totalClaimable,,) = personaFactory.getClaimableRewards(tokenId, user2);
+        (,,, uint256 totalClaimable,,) =
+            personaFactory.getClaimableRewards(tokenId, user2);
         console.log("Total claimable:", totalClaimable / 1e18);
         assertGt(totalClaimable, 0, "Should have claimable tokens");
 
@@ -239,9 +266,15 @@ contract ClaimRewardsDebugTest is Fixtures {
         uint256 balanceAfterClaim = IERC20(personaTokenAddr).balanceOf(user2);
         console.log("User2 balance after claim:", balanceAfterClaim / 1e18);
         assertGt(balanceAfterClaim, 0, "Balance should be > 0 after claim");
-        assertEq(balanceAfterClaim, totalClaimable, "Balance should equal claimable amount");
+        assertEq(
+            balanceAfterClaim,
+            totalClaimable,
+            "Balance should equal claimable amount"
+        );
 
-        console.log("\n[OK] CORRECT: Tokens are only received after calling claimRewards()");
+        console.log(
+            "\n[OK] CORRECT: Tokens are only received after calling claimRewards()"
+        );
     }
 
     function testDebug_AgentOnlyDepositor() public {
@@ -288,7 +321,9 @@ contract ClaimRewardsDebugTest is Fixtures {
                 vm.prank(user3);
                 try personaFactory.swapExactTokensForTokens(
                     tokenId, 1_000_000 ether, 0, user3, block.timestamp + 1
-                ) {} catch { break; }
+                ) {} catch {
+                    break;
+                }
 
                 (,,, graduationTimestamp,,,) = personaFactory.personas(tokenId);
                 if (graduationTimestamp > 0) {
@@ -323,7 +358,8 @@ contract ClaimRewardsDebugTest is Fixtures {
         console.log("  Claimable:", claimable);
 
         // Check factory balance
-        uint256 factoryBalance = IERC20(personaTokenAddr).balanceOf(address(personaFactory));
+        uint256 factoryBalance =
+            IERC20(personaTokenAddr).balanceOf(address(personaFactory));
         console.log("\nFactory persona token balance:", factoryBalance / 1e18);
 
         if (factoryBalance < totalClaimable) {

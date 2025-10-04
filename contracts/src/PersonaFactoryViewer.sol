@@ -156,7 +156,7 @@ contract PersonaFactoryViewer {
             uint256 graduationTimestamp,
             , // agentTokenThreshold
             , // poolId
-            // positionTokenId
+                // positionTokenId
         ) = factory.personas(tokenId);
         if (graduationTimestamp > 0 || token == address(0)) return 0;
 
@@ -194,7 +194,7 @@ contract PersonaFactoryViewer {
             uint256 graduationTimestamp,
             uint256 agentTokenThreshold,
             , // poolId
-            // positionTokenId
+                // positionTokenId
         ) = factory.personas(tokenId);
 
         if (graduationTimestamp > 0) {
@@ -341,7 +341,7 @@ contract PersonaFactoryViewer {
             uint256 graduationTimestamp,
             , // agentTokenThreshold
             , // poolId
-            // positionTokenId
+                // positionTokenId
         ) = factory.personas(tokenId);
         if (graduationTimestamp > 0 || token == address(0)) return 0;
 
@@ -377,7 +377,7 @@ contract PersonaFactoryViewer {
             uint256 graduationTimestamp,
             , // agentTokenThreshold
             , // poolId
-            // positionTokenId
+                // positionTokenId
         ) = factory.personas(tokenId);
         if (graduationTimestamp > 0 || token == address(0)) return 0;
 
@@ -414,7 +414,7 @@ contract PersonaFactoryViewer {
             uint256 graduationTimestamp,
             , // agentTokenThreshold
             , // poolId
-            // positionTokenId
+                // positionTokenId
         ) = factory.personas(tokenId);
         if (graduationTimestamp > 0 || token == address(0)) return 0;
 

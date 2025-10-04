@@ -138,9 +138,7 @@ contract BridgeToBase is Script {
         string memory finalJson = vm.serializeAddress(obj, "to", result.to);
 
         string memory filename = string.concat(
-            "deployments/bridge-to-base-",
-            vm.toString(block.timestamp),
-            ".json"
+            "deployments/bridge-to-base-", vm.toString(block.timestamp), ".json"
         );
 
         vm.writeJson(finalJson, filename);
