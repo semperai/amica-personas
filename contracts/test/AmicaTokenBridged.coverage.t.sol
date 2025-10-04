@@ -218,5 +218,3 @@ contract AmicaTokenBridgedCoverageTest is Test {
         assertEq(amicaV2.balanceOf(user1), 1500e18);
     }
 }
-
-

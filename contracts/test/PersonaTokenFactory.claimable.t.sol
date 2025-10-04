@@ -122,7 +122,11 @@ contract PersonaTokenFactoryClaimableTest is Fixtures {
         assertEq(purchasedAmount, 0, "No purchased tokens");
         assertEq(bonusAmount, 0, "No bonus without purchases");
         assertGt(agentRewardAmount, 0, "Should have agent rewards");
-        assertEq(totalClaimable, agentRewardAmount, "Total should equal agent rewards");
+        assertEq(
+            totalClaimable,
+            agentRewardAmount,
+            "Total should equal agent rewards"
+        );
         assertFalse(claimed, "Not claimed yet");
         assertFalse(claimable, "Not claimable until delay passes");
     }
@@ -178,7 +182,9 @@ contract PersonaTokenFactoryClaimableTest is Fixtures {
         assertGt(purchasedAmount, 0, "Should show purchased amount");
         assertEq(bonusAmount, 0, "Bonus should be 0 (already claimed)");
         assertEq(agentRewardAmount, 0, "No agent rewards");
-        assertEq(totalClaimable, purchasedAmount, "Total equals purchased (no bonus)");
+        assertEq(
+            totalClaimable, purchasedAmount, "Total equals purchased (no bonus)"
+        );
         assertTrue(claimed, "Should be marked as claimed");
         assertTrue(claimable, "Delay has passed");
     }
@@ -229,7 +235,11 @@ contract PersonaTokenFactoryClaimableTest is Fixtures {
         assertGt(purchasedAmount, 0, "Has purchased tokens");
         assertGt(bonusAmount, 0, "Has bonus from 15% unsold");
         assertEq(agentRewardAmount, 0, "No agent rewards");
-        assertEq(totalClaimable, purchasedAmount + bonusAmount, "Total equals purchased + bonus");
+        assertEq(
+            totalClaimable,
+            purchasedAmount + bonusAmount,
+            "Total equals purchased + bonus"
+        );
     }
 
     /**
@@ -325,7 +335,11 @@ contract PersonaTokenFactoryClaimableTest is Fixtures {
         assertGt(purchasedAmount, 0, "Has purchased tokens");
         assertGt(bonusAmount, 0, "Has bonus from unsold tokens");
         assertEq(agentRewardAmount, 0, "No agent token configured");
-        assertEq(totalClaimable, purchasedAmount + bonusAmount, "Total is purchase + bonus");
+        assertEq(
+            totalClaimable,
+            purchasedAmount + bonusAmount,
+            "Total is purchase + bonus"
+        );
     }
 
     /**
@@ -383,7 +397,11 @@ contract PersonaTokenFactoryClaimableTest is Fixtures {
         assertGt(purchasedAmount, 0, "Has purchased tokens");
         assertGt(bonusAmount, 0, "Has bonus");
         assertEq(agentRewardAmount, 0, "No agent deposit, no agent rewards");
-        assertEq(totalClaimable, purchasedAmount + bonusAmount, "Total excludes agent");
+        assertEq(
+            totalClaimable,
+            purchasedAmount + bonusAmount,
+            "Total excludes agent"
+        );
     }
 
     /**
@@ -435,7 +453,11 @@ contract PersonaTokenFactoryClaimableTest is Fixtures {
         assertGt(purchasedAmount, 0, "Has purchased tokens");
         assertGt(bonusAmount, 0, "Has bonus");
         assertEq(agentRewardAmount, 0, "No agent deposits in system");
-        assertEq(totalClaimable, purchasedAmount + bonusAmount, "Total excludes agent");
+        assertEq(
+            totalClaimable,
+            purchasedAmount + bonusAmount,
+            "Total excludes agent"
+        );
     }
 
     /**

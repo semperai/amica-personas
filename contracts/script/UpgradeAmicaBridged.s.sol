@@ -42,7 +42,8 @@ contract UpgradeAmicaBridged is Script {
         console2.log("");
 
         // Get old implementation before upgrade
-        address oldImplementation = Upgrades.getImplementationAddress(proxyAddress);
+        address oldImplementation =
+            Upgrades.getImplementationAddress(proxyAddress);
         console2.log("Old Implementation:", oldImplementation);
 
         vm.startBroadcast(deployerPrivateKey);
@@ -54,14 +55,10 @@ contract UpgradeAmicaBridged is Script {
 
         console2.log("Upgrading to AmicaTokenBridgedV2...");
 
-        Upgrades.upgradeProxy(
-            proxyAddress,
-            "AmicaTokenBridgedV2.sol",
-            "",
-            opts
-        );
+        Upgrades.upgradeProxy(proxyAddress, "AmicaTokenBridgedV2.sol", "", opts);
 
-        address newImplementation = Upgrades.getImplementationAddress(proxyAddress);
+        address newImplementation =
+            Upgrades.getImplementationAddress(proxyAddress);
 
         console2.log("  New Implementation:", newImplementation);
         console2.log("");
@@ -119,7 +116,8 @@ contract UpgradeAmicaBridged is Script {
         vm.serializeAddress(obj, "proxy", result.proxy);
         vm.serializeAddress(obj, "oldImplementation", result.oldImplementation);
         vm.serializeAddress(obj, "newImplementation", result.newImplementation);
-        string memory finalJson = vm.serializeString(obj, "version", result.version);
+        string memory finalJson =
+            vm.serializeString(obj, "version", result.version);
 
         string memory filename = string.concat(
             "deployments/amica-bridged-upgrade-",

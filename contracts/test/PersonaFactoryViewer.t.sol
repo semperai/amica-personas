@@ -788,11 +788,7 @@ contract PersonaFactoryViewerTest is Fixtures {
         uint256 graduationThreshold = (333_333_333 ether * 85) / 100;
         vm.prank(user2);
         personaFactory.swapExactTokensForTokens(
-            tokenId,
-            graduationThreshold,
-            0,
-            user2,
-            block.timestamp + 300
+            tokenId, graduationThreshold, 0, user2, block.timestamp + 300
         );
 
         // Check claim allowed immediately (should be false due to 1 day delay)

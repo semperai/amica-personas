@@ -6,8 +6,10 @@ import {AmicaTokenMainnet} from "../src/AmicaTokenMainnet.sol";
 import {AmicaTokenMainnetV2} from "../src/AmicaTokenMainnetV2.sol";
 import {AmicaTokenBridged} from "../src/AmicaTokenBridged.sol";
 import {AmicaTokenBridgedV2} from "../src/AmicaTokenBridgedV2.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {ERC1967Proxy} from
+    "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {UUPSUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
@@ -48,8 +50,12 @@ contract DeploymentUpgradeTest is Test {
 
         // Step 4: Verify deployment
         assertEq(amica.owner(), owner, "Owner should be set");
-        assertEq(amica.totalSupply(), MAX_SUPPLY, "Total supply should be MAX_SUPPLY");
-        assertEq(amica.balanceOf(owner), MAX_SUPPLY, "Owner should have all tokens");
+        assertEq(
+            amica.totalSupply(), MAX_SUPPLY, "Total supply should be MAX_SUPPLY"
+        );
+        assertEq(
+            amica.balanceOf(owner), MAX_SUPPLY, "Owner should have all tokens"
+        );
         assertEq(amica.name(), "Amica", "Name should be Amica");
         assertEq(amica.symbol(), "AMICA", "Symbol should be AMICA");
 
@@ -86,8 +92,7 @@ contract DeploymentUpgradeTest is Test {
 
         // Upgrade proxy
         UUPSUpgradeable(address(amica)).upgradeToAndCall(
-            address(implementationV2),
-            ""
+            address(implementationV2), ""
         );
 
         // Cast to V2
@@ -98,12 +103,22 @@ contract DeploymentUpgradeTest is Test {
 
         // Check V2 specific functions
         assertEq(amicaV2.version(), "2.0.0", "Version should be 2.0.0");
-        assertEq(amicaV2.upgradeTest(), "Upgrade success", "Upgrade test should pass");
+        assertEq(
+            amicaV2.upgradeTest(), "Upgrade success", "Upgrade test should pass"
+        );
 
         // Check state preservation
         assertEq(amicaV2.owner(), owner, "Owner should be preserved");
-        assertEq(amicaV2.totalSupply(), MAX_SUPPLY, "Total supply should be preserved");
-        assertEq(amicaV2.balanceOf(owner), MAX_SUPPLY, "Owner balance should be preserved");
+        assertEq(
+            amicaV2.totalSupply(),
+            MAX_SUPPLY,
+            "Total supply should be preserved"
+        );
+        assertEq(
+            amicaV2.balanceOf(owner),
+            MAX_SUPPLY,
+            "Owner balance should be preserved"
+        );
 
         console.log("Version:", amicaV2.version());
         console.log("Upgrade Test:", amicaV2.upgradeTest());
@@ -143,21 +158,23 @@ contract DeploymentUpgradeTest is Test {
         // Upgrade to V2
         AmicaTokenMainnetV2 implementationV2 = new AmicaTokenMainnetV2();
         UUPSUpgradeable(address(amica)).upgradeToAndCall(
-            address(implementationV2),
-            ""
+            address(implementationV2), ""
         );
         AmicaTokenMainnetV2 amicaV2 = AmicaTokenMainnetV2(address(proxy));
 
         // Verify all functionality still works
         uint256 remainingAfter = amicaV2.remainingSupply();
-        assertEq(remainingAfter, remainingBefore, "Remaining supply should be same");
+        assertEq(
+            remainingAfter, remainingBefore, "Remaining supply should be same"
+        );
 
         address[] memory tokensAfter = amicaV2.getConfiguredTokens();
         assertEq(tokensAfter.length, 1, "Should still have 1 configured token");
         assertEq(tokensAfter[0], mockToken, "Token should still be configured");
 
         // Check token config preserved
-        (bool enabled, uint256 rate, uint8 decimals) = amicaV2.tokenConfigs(mockToken);
+        (bool enabled, uint256 rate, uint8 decimals) =
+            amicaV2.tokenConfigs(mockToken);
         assertTrue(enabled, "Token should still be enabled");
         assertEq(rate, 1e18, "Rate should be preserved");
         assertEq(decimals, 18, "Decimals should be preserved");
@@ -229,8 +246,7 @@ contract DeploymentUpgradeTest is Test {
         console.log("V2 Implementation deployed:", address(implementationV2));
 
         UUPSUpgradeable(address(amica)).upgradeToAndCall(
-            address(implementationV2),
-            ""
+            address(implementationV2), ""
         );
 
         AmicaTokenBridgedV2 amicaV2 = AmicaTokenBridgedV2(address(proxy));
@@ -239,7 +255,9 @@ contract DeploymentUpgradeTest is Test {
         console.log("\n=== Verifying Bridged Upgrade ===");
 
         assertEq(amicaV2.version(), "2.0.0", "Version should be 2.0.0");
-        assertEq(amicaV2.upgradeTest(), "Upgrade success", "Upgrade test should pass");
+        assertEq(
+            amicaV2.upgradeTest(), "Upgrade success", "Upgrade test should pass"
+        );
         assertEq(amicaV2.owner(), owner, "Owner should be preserved");
         assertEq(amicaV2.totalSupply(), 0, "Total supply should be 0");
 
@@ -259,7 +277,9 @@ contract DeploymentUpgradeTest is Test {
         AmicaTokenMainnet implementation = new AmicaTokenMainnet();
         ERC1967Proxy proxy = new ERC1967Proxy(
             address(implementation),
-            abi.encodeCall(AmicaTokenMainnet.initialize, (owner, 900_000_000 * 1e18))
+            abi.encodeCall(
+                AmicaTokenMainnet.initialize, (owner, 900_000_000 * 1e18)
+            )
         );
         AmicaTokenMainnet amica = AmicaTokenMainnet(address(proxy));
 
@@ -279,8 +299,7 @@ contract DeploymentUpgradeTest is Test {
         // Upgrade to V2
         AmicaTokenMainnetV2 implementationV2 = new AmicaTokenMainnetV2();
         UUPSUpgradeable(address(amica)).upgradeToAndCall(
-            address(implementationV2),
-            ""
+            address(implementationV2), ""
         );
         AmicaTokenMainnetV2 amicaV2 = AmicaTokenMainnetV2(address(proxy));
 
@@ -292,17 +311,20 @@ contract DeploymentUpgradeTest is Test {
         assertEq(tokensAfter[2], dai, "DAI should be third");
 
         // Verify each config
-        (bool enabled1, uint256 rate1, uint8 decimals1) = amicaV2.tokenConfigs(usdc);
+        (bool enabled1, uint256 rate1, uint8 decimals1) =
+            amicaV2.tokenConfigs(usdc);
         assertTrue(enabled1);
         assertEq(rate1, 1e18);
         assertEq(decimals1, 6);
 
-        (bool enabled2, uint256 rate2, uint8 decimals2) = amicaV2.tokenConfigs(usdt);
+        (bool enabled2, uint256 rate2, uint8 decimals2) =
+            amicaV2.tokenConfigs(usdt);
         assertTrue(enabled2);
         assertEq(rate2, 0.9e18);
         assertEq(decimals2, 6);
 
-        (bool enabled3, uint256 rate3, uint8 decimals3) = amicaV2.tokenConfigs(dai);
+        (bool enabled3, uint256 rate3, uint8 decimals3) =
+            amicaV2.tokenConfigs(dai);
         assertTrue(enabled3);
         assertEq(rate3, 1e18);
         assertEq(decimals3, 18);
@@ -336,8 +358,7 @@ contract DeploymentUpgradeTest is Test {
 
         vm.expectRevert();
         UUPSUpgradeable(address(amica)).upgradeToAndCall(
-            address(implementationV2),
-            ""
+            address(implementationV2), ""
         );
 
         vm.stopPrank();
@@ -345,8 +366,7 @@ contract DeploymentUpgradeTest is Test {
         // Verify owner can still upgrade
         vm.prank(owner);
         UUPSUpgradeable(address(amica)).upgradeToAndCall(
-            address(implementationV2),
-            ""
+            address(implementationV2), ""
         );
 
         AmicaTokenMainnetV2 amicaV2 = AmicaTokenMainnetV2(address(proxy));
@@ -363,7 +383,9 @@ contract DeploymentUpgradeTest is Test {
         AmicaTokenMainnet implementation = new AmicaTokenMainnet();
         ERC1967Proxy proxy = new ERC1967Proxy(
             address(implementation),
-            abi.encodeCall(AmicaTokenMainnet.initialize, (owner, 900_000_000 * 1e18))
+            abi.encodeCall(
+                AmicaTokenMainnet.initialize, (owner, 900_000_000 * 1e18)
+            )
         );
         AmicaTokenMainnet amica = AmicaTokenMainnet(address(proxy));
 
@@ -387,20 +409,30 @@ contract DeploymentUpgradeTest is Test {
         // Upgrade
         AmicaTokenMainnetV2 implementationV2 = new AmicaTokenMainnetV2();
         UUPSUpgradeable(address(amica)).upgradeToAndCall(
-            address(implementationV2),
-            ""
+            address(implementationV2), ""
         );
         AmicaTokenMainnetV2 amicaV2 = AmicaTokenMainnetV2(address(proxy));
 
         // Verify all state preserved
-        assertEq(amicaV2.paused(), pausedBefore, "Paused state should be preserved");
-        assertEq(amicaV2.balanceOf(owner), balanceOwnerBefore, "Owner balance preserved");
-        assertEq(amicaV2.balanceOf(user), balanceUserBefore, "User balance preserved");
+        assertEq(
+            amicaV2.paused(), pausedBefore, "Paused state should be preserved"
+        );
+        assertEq(
+            amicaV2.balanceOf(owner),
+            balanceOwnerBefore,
+            "Owner balance preserved"
+        );
+        assertEq(
+            amicaV2.balanceOf(user), balanceUserBefore, "User balance preserved"
+        );
 
         address[] memory tokensAfter = amicaV2.getConfiguredTokens();
-        assertEq(tokensAfter.length, tokensBefore.length, "Tokens list preserved");
+        assertEq(
+            tokensAfter.length, tokensBefore.length, "Tokens list preserved"
+        );
 
-        (bool enabled, uint256 rate, uint8 decimals) = amicaV2.tokenConfigs(token1);
+        (bool enabled, uint256 rate, uint8 decimals) =
+            amicaV2.tokenConfigs(token1);
         assertTrue(enabled, "Token still enabled");
         assertEq(rate, 2e18, "Rate preserved");
         assertEq(decimals, 18, "Decimals preserved");

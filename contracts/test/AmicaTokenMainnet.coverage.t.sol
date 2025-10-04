@@ -442,8 +442,7 @@ contract AmicaTokenMainnetCoverageTest is Test {
         new ERC1967Proxy(
             address(implementation),
             abi.encodeCall(
-                AmicaTokenMainnet.initialize,
-                (owner, MAX_SUPPLY + 1)
+                AmicaTokenMainnet.initialize, (owner, MAX_SUPPLY + 1)
             )
         );
     }
@@ -539,4 +538,3 @@ contract AmicaTokenMainnetCoverageTest is Test {
         assertEq(amicaV2.balanceOf(user1), 1500e18);
     }
 }
-
