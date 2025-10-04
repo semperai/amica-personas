@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import * as fc from "fast-check";
-import { buildUrl } from "@/utils/buildUrl";
+import { buildUrl } from "@/utils/resolveAssetUrl";
 import { removeEmojiFromText } from "@/utils/removeEmojiFromText";
 
 /**

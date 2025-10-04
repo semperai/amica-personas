@@ -14,8 +14,8 @@ import { EmoteController } from "@/features/emoteController/EmotionController";
 import { ProceduralAnimation } from "@/features/proceduralAnimation/proceduralAnimation";
 import { Screenplay } from "@/features/chat/messages";
 import { downscaleModelTextures, logTextureInfo } from '@/utils/textureDownscaler';
-import { OptimizedGLTFLoader } from '@/utils/gltfOptimizer';
-import { GLTFAnalyzer } from '@/utils/gltfAnalyzer';
+import { OptimizedGLTFLoader } from '@/utils/glTFOptimizer';
+import { GLTFAnalyzer } from '@/utils/glTFAnalyzer';
 import { TransparencyOptimizer, checkAndOptimizeTransparency } from '@/utils/transparencyOptimizer';
 import { config } from "@/utils/config";
 

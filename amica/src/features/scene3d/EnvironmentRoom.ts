@@ -3,8 +3,8 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader";
 // @ts-ignore
 import * as GaussianSplats3D from '@mkkellogg/gaussian-splats-3d';
 import { downscaleModelTextures, logTextureInfo } from '@/utils/textureDownscaler';
-import { OptimizedGLTFLoader } from '@/utils/gltfOptimizer';
-import { GLTFAnalyzer } from '@/utils/gltfAnalyzer';
+import { OptimizedGLTFLoader } from '@/utils/glTFOptimizer';
+import { GLTFAnalyzer } from '@/utils/glTFAnalyzer';
 import { TransparencyOptimizer, checkAndOptimizeTransparency } from '@/utils/transparencyOptimizer';
 import { config } from "@/utils/config";
 

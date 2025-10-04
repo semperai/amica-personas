@@ -1,5 +1,5 @@
 import { Message } from "./messages";
-import { buildPrompt, buildVisionPrompt } from "@/utils/buildPrompt";
+import { buildPrompt, buildVisionPrompt } from "@/utils/constructLLMPrompt";
 import { config } from '@/utils/config';
 
 export async function getLlamaCppChatResponseStream(messages: Message[]) {

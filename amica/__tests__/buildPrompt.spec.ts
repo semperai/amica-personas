@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { buildPrompt, buildVisionPrompt } from "@/utils/buildPrompt";
+import { buildPrompt, buildVisionPrompt } from "@/utils/constructLLMPrompt";
 import type { Message } from "@/features/chat/messages";
 import { config } from "@/utils/config";
 

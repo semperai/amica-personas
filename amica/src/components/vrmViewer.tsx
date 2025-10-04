@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { useContext, useCallback, useState, useEffect } from "react";
 import { ViewerContext } from "@/features/scene3d/SceneCoordinatorContext";
-import { buildUrl } from "@/utils/buildUrl";
+import { buildUrl } from "@/utils/resolveAssetUrl";
 import { config } from "@/utils/config";
 import { useVrmStoreContext } from "@/features/vrmStore/vrmStoreContext";
 import { ChatContext } from "@/features/chat/chatContext";

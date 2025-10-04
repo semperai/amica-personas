@@ -31,7 +31,7 @@ vi.mock("@/utils/config", () => ({
   }),
 }));
 
-vi.mock("@/utils/buildPrompt", () => ({
+vi.mock("@/utils/constructLLMPrompt", () => ({
   buildPrompt: vi.fn((messages) =>
     messages.map((m: any) => `${m.role}: ${m.content}`).join("\n")
   ),

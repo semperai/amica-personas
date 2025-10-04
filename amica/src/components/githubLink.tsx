@@ -1,4 +1,4 @@
-import { buildUrl } from "@/utils/buildUrl";
+import { buildUrl } from "@/utils/resolveAssetUrl";
 
 export const GitHubLink = () => {
   return (

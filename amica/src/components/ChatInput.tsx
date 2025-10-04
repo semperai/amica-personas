@@ -7,7 +7,7 @@ import { hasOnScreenKeyboard } from "@/utils/hasOnScreenKeyboard";
 import { AlertContext } from "@/features/alert/alertContext";
 import { ChatContext } from "@/features/chat/chatContext";
 import { openaiWhisper  } from "@/features/openaiWhisper/openaiWhisper";
-import { whispercpp  } from "@/features/whispercpp/whispercpp";
+import { whispercpp  } from "@/features/whispercpp/whisperCpp";
 import { config } from "@/utils/config";
 import { WaveFile } from "wavefile";
 

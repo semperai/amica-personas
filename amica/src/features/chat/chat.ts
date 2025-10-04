@@ -27,13 +27,13 @@ import { coquiLocal } from "@/features/coquiLocal/coquiLocal";
 import { piper } from "@/features/piper/piper";
 import { elevenlabs } from "@/features/elevenlabs/elevenlabs";
 import { speecht5 } from "@/features/speecht5/speecht5";
-import { openaiTTS } from "@/features/openaiTTS/openaiTTS";
+import { openaiTTS } from "@/features/openaiTTS/openAITextToSpeech";
 import { localXTTSTTS } from "@/features/localXTTS/localXTTS";
 
 import { config } from "@/utils/config";
 import { removeEmojiFromText } from "@/utils/removeEmojiFromText";
 import { processResponse } from "@/utils/processResponse";
-import { wait } from "@/utils/wait";
+import { wait } from "@/utils/sleep";
 import {
   isCharacterIdle,
   characterIdleTime,

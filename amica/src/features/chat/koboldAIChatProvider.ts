@@ -1,5 +1,5 @@
 import { Message } from "./messages";
-import { buildPrompt } from "@/utils/buildPrompt";
+import { buildPrompt } from "@/utils/constructLLMPrompt";
 import { config } from '@/utils/config';
 
 export async function getKoboldAiChatResponseStream(messages: Message[]) {

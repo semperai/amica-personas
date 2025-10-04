@@ -28,7 +28,7 @@ import { Alert } from "@/components/alert";
 import { UserText } from "@/components/userText";
 import { ChatLog } from "@/components/ChatHistory";
 import VrmViewer from "@/components/vrmViewer";
-import { MessageInputContainer } from "@/components/messageInputContainer";
+import { MessageInputContainer } from "@/components/LazyMessageInput";
 import { LoadingProgress } from "@/components/loadingProgress";
 import { DebugPane } from "@/components/DebugPanel";
 import { EmbeddedWebcam } from "@/components/embeddedWebcam";

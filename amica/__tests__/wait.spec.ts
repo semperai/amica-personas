@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import { wait } from "../src/utils/wait";
+import { wait } from "../src/utils/sleep";
 
 describe("wait", () => {
   beforeEach(() => {

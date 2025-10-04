@@ -1,6 +1,6 @@
 import { useContext, useCallback, useEffect, useState } from "react";
 import { ViewerContext } from "@/features/scene3d/SceneCoordinatorContext";
-import { buildUrl } from "@/utils/buildUrl";
+import { buildUrl } from "@/utils/resolveAssetUrl";
 
 export default function VrmDemo({
   vrmUrl,

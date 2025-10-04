@@ -1,4 +1,4 @@
-// Manual mock for utils/buildUrl to avoid import.meta issues in Jest
+// Manual mock for utils/resolveAssetUrl to avoid import.meta issues in Jest
 
 export let mockBaseUrl = '/';
 

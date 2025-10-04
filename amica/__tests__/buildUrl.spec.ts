@@ -1,5 +1,5 @@
 import { describe, expect, test, afterEach, vi } from "vitest";
-import { buildUrl } from "@/utils/buildUrl";
+import { buildUrl } from "@/utils/resolveAssetUrl";
 
 // Helper to mock BASE_URL
 function setMockBaseUrl(url: string) {

@@ -1,4 +1,4 @@
-import { hashCode } from "@/utils/hashCode";
+import { hashCode } from "@/utils/stringHash";
 import { VrmData } from "./vrmData";
 import { vrmDataProvider } from "./vrmDataProvider";
 import VrmDbModel from "./vrmDbModel";
