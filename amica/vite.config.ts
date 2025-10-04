@@ -61,6 +61,13 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       external: ['sharp', 'onnxruntime-node'],
+      onwarn(warning, warn) {
+        // Ignore missing source map warnings for onnxruntime files
+        if (warning.code === 'SOURCEMAP_ERROR' && warning.message.includes('ort')) {
+          return;
+        }
+        warn(warning);
+      },
     },
   },
   server: {

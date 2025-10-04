@@ -13,6 +13,7 @@
     "lint": "eslint src --ext ts,tsx",
     "test": "vitest run",
     "test:ci": "vitest run --reporter=json --reporter=default --outputFile=test-results.json",
+    "test:coverage": "vitest run --coverage",
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",

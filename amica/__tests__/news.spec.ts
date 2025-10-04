@@ -1,17 +1,17 @@
 import { describe, expect, test, vi, beforeEach } from "vitest";
 
-// Mock fetch BEFORE importing the module that uses it
-const fetchMock = vi.fn();
-global.fetch = fetchMock as any;
-
-// Use vi.hoisted to create the mock before it's hoisted
-const { expandPromptMock } = vi.hoisted(() => {
+// Use vi.hoisted to create the mocks before they're hoisted
+const { fetchMock, expandPromptMock } = vi.hoisted(() => {
   return {
+    fetchMock: vi.fn(),
     expandPromptMock: vi.fn((prompt: string, values: any) => {
       return Promise.resolve(prompt.replace('{context_str}', values.context_str));
     }),
   };
 });
+
+// Mock fetch globally
+vi.stubGlobal('fetch', fetchMock);
 
 // Mock the module to use our hoisted mock
 vi.mock("@/features/functionCalling/eventHandler", () => ({
