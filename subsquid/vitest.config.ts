@@ -14,6 +14,7 @@ export default defineConfig({
         '**/abi/**',
         'src/abi/**',
         'src/model/**',
+        'src/**/__tests__/**',
       ],
     },
   },
