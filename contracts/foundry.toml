@@ -15,7 +15,7 @@ evm_version = "cancun"
 optimizer = true
 optimizer_runs = 200
 
-no_match_coverage = "(test/.*|mocks/.*)\\.sol"
+no_match_coverage = "(test/.*|mocks/.*|script/.*)\\.sol"
 
 [profile.ci]
 fuzz = { runs = 5000 }
