@@ -5,6 +5,7 @@ import { buildUrl } from "@/utils/buildUrl";
 import { config } from "@/utils/config";
 import { useVrmStoreContext } from "@/features/vrmStore/vrmStoreContext";
 import { ChatContext } from "@/features/chat/chatContext";
+import { globalHookManager } from "@/features/hooks";
 import clsx from "clsx";
 
 export default function VrmViewer({ chatMode }: { chatMode: boolean }) {
@@ -35,7 +36,7 @@ export default function VrmViewer({ chatMode }: { chatMode: boolean }) {
           await viewer.setup(canvas);
 
           try {
-            await viewer.scenario.loadScenario(config('scenario_url'), viewer, viewer.hookManager);
+            await viewer.scenario.loadScenario(config('scenario_url'), viewer, globalHookManager);
             resolve(true);
           } catch (e) {
             reject(e);
