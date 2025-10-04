@@ -40,6 +40,53 @@ describe('PhysicsSystem', () => {
       expect(mockAmmo.btSequentialImpulseConstraintSolver).toHaveBeenCalled();
       expect(mockAmmo.btDiscreteDynamicsWorld).toHaveBeenCalled();
     });
+
+    it('should return false when Ammo is undefined', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const originalAmmo = global.window.Ammo;
+
+      // @ts-ignore
+      delete global.window.Ammo;
+
+      const newSystem = new PhysicsSystem();
+      const result = await newSystem.initialize();
+
+      expect(result).toBe(false);
+      expect(consoleSpy).toHaveBeenCalledWith('Ammo not found');
+      expect(newSystem.isInitialized).toBe(false);
+
+      global.window.Ammo = originalAmmo;
+      consoleSpy.mockRestore();
+    });
+
+    it('should handle Ammo as a function', async () => {
+      const originalAmmo = global.window.Ammo;
+      const mockAmmoInstance = { ...mockAmmo };
+
+      global.window.Ammo = vi.fn().mockResolvedValue(mockAmmoInstance) as any;
+
+      const newSystem = new PhysicsSystem();
+      const result = await newSystem.initialize();
+
+      expect(result).toBe(true);
+      expect(global.window.Ammo).toHaveBeenCalled();
+
+      global.window.Ammo = originalAmmo;
+    });
+
+    it('should return false when ammo initialization fails', async () => {
+      const originalAmmo = global.window.Ammo;
+
+      global.window.Ammo = vi.fn().mockResolvedValue(null) as any;
+
+      const newSystem = new PhysicsSystem();
+      const result = await newSystem.initialize();
+
+      expect(result).toBe(false);
+      expect(newSystem.isInitialized).toBe(false);
+
+      global.window.Ammo = originalAmmo;
+    });
   });
 
   describe('stepSimulation', () => {

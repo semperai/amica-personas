@@ -179,6 +179,7 @@ describe('DebugSystem', () => {
     });
   });
 
+
   describe('addToScene', () => {
     it('should add debug meshes to scene', () => {
       const scene = new THREE.Scene();
