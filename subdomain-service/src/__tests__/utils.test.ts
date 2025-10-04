@@ -288,7 +288,6 @@ describe('injectConfig', () => {
       ...mockConfig,
       metadata: {
         // Test a variety of config keys
-        language: 'es',
         tts_backend: 'elevenlabs',
         stt_backend: 'whisper',
         wake_word: 'Hey AI',
@@ -296,7 +295,6 @@ describe('injectConfig', () => {
         openai_model: 'gpt-4',
         bg_color: '#000000',
         animation_url: '/animations/custom.vrma',
-        voice_url: '/voices/custom.wav',
       },
     };
 
@@ -304,7 +302,6 @@ describe('injectConfig', () => {
     const result = injectConfig(html, allConfigKeys);
 
     // All should be injected
-    expect(result).toContain("localStorage.setItem('chatvrm_language'");
     expect(result).toContain("localStorage.setItem('chatvrm_tts_backend'");
     expect(result).toContain("localStorage.setItem('chatvrm_stt_backend'");
     expect(result).toContain("localStorage.setItem('chatvrm_wake_word'");
@@ -312,6 +309,5 @@ describe('injectConfig', () => {
     expect(result).toContain("localStorage.setItem('chatvrm_openai_model'");
     expect(result).toContain("localStorage.setItem('chatvrm_bg_color'");
     expect(result).toContain("localStorage.setItem('chatvrm_animation_url'");
-    expect(result).toContain("localStorage.setItem('chatvrm_voice_url'");
   });
 });

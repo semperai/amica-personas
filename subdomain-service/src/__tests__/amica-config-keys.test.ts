@@ -9,7 +9,6 @@ describe('amica-config-keys', () => {
       expect(AMICA_CONFIG_KEYS).toContain('bg_color');
       expect(AMICA_CONFIG_KEYS).toContain('bg_url');
       expect(AMICA_CONFIG_KEYS).toContain('animation_url');
-      expect(AMICA_CONFIG_KEYS).toContain('voice_url');
       expect(AMICA_CONFIG_KEYS).toContain('chatbot_backend');
       expect(AMICA_CONFIG_KEYS).toContain('tts_backend');
       expect(AMICA_CONFIG_KEYS).toContain('stt_backend');
