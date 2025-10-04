@@ -35,12 +35,12 @@ jobs:
 
       - name: Run Forge build
         run: |
-          forge build --sizes
+          cd contracts && forge build --sizes
         id: build
 
       - name: Run Forge tests
         run: |
-          forge test -vvv
+          cd contracts && forge test -vvv
         id: test
         continue-on-error: true
 
