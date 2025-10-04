@@ -5,7 +5,8 @@
  * @example addThumbnailPrefix("/images/avatar.jpg") => "/images/thumb-avatar.jpg"
  */
 export function addThumbnailPrefix(path: string) {
-  const a = path.split("/");
+  const separator = path.includes('\\') ? '\\' : '/';
+  const a = path.split(separator);
   a[a.length - 1] = "thumb-" + a[a.length - 1];
-  return a.join("/");
+  return a.join(separator);
 }
