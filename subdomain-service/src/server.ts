@@ -22,6 +22,7 @@ const CHAIN_ID = parseInt(process.env.CHAIN_ID || '42161', 10);
 // GraphQL client
 const graphqlClient = createClient({
   url: GRAPHQL_ENDPOINT,
+  exchanges: [],
 });
 
 // CORS configuration
@@ -376,7 +377,7 @@ app.get('*', async (req: Request, res: Response, next: NextFunction) => {
 
     const data = result.data;
 
-    if (!data.personas || data.personas.length === 0) {
+    if (!data || !data.personas || data.personas.length === 0) {
       log(`Persona not found: ${subdomain}`);
       return res.status(404).send(render404Page(subdomain));
     }
