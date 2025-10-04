@@ -4,7 +4,7 @@ import { describe, expect, test, vi, beforeEach, afterEach } from "vitest";
 const fetchMock = vi.fn();
 global.fetch = fetchMock as any;
 
-// Mock expandPrompt - must be inline in the factory since jest.mock is hoisted
+// Mock expandPrompt - must be inline in the factory since vi.mock is hoisted
 vi.mock("@/features/functionCalling/eventHandler", () => ({
   expandPrompt: vi.fn((prompt: string, values: any) => {
     return Promise.resolve(prompt.replace('{context_str}', values.context_str));
@@ -12,10 +12,16 @@ vi.mock("@/features/functionCalling/eventHandler", () => ({
 }));
 
 import { handleNews } from "@/features/plugins/news";
+import { expandPrompt } from "@/features/functionCalling/eventHandler";
 
 describe("news", () => {
   beforeEach(() => {
     fetchMock.mockClear();
+    vi.mocked(expandPrompt).mockClear();
+    // Re-apply the mock implementation to ensure it works in the full test suite
+    vi.mocked(expandPrompt).mockImplementation((prompt: string, values: any) => {
+      return Promise.resolve(prompt.replace('{context_str}', values.context_str));
+    });
   });
 
   const createMockRSS = (items: Array<{title: string, description: string}>) => {
