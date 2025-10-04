@@ -5,24 +5,50 @@ import {
   MeshStandardMaterial,
   InstancedMesh,
   Matrix4,
-  Vector3
+  Vector3,
+  Object3D,
+  BufferGeometry,
+  Material
 } from 'three';
 
 const _matrix = new Matrix4();
 const _vector = new Vector3();
 
-class XRHandPrimitiveModel {
-  constructor(handModel, controller, path, handedness, options) {
+interface XRHandPrimitiveOptions {
+  primitive?: 'sphere' | 'box';
+}
+
+interface XRJoint {
+  visible: boolean;
+  position: Vector3;
+  quaternion: any;
+  jointRadius?: number;
+}
+
+interface XRController {
+  joints: Record<string, XRJoint>;
+}
+
+export class XRHandPrimitiveModel {
+  controller: XRController;
+  handModel: Object3D;
+  envMap: any;
+  handMesh: InstancedMesh<BufferGeometry, Material>;
+  joints: string[];
+
+  constructor(handModel: Object3D, controller: XRController, path: string | null, handedness: string, options?: XRHandPrimitiveOptions) {
     this.controller = controller;
     this.handModel = handModel;
     this.envMap = null;
 
-    let geometry;
+    let geometry: BufferGeometry;
 
-    if (! options || ! options.primitive || options.primitive === 'sphere') {
+    if (!options || !options.primitive || options.primitive === 'sphere') {
       geometry = new SphereGeometry(1, 10, 10);
     } else if (options.primitive === 'box') {
       geometry = new BoxGeometry(1, 1, 1);
+    } else {
+      geometry = new SphereGeometry(1, 10, 10);
     }
 
     const material = new MeshStandardMaterial();
@@ -61,10 +87,9 @@ class XRHandPrimitiveModel {
       'pinky-finger-phalanx-distal',
       'pinky-finger-tip'
     ];
-
   }
 
-  updateMesh() {
+  updateMesh(): void {
     const defaultRadius = 0.008;
     const joints = this.controller.joints;
 
@@ -73,7 +98,7 @@ class XRHandPrimitiveModel {
     for (let i = 0; i < this.joints.length; i++) {
       const joint = joints[this.joints[i]];
 
-      if (joint.visible) {
+      if (joint && joint.visible) {
         _vector.setScalar(joint.jointRadius || defaultRadius);
         _matrix.compose(joint.position, joint.quaternion, _vector);
         this.handMesh.setMatrixAt(i, _matrix);
@@ -86,5 +111,3 @@ class XRHandPrimitiveModel {
     this.handMesh.instanceMatrix.needsUpdate = true;
   }
 }
-
-export { XRHandPrimitiveModel };

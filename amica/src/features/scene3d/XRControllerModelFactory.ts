@@ -3,9 +3,11 @@ import {
   MeshBasicMaterial,
   Object3D,
   SphereGeometry,
+  Texture,
 } from 'three';
 
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader";
+import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader';
 
 import {
   Constants as MotionControllerConstants,
@@ -16,7 +18,20 @@ import {
 const DEFAULT_PROFILES_PATH = '/controllers';
 const DEFAULT_PROFILE = 'generic-trigger';
 
+interface XRInputSource {
+  targetRayMode: string;
+  gamepad?: any;
+  hand?: any;
+}
+
+interface XRController extends Object3D {
+  addEventListener(type: string, listener: (event: any) => void): void;
+}
+
 class XRControllerModel extends Object3D {
+  motionController: any;
+  envMap: Texture | null;
+
   constructor() {
     super();
 
@@ -24,16 +39,24 @@ class XRControllerModel extends Object3D {
     this.envMap = null;
   }
 
-  setEnvironmentMap(envMap) {
+  setEnvironmentMap(envMap: Texture | null): this {
     if (this.envMap == envMap) {
       return this;
     }
 
     this.envMap = envMap;
     this.traverse((child) => {
-      if (child.isMesh) {
-        child.material.envMap = this.envMap;
-        child.material.needsUpdate = true;
+      if ((child as any).isMesh) {
+        const mesh = child as Mesh;
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach(mat => {
+            (mat as any).envMap = this.envMap;
+            mat.needsUpdate = true;
+          });
+        } else {
+          (mesh.material as any).envMap = this.envMap;
+          mesh.material.needsUpdate = true;
+        }
       }
     });
 
@@ -44,24 +67,24 @@ class XRControllerModel extends Object3D {
    * Polls data from the XRInputSource and updates the model's components to match
    * the real world data
    */
-  updateMatrixWorld(force) {
+  updateMatrixWorld(force?: boolean): void {
     super.updateMatrixWorld(force);
 
-    if (! this.motionController) return;
+    if (!this.motionController) return;
 
     // Cause the MotionController to poll the Gamepad for data
     this.motionController.updateFromGamepad();
 
     // Update the 3D model to reflect the button, thumbstick, and touchpad state
-    Object.values(this.motionController.components).forEach((component) => {
+    Object.values(this.motionController.components).forEach((component: any) => {
 
       // Update node data based on the visual responses' current states
-      Object.values(component.visualResponses).forEach((visualResponse) => {
+      Object.values(component.visualResponses).forEach((visualResponse: any) => {
         const { valueNode, minNode, maxNode, value, valueNodeProperty } = visualResponse;
 
         // Skip if the visual response node is not found. No error is needed,
         // because it will have been reported at load time.
-        if (! valueNode) return;
+        if (!valueNode) return;
 
         // Calculate the new properties based on the weight supplied
         if (valueNodeProperty === MotionControllerConstants.VisualResponseProperty.VISIBILITY) {
@@ -74,13 +97,13 @@ class XRControllerModel extends Object3D {
             minNode.quaternion,
             maxNode.quaternion,
             value
-         );
+          );
 
           valueNode.position.lerpVectors(
             minNode.position,
             maxNode.position,
             value
-         );
+          );
         }
       });
     });
@@ -92,9 +115,9 @@ class XRControllerModel extends Object3D {
  * saves them to the motionContoller components for use in the frame loop. When
  * touchpads are found, attaches a touch dot to them.
  */
-function findNodes(motionController, scene) {
+function findNodes(motionController: any, scene: Object3D): void {
   // Loop through the components and find the nodes needed for each components' visual responses
-  Object.values(motionController.components).forEach((component) => {
+  Object.values(motionController.components).forEach((component: any) => {
     const { type, touchPointNodeName, visualResponses } = component;
 
     if (type === MotionControllerConstants.ComponentType.TOUCHPAD) {
@@ -112,7 +135,7 @@ function findNodes(motionController, scene) {
     }
 
     // Loop through all the visual responses to be applied to this component
-    Object.values(visualResponses).forEach((visualResponse) => {
+    Object.values(visualResponses).forEach((visualResponse: any) => {
       const { valueNodeName, minNodeName, maxNodeName, valueNodeProperty } = visualResponse;
 
       // If animating a transform, find the two nodes to be interpolated between.
@@ -121,12 +144,12 @@ function findNodes(motionController, scene) {
         visualResponse.maxNode = scene.getObjectByName(maxNodeName);
 
         // If the extents cannot be found, skip this animation
-        if (! visualResponse.minNode) {
+        if (!visualResponse.minNode) {
           console.warn(`Could not find ${minNodeName} in the model`);
           return;
         }
 
-        if (! visualResponse.maxNode) {
+        if (!visualResponse.maxNode) {
           console.warn(`Could not find ${maxNodeName} in the model`);
           return;
         }
@@ -134,23 +157,31 @@ function findNodes(motionController, scene) {
 
       // If the target node cannot be found, skip this animation
       visualResponse.valueNode = scene.getObjectByName(valueNodeName);
-      if (! visualResponse.valueNode) {
+      if (!visualResponse.valueNode) {
         console.warn(`Could not find ${valueNodeName} in the model`);
       }
     });
   });
 }
 
-function addAssetSceneToControllerModel(controllerModel, scene) {
+function addAssetSceneToControllerModel(controllerModel: XRControllerModel, scene: Object3D): void {
   // Find the nodes needed for animation and cache them on the motionController.
   findNodes(controllerModel.motionController, scene);
 
   // Apply any environment map that the mesh already has set.
   if (controllerModel.envMap) {
     scene.traverse((child) => {
-      if (child.isMesh) {
-        child.material.envMap = controllerModel.envMap;
-        child.material.needsUpdate = true;
+      if ((child as any).isMesh) {
+        const mesh = child as Mesh;
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach(mat => {
+            (mat as any).envMap = controllerModel.envMap;
+            mat.needsUpdate = true;
+          });
+        } else {
+          (mesh.material as any).envMap = controllerModel.envMap;
+          mesh.material.needsUpdate = true;
+        }
       }
     });
   }
@@ -159,75 +190,81 @@ function addAssetSceneToControllerModel(controllerModel, scene) {
   controllerModel.add(scene);
 }
 
-class XRControllerModelFactory {
-  constructor(gltfLoader = null, onLoad = null) {
-    this.gltfLoader = gltfLoader;
+export class XRControllerModelFactory {
+  gltfLoader: GLTFLoader;
+  path: string;
+  _assetCache: Record<string, GLTF>;
+  onLoad: ((scene: Object3D) => void) | null;
+
+  constructor(gltfLoader: GLTFLoader | null = null, onLoad: ((scene: Object3D) => void) | null = null) {
     this.path = DEFAULT_PROFILES_PATH;
     this._assetCache = {};
     this.onLoad = onLoad;
 
     // If a GLTFLoader wasn't supplied to the constructor create a new one.
-    if (! this.gltfLoader) {
+    if (!gltfLoader) {
       this.gltfLoader = new GLTFLoader();
+    } else {
+      this.gltfLoader = gltfLoader;
     }
   }
 
-  setPath(path) {
+  setPath(path: string): this {
     this.path = path;
     return this;
   }
 
-  createControllerModel(controller) {
+  createControllerModel(controller: XRController): XRControllerModel {
     const controllerModel = new XRControllerModel();
-    let scene = null;
+    let scene: Object3D | null = null;
 
-    controller.addEventListener('connected', (event) => {
-      const xrInputSource = event.data;
-      if (xrInputSource.targetRayMode !== 'tracked-pointer' || ! xrInputSource.gamepad || xrInputSource.hand) return;
+    controller.addEventListener('connected', (event: any) => {
+      const xrInputSource: XRInputSource = event.data;
+      if (xrInputSource.targetRayMode !== 'tracked-pointer' || !xrInputSource.gamepad || xrInputSource.hand) return;
 
-      fetchProfile(xrInputSource, this.path, DEFAULT_PROFILE).then(({ profile, assetPath }) => {
+      fetchProfile(xrInputSource, this.path, DEFAULT_PROFILE).then(({ profile, assetPath }: any) => {
         controllerModel.motionController = new MotionController(
           xrInputSource,
           profile,
           assetPath
-       );
+        );
 
-        const cachedAsset = this._assetCache[ controllerModel.motionController.assetUrl ];
+        const cachedAsset = this._assetCache[controllerModel.motionController.assetUrl];
         if (cachedAsset) {
           scene = cachedAsset.scene.clone();
           addAssetSceneToControllerModel(controllerModel, scene);
           if (this.onLoad) this.onLoad(scene);
         } else {
-          if (! this.gltfLoader) {
+          if (!this.gltfLoader) {
             throw new Error('GLTFLoader not set.');
           }
 
           this.gltfLoader.setPath('');
-          this.gltfLoader.load(controllerModel.motionController.assetUrl, (asset) => {
-            this._assetCache[ controllerModel.motionController.assetUrl ] = asset;
+          this.gltfLoader.load(controllerModel.motionController.assetUrl, (asset: GLTF) => {
+            this._assetCache[controllerModel.motionController.assetUrl] = asset;
             scene = asset.scene.clone();
             addAssetSceneToControllerModel(controllerModel, scene);
 
             if (this.onLoad) this.onLoad(scene);
           },
-          null,
+          undefined,
           () => {
             throw new Error(`Asset ${controllerModel.motionController.assetUrl} missing or malformed.`);
           });
         }
-      }).catch((err) => {
+      }).catch((err: Error) => {
         console.warn(err);
       });
     });
 
     controller.addEventListener('disconnected', () => {
       controllerModel.motionController = null;
-      controllerModel.remove(scene);
+      if (scene) {
+        controllerModel.remove(scene);
+      }
       scene = null;
     });
 
     return controllerModel;
   }
 }
-
-export { XRControllerModelFactory };

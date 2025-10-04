@@ -13,10 +13,10 @@ import { LipSync } from "@/features/lipSync/lipSync";
 import { EmoteController } from "@/features/emoteController/EmotionController";
 import { ProceduralAnimation } from "@/features/proceduralAnimation/proceduralAnimation";
 import { Screenplay } from "@/features/chat/messages";
-import { downscaleModelTextures, logTextureInfo } from '@/utils/textureDownscaler';
-import { OptimizedGLTFLoader } from '@/utils/glTFOptimizer';
-import { GLTFAnalyzer } from '@/utils/glTFAnalyzer';
-import { TransparencyOptimizer, checkAndOptimizeTransparency } from '@/utils/transparencyOptimizer';
+import { downscaleModelTextures, logTextureInfo } from '@/utils/graphics/textureDownscaler';
+import { OptimizedGLTFLoader } from '@/utils/graphics/glTFOptimizer';
+import { GLTFAnalyzer } from '@/utils/graphics/glTFAnalyzer';
+import { TransparencyOptimizer, checkAndOptimizeTransparency } from '@/utils/graphics/transparencyOptimizer';
 import { config } from "@/utils/config";
 
 /**

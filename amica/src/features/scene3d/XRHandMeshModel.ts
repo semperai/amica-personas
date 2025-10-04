@@ -1,12 +1,38 @@
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader";
+import { Object3D } from 'three';
 
 const DEFAULT_HAND_PROFILE_PATH = '/controllers/generic-hand/';
 
-class XRHandMeshModel {
-  constructor(handModel, controller, path, handedness, loader = null, onLoad = null) {
+interface XRJoint {
+  visible: boolean;
+  position: any;
+  quaternion: any;
+  jointRadius?: number;
+}
+
+interface XRController {
+  joints: Record<string, XRJoint>;
+}
+
+interface Bone extends Object3D {
+  jointName?: string;
+}
+
+export class XRHandMeshModel {
+  controller: XRController;
+  handModel: Object3D;
+  bones: (Bone | undefined)[];
+
+  constructor(
+    handModel: Object3D,
+    controller: XRController,
+    path: string | null,
+    handedness: string,
+    loader: GLTFLoader | null = null,
+    onLoad: ((object: Object3D) => void) | null = null
+  ) {
     this.controller = controller;
     this.handModel = handModel;
-
     this.bones = [];
 
     if (loader === null) {
@@ -19,9 +45,11 @@ class XRHandMeshModel {
       this.handModel.add(object);
 
       const mesh = object.getObjectByProperty('type', 'SkinnedMesh');
-      mesh.frustumCulled = false;
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
+      if (mesh) {
+        mesh.frustumCulled = false;
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+      }
 
       const joints = [
         'wrist',
@@ -52,7 +80,7 @@ class XRHandMeshModel {
       ];
 
       joints.forEach(jointName => {
-        const bone = object.getObjectByName(jointName);
+        const bone = object.getObjectByName(jointName) as Bone | undefined;
 
         if (bone !== undefined) {
           bone.jointName = jointName;
@@ -67,17 +95,17 @@ class XRHandMeshModel {
     });
   }
 
-  updateMesh() {
+  updateMesh(): void {
     // XR Joints
     const XRJoints = this.controller.joints;
 
-    for (let i=0; i < this.bones.length; i++) {
+    for (let i = 0; i < this.bones.length; i++) {
       const bone = this.bones[i];
 
-      if (bone) {
+      if (bone && bone.jointName) {
         const XRJoint = XRJoints[bone.jointName];
 
-        if (XRJoint.visible) {
+        if (XRJoint && XRJoint.visible) {
           const position = XRJoint.position;
           bone.position.copy(position);
           bone.quaternion.copy(XRJoint.quaternion);
@@ -87,5 +115,3 @@ class XRHandMeshModel {
     }
   }
 }
-
-export { XRHandMeshModel };

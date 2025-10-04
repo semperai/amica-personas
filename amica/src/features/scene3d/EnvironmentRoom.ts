@@ -2,10 +2,10 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader";
 // @ts-ignore
 import * as GaussianSplats3D from '@mkkellogg/gaussian-splats-3d';
-import { downscaleModelTextures, logTextureInfo } from '@/utils/textureDownscaler';
-import { OptimizedGLTFLoader } from '@/utils/glTFOptimizer';
-import { GLTFAnalyzer } from '@/utils/glTFAnalyzer';
-import { TransparencyOptimizer, checkAndOptimizeTransparency } from '@/utils/transparencyOptimizer';
+import { downscaleModelTextures, logTextureInfo } from '@/utils/graphics/textureDownscaler';
+import { OptimizedGLTFLoader } from '@/utils/graphics/glTFOptimizer';
+import { GLTFAnalyzer } from '@/utils/graphics/glTFAnalyzer';
+import { TransparencyOptimizer, checkAndOptimizeTransparency } from '@/utils/graphics/transparencyOptimizer';
 import { config } from "@/utils/config";
 
 export class Room {
