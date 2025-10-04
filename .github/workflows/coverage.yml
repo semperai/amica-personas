@@ -53,9 +53,11 @@ jobs:
         if: hashFiles('contracts/lcov.info') != ''
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          file: ./contracts/lcov.info
+          path-to-lcov: ./contracts/lcov.info
+          base-path: ./contracts
           flag-name: contracts
           parallel: true
+          carryforward: true
 
   amica:
     name: Amica
@@ -83,9 +85,11 @@ jobs:
         if: hashFiles('amica/coverage/lcov.info') != ''
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          file: ./amica/coverage/lcov.info
+          path-to-lcov: ./amica/coverage/lcov.info
+          base-path: ./amica
           flag-name: amica
           parallel: true
+          carryforward: true
 
   website:
     name: Website
