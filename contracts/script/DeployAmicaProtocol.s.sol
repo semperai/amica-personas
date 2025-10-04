@@ -5,7 +5,7 @@ import "forge-std/Script.sol";
 import "forge-std/console2.sol";
 
 // Import all contracts
-import {AmicaToken} from "../src/AmicaToken.sol";
+import {AmicaTokenMainnet} from "../src/AmicaTokenMainnet.sol";
 import {PersonaToken} from "../src/PersonaToken.sol";
 import {PersonaTokenFactory} from "../src/PersonaTokenFactory.sol";
 import {DynamicFeeHook} from "../src/DynamicFeeHook.sol";
@@ -37,7 +37,7 @@ import {DeployConfig} from "./DeployConfig.s.sol";
 contract DeployAmicaProtocol is DeployConfig {
     // ============ Deployed Contracts ============
 
-    AmicaToken public amicaToken;
+    AmicaTokenMainnet public amicaToken;
     PersonaToken public personaTokenImpl;
     PersonaTokenFactory public personaFactory;
     DynamicFeeHook public dynamicFeeHook;
@@ -140,14 +140,14 @@ contract DeployAmicaProtocol is DeployConfig {
         opts.defender.useDefenderDeploy = false; // Set to true if using Defender
 
         address proxy = Upgrades.deployUUPSProxy(
-            "AmicaToken.sol",
+            "AmicaTokenMainnet.sol",
             abi.encodeCall(
-                AmicaToken.initialize, (deployer, config.amicaTotalSupply)
+                AmicaTokenMainnet.initialize, (deployer, config.amicaTotalSupply)
             ),
             opts
         );
 
-        amicaToken = AmicaToken(proxy);
+        amicaToken = AmicaTokenMainnet(proxy);
         addresses.amicaToken = proxy;
         addresses.amicaTokenImpl = Upgrades.getImplementationAddress(proxy);
         addresses.proxyAdmin = Upgrades.getAdminAddress(proxy);

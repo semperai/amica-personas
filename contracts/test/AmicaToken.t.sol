@@ -5,7 +5,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
 import {Fixtures} from "./shared/Fixtures.sol";
-import {AmicaToken} from "../src/AmicaToken.sol";
+import {AmicaTokenMainnet} from "../src/AmicaTokenMainnet.sol";
 
 contract AmicaTokenTest is Fixtures {
     // Constants

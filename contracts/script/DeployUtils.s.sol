@@ -5,7 +5,7 @@ import "forge-std/Script.sol";
 import "forge-std/console2.sol";
 
 import {PersonaTokenFactory} from "../src/PersonaTokenFactory.sol";
-import {AmicaToken} from "../src/AmicaToken.sol";
+import {AmicaTokenMainnet} from "../src/AmicaTokenMainnet.sol";
 import {FeeReductionSystem} from "../src/FeeReductionSystem.sol";
 import {DynamicFeeHook} from "../src/DynamicFeeHook.sol";
 import {BondingCurve} from "../src/BondingCurve.sol";
@@ -122,7 +122,7 @@ contract DeployUtils is DeployConfig {
         string memory json = vm.readFile(filename);
         address amicaAddress =
             vm.parseJsonAddress(json, ".addresses.amicaToken");
-        AmicaToken amica = AmicaToken(amicaAddress);
+        AmicaTokenMainnet amica = AmicaTokenMainnet(amicaAddress);
 
         // Define distribution
         address[] memory recipients = new address[](4);
@@ -180,7 +180,7 @@ contract DeployUtils is DeployConfig {
         address factoryAddress =
             vm.parseJsonAddress(json, ".addresses.personaFactory");
 
-        AmicaToken amica = AmicaToken(amicaAddress);
+        AmicaTokenMainnet amica = AmicaTokenMainnet(amicaAddress);
         PersonaTokenFactory factory = PersonaTokenFactory(factoryAddress);
 
         vm.startBroadcast(deployerPrivateKey);
@@ -219,8 +219,8 @@ contract DeployUtils is DeployConfig {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        AmicaToken(amicaAddress).transferOwnership(newOwner);
-        console2.log("AmicaToken ownership transferred");
+        AmicaTokenMainnet(amicaAddress).transferOwnership(newOwner);
+        console2.log("AmicaTokenMainnet ownership transferred");
 
         PersonaTokenFactory(factoryAddress).transferOwnership(newOwner);
         console2.log("PersonaFactory ownership transferred");
@@ -271,7 +271,7 @@ contract DeployUtils is DeployConfig {
         console2.log("");
 
         // Check key configurations
-        AmicaToken amica = AmicaToken(amicaAddress);
+        AmicaTokenMainnet amica = AmicaTokenMainnet(amicaAddress);
         PersonaTokenFactory factory = PersonaTokenFactory(factoryAddress);
         FeeReductionSystem feeSystem = FeeReductionSystem(feeSystemAddress);
 

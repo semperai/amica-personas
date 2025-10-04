@@ -303,4 +303,7 @@ contract AmicaTokenBridgedTest is Test {
         uint256 expectedAmica = (amount * 1e18) / 1e6;
         assertEq(amica.balanceOf(user1), expectedAmica);
     }
+
+    // Note: Upgrade tests are skipped for now as the contract is in its initial version
+    // When we need to test upgrades, we'll create a V2 contract and test upgrading from V1 to V2
 }

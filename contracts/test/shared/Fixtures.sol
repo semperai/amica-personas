@@ -7,7 +7,7 @@ import "forge-std/console.sol";
 import {Deployers} from "./Deployers.sol";
 
 import {PersonaTokenFactory} from "../../src/PersonaTokenFactory.sol";
-import {AmicaToken} from "../../src/AmicaToken.sol";
+import {AmicaTokenMainnet} from "../../src/AmicaTokenMainnet.sol";
 import {PersonaToken} from "../../src/PersonaToken.sol";
 import {DynamicFeeHook} from "../../src/DynamicFeeHook.sol";
 import {FeeReductionSystem} from "../../src/FeeReductionSystem.sol";
@@ -48,7 +48,7 @@ abstract contract Fixtures is Test, Deployers {
         0x4e59b44847b379578588920cA78FbF26c0B4956C;
 
     PersonaTokenFactory public personaFactory;
-    AmicaToken public amicaToken;
+    AmicaTokenMainnet public amicaToken;
     PersonaToken public personaToken;
     DynamicFeeHook public dynamicFeeHook;
     FeeReductionSystem public feeReductionSystem;
@@ -89,14 +89,14 @@ abstract contract Fixtures is Test, Deployers {
 
     function _deployCore() internal {
         // Deploy AmicaToken as upgradeable proxy
-        address amicaImpl = address(new AmicaToken());
+        address amicaImpl = address(new AmicaTokenMainnet());
         address amicaProxy = UnsafeUpgrades.deployUUPSProxy(
             amicaImpl,
             abi.encodeCall(
-                AmicaToken.initialize, (factoryOwner, AMICA_TOTAL_SUPPLY)
+                AmicaTokenMainnet.initialize, (factoryOwner, AMICA_TOTAL_SUPPLY)
             )
         );
-        amicaToken = AmicaToken(amicaProxy);
+        amicaToken = AmicaTokenMainnet(amicaProxy);
 
         // Deploy PersonaToken implementation
         personaToken = new PersonaToken();

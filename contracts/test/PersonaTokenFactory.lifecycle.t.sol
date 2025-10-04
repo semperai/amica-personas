@@ -20,7 +20,6 @@ import {Actions} from "@uniswap/v4-periphery/src/libraries/Actions.sol";
 import {console} from "forge-std/console.sol";
 import {NotAllowed} from "../src/PersonaTokenFactory.sol";
 import {PersonaTokenFactory} from "../src/PersonaTokenFactory.sol";
-import {AmicaToken} from "../src/AmicaToken.sol";
 import {PersonaToken} from "../src/PersonaToken.sol";
 import {DynamicFeeHook} from "../src/DynamicFeeHook.sol";
 import {FeeReductionSystem} from "../src/FeeReductionSystem.sol";

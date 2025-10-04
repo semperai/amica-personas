@@ -9,6 +9,8 @@ import {PausableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from
     "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {UUPSUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from
     "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -47,7 +49,8 @@ contract AmicaTokenBridged is
     ERC20Upgradeable,
     OwnableUpgradeable,
     PausableUpgradeable,
-    ReentrancyGuardUpgradeable
+    ReentrancyGuardUpgradeable,
+    UUPSUpgradeable
 {
     using SafeERC20 for IERC20;
 
@@ -308,4 +311,15 @@ contract AmicaTokenBridged is
     function unpause() external onlyOwner {
         _unpause();
     }
+
+    /**
+     * @notice Authorizes an upgrade to a new implementation
+     * @dev Required by UUPSUpgradeable - only owner can upgrade
+     * @param newImplementation Address of the new implementation contract
+     */
+    function _authorizeUpgrade(address newImplementation)
+        internal
+        override
+        onlyOwner
+    {}
 }
