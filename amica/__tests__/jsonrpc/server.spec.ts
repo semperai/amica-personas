@@ -677,6 +677,44 @@ describe('JsonRpcServer', () => {
       expect(response.result.succeeded).toBe(2);
       expect(response.result.errors).toBe(0);
     });
+
+    it('should handle sequential batch execution', async () => {
+      const request: JsonRpcRequest = {
+        jsonrpc: '2.0',
+        method: 'system.batch',
+        params: {
+          sequential: true,
+          actions: [
+            {
+              jsonrpc: '2.0',
+              method: 'system.ping',
+              id: 1,
+            },
+            {
+              jsonrpc: '2.0',
+              method: 'system.getVersion',
+              id: 2,
+            },
+            {
+              jsonrpc: '2.0',
+              method: 'system.ping',
+              id: 3,
+            },
+          ],
+        },
+        id: 1,
+      };
+
+      const response = await server.handleRequest(request);
+
+      expect(response.result.results).toHaveLength(3);
+      expect(response.result.succeeded).toBe(3);
+      expect(response.result.errors).toBe(0);
+      // Verify results are in order (sequential execution)
+      expect(response.result.results[0].id).toBe(1);
+      expect(response.result.results[1].id).toBe(2);
+      expect(response.result.results[2].id).toBe(3);
+    });
   });
 
   describe('Error Handling', () => {

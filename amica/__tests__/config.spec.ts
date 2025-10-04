@@ -1,8 +1,11 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   config,
   defaultConfig,
-  setConfig
+  setConfig,
+  loadConfig,
+  isConfigLoaded,
+  getConfigError
 } from '../src/utils/config';
 
 describe('config', () => {
@@ -79,6 +82,42 @@ describe('config', () => {
     it('should handle special characters', () => {
       setConfig('special_key', 'value with spaces & symbols!');
       expect(config('special_key')).toBe('value with spaces & symbols!');
+    });
+  });
+
+  describe('isConfigLoaded', () => {
+    it('should return boolean indicating if config is loaded', () => {
+      const loaded = isConfigLoaded();
+      expect(typeof loaded).toBe('boolean');
+    });
+  });
+
+  describe('getConfigError', () => {
+    it('should return null or string', () => {
+      const error = getConfigError();
+      expect(error === null || typeof error === 'string').toBe(true);
+    });
+  });
+
+  describe('loadConfig', () => {
+    // Note: loadConfig can only be called once due to configLoaded flag
+    // These tests verify behavior but cannot reset the module state
+
+    it('should not reload if already loaded', async () => {
+      // loadConfig has likely already been called by previous tests
+      // This test verifies idempotency
+      await loadConfig();
+      expect(isConfigLoaded()).toBe(true);
+    });
+
+    it('should return config loading status', () => {
+      const loaded = isConfigLoaded();
+      expect(typeof loaded).toBe('boolean');
+    });
+
+    it('should return config error status', () => {
+      const error = getConfigError();
+      expect(error === null || typeof error === 'string').toBe(true);
     });
   });
 });

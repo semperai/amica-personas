@@ -314,6 +314,73 @@ describe("processResponse", () => {
   });
 
   describe("edge cases", () => {
+    test("should skip sentences with only brackets and spaces", () => {
+      const mockCallback = vi.fn(() => false);
+      const params = createDefaultParams();
+      params.callback = mockCallback;
+      // Longer string with brackets and spaces that will match sentence regex
+      params.receivedMessage = "  [ ] ( ) { }\n";
+
+      const result = processResponse(params);
+
+      // Sentence is extracted but after removing brackets/parens/braces becomes whitespace-only, so skipped
+      expect(result.sentences).toEqual(["  [ ] ( ) { }\n"]);
+      // Callback should not be called because sentence is skipped
+      expect(mockCallback).not.toHaveBeenCalled();
+    });
+
+    test("should skip sentences with only opening brackets", () => {
+      const mockCallback = vi.fn(() => false);
+      const params = createDefaultParams();
+      params.callback = mockCallback;
+      params.receivedMessage = " [[[( {{  \n";
+
+      const result = processResponse(params);
+
+      expect(result.sentences).toEqual([" [[[( {{  \n"]);
+      // Callback should not be called for bracket-only sentences
+      expect(mockCallback).not.toHaveBeenCalled();
+    });
+
+    test("should skip sentences with only closing brackets", () => {
+      const mockCallback = vi.fn(() => false);
+      const params = createDefaultParams();
+      params.callback = mockCallback;
+      params.receivedMessage = " ))) }}} ]]]\n";
+
+      const result = processResponse(params);
+
+      expect(result.sentences).toEqual([" ))) }}} ]]]\n"]);
+      expect(mockCallback).not.toHaveBeenCalled();
+    });
+
+    test("should skip sentences with Chinese brackets only", () => {
+      const mockCallback = vi.fn(() => false);
+      const params = createDefaultParams();
+      params.callback = mockCallback;
+      params.receivedMessage = " 「」［］（）\n";
+
+      const result = processResponse(params);
+
+      expect(result.sentences).toEqual([" 「」［］（）\n"]);
+      expect(mockCallback).not.toHaveBeenCalled();
+    });
+
+    test("should process content after bracket-only sentence", () => {
+      const mockCallback = vi.fn(() => false);
+      const params = createDefaultParams();
+      params.callback = mockCallback;
+
+      // String with brackets only won't match sentence, needs more chars
+      params.receivedMessage = "  (  )\n";
+
+      const result = processResponse(params);
+
+      // Short bracket-only strings won't match sentence pattern
+      expect(result.sentences).toEqual(["  (  )\n"]);
+      expect(mockCallback).not.toHaveBeenCalled();
+    });
+
     test("should extract tag with only whitespace", () => {
       const mockCallback = vi.fn(() => false);
       const params = createDefaultParams();

@@ -94,13 +94,12 @@ describe('JsonRpcServer Extended Tests', () => {
   });
 
   describe('Audio Methods', () => {
-    // Skipping audio tests as they require complex base64 audio data setup
-    it.skip('should handle audio.send with transcription', async () => {
+    it('should handle audio.send with transcription', async () => {
       const request: JsonRpcRequest = {
         jsonrpc: '2.0',
         method: 'audio.send',
         params: {
-          audio: 'data:audio/wav;base64,UklGRi...',
+          audio: 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=',
           transcribe: true,
         },
         id: 1,
@@ -112,12 +111,17 @@ describe('JsonRpcServer Extended Tests', () => {
       expect(response.result.success).toBe(true);
     });
 
-    it.skip('should handle audio.transcribe', async () => {
+    it('should handle audio.transcribe', async () => {
+      // Hook manager will return the transcript from afterContext
+      mockHookManager.trigger = vi.fn()
+        .mockResolvedValueOnce({ audio: new Float32Array() }) // before hook
+        .mockResolvedValueOnce({ transcript: '' }); // after hook with transcript
+
       const request: JsonRpcRequest = {
         jsonrpc: '2.0',
         method: 'audio.transcribe',
         params: {
-          audio: 'data:audio/wav;base64,UklGRi...',
+          audio: 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=',
         },
         id: 1,
       };
@@ -125,14 +129,23 @@ describe('JsonRpcServer Extended Tests', () => {
       const response = await server.handleRequest(request);
 
       expect(response.result).toBeDefined();
+      expect(response.result.success).toBe(true);
+      expect(response.result.transcript).toBe('');
     });
 
-    it.skip('should handle audio.playback', async () => {
+    it('should handle audio.playback', async () => {
+      // Setup model with speak method
+      const mockModel = {
+        speak: vi.fn()
+      };
+      mockSceneCoordinator.vrm!.getModel = vi.fn(() => mockModel as any);
+      mockSceneCoordinator.model = { speak: vi.fn() } as any;
+
       const request: JsonRpcRequest = {
         jsonrpc: '2.0',
         method: 'audio.playback',
         params: {
-          audio: 'data:audio/wav;base64,UklGRi...',
+          audio: 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=',
           screenplay: {
             expression: 'happy',
             talk: { message: 'Test', style: 'talk', emotion: 'happy' },
@@ -148,14 +161,14 @@ describe('JsonRpcServer Extended Tests', () => {
       expect(response.result.playing).toBe(true);
     });
 
-    it.skip('should reject audio.playback without model', async () => {
-      const mockModel = null;
+    it('should reject audio.playback without model', async () => {
+      mockSceneCoordinator.vrm!.getModel = vi.fn(() => null);
 
       const request: JsonRpcRequest = {
         jsonrpc: '2.0',
         method: 'audio.playback',
         params: {
-          audio: 'data:audio/wav;base64,UklGRi...',
+          audio: 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=',
         },
         id: 1,
       };
@@ -194,7 +207,9 @@ describe('JsonRpcServer Extended Tests', () => {
       expect(response.result.success).toBe(true);
     });
 
-    it.skip('should handle character.stopSpeaking', async () => {
+    it('should handle character.stopSpeaking', async () => {
+      mockChat.speakJobs = { clear: vi.fn() } as any;
+
       const request: JsonRpcRequest = {
         jsonrpc: '2.0',
         method: 'character.stopSpeaking',
