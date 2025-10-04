@@ -27,7 +27,7 @@ import { AssistantText } from "@/components/assistantText";
 import { Alert } from "@/components/alert";
 import { UserText } from "@/components/userText";
 import { ChatLog } from "@/components/chatLog";
-import VrmViewer from "@/components/scene3d";
+import VrmViewer from "@/components/vrmViewer";
 import { MessageInputContainer } from "@/components/messageInputContainer";
 import { LoadingProgress } from "@/components/loadingProgress";
 import { DebugPane } from "@/components/debugPane";

@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { useContext, useCallback, useState } from "react";
+import { useContext, useCallback, useState, useEffect } from "react";
 import { ViewerContext } from "@/features/scene3d/SceneCoordinatorContext";
 import { buildUrl } from "@/utils/buildUrl";
 import { config } from "@/utils/config";
@@ -17,10 +17,16 @@ export default function VrmViewer({ chatMode }: { chatMode: boolean }) {
   const [loadingError, setLoadingError] = useState(false);
   const isVrmLocal = "local" == config("vrm_save_type");
 
-  viewer.resizeChatMode(chatMode);
-  window.addEventListener("resize", () => {
-    viewer.resizeChatMode(chatMode);
-  });
+  useEffect(() => {
+    viewer.render?.resizeChatMode(chatMode);
+
+    const handleResize = () => {
+      viewer.render?.resizeChatMode(chatMode);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [chatMode, viewer]);
 
   const canvasRef = useCallback(
     (canvas: HTMLCanvasElement) => {
@@ -29,7 +35,7 @@ export default function VrmViewer({ chatMode }: { chatMode: boolean }) {
           await viewer.setup(canvas);
 
           try {
-            await viewer.loadScenario(config('scenario_url'));
+            await viewer.scenario.loadScenario(config('scenario_url'), viewer, viewer.hookManager);
             resolve(true);
           } catch (e) {
             reject(e);
