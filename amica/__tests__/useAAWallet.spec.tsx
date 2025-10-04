@@ -270,4 +270,45 @@ describe("useAAWallet", () => {
 
     expect(signature).toBeNull();
   });
+
+  test("should call walletClient.signMessage when signMessage callback is invoked", async () => {
+    const mockAddress = '0xUserAddress';
+    const mockSignature = '0xwalletSignature';
+
+    const mockWalletClient = {
+      signMessage: vi.fn().mockResolvedValue(mockSignature),
+    };
+
+    let capturedSignMessage: ((message: string) => Promise<any>) | null = null;
+
+    mockUseAccount.mockReturnValue({ address: mockAddress });
+    mockUseWalletClient.mockReturnValue({ data: mockWalletClient });
+    mockGetCachedWalletAddress.mockReturnValue(null);
+
+    // Capture the signMessage function passed to initDeterministicWallet
+    mockInitDeterministicWallet.mockImplementation(async (address, signMessage) => {
+      capturedSignMessage = signMessage;
+      return {
+        address: '0xNewWallet',
+        signMessage: vi.fn(),
+      };
+    });
+
+    renderHook(() => useAAWallet(), { wrapper });
+
+    await waitFor(() => {
+      expect(capturedSignMessage).not.toBeNull();
+    });
+
+    // Call the captured signMessage function
+    if (capturedSignMessage) {
+      const result = await capturedSignMessage('test message');
+
+      expect(mockWalletClient.signMessage).toHaveBeenCalledWith({
+        account: mockAddress,
+        message: 'test message'
+      });
+      expect(result).toBe(mockSignature);
+    }
+  });
 });
