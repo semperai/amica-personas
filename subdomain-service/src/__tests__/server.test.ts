@@ -5,12 +5,12 @@
 
 import request from 'supertest';
 import express from 'express';
-import { GraphQLClient } from 'graphql-request';
+import { createClient, Client, fetchExchange } from 'urql';
 
-// Mock graphql-request
-jest.mock('graphql-request');
+// Mock urql
+jest.mock('urql');
 
-const MockedGraphQLClient = GraphQLClient as jest.MockedClass<typeof GraphQLClient>;
+const MockedCreateClient = createClient as jest.MockedFunction<typeof createClient>;
 
 // Mock persona data
 const mockPersonaData = {
@@ -49,7 +49,7 @@ function createTestServer() {
   const app = express();
 
   // Mock implementation similar to our actual server
-  app.get('*', async (req, res) => {
+  app.use(async (req, res) => {
     const hostname = req.hostname;
     const subdomain = hostname.split('.')[0];
 
@@ -58,11 +58,17 @@ function createTestServer() {
     }
 
     try {
-      const mockClient = new GraphQLClient('http://mock');
-      const data = await mockClient.request('mock-query', {
+      const mockClient = createClient({ url: 'http://mock', exchanges: [fetchExchange] });
+      const result = await mockClient.query('mock-query', {
         domain: subdomain,
         chainId: 42161,
       });
+
+      if (result.error) {
+        throw result.error;
+      }
+
+      const data = result.data;
 
       if (!(data as any).personas || (data as any).personas.length === 0) {
         return res.status(404).send('<html><body>404 - Persona Not Found</body></html>');
@@ -83,15 +89,17 @@ function createTestServer() {
 }
 
 describe('Subdomain Server', () => {
-  let mockRequest: jest.Mock;
+  let mockQuery: jest.Mock;
 
   beforeEach(() => {
     // Reset mocks
-    MockedGraphQLClient.mockClear();
-    mockRequest = jest.fn();
+    MockedCreateClient.mockClear();
+    mockQuery = jest.fn();
 
     // Setup default mock implementation
-    MockedGraphQLClient.prototype.request = mockRequest;
+    MockedCreateClient.mockReturnValue({
+      query: mockQuery,
+    } as any);
   });
 
   describe('Root domain', () => {
@@ -104,7 +112,7 @@ describe('Subdomain Server', () => {
 
       expect(response.status).toBe(200);
       expect(response.text).toContain('Landing Page');
-      expect(mockRequest).not.toHaveBeenCalled();
+      expect(mockQuery).not.toHaveBeenCalled();
     });
 
     test('should show landing page for www subdomain', async () => {
@@ -116,13 +124,13 @@ describe('Subdomain Server', () => {
 
       expect(response.status).toBe(200);
       expect(response.text).toContain('Landing Page');
-      expect(mockRequest).not.toHaveBeenCalled();
+      expect(mockQuery).not.toHaveBeenCalled();
     });
   });
 
   describe('Persona subdomain', () => {
     test('should load persona when found', async () => {
-      mockRequest.mockResolvedValue(mockPersonaData);
+      mockQuery.mockResolvedValue({ data: mockPersonaData, error: null });
       const app = createTestServer();
 
       const response = await request(app)
@@ -131,7 +139,7 @@ describe('Subdomain Server', () => {
 
       expect(response.status).toBe(200);
       expect(response.text).toContain('Persona Page');
-      expect(mockRequest).toHaveBeenCalledWith(
+      expect(mockQuery).toHaveBeenCalledWith(
         'mock-query',
         expect.objectContaining({
           domain: 'cool-agent',
@@ -141,7 +149,7 @@ describe('Subdomain Server', () => {
     });
 
     test('should return 404 when persona not found', async () => {
-      mockRequest.mockResolvedValue({ personas: [] });
+      mockQuery.mockResolvedValue({ data: { personas: [] }, error: null });
       const app = createTestServer();
 
       const response = await request(app)
@@ -154,7 +162,7 @@ describe('Subdomain Server', () => {
     });
 
     test('should return 500 on GraphQL error', async () => {
-      mockRequest.mockRejectedValue(new Error('GraphQL error'));
+      mockQuery.mockResolvedValue({ data: null, error: new Error('GraphQL error') });
       const app = createTestServer();
 
       const response = await request(app)
@@ -167,7 +175,7 @@ describe('Subdomain Server', () => {
     });
 
     test('should handle different subdomains', async () => {
-      mockRequest.mockResolvedValue(mockPersonaData);
+      mockQuery.mockResolvedValue({ data: mockPersonaData, error: null });
       const app = createTestServer();
 
       const testSubdomains = [
@@ -178,14 +186,14 @@ describe('Subdomain Server', () => {
       ];
 
       for (const subdomain of testSubdomains) {
-        mockRequest.mockClear();
-        mockRequest.mockResolvedValue(mockPersonaData);
+        mockQuery.mockClear();
+        mockQuery.mockResolvedValue({ data: mockPersonaData, error: null });
 
         const response = await request(app)
           .get('/')
           .set('Host', `${subdomain}.amica.bot`);
 
-        expect(mockRequest).toHaveBeenCalledWith(
+        expect(mockQuery).toHaveBeenCalledWith(
           'mock-query',
           expect.objectContaining({
             domain: subdomain,
@@ -197,7 +205,7 @@ describe('Subdomain Server', () => {
 
   describe('Static files', () => {
     test('should serve static files for valid persona', async () => {
-      mockRequest.mockResolvedValue(mockPersonaData);
+      mockQuery.mockResolvedValue({ data: mockPersonaData, error: null });
       const app = createTestServer();
 
       const response = await request(app)
@@ -210,16 +218,18 @@ describe('Subdomain Server', () => {
 });
 
 describe('Error Handling', () => {
-  let mockRequest: jest.Mock;
+  let mockQuery: jest.Mock;
 
   beforeEach(() => {
-    MockedGraphQLClient.mockClear();
-    mockRequest = jest.fn();
-    MockedGraphQLClient.prototype.request = mockRequest;
+    MockedCreateClient.mockClear();
+    mockQuery = jest.fn();
+    MockedCreateClient.mockReturnValue({
+      query: mockQuery,
+    } as any);
   });
 
   test('should handle network errors gracefully', async () => {
-    mockRequest.mockRejectedValue(new Error('Network error'));
+    mockQuery.mockResolvedValue({ data: null, error: new Error('Network error') });
     const app = createTestServer();
 
     const response = await request(app)
@@ -230,7 +240,7 @@ describe('Error Handling', () => {
   });
 
   test('should handle timeout errors', async () => {
-    mockRequest.mockRejectedValue(new Error('Timeout'));
+    mockQuery.mockResolvedValue({ data: null, error: new Error('Timeout') });
     const app = createTestServer();
 
     const response = await request(app)
@@ -241,7 +251,7 @@ describe('Error Handling', () => {
   });
 
   test('should handle malformed GraphQL responses', async () => {
-    mockRequest.mockResolvedValue({});
+    mockQuery.mockResolvedValue({ data: {}, error: null });
     const app = createTestServer();
 
     const response = await request(app)

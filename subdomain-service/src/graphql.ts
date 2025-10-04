@@ -1,6 +1,4 @@
-import { gql } from 'graphql-request';
-
-export const GET_PERSONA_BY_DOMAIN = gql`
+export const GET_PERSONA_BY_DOMAIN = `
   query GetPersonaByDomain($domain: String!, $chainId: Int!) {
     personas(
       where: {
