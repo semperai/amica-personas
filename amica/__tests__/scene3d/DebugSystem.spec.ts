@@ -1,6 +1,28 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as THREE from 'three';
 
+// Hoist mock objects so they're accessible in tests
+const { mockStatsPanel, mockStats, mockGUI } = vi.hoisted(() => {
+  const mockStatsPanel = {
+    update: vi.fn(),
+  };
+
+  const mockStats = {
+    dom: document.createElement('div'),
+    addPanel: vi.fn(() => mockStatsPanel),
+    update: vi.fn(),
+  };
+
+  const mockGUI = {
+    domElement: document.createElement('div'),
+    add: vi.fn().mockReturnThis(),
+    onChange: vi.fn().mockReturnThis(),
+    controllers: [],
+  };
+
+  return { mockStatsPanel, mockStats, mockGUI };
+});
+
 // Mock HTMLMesh to avoid canvas context issues
 vi.mock('three/addons/interactive/HTMLMesh.js', () => ({
   HTMLMesh: vi.fn().mockImplementation((element) => {
@@ -10,22 +32,12 @@ vi.mock('three/addons/interactive/HTMLMesh.js', () => ({
   }),
 }));
 
-// Mock stats.js and lil-gui BEFORE importing DebugSystem
+// Mock stats.js
 vi.mock('stats.js', () => {
-  const mockStatsPanel = {
-    update: vi.fn(),
-  };
-
   class MockStatsPanel {
     update = vi.fn();
     constructor(name: string, fg: string, bg: string) {}
   }
-
-  const mockStats = {
-    dom: document.createElement('div'),
-    addPanel: vi.fn(() => mockStatsPanel),
-    update: vi.fn(),
-  };
 
   const mockStatsConstructor: any = vi.fn(() => mockStats);
   mockStatsConstructor.Panel = MockStatsPanel;
@@ -35,18 +47,10 @@ vi.mock('stats.js', () => {
   };
 });
 
-vi.mock('lil-gui', () => {
-  const mockGUI = {
-    domElement: document.createElement('div'),
-    add: vi.fn().mockReturnThis(),
-    onChange: vi.fn().mockReturnThis(),
-    controllers: [],
-  };
-
-  return {
-    default: vi.fn(() => mockGUI),
-  };
-});
+// Mock lil-gui
+vi.mock('lil-gui', () => ({
+  default: vi.fn(() => mockGUI),
+}));
 
 import { DebugSystem } from '@/features/scene3d/DebugSystem';
 
