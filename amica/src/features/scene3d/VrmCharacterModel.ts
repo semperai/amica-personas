@@ -10,7 +10,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader";
 import { VRMAnimation } from "@/lib/VRMAnimation/VRMAnimation";
 import { VRMLookAtSmootherLoaderPlugin } from "@/lib/VRMLookAtSmootherLoaderPlugin/VRMLookAtSmootherLoaderPlugin";
 import { LipSync } from "@/features/lipSync/lipSync";
-import { EmoteController } from "@/features/emoteController/emoteController";
+import { EmoteController } from "@/features/emoteController/EmotionController";
 import { ProceduralAnimation } from "@/features/proceduralAnimation/proceduralAnimation";
 import { Screenplay } from "@/features/chat/messages";
 import { downscaleModelTextures, logTextureInfo } from '@/utils/textureDownscaler';

@@ -1,5 +1,5 @@
 import { WaveFile } from 'wavefile';
-import { updateFileProgress } from "@/utils/progress";
+import { updateFileProgress } from "@/utils/fileLoadingProgress";
 import { convertNumberToWordsEN } from "@/utils/numberSpelling";
 
 export async function speecht5(

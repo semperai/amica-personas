@@ -10,7 +10,7 @@ import {
 import {
   getOpenAiChatResponseStream,
   getOpenAiVisionChatResponse,
-} from "./openAiChat";
+} from "./openAIChatProvider";
 import {
   getLlamaCppChatResponseStream,
   getLlavaCppChatResponse,
@@ -20,7 +20,7 @@ import {
   getOllamaChatResponseStream,
   getOllamaVisionChatResponse,
 } from "./ollamaChat";
-import { getKoboldAiChatResponseStream } from "./koboldAiChat";
+import { getKoboldAiChatResponseStream } from "./koboldAIChatProvider";
 
 import { rvc } from "@/features/rvc/rvc";
 import { coquiLocal } from "@/features/coquiLocal/coquiLocal";

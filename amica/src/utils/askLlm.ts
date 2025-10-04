@@ -2,11 +2,11 @@ import { Message, Screenplay } from "@/features/chat/messages";
 import { Chat } from "@/features/chat/chat";
 
 import { getEchoChatResponseStream } from "@/features/chat/echoChat";
-import { getOpenAiChatResponseStream } from "@/features/chat/openAiChat";
+import { getOpenAiChatResponseStream } from "@/features/chat/openAIChatProvider";
 import { getLlamaCppChatResponseStream } from "@/features/chat/llamaCppChat";
 import { getWindowAiChatResponseStream } from "@/features/chat/windowAiChat";
 import { getOllamaChatResponseStream } from "@/features/chat/ollamaChat";
-import { getKoboldAiChatResponseStream } from "@/features/chat/koboldAiChat";
+import { getKoboldAiChatResponseStream } from "@/features/chat/koboldAIChatProvider";
 
 import { config } from "@/utils/config";
 import { processResponse } from "@/utils/processResponse";

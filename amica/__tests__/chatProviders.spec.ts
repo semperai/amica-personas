@@ -40,10 +40,10 @@ vi.mock("@/utils/buildPrompt", () => ({
   ),
 }));
 
-import { getOpenAiChatResponseStream, getOpenAiVisionChatResponse } from "@/features/chat/openAiChat";
+import { getOpenAiChatResponseStream, getOpenAiVisionChatResponse } from "@/features/chat/openAIChatProvider";
 import { getLlamaCppChatResponseStream, getLlavaCppChatResponse } from "@/features/chat/llamaCppChat";
 import { getOllamaChatResponseStream, getOllamaVisionChatResponse } from "@/features/chat/ollamaChat";
-import { getKoboldAiChatResponseStream } from "@/features/chat/koboldAiChat";
+import { getKoboldAiChatResponseStream } from "@/features/chat/koboldAIChatProvider";
 import { Message } from "@/features/chat/messages";
 
 // Mock fetch globally

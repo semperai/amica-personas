@@ -2,7 +2,7 @@ import { lazy, useCallback, useEffect, useState, Suspense } from "react";
 
 // necessary because of VAD in MessageInput
 const DynamicMessageInput = lazy(() =>
-  import("@/components/messageInput")
+  import("@/components/ChatInput")
 );
 
 /**

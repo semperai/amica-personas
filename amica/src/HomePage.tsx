@@ -26,11 +26,11 @@ import { MenuButton } from "@/components/menuButton";
 import { AssistantText } from "@/components/assistantText";
 import { Alert } from "@/components/alert";
 import { UserText } from "@/components/userText";
-import { ChatLog } from "@/components/chatLog";
+import { ChatLog } from "@/components/ChatHistory";
 import VrmViewer from "@/components/vrmViewer";
 import { MessageInputContainer } from "@/components/messageInputContainer";
 import { LoadingProgress } from "@/components/loadingProgress";
-import { DebugPane } from "@/components/debugPane";
+import { DebugPane } from "@/components/DebugPanel";
 import { EmbeddedWebcam } from "@/components/embeddedWebcam";
 import { Moshi } from "@/features/moshi/components/Moshi";
 
@@ -41,7 +41,7 @@ import { AlertContext } from "@/features/alert/alertContext";
 
 import { config } from '@/utils/config';
 import { VrmStoreProvider } from "@/features/vrmStore/vrmStoreContext";
-import { ChatModeText } from "@/components/chatModeText";
+import { ChatModeText } from "@/components/ChatHistoryOverlay";
 
 function detectVRHeadset() {
   const userAgent = navigator.userAgent.toLowerCase();

@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { VRM, VRMExpressionPresetName } from "@pixiv/three-vrm";
-import { ExpressionController } from "./expressionController";
+import { ExpressionController } from "./FacialExpressionController";
 
 /**
  * 感情表現としてExpressionとMotionを操作する為のクラス

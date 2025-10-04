@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useWorker } from "./useWorker";
-import { updateFileProgress } from "@/utils/progress";
+import { updateFileProgress } from "@/utils/fileLoadingProgress";
 
 interface ProgressItem {
   file: string;
