@@ -1,19 +1,14 @@
 import { TypeormDatabase } from '@subsquid/typeorm-store'
 import { processor, Context, Log, DEPLOYMENT } from './processor'
 import * as factoryAbi from './abi/PersonaTokenFactory'
-import * as stakingAbi from './abi/PersonaStakingRewards'
 import * as bridgeAbi from './abi/AmicaBridgeWrapper'
-import * as amicaAbi from './abi/AmicaToken'
+import * as amicaAbi from './abi/AmicaTokenMainnet'
 import {
   Persona,
   PersonaMetadata,
   Trade,
   AgentDeposit,
   AgentReward,
-  StakingPool,
-  UserStake,
-  StakeLock,
-  StakingRewardClaim,
   BridgeActivity,
   BridgeAction,
   FeeConfig,
@@ -38,22 +33,13 @@ import {
   handleAgentRewardsDistributed
 } from './handlers/agent'
 import {
-  handlePoolAdded,
-  handlePoolUpdated,
-  handleStakingDeposit,
-  handleStakingDepositLocked,
-  handleStakingWithdraw,
-  handleStakingWithdrawLocked,
-  handleRewardsClaimed
-} from './handlers/staking'
-import {
   handleTokensWrapped,
   handleTokensUnwrapped,
   handleEmergencyWithdraw,
   handleBridgeMetricsUpdated,
   handleBridgeTokensUpdated
 } from './handlers/bridge'
-import { handleAmicaTransfer, handleAmicaTokenClaimed } from './handlers/amica-token'
+import { handleAmicaTransfer, handleAmicaTokenClaimed, handleAmicaTokenDeposited, handleAmicaTokenConfigured, handleAmicaTokenWithdrawn } from './handlers/amica-token'
 import { updateGlobalStats, updateDailyStats } from './handlers/stats'
 import { handleTransfer } from './handlers/transfers'
 import { handleTokensClaimed } from './handlers/withdrawals'
@@ -67,7 +53,6 @@ console.log(`Chain: ${DEPLOYMENT.chainName} (${DEPLOYMENT.chainId})`)
 console.log(`Start Block: ${DEPLOYMENT.startBlock}`)
 console.log('Addresses:')
 console.log(`  - PersonaFactory: ${DEPLOYMENT.addresses.personaFactory}`)
-console.log(`  - StakingRewards: ${DEPLOYMENT.addresses.stakingRewards}`)
 console.log(`  - BridgeWrapper: ${DEPLOYMENT.addresses.bridgeWrapper}`)
 console.log(`  - AmicaToken: ${DEPLOYMENT.addresses.amicaToken}`)
 console.log('Environment:')
@@ -86,7 +71,6 @@ processor.run(new TypeormDatabase({ supportHotBlocks: true }), async (ctx) => {
   let totalLogsProcessed = 0
   let eventsProcessed = {
     personaFactory: 0,
-    stakingRewards: 0,
     bridgeWrapper: 0,
     amicaToken: 0,
     errors: 0
@@ -157,14 +141,14 @@ processor.run(new TypeormDatabase({ supportHotBlocks: true }), async (ctx) => {
               
             case factoryAbi.events.V4PoolCreated.topic:
               ctx.log.info('Processing V4PoolCreated event')
-              await handleV4PoolCreated(ctx, log)
+              await handleV4PoolCreated(ctx, log, timestamp, blockNumber)
               const v4PoolEvent = factoryAbi.events.V4PoolCreated.decode(log)
               personasToUpdate.add(v4PoolEvent.tokenId.toString())
               break
 
             case factoryAbi.events.FeesCollected.topic:
               ctx.log.info('Processing FeesCollected event')
-              await handleFeesCollected(ctx, log)
+              await handleFeesCollected(ctx, log, timestamp, blockNumber)
               break
 
             case factoryAbi.events.Graduated.topic:
@@ -213,54 +197,7 @@ processor.run(new TypeormDatabase({ supportHotBlocks: true }), async (ctx) => {
               ctx.log.warn(`Unknown PersonaFactory event topic: ${topic}`)
           }
         }
-        
-        // StakingRewards events
-        else if (address === DEPLOYMENT.addresses.stakingRewards) {
-          eventsProcessed.stakingRewards++
-          const topic = log.topics[0]
-          ctx.log.debug(`StakingRewards event: ${topic} at block ${blockNumber}`)
-          
-          switch (topic) {
-            case stakingAbi.events.PoolAdded.topic:
-              ctx.log.info('Processing PoolAdded event')
-              await handlePoolAdded(ctx, log, timestamp, blockNumber)
-              break
-              
-            case stakingAbi.events.PoolUpdated.topic:
-              ctx.log.info('Processing PoolUpdated event')
-              await handlePoolUpdated(ctx, log)
-              break
-              
-            case stakingAbi.events.Deposit.topic:
-              ctx.log.info('Processing Deposit event')
-              await handleStakingDeposit(ctx, log, timestamp)
-              break
-              
-            case stakingAbi.events.DepositLocked.topic:
-              ctx.log.info('Processing DepositLocked event')
-              await handleStakingDepositLocked(ctx, log, timestamp, blockNumber)
-              break
-              
-            case stakingAbi.events.Withdraw.topic:
-              ctx.log.info('Processing Withdraw event')
-              await handleStakingWithdraw(ctx, log)
-              break
-              
-            case stakingAbi.events.WithdrawLocked.topic:
-              ctx.log.info('Processing WithdrawLocked event')
-              await handleStakingWithdrawLocked(ctx, log)
-              break
-              
-            case stakingAbi.events.RewardsClaimed.topic:
-              ctx.log.info('Processing RewardsClaimed event')
-              await handleRewardsClaimed(ctx, log, timestamp, blockNumber)
-              break
-              
-            default:
-              ctx.log.warn(`Unknown StakingRewards event topic: ${topic}`)
-          }
-        }
-        
+
         // BridgeWrapper events
         else if (address === DEPLOYMENT.addresses.bridgeWrapper) {
           eventsProcessed.bridgeWrapper++
@@ -317,6 +254,21 @@ processor.run(new TypeormDatabase({ supportHotBlocks: true }), async (ctx) => {
               await handleAmicaTokenClaimed(ctx, log, timestamp, blockNumber)
               break
 
+            case amicaAbi.events.TokenDeposited.topic:
+              ctx.log.info('Processing AMICA TokenDeposited event')
+              await handleAmicaTokenDeposited(ctx, log, timestamp, blockNumber)
+              break
+
+            case amicaAbi.events.TokenConfigured.topic:
+              ctx.log.info('Processing AMICA TokenConfigured event')
+              await handleAmicaTokenConfigured(ctx, log, timestamp, blockNumber)
+              break
+
+            case amicaAbi.events.TokenWithdrawn.topic:
+              ctx.log.info('Processing AMICA TokenWithdrawn event')
+              await handleAmicaTokenWithdrawn(ctx, log, timestamp, blockNumber)
+              break
+
             default:
               ctx.log.warn(`Unknown AmicaToken event topic: ${topic}`)
           }
@@ -339,7 +291,6 @@ processor.run(new TypeormDatabase({ supportHotBlocks: true }), async (ctx) => {
   ctx.log.info(`Batch processing complete:`)
   ctx.log.info(`  - Total logs: ${totalLogsProcessed}`)
   ctx.log.info(`  - PersonaFactory events: ${eventsProcessed.personaFactory}`)
-  ctx.log.info(`  - StakingRewards events: ${eventsProcessed.stakingRewards}`)
   ctx.log.info(`  - BridgeWrapper events: ${eventsProcessed.bridgeWrapper}`)
   ctx.log.info(`  - AmicaToken events: ${eventsProcessed.amicaToken}`)
   ctx.log.info(`  - Errors: ${eventsProcessed.errors}`)

@@ -9,9 +9,8 @@ import {
 import { assertNotNull } from '@subsquid/util-internal'
 import { Store } from '@subsquid/typeorm-store'
 import * as factoryAbi from './abi/PersonaTokenFactory'
-import * as stakingAbi from './abi/PersonaStakingRewards'
 import * as bridgeAbi from './abi/AmicaBridgeWrapper'
-import * as amicaAbi from './abi/AmicaToken'
+import * as amicaAbi from './abi/AmicaTokenMainnet'
 
 // Base deployment data
 export const DEPLOYMENT = {
@@ -21,7 +20,6 @@ export const DEPLOYMENT = {
     amicaToken: '0xC0ba25570F4cB592e83FF5f052cC9DD69D5b3caE'.toLowerCase(),
     personaFactory: '0x62966fd253C2c3507A305f296E54cabD74AEA083'.toLowerCase(),
     bridgeWrapper: '0xe17B125b85AbCC0Ff212cf33d06d928d4736aA04'.toLowerCase(),
-    stakingRewards: '0xEfc05BA7cca5653a71dA0569D589848dfAb60CdA'.toLowerCase(),
     erc20Implementation: '0x4b140c2d84c75D50E28b46f4126fF9C1c5e4C3DD'.toLowerCase(),
   },
   startBlock: 31632211,
@@ -67,29 +65,16 @@ export const processor = new EvmBatchProcessor()
       factoryAbi.events.TokensPurchased.topic,
       factoryAbi.events.TokensSold.topic,
       factoryAbi.events.MetadataUpdated.topic,
-      factoryAbi.events.V4PoolCreated.topic,  // Renamed from LiquidityPairCreated
-      factoryAbi.events.FeesCollected.topic,  // Renamed from TradingFeesCollected
-      factoryAbi.events.Graduated.topic,  // New event
-      factoryAbi.events.TokensClaimed.topic,  // New event
-      factoryAbi.events.TokensDistributed.topic,  // New event
+      factoryAbi.events.V4PoolCreated.topic,
+      factoryAbi.events.FeesCollected.topic,
+      factoryAbi.events.Graduated.topic,
+      factoryAbi.events.TokensClaimed.topic,
+      factoryAbi.events.TokensDistributed.topic,
       factoryAbi.events.AgentTokenAssociated.topic,
       factoryAbi.events.AgentTokensDeposited.topic,
       factoryAbi.events.AgentTokensWithdrawn.topic,
       factoryAbi.events.AgentRewardsDistributed.topic,
       factoryAbi.events.PairingConfigUpdated.topic,
-    ]
-  })
-  // StakingRewards events
-  .addLog({
-    address: [DEPLOYMENT.addresses.stakingRewards],
-    topic0: [
-      stakingAbi.events.PoolAdded.topic,
-      stakingAbi.events.PoolUpdated.topic,
-      stakingAbi.events.Deposit.topic,
-      stakingAbi.events.DepositLocked.topic,
-      stakingAbi.events.Withdraw.topic,
-      stakingAbi.events.WithdrawLocked.topic,
-      stakingAbi.events.RewardsClaimed.topic,
     ]
   })
   // BridgeWrapper events
@@ -109,13 +94,15 @@ export const processor = new EvmBatchProcessor()
     topic0: [
       amicaAbi.events.Transfer.topic,
       amicaAbi.events.TokenClaimed.topic,
+      amicaAbi.events.TokenDeposited.topic,
+      amicaAbi.events.TokenConfigured.topic,
+      amicaAbi.events.TokenWithdrawn.topic,
     ]
   })
 
 // Log event topic registration
 console.log('Registered event topics:')
 console.log('- PersonaFactory:', Object.keys(factoryAbi.events).length, 'events')
-console.log('- StakingRewards:', Object.keys(stakingAbi.events).length, 'events')
 console.log('- BridgeWrapper:', Object.keys(bridgeAbi.events).length, 'events')
 console.log('- AmicaToken:', Object.keys(amicaAbi.events).length, 'events')
 

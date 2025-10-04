@@ -8,7 +8,6 @@ export async function handleGraduated(
   timestamp: Date,
   blockNumber: bigint
 ) {
-  // Event: Graduated(uint256 tokenId, bytes32 poolId, uint256 totalDeposited, uint256 tokensSold)
   const event = factoryAbi.events.Graduated.decode(log)
 
   const personaId = event.tokenId.toString()
@@ -20,8 +19,6 @@ export async function handleGraduated(
   }
 
   // Update persona with graduation information
-  persona.totalDeposited = event.totalDeposited
-  persona.tokensSold = event.tokensSold
   persona.poolId = event.poolId
   persona.graduationTimestamp = BigInt(Math.floor(timestamp.getTime() / 1000))
 
@@ -39,7 +36,6 @@ export async function handleTokensDistributed(
   timestamp: Date,
   blockNumber: bigint
 ) {
-  // Event: TokensDistributed(uint256 tokenId, uint256 toAmica, uint256 toLiquidity, uint256 toAgentRewards)
   const event = factoryAbi.events.TokensDistributed.decode(log)
 
   const personaId = event.tokenId.toString()

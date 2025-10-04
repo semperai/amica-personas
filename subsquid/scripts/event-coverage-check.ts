@@ -21,9 +21,9 @@ function log(color: keyof typeof COLORS, message: string): void {
 }
 
 // Load ABIs
-const personaFactoryAbi = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/abi/PersonaTokenFactory.json'), 'utf8'));
-const amicaTokenAbi = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/abi/AmicaToken.json'), 'utf8'));
-const bridgeWrapperAbi = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/abi/AmicaBridgeWrapper.json'), 'utf8'));
+const personaFactoryAbi = JSON.parse(fs.readFileSync(path.join(__dirname, '../abi/PersonaTokenFactory.json'), 'utf8'));
+const amicaTokenAbi = JSON.parse(fs.readFileSync(path.join(__dirname, '../abi/AmicaTokenMainnet.json'), 'utf8'));
+const bridgeWrapperAbi = JSON.parse(fs.readFileSync(path.join(__dirname, '../abi/AmicaBridgeWrapper.json'), 'utf8'));
 
 // Extract events from processor.ts
 const processorFile = fs.readFileSync(path.join(__dirname, '../src/processor.ts'), 'utf8');
@@ -31,7 +31,9 @@ const mainFile = fs.readFileSync(path.join(__dirname, '../src/main.ts'), 'utf8')
 
 // Helper to get event names from ABI
 function getEventNames(abi: any): string[] {
-  return abi.abi
+  // Handle both formats: {abi: [...]} and [...]
+  const abiArray = Array.isArray(abi) ? abi : abi.abi;
+  return abiArray
     .filter((item: any) => item.type === 'event')
     .map((item: any) => item.name)
     .sort();
@@ -93,8 +95,8 @@ factoryEvents.forEach(event => {
 console.log();
 log('blue', `Summary: ${factoryIndexed} indexed, ${factoryMissing} missing, ${factoryAdmin} admin/approval\n`);
 
-// Check AmicaToken
-log('blue', '2. AmicaToken Events');
+// Check AmicaTokenMainnet
+log('blue', '2. AmicaTokenMainnet Events');
 console.log('─'.repeat(70));
 const amicaEvents = getEventNames(amicaTokenAbi);
 let amicaIndexed = 0, amicaMissing = 0, amicaAdmin = 0;

@@ -3,6 +3,7 @@ import { event, fun, viewFun, indexed, ContractBase } from '@subsquid/evm-abi'
 import type { EventParams as EParams, FunctionArguments, FunctionReturn } from '@subsquid/evm-abi'
 
 export const events = {
+    BridgeMetricsUpdated: event("0x94be0515a07bd4828d6e9855efd58993b8d50f4582212691069ca5abf8bf0d1b", "BridgeMetricsUpdated(uint256,uint256,uint256)", {"totalBridgedIn": p.uint256, "totalBridgedOut": p.uint256, "netBridged": p.uint256}),
     BridgeTokensUpdated: event("0xae1dd35fa7dd26822921d81f756962dc61a7b0d23595510cca367a86bfa21bcd", "BridgeTokensUpdated(address,address,address)", {"oldBridgedToken": indexed(p.address), "newBridgedToken": indexed(p.address), "newNativeToken": indexed(p.address)}),
     EmergencyWithdraw: event("0xf24ef89f38eadc1bde50701ad6e4d6d11a2dc24f7cf834a486991f3883328504", "EmergencyWithdraw(address,address,uint256)", {"token": indexed(p.address), "to": indexed(p.address), "amount": p.uint256}),
     Initialized: event("0xc7f505b2f371ae2175ee4913f4499e1f2633a7b5936321eed1cdaeb6115181d2", "Initialized(uint64)", {"version": p.uint64}),
@@ -64,6 +65,7 @@ export class Contract extends ContractBase {
 }
 
 /// Event types
+export type BridgeMetricsUpdatedEventArgs = EParams<typeof events.BridgeMetricsUpdated>
 export type BridgeTokensUpdatedEventArgs = EParams<typeof events.BridgeTokensUpdated>
 export type EmergencyWithdrawEventArgs = EParams<typeof events.EmergencyWithdraw>
 export type InitializedEventArgs = EParams<typeof events.Initialized>

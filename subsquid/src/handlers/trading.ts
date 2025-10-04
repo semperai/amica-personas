@@ -107,18 +107,18 @@ export async function handleTokensSold(
 
 export async function handleFeesCollected(
   ctx: Context,
-  log: Log
-) {
-  // New event: FeesCollected(uint256 tokenId, bytes32 poolId, uint256 amount0, uint256 amount1)
+  log: Log,
+  timestamp: Date,
+  blockNumber: bigint
+): Promise<void> {
+  // Event: FeesCollected(uint256 indexed tokenId, bytes32 poolId, uint256 amount0, uint256 amount1)
   const event = factoryAbi.events.FeesCollected.decode(log)
 
   ctx.log.info(`Fees collected for token ${event.tokenId}, pool ${event.poolId}`)
   ctx.log.debug(`  - Amount0: ${event.amount0}`)
   ctx.log.debug(`  - Amount1: ${event.amount1}`)
 
-  // This event is now for V4 pool fee collection, not trading fees
-  // You may want to create a new entity to track these fees or update persona stats
-
+  // This event is for V4 pool fee collection after graduation
   const personaId = event.tokenId.toString()
   const persona = await ctx.store.get(Persona, personaId)
 
@@ -127,7 +127,6 @@ export async function handleFeesCollected(
     return
   }
 
-  // The fees are now collected from the V4 pool after graduation
-  // This is different from the old trading fees during bonding curve phase
+  // The fees are collected from the V4 pool after graduation
   ctx.log.info(`V4 pool fees collected for persona ${personaId}: ${event.amount0} (token0), ${event.amount1} (token1)`)
 }

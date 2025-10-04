@@ -38,16 +38,18 @@ export async function handlePersonaCreated(
       tokenId: event.tokenId,
       creator: creatorAddress.toLowerCase(),
       owner: creatorAddress.toLowerCase(), // Initially owned by creator
-      name: '', // Name needs to be fetched from the ERC20 token or metadata
-      symbol: '', // Symbol needs to be fetched from the ERC20 token or metadata
+      name: '', // Will be populated from metadata
+      symbol: '', // Will be populated from metadata
       erc20Token: event.token.toLowerCase(),
-      domain: event.domain,
-      poolId: personaData.poolId || null,
+      domain: event.domain, // bytes32 domain from event
+      poolId: personaData.poolId !== '0x0000000000000000000000000000000000000000000000000000000000000000'
+        ? personaData.poolId
+        : null,
       pairToken: personaData.pairToken.toLowerCase(),
       agentToken: personaData.agentToken !== '0x0000000000000000000000000000000000000000'
         ? personaData.agentToken.toLowerCase()
         : null,
-      pairCreated: false,
+      pairCreated: false, // Will be set by V4PoolCreated event
       pairAddress: null,
       chainId: DEPLOYMENT.chainId,
       createdAt: timestamp,
@@ -55,9 +57,9 @@ export async function handlePersonaCreated(
       graduationTimestamp: personaData.graduationTimestamp > 0n ? personaData.graduationTimestamp : null,
       totalDeposited: 0n,
       tokensSold: 0n,
-      graduationThreshold: 0n, // This field exists but is deprecated
+      graduationThreshold: 0n,
       totalAgentDeposited: 0n,
-      minAgentTokens: personaData.agentTokenThreshold || 0n,
+      minAgentTokens: personaData.agentTokenThreshold,
     })
 
     await ctx.store.insert(persona)

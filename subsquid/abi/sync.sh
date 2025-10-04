@@ -1,8 +1,16 @@
 #!/usr/bin/env bash
-cat ../../contract/artifacts/contracts/AmicaBridgeWrapper.sol/AmicaBridgeWrapper.json| jq ".abi" > AmicaBridgeWrapper.json
-cat ../../contract/artifacts/contracts/AmicaToken.sol/AmicaToken.json | jq ".abi" > AmicaToken.json
-cat ../../contract/artifacts/contracts/PersonaTokenFactory.sol/PersonaTokenFactory.json | jq ".abi" > PersonaTokenFactory.json
-cat ../../contract/artifacts/contracts/PersonaFactoryViewer.sol/PersonaFactoryViewer.json | jq ".abi" > PersonaFactoryViewer.json
-cat ../../contract/artifacts/contracts/PersonaStakingRewards.sol/PersonaStakingRewards.json| jq ".abi" > PersonaStakingRewards.json
+cat ../../contracts/out/AmicaTokenMainnet.sol/AmicaTokenMainnet.json | jq ".abi" > AmicaTokenMainnet.json
+cat ../../contracts/out/AmicaTokenBridged.sol/AmicaTokenBridged.json | jq ".abi" > AmicaTokenBridged.json
+cat ../../contracts/out/AmicaBridgeWrapper.sol/AmicaBridgeWrapper.json | jq ".abi" > AmicaBridgeWrapper.json
+cat ../../contracts/out/PersonaTokenFactory.sol/PersonaTokenFactory.json | jq ".abi" > PersonaTokenFactory.json
+cat ../../contracts/out/PersonaFactoryViewer.sol/PersonaFactoryViewer.json | jq ".abi" > PersonaFactoryViewer.json
+
+# Remove old files that no longer exist
+rm -f AmicaToken.json
+rm -f BridgeWrapper.json
+rm -f PersonaStakingRewards.json
+rm -f ../src/abi/AmicaToken.ts
+rm -f ../src/abi/BridgeWrapper.ts
+rm -f ../src/abi/PersonaStakingRewards.ts
 
 sqd typegen

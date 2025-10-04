@@ -4,9 +4,10 @@ import { Persona } from '../model'
 
 export async function handleV4PoolCreated(
   ctx: Context,
-  log: Log
+  log: Log,
+  timestamp: Date,
+  blockNumber: bigint
 ) {
-  // New event: V4PoolCreated(uint256 tokenId, bytes32 poolId, uint256 liquidity)
   const event = factoryAbi.events.V4PoolCreated.decode(log)
 
   const personaId = event.tokenId.toString()

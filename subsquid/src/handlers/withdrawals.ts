@@ -3,16 +3,13 @@ import * as factoryAbi from '../abi/PersonaTokenFactory'
 import { Persona, TokenWithdrawal } from '../model'
 import { DEPLOYMENT } from '../processor'
 
-// Note: TokensWithdrawn event no longer exists in the new contract
-// Only TokensClaimed is used now for post-graduation token claims
-
 export async function handleTokensClaimed(
   ctx: Context,
   log: Log,
   timestamp: Date,
   blockNumber: bigint
 ) {
-  // Event: TokensClaimed(uint256 tokenId, address user, uint256 purchasedAmount, uint256 bonusAmount, uint256 totalAmount)
+  // Event: TokensClaimed(uint256 indexed tokenId, address indexed user, uint256 purchasedAmount, uint256 bonusAmount, uint256 totalAmount)
   const event = factoryAbi.events.TokensClaimed.decode(log)
 
   const personaId = event.tokenId.toString()

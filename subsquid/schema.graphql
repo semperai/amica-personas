@@ -220,6 +220,43 @@ type AmicaClaim @entity {
   chainId: Int! @index
 }
 
+# Token deposit tracking (minting AMICA by depositing other tokens)
+type AmicaDeposit @entity {
+  id: ID! # txHash-logIndex
+  user: String! @index
+  token: String! @index
+  amountDeposited: BigInt!
+  amountMinted: BigInt!
+  timestamp: DateTime!
+  block: BigInt!
+  txHash: String! @index
+  chainId: Int! @index
+}
+
+# Token configuration tracking
+type AmicaTokenConfig @entity {
+  id: ID! # token address
+  token: String! @unique @index
+  enabled: Boolean!
+  exchangeRate: BigInt!
+  decimals: Int!
+  lastUpdated: DateTime!
+  lastUpdatedBlock: BigInt!
+  txHash: String! @index
+}
+
+# Admin token withdrawals
+type AmicaWithdrawal @entity {
+  id: ID! # txHash-logIndex
+  token: String! @index
+  to: String! @index
+  amount: BigInt!
+  timestamp: DateTime!
+  block: BigInt!
+  txHash: String! @index
+  chainId: Int! @index
+}
+
 # Fee Configuration
 
 type FeeConfig @entity {
