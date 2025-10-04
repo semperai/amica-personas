@@ -53,11 +53,9 @@ jobs:
         if: hashFiles('contracts/lcov.info') != ''
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: ./contracts/lcov.info
-          base-path: ./contracts
+          file: ./contracts/lcov.info
           flag-name: contracts
           parallel: true
-          carryforward: true
 
   amica:
     name: Amica
@@ -78,18 +76,16 @@ jobs:
         run: cd amica && npm ci
 
       - name: Run tests with coverage
-        run: cd amica && npx vitest run --coverage
+        run: cd amica && npm run test:coverage
 
       - name: Upload coverage to Coveralls
         uses: coverallsapp/github-action@v2
         if: hashFiles('amica/coverage/lcov.info') != ''
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: ./amica/coverage/lcov.info
-          base-path: ./amica
+          file: ./amica/coverage/lcov.info
           flag-name: amica
           parallel: true
-          carryforward: true
 
   website:
     name: Website
@@ -154,6 +150,7 @@ jobs:
   coverage-complete:
     name: Coverage Complete
     needs: [contracts, amica]
+    if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Coveralls Finished
