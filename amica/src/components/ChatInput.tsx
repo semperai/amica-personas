@@ -1,3 +1,8 @@
+import * as ort from "onnxruntime-web"
+ort.env.wasm.wasmPaths = '/assets/'
+ort.env.wasm.numThreads = 1
+ort.env.wasm.simd = true
+
 import { useContext, useEffect, useRef, useState } from "react";
 import { useMicVAD } from "@ricky0123/vad-react"
 import { Mic, Pause, Send, Loader2 } from "lucide-react";
@@ -34,14 +39,22 @@ export default function MessageInput({
 
   const vad = useMicVAD({
     startOnLoad: false,
-    onnxWASMBasePath: 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/',
-    baseAssetPath: 'https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.28/dist/',
+    model: 'v5',
+    modelURL: '/silero_vad_v5.onnx',
+    workletURL: '/vad.worklet.bundle.min.js',
+    baseAssetPath: '/',
+    onnxWASMBasePath: '/assets/',
+    onFrameProcessed: (probabilities) => {
+      console.log('[VAD] Frame processed, speech probability:', probabilities.isSpeech);
+    },
     onSpeechStart: () => {
-      console.log('[VAD] Speech started');
+      console.log('[VAD] ===== Speech started =====');
       console.time('performance_speech');
     },
     onSpeechEnd: (audio: Float32Array) => {
-      console.log('[VAD] Speech ended, audio length:', audio.length);
+      console.log('[VAD] ===== Speech ended =====');
+      console.log('[VAD] Audio length:', audio.length, 'samples');
+      console.log('[VAD] Audio duration:', (audio.length / 16000).toFixed(2), 'seconds');
       console.timeEnd('performance_speech');
       console.time('performance_transcribe');
       (window as any).chatvrm_latency_tracker = {
@@ -122,9 +135,20 @@ export default function MessageInput({
     },
   });
 
+  console.log('[VAD] Status:', {
+    loading: vad.loading,
+    listening: vad.listening,
+    userSpeaking: vad.userSpeaking,
+    errored: vad.errored,
+  });
+
   if (vad.errored) {
-    console.error('vad error', vad.errored);
+    console.error('[VAD] ERROR:', vad.errored);
   }
+
+  useEffect(() => {
+    console.log('[VAD] State changed - listening:', vad.listening, 'userSpeaking:', vad.userSpeaking);
+  }, [vad.listening, vad.userSpeaking]);
 
   function handleTranscriptionResult(preprocessed: string) {
     console.log('[Transcription] Raw result:', preprocessed);
@@ -204,7 +228,16 @@ export default function MessageInput({
           <div className="flex items-center gap-2">
             <button
               disabled={config('stt_backend') === 'none' || vad.loading || Boolean(vad.errored)}
-              onClick={vad.toggle}
+              onClick={() => {
+                console.log('[VAD] Microphone button clicked');
+                console.log('[VAD] Current state before toggle:', {
+                  listening: vad.listening,
+                  loading: vad.loading,
+                  errored: vad.errored,
+                  sttBackend: config('stt_backend'),
+                });
+                vad.toggle();
+              }}
               className="flex-shrink-0 p-2 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-slate-900"
             >
               {vad.userSpeaking ? (

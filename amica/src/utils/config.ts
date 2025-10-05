@@ -1,14 +1,14 @@
 import { AmicaConfig } from '@/types/config';
 
 const defaults = {
-  autosend_from_mic: 'true',
-  wake_word_enabled: 'false',
-  wake_word: 'Hello',
-  time_before_idle_sec: '20',
-  debug_gfx: 'false',
-  use_webgpu: 'false',
-  mtoon_debug_mode: 'none',
-  mtoon_material_type: 'mtoon',
+  autosend_from_mic: import.meta.env.VITE_AUTOSEND_FROM_MIC ?? 'true',
+  wake_word_enabled: import.meta.env.VITE_WAKE_WORD_ENABLED ?? 'false',
+  wake_word: import.meta.env.VITE_WAKE_WORD ?? 'Hello',
+  time_before_idle_sec: import.meta.env.VITE_TIME_BEFORE_IDLE_SEC ?? '20',
+  debug_gfx: import.meta.env.VITE_DEBUG_GFX ?? 'false',
+  use_webgpu: import.meta.env.VITE_USE_WEBGPU ?? 'false',
+  mtoon_debug_mode: import.meta.env.VITE_MTOON_DEBUG_MODE ?? 'none',
+  mtoon_material_type: import.meta.env.VITE_MTOON_MATERIAL_TYPE ?? 'mtoon',
   bg_color: import.meta.env.VITE_BG_COLOR ?? '#000000',
   bg_url: import.meta.env.VITE_BG_URL ?? '/bg/bg-room2.jpg',
   vrm_url: import.meta.env.VITE_VRM_HASH ?? '/vrm/AvatarSample_A.vrm',

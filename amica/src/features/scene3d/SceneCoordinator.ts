@@ -213,6 +213,11 @@ export class SceneCoordinator {
     return this.physics.getWorld();
   }
 
+  // Safe physics body removal (deferred until after physics step)
+  public removeRigidBody(body: any) {
+    this.physics.removeRigidBody(body);
+  }
+
   public get scene(): THREE.Scene | undefined {
     return this.render?.scene;
   }

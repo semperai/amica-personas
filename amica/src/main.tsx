@@ -19,9 +19,10 @@ loadConfig().then(() => {
     initialLoading.remove();
   }
 
+  // StrictMode disabled to prevent double initialization of physics/3D systems
+  // StrictMode causes components to mount twice in development, which breaks
+  // singleton systems like Rapier physics that don't support multiple instances
   ReactDOM.createRoot(document.getElementById('root')!).render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
+    <App />
   );
 });
