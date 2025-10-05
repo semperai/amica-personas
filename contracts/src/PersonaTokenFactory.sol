@@ -176,8 +176,8 @@ contract PersonaTokenFactory is
     /// @notice Uniswap V4 PositionManager contract
     IPositionManager public positionManager;
 
-    // @notice Uniswap Permit2
-    IPermit2 permit2;
+    /// @notice Uniswap Permit2
+    IPermit2 public permit2;
 
     /// @notice Address of the fee reduction hook
     address public dynamicFeeHook;
