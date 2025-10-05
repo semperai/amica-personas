@@ -14,8 +14,8 @@ export interface MockScope {
   renderer?: THREE.WebGLRenderer;
   igroup: THREE.Group;
 
-  // Ammo.js physics
-  ammo: any;
+  // Rapier.js physics
+  rapier: any;
   physicsWorld: any;
 
   // Managers
@@ -78,43 +78,67 @@ export function createMockScope(): MockScope {
   const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
   const igroup = new THREE.Group();
 
-  // Mock Ammo.js
-  const mockAmmo = {
-    btTransform: jest.fn().mockReturnValue({
-      setIdentity: jest.fn(),
-      setOrigin: jest.fn(),
-      setRotation: jest.fn(),
-      getOrigin: jest.fn().mockReturnValue({ x: () => 0, y: () => 0, z: () => 0 }),
-      getRotation: jest.fn().mockReturnValue({ x: () => 0, y: () => 0, z: () => 0, w: () => 1 }),
-    }),
-    btVector3: jest.fn().mockImplementation((x, y, z) => ({ x: () => x, y: () => y, z: () => z })),
-    btQuaternion: jest.fn(),
-    btBoxShape: jest.fn().mockReturnValue({ calculateLocalInertia: jest.fn() }),
-    btSphereShape: jest.fn().mockReturnValue({ calculateLocalInertia: jest.fn() }),
-    btCylinderShape: jest.fn().mockReturnValue({ calculateLocalInertia: jest.fn() }),
-    btRigidBody: jest.fn().mockReturnValue({
-      setFriction: jest.fn(),
-      setRestitution: jest.fn(),
-      applyImpulse: jest.fn(),
-      getMotionState: jest.fn(),
-    }),
-    btRigidBodyConstructionInfo: jest.fn(),
-    btDefaultMotionState: jest.fn(),
-    btPoint2PointConstraint: jest.fn(),
+  // Mock Rapier.js
+  const mockRigidBody = {
+    translation: jest.fn().mockReturnValue({ x: 0, y: 0, z: 0 }),
+    rotation: jest.fn().mockReturnValue({ x: 0, y: 0, z: 0, w: 1 }),
+    setTranslation: jest.fn(),
+    setRotation: jest.fn(),
+    applyImpulse: jest.fn(),
+    applyImpulseAtPoint: jest.fn(),
+  };
+
+  const mockRapier = {
+    RigidBodyDesc: {
+      dynamic: jest.fn().mockReturnValue({
+        setTranslation: jest.fn().mockReturnThis(),
+        setRotation: jest.fn().mockReturnThis(),
+      }),
+      fixed: jest.fn().mockReturnValue({
+        setTranslation: jest.fn().mockReturnThis(),
+        setRotation: jest.fn().mockReturnThis(),
+      }),
+      kinematicPositionBased: jest.fn().mockReturnValue({
+        setTranslation: jest.fn().mockReturnThis(),
+        setRotation: jest.fn().mockReturnThis(),
+      }),
+    },
+    ColliderDesc: {
+      cuboid: jest.fn().mockReturnValue({
+        setMass: jest.fn().mockReturnThis(),
+        setFriction: jest.fn().mockReturnThis(),
+        setRestitution: jest.fn().mockReturnThis(),
+      }),
+      ball: jest.fn().mockReturnValue({
+        setMass: jest.fn().mockReturnThis(),
+        setFriction: jest.fn().mockReturnThis(),
+        setRestitution: jest.fn().mockReturnThis(),
+      }),
+      cylinder: jest.fn().mockReturnValue({
+        setMass: jest.fn().mockReturnThis(),
+        setFriction: jest.fn().mockReturnThis(),
+        setRestitution: jest.fn().mockReturnThis(),
+      }),
+    },
+    JointData: {
+      spherical: jest.fn(),
+    },
   };
 
   const mockPhysicsWorld = {
-    addRigidBody: jest.fn(),
+    createRigidBody: jest.fn().mockReturnValue(mockRigidBody),
+    createCollider: jest.fn(),
     removeRigidBody: jest.fn(),
-    addConstraint: jest.fn(),
-    removeConstraint: jest.fn(),
+    createImpulseJoint: jest.fn(),
+    step: jest.fn(),
+    gravity: { x: 0, y: -7.8, z: 0 },
   };
 
   return {
     scene,
     camera,
     igroup,
-    ammo: mockAmmo,
+    rapier: mockRapier,
     physicsWorld: mockPhysicsWorld,
 
     loadVrm: jest.fn().mockResolvedValue(undefined),

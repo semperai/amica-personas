@@ -199,8 +199,12 @@ export class SceneCoordinator {
   }
 
   // Convenience getters for scenarios
-  public get ammo() {
-    return this.physics.isInitialized ? (window as any).Ammo : null;
+  public get rapier() {
+    return this.physics.getRAPIER();
+  }
+
+  public get physicsWorld() {
+    return this.physics.getWorld();
   }
 
   public get scene(): THREE.Scene | undefined {
@@ -213,10 +217,6 @@ export class SceneCoordinator {
 
   public get renderer(): THREE.WebGLRenderer | undefined {
     return this.render?.renderer;
-  }
-
-  public get physicsWorld() {
-    return this.physics.getPhysicsWorld();
   }
 
   public get igroup(): THREE.Group | undefined {

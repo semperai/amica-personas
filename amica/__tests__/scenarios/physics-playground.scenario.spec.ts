@@ -6,7 +6,7 @@ import {
 } from '@/testing/ScenarioTestRunner';
 import * as THREE from 'three';
 
-// Simplified physics playground scenario for testing
+// Simplified physics playground scenario for testing (Rapier version)
 const physicsPlaygroundCode = `
 class Scenario {
   constructor(ctx) {
@@ -15,14 +15,18 @@ class Scenario {
     this.config = ctx.config;
 
     this.rigidBodies = [];
-    this.tmpTrans = null;
     this.randomObjectTimer = 0;
     this.randomObjectInterval = 1.0;
   }
 
   async setup() {
-    const Ammo = this.$.ammo;
-    this.tmpTrans = new Ammo.btTransform();
+    const RAPIER = this.$.rapier;
+    const world = this.$.physicsWorld;
+
+    if (!RAPIER || !world) {
+      console.error('Rapier.js not available!');
+      return;
+    }
 
     await this.$.loadVrm(this.config('vrm_url'), console.log);
     this.$.setCameraPosition(4, 3, 6);
@@ -44,7 +48,8 @@ class Scenario {
   }
 
   createGround() {
-    const Ammo = this.$.ammo;
+    const RAPIER = this.$.rapier;
+    const world = this.$.physicsWorld;
 
     const groundMesh = new this.THREE.Mesh(
       new this.THREE.PlaneGeometry(20, 20),
@@ -53,22 +58,17 @@ class Scenario {
     groundMesh.rotation.x = -Math.PI / 2;
     this.$.scene.add(groundMesh);
 
-    const transform = new Ammo.btTransform();
-    transform.setIdentity();
-    transform.setOrigin(new Ammo.btVector3(0, 0, 0));
+    const rigidBodyDesc = RAPIER.RigidBodyDesc.fixed()
+      .setTranslation(0, 0, 0);
+    const rigidBody = world.createRigidBody(rigidBodyDesc);
 
-    const shape = new Ammo.btBoxShape(new Ammo.btVector3(10, 0.1, 10));
-    const motionState = new Ammo.btDefaultMotionState(transform);
-    const rbInfo = new Ammo.btRigidBodyConstructionInfo(
-      0, motionState, shape, new Ammo.btVector3(0, 0, 0)
-    );
-    const body = new Ammo.btRigidBody(rbInfo);
-
-    this.$.physicsWorld.addRigidBody(body);
+    const colliderDesc = RAPIER.ColliderDesc.cuboid(10, 0.1, 10);
+    world.createCollider(colliderDesc, rigidBody);
   }
 
   createRandomSphere() {
-    const Ammo = this.$.ammo;
+    const RAPIER = this.$.rapier;
+    const world = this.$.physicsWorld;
     const radius = 0.3;
 
     const geometry = new this.THREE.SphereGeometry(radius, 16, 16);
@@ -79,54 +79,42 @@ class Scenario {
     mesh.position.set(0, 5, 0);
     this.$.scene.add(mesh);
 
-    const transform = new Ammo.btTransform();
-    transform.setIdentity();
-    transform.setOrigin(new Ammo.btVector3(0, 5, 0));
+    const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
+      .setTranslation(0, 5, 0);
+    const rigidBody = world.createRigidBody(rigidBodyDesc);
 
-    const shape = new Ammo.btSphereShape(radius);
-    const mass = 1;
-    const localInertia = new Ammo.btVector3(0, 0, 0);
-    shape.calculateLocalInertia(mass, localInertia);
+    const colliderDesc = RAPIER.ColliderDesc.ball(radius)
+      .setMass(1);
+    world.createCollider(colliderDesc, rigidBody);
 
-    const motionState = new Ammo.btDefaultMotionState(transform);
-    const rbInfo = new Ammo.btRigidBodyConstructionInfo(
-      mass, motionState, shape, localInertia
-    );
-    const body = new Ammo.btRigidBody(rbInfo);
-
-    this.$.physicsWorld.addRigidBody(body);
-
-    mesh.userData.physicsBody = body;
+    mesh.userData.physicsBody = rigidBody;
     this.rigidBodies.push(mesh);
   }
 
   updateRigidBodies() {
-    const Ammo = this.$.ammo;
-
     for (let i = 0; i < this.rigidBodies.length; i++) {
       const mesh = this.rigidBodies[i];
       const body = mesh.userData.physicsBody;
 
       if (!body) continue;
 
-      const ms = body.getMotionState();
-      if (ms) {
-        ms.getWorldTransform(this.tmpTrans);
-        const p = this.tmpTrans.getOrigin();
-        const q = this.tmpTrans.getRotation();
-        mesh.position.set(p.x(), p.y(), p.z());
-        mesh.quaternion.set(q.x(), q.y(), q.z(), q.w());
-      }
+      const position = body.translation();
+      const rotation = body.rotation();
+
+      mesh.position.set(position.x, position.y, position.z);
+      mesh.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
     }
   }
 
   cleanupFallenObjects() {
+    const world = this.$.physicsWorld;
+
     for (let i = this.rigidBodies.length - 1; i >= 0; i--) {
       const mesh = this.rigidBodies[i];
       if (mesh.position.y < -10) {
         this.$.scene.remove(mesh);
         if (mesh.userData.physicsBody) {
-          this.$.physicsWorld.removeRigidBody(mesh.userData.physicsBody);
+          world.removeRigidBody(mesh.userData.physicsBody);
         }
         this.rigidBodies.splice(i, 1);
       }
@@ -134,10 +122,12 @@ class Scenario {
   }
 
   async cleanup() {
+    const world = this.$.physicsWorld;
+
     for (const mesh of this.rigidBodies) {
       this.$.scene.remove(mesh);
       if (mesh.userData.physicsBody) {
-        this.$.physicsWorld.removeRigidBody(mesh.userData.physicsBody);
+        world.removeRigidBody(mesh.userData.physicsBody);
       }
     }
     this.rigidBodies = [];
@@ -174,8 +164,9 @@ describe('Physics Playground Scenario', () => {
       await runner.setup();
 
       const scope = runner.getScope();
-      // Ground physics body should be added
-      expect(scope.physicsWorld.addRigidBody).toHaveBeenCalled();
+      // Ground physics body should be created
+      expect(scope.physicsWorld.createRigidBody).toHaveBeenCalled();
+      expect(scope.physicsWorld.createCollider).toHaveBeenCalled();
     });
 
     it('should position camera for viewing', async () => {
@@ -222,11 +213,11 @@ describe('Physics Playground Scenario', () => {
 
     it('should add spheres to physics world', () => {
       const scope = runner.getScope();
-      const initialCalls = (scope.physicsWorld.addRigidBody as any).mock.calls.length;
+      const initialCalls = (scope.physicsWorld.createRigidBody as any).mock.calls.length;
 
       runner.updateForDuration(2.0);
 
-      const finalCalls = (scope.physicsWorld.addRigidBody as any).mock.calls.length;
+      const finalCalls = (scope.physicsWorld.createRigidBody as any).mock.calls.length;
       // 2 more bodies (2 spheres)
       expect(finalCalls - initialCalls).toBe(2);
     });

@@ -1,14 +1,13 @@
 class Scenario {
   /*
    * Description: Physics Playground
-   * Version: 1.0
+   * Version: 2.0 (Rapier.js)
    *
-   * This scenario demonstrates Ammo.js physics integration:
+   * This scenario demonstrates Rapier.js physics integration:
    * - Falling objects of various shapes (spheres, boxes, cylinders)
    * - Stacking blocks
    * - Pendulum simulation
    * - Domino chain reaction
-   * - Interactive ragdoll-like constraints
    */
   constructor(ctx) {
     console.log('[PhysicsPlayground] Initializing scenario');
@@ -18,7 +17,6 @@ class Scenario {
 
     // Physics state
     this.rigidBodies = [];
-    this.tmpTrans = null;
 
     // Spawn timers
     this.randomObjectTimer = 0;
@@ -41,13 +39,13 @@ class Scenario {
   async setup() {
     console.log('[PhysicsPlayground] Setting up scene');
 
-    const Ammo = this.$.ammo;
-    if (!Ammo) {
-      console.error('[PhysicsPlayground] Ammo.js not available!');
+    const RAPIER = this.$.rapier;
+    const world = this.$.physicsWorld;
+
+    if (!RAPIER || !world) {
+      console.error('[PhysicsPlayground] Rapier.js not available!');
       return;
     }
-
-    this.tmpTrans = new Ammo.btTransform();
 
     // Load VRM model
     await this.$.loadVrm(
@@ -67,8 +65,9 @@ class Scenario {
   }
 
   update(delta) {
-    const Ammo = this.$.ammo;
-    if (!Ammo) return;
+    const RAPIER = this.$.rapier;
+    const world = this.$.physicsWorld;
+    if (!RAPIER || !world) return;
 
     // Demo switching
     this.demoTimer += delta;
@@ -148,7 +147,6 @@ class Scenario {
 
   updatePendulumDemo(delta) {
     // Pendulum updates happen in physics automatically
-    // Could add forces or constraints here
   }
 
   updateDominoesDemo(delta) {
@@ -159,9 +157,9 @@ class Scenario {
         console.log('[PhysicsPlayground] 🎯 Pushing first domino!');
 
         const body = firstDomino.userData.physicsBody;
-        const impulse = new this.$.ammo.btVector3(3, 0, 0);
-        const relativePos = new this.$.ammo.btVector3(0, 0.5, 0);
-        body.applyImpulse(impulse, relativePos);
+        const impulse = { x: 3, y: 0, z: 0 };
+        const point = { x: 0, y: 0.5, z: 0 };
+        body.applyImpulseAtPoint(impulse, point, true);
 
         firstDomino.userData.pushed = true;
       }
@@ -169,7 +167,8 @@ class Scenario {
   }
 
   createGround() {
-    const Ammo = this.$.ammo;
+    const RAPIER = this.$.rapier;
+    const world = this.$.physicsWorld;
 
     // Visual ground
     const groundSize = 20;
@@ -185,40 +184,34 @@ class Scenario {
     groundMesh.receiveShadow = true;
     this.$.scene.add(groundMesh);
 
-    // Physics ground
-    const transform = new Ammo.btTransform();
-    transform.setIdentity();
-    transform.setOrigin(new Ammo.btVector3(0, 0, 0));
-    transform.setRotation(new Ammo.btQuaternion(
-      -Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)
-    ));
+    // Physics ground (static rigid body)
+    const rigidBodyDesc = RAPIER.RigidBodyDesc.fixed()
+      .setTranslation(0, 0, 0);
+    const rigidBody = world.createRigidBody(rigidBodyDesc);
 
-    const shape = new Ammo.btBoxShape(new Ammo.btVector3(groundSize / 2, 0.1, groundSize / 2));
-    const motionState = new Ammo.btDefaultMotionState(transform);
-    const rbInfo = new Ammo.btRigidBodyConstructionInfo(
-      0, motionState, shape, new Ammo.btVector3(0, 0, 0)
-    );
-    const body = new Ammo.btRigidBody(rbInfo);
-    body.setFriction(0.8);
-    this.$.physicsWorld.addRigidBody(body);
+    const colliderDesc = RAPIER.ColliderDesc.cuboid(groundSize / 2, 0.1, groundSize / 2)
+      .setFriction(0.8);
+    world.createCollider(colliderDesc, rigidBody);
 
     console.log('[PhysicsPlayground] Ground created');
   }
 
   createRandomObject(shapeType) {
-    const Ammo = this.$.ammo;
+    const RAPIER = this.$.rapier;
+    const world = this.$.physicsWorld;
+
     const spawnHeight = 4 + Math.random() * 2;
     const spawnX = (Math.random() - 0.5) * 4;
     const spawnZ = (Math.random() - 0.5) * 4;
 
-    let geometry, shape, size;
+    let geometry, colliderDesc, size;
     const color = new this.THREE.Color().setHSL(Math.random(), 0.8, 0.5);
 
     switch (shapeType) {
       case 'sphere': {
         const radius = 0.2 + Math.random() * 0.2;
         geometry = new this.THREE.SphereGeometry(radius, 16, 16);
-        shape = new Ammo.btSphereShape(radius);
+        colliderDesc = RAPIER.ColliderDesc.ball(radius);
         size = radius;
         break;
       }
@@ -227,7 +220,7 @@ class Scenario {
         const sizeY = 0.2 + Math.random() * 0.3;
         const sizeZ = 0.2 + Math.random() * 0.3;
         geometry = new this.THREE.BoxGeometry(sizeX * 2, sizeY * 2, sizeZ * 2);
-        shape = new Ammo.btBoxShape(new Ammo.btVector3(sizeX, sizeY, sizeZ));
+        colliderDesc = RAPIER.ColliderDesc.cuboid(sizeX, sizeY, sizeZ);
         size = Math.max(sizeX, sizeY, sizeZ);
         break;
       }
@@ -235,7 +228,7 @@ class Scenario {
         const radius = 0.2 + Math.random() * 0.2;
         const height = 0.4 + Math.random() * 0.4;
         geometry = new this.THREE.CylinderGeometry(radius, radius, height, 16);
-        shape = new Ammo.btCylinderShape(new Ammo.btVector3(radius, height / 2, radius));
+        colliderDesc = RAPIER.ColliderDesc.cylinder(height / 2, radius);
         size = Math.max(radius, height);
         break;
       }
@@ -255,27 +248,24 @@ class Scenario {
 
     // Physics
     const mass = size * size * size; // Approximate volume
-    const transform = new Ammo.btTransform();
-    transform.setIdentity();
-    transform.setOrigin(new Ammo.btVector3(spawnX, spawnHeight, spawnZ));
+    const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
+      .setTranslation(spawnX, spawnHeight, spawnZ);
+    const rigidBody = world.createRigidBody(rigidBodyDesc);
 
-    const localInertia = new Ammo.btVector3(0, 0, 0);
-    shape.calculateLocalInertia(mass, localInertia);
+    colliderDesc
+      .setMass(mass)
+      .setFriction(0.5)
+      .setRestitution(0.3);
+    world.createCollider(colliderDesc, rigidBody);
 
-    const motionState = new Ammo.btDefaultMotionState(transform);
-    const rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, shape, localInertia);
-    const body = new Ammo.btRigidBody(rbInfo);
-    body.setFriction(0.5);
-    body.setRestitution(0.3);
-
-    this.$.physicsWorld.addRigidBody(body);
-
-    mesh.userData.physicsBody = body;
+    mesh.userData.physicsBody = rigidBody;
     this.rigidBodies.push(mesh);
   }
 
   createStackBlock() {
-    const Ammo = this.$.ammo;
+    const RAPIER = this.$.rapier;
+    const world = this.$.physicsWorld;
+
     const blockSize = 0.5;
     const y = 0.25 + this.stackHeight * blockSize;
 
@@ -291,30 +281,22 @@ class Scenario {
     this.$.scene.add(mesh);
 
     // Physics
-    const mass = 1;
-    const transform = new Ammo.btTransform();
-    transform.setIdentity();
-    transform.setOrigin(new Ammo.btVector3(0, y, 0));
+    const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
+      .setTranslation(0, y, 0);
+    const rigidBody = world.createRigidBody(rigidBodyDesc);
 
-    const shape = new Ammo.btBoxShape(new Ammo.btVector3(blockSize / 2, blockSize / 2, blockSize / 2));
-    const localInertia = new Ammo.btVector3(0, 0, 0);
-    shape.calculateLocalInertia(mass, localInertia);
+    const colliderDesc = RAPIER.ColliderDesc.cuboid(blockSize / 2, blockSize / 2, blockSize / 2)
+      .setMass(1)
+      .setFriction(0.8);
+    world.createCollider(colliderDesc, rigidBody);
 
-    const motionState = new Ammo.btDefaultMotionState(transform);
-    const rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, shape, localInertia);
-    const body = new Ammo.btRigidBody(rbInfo);
-    body.setFriction(0.8);
-
-    this.$.physicsWorld.addRigidBody(body);
-
-    mesh.userData.physicsBody = body;
+    mesh.userData.physicsBody = rigidBody;
     this.rigidBodies.push(mesh);
 
     this.stackHeight++;
   }
 
   createPendulum() {
-    const Ammo = this.$.ammo;
     const pendulumCount = 5;
     const spacing = 0.5;
 
@@ -327,7 +309,9 @@ class Scenario {
   }
 
   createPendulumBall(x, y, z) {
-    const Ammo = this.$.ammo;
+    const RAPIER = this.$.rapier;
+    const world = this.$.physicsWorld;
+
     const radius = 0.2;
 
     // Visual
@@ -342,44 +326,44 @@ class Scenario {
     mesh.castShadow = true;
     this.$.scene.add(mesh);
 
-    // Physics
-    const mass = 1;
-    const transform = new Ammo.btTransform();
-    transform.setIdentity();
-    transform.setOrigin(new Ammo.btVector3(x, y - 2, z));
+    // Physics - Create dynamic body
+    const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
+      .setTranslation(x, y - 2, z);
+    const rigidBody = world.createRigidBody(rigidBodyDesc);
 
-    const shape = new Ammo.btSphereShape(radius);
-    const localInertia = new Ammo.btVector3(0, 0, 0);
-    shape.calculateLocalInertia(mass, localInertia);
+    const colliderDesc = RAPIER.ColliderDesc.ball(radius)
+      .setMass(1);
+    world.createCollider(colliderDesc, rigidBody);
 
-    const motionState = new Ammo.btDefaultMotionState(transform);
-    const rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, shape, localInertia);
-    const body = new Ammo.btRigidBody(rbInfo);
+    // Create fixed anchor point
+    const anchorDesc = RAPIER.RigidBodyDesc.fixed()
+      .setTranslation(x, y, z);
+    const anchor = world.createRigidBody(anchorDesc);
 
-    this.$.physicsWorld.addRigidBody(body);
+    // Create ball joint (spherical joint) to simulate rope
+    const params = RAPIER.JointData.spherical(
+      { x: 0, y: 0, z: 0 },  // anchor point on anchor body
+      { x: 0, y: 2, z: 0 }   // attach point on ball (2 units up from center)
+    );
+    const joint = world.createImpulseJoint(params, anchor, rigidBody, true);
 
-    // Point-to-point constraint (acts like a rope)
-    const pivotInWorld = new Ammo.btVector3(x, y, z);
-    const pivotInBody = new Ammo.btVector3(0, 0, 0);
-    const constraint = new Ammo.btPoint2PointConstraint(body, pivotInBody);
-    this.$.physicsWorld.addConstraint(constraint, false);
-
-    mesh.userData.physicsBody = body;
+    mesh.userData.physicsBody = rigidBody;
+    mesh.userData.anchor = anchor;
+    mesh.userData.joint = joint;
     this.rigidBodies.push(mesh);
-    this.pendulumBodies.push({ mesh, body, constraint });
+    this.pendulumBodies.push({ mesh, body: rigidBody, anchor, joint });
 
     // Give first ball initial impulse
     if (this.pendulumBodies.length === 1) {
       setTimeout(() => {
-        const impulse = new Ammo.btVector3(-5, 0, 0);
-        const relativePos = new Ammo.btVector3(0, 0, 0);
-        body.applyImpulse(impulse, relativePos);
+        const impulse = { x: -5, y: 0, z: 0 };
+        const point = { x: 0, y: 0, z: 0 };
+        rigidBody.applyImpulseAtPoint(impulse, point, true);
       }, 500);
     }
   }
 
   createDominoChain() {
-    const Ammo = this.$.ammo;
     const dominoCount = 15;
     const spacing = 0.6;
     const dominoWidth = 0.1;
@@ -395,7 +379,8 @@ class Scenario {
   }
 
   createDomino(x, y, z, width, height, depth) {
-    const Ammo = this.$.ammo;
+    const RAPIER = this.$.rapier;
+    const world = this.$.physicsWorld;
 
     // Visual
     const geometry = new this.THREE.BoxGeometry(width, height, depth);
@@ -410,54 +395,49 @@ class Scenario {
     this.$.scene.add(mesh);
 
     // Physics
-    const mass = 0.5;
-    const transform = new Ammo.btTransform();
-    transform.setIdentity();
-    transform.setOrigin(new Ammo.btVector3(x, y, z));
+    const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
+      .setTranslation(x, y, z);
+    const rigidBody = world.createRigidBody(rigidBodyDesc);
 
-    const shape = new Ammo.btBoxShape(new Ammo.btVector3(width / 2, height / 2, depth / 2));
-    const localInertia = new Ammo.btVector3(0, 0, 0);
-    shape.calculateLocalInertia(mass, localInertia);
+    const colliderDesc = RAPIER.ColliderDesc.cuboid(width / 2, height / 2, depth / 2)
+      .setMass(0.5)
+      .setFriction(0.5)
+      .setRestitution(0.1);
+    world.createCollider(colliderDesc, rigidBody);
 
-    const motionState = new Ammo.btDefaultMotionState(transform);
-    const rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, shape, localInertia);
-    const body = new Ammo.btRigidBody(rbInfo);
-    body.setFriction(0.5);
-    body.setRestitution(0.1);
-
-    this.$.physicsWorld.addRigidBody(body);
-
-    mesh.userData.physicsBody = body;
+    mesh.userData.physicsBody = rigidBody;
     this.rigidBodies.push(mesh);
   }
 
   updateRigidBodies() {
-    const Ammo = this.$.ammo;
-
     for (let i = 0; i < this.rigidBodies.length; i++) {
       const mesh = this.rigidBodies[i];
       const body = mesh.userData.physicsBody;
 
       if (!body) continue;
 
-      const ms = body.getMotionState();
-      if (ms) {
-        ms.getWorldTransform(this.tmpTrans);
-        const p = this.tmpTrans.getOrigin();
-        const q = this.tmpTrans.getRotation();
-        mesh.position.set(p.x(), p.y(), p.z());
-        mesh.quaternion.set(q.x(), q.y(), q.z(), q.w());
-      }
+      // Update mesh position and rotation from physics body
+      const position = body.translation();
+      const rotation = body.rotation();
+
+      mesh.position.set(position.x, position.y, position.z);
+      mesh.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
     }
   }
 
   cleanupFallenObjects() {
+    const world = this.$.physicsWorld;
+
     for (let i = this.rigidBodies.length - 1; i >= 0; i--) {
       const mesh = this.rigidBodies[i];
       if (mesh.position.y < -10) {
         this.$.scene.remove(mesh);
         if (mesh.userData.physicsBody) {
-          this.$.physicsWorld.removeRigidBody(mesh.userData.physicsBody);
+          world.removeRigidBody(mesh.userData.physicsBody);
+        }
+        // Remove anchor if it exists (for pendulum)
+        if (mesh.userData.anchor) {
+          world.removeRigidBody(mesh.userData.anchor);
         }
         this.rigidBodies.splice(i, 1);
       }
@@ -465,18 +445,17 @@ class Scenario {
   }
 
   clearAllPhysicsObjects() {
+    const world = this.$.physicsWorld;
+
     // Remove all rigid bodies
     for (const mesh of this.rigidBodies) {
       this.$.scene.remove(mesh);
       if (mesh.userData.physicsBody) {
-        this.$.physicsWorld.removeRigidBody(mesh.userData.physicsBody);
+        world.removeRigidBody(mesh.userData.physicsBody);
       }
-    }
-
-    // Remove constraints
-    for (const pendulum of this.pendulumBodies) {
-      if (pendulum.constraint) {
-        this.$.physicsWorld.removeConstraint(pendulum.constraint);
+      // Remove anchor if it exists (for pendulum)
+      if (mesh.userData.anchor) {
+        world.removeRigidBody(mesh.userData.anchor);
       }
     }
 

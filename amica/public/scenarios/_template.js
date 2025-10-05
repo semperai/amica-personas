@@ -76,12 +76,16 @@ class Scenario {
     // this.lights.push(dirLight);
 
     // ============================================
-    // SETUP PHYSICS (optional)
+    // SETUP PHYSICS (optional - using Rapier.js)
     // ============================================
-    // const Ammo = this.$.ammo;
-    // if (Ammo) {
-    //   this.tmpTrans = new Ammo.btTransform();
-    //   // Setup physics objects here
+    // const RAPIER = this.$.rapier;
+    // const world = this.$.physicsWorld;
+    // if (RAPIER && world) {
+    //   // Create a static ground
+    //   const groundDesc = RAPIER.RigidBodyDesc.fixed();
+    //   const ground = world.createRigidBody(groundDesc);
+    //   const colliderDesc = RAPIER.ColliderDesc.cuboid(10, 0.1, 10);
+    //   world.createCollider(colliderDesc, ground);
     // }
 
     // ============================================
@@ -176,10 +180,11 @@ class Scenario {
     // }
 
     // Remove physics bodies
-    // if (this.rigidBodies) {
+    // const world = this.$.physicsWorld;
+    // if (this.rigidBodies && world) {
     //   this.rigidBodies.forEach(mesh => {
     //     if (mesh.userData.physicsBody) {
-    //       this.$.physicsWorld.removeRigidBody(mesh.userData.physicsBody);
+    //       world.removeRigidBody(mesh.userData.physicsBody);
     //     }
     //   });
     // }

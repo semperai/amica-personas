@@ -2,28 +2,74 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { PhysicsSystem } from '@/features/scene3d/PhysicsSystem';
 import * as THREE from 'three';
 
-// Mock Ammo.js
-const mockAmmo = {
-  btDefaultCollisionConfiguration: vi.fn(),
-  btCollisionDispatcher: vi.fn(),
-  btDbvtBroadphase: vi.fn(),
-  btSequentialImpulseConstraintSolver: vi.fn(),
-  btDiscreteDynamicsWorld: vi.fn().mockReturnValue({
-    setGravity: vi.fn(),
-    stepSimulation: vi.fn(),
-  }),
-  btVector3: vi.fn(),
-  btTransform: vi.fn(),
-};
+// Mock Rapier.js
+let mockWorld: any;
+let mockEventQueue: any;
 
-global.window = {
-  Ammo: mockAmmo,
-} as any;
+vi.mock('@dimforge/rapier3d-compat', () => {
+  mockWorld = {
+    step: vi.fn(),
+    createRigidBody: vi.fn(),
+    createCollider: vi.fn(),
+    removeRigidBody: vi.fn(),
+    createImpulseJoint: vi.fn(),
+    gravity: { x: 0, y: -7.8, z: 0 },
+  };
+
+  mockEventQueue = {
+    drainCollisionEvents: vi.fn(),
+    drainContactForceEvents: vi.fn(),
+  };
+
+  return {
+    default: {
+      World: vi.fn(() => mockWorld),
+      EventQueue: vi.fn(() => mockEventQueue),
+      RigidBodyDesc: {
+        dynamic: vi.fn(() => ({
+          setTranslation: vi.fn().mockReturnThis(),
+          setRotation: vi.fn().mockReturnThis(),
+        })),
+        fixed: vi.fn(() => ({
+          setTranslation: vi.fn().mockReturnThis(),
+          setRotation: vi.fn().mockReturnThis(),
+        })),
+        kinematicPositionBased: vi.fn(() => ({
+          setTranslation: vi.fn().mockReturnThis(),
+          setRotation: vi.fn().mockReturnThis(),
+        })),
+      },
+      ColliderDesc: {
+        cuboid: vi.fn(() => ({
+          setMass: vi.fn().mockReturnThis(),
+          setFriction: vi.fn().mockReturnThis(),
+          setRestitution: vi.fn().mockReturnThis(),
+        })),
+        ball: vi.fn(() => ({
+          setMass: vi.fn().mockReturnThis(),
+          setFriction: vi.fn().mockReturnThis(),
+          setRestitution: vi.fn().mockReturnThis(),
+        })),
+        cylinder: vi.fn(() => ({
+          setMass: vi.fn().mockReturnThis(),
+          setFriction: vi.fn().mockReturnThis(),
+          setRestitution: vi.fn().mockReturnThis(),
+        })),
+      },
+      JointData: {
+        spherical: vi.fn(),
+      },
+    },
+  };
+});
 
 describe('PhysicsSystem', () => {
   let physicsSystem: PhysicsSystem;
 
   beforeEach(async () => {
+    // Reset gravity before each test
+    mockWorld.gravity = { x: 0, y: -7.8, z: 0 };
+
     physicsSystem = new PhysicsSystem();
     await physicsSystem.initialize();
   });
@@ -33,75 +79,29 @@ describe('PhysicsSystem', () => {
       expect(physicsSystem.isInitialized).toBe(true);
     });
 
-    it('should create physics world components', async () => {
-      expect(mockAmmo.btDefaultCollisionConfiguration).toHaveBeenCalled();
-      expect(mockAmmo.btCollisionDispatcher).toHaveBeenCalled();
-      expect(mockAmmo.btDbvtBroadphase).toHaveBeenCalled();
-      expect(mockAmmo.btSequentialImpulseConstraintSolver).toHaveBeenCalled();
-      expect(mockAmmo.btDiscreteDynamicsWorld).toHaveBeenCalled();
+    it('should create world and event queue', async () => {
+      expect(physicsSystem.getWorld()).toBeDefined();
+      expect(physicsSystem.getEventQueue()).toBeDefined();
     });
 
-    it('should return false when Ammo is undefined', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const originalAmmo = global.window.Ammo;
-
-      // @ts-ignore
-      delete global.window.Ammo;
-
-      const newSystem = new PhysicsSystem();
-      const result = await newSystem.initialize();
-
-      expect(result).toBe(false);
-      expect(consoleSpy).toHaveBeenCalledWith('Ammo not found');
-      expect(newSystem.isInitialized).toBe(false);
-
-      global.window.Ammo = originalAmmo;
-      consoleSpy.mockRestore();
-    });
-
-    it('should handle Ammo as a function', async () => {
-      const originalAmmo = global.window.Ammo;
-      const mockAmmoInstance = { ...mockAmmo };
-
-      global.window.Ammo = vi.fn().mockResolvedValue(mockAmmoInstance) as any;
-
-      const newSystem = new PhysicsSystem();
-      const result = await newSystem.initialize();
-
-      expect(result).toBe(true);
-      expect(global.window.Ammo).toHaveBeenCalled();
-
-      global.window.Ammo = originalAmmo;
-    });
-
-    it('should return false when ammo initialization fails', async () => {
-      const originalAmmo = global.window.Ammo;
-
-      global.window.Ammo = vi.fn().mockResolvedValue(null) as any;
-
-      const newSystem = new PhysicsSystem();
-      const result = await newSystem.initialize();
-
-      expect(result).toBe(false);
-      expect(newSystem.isInitialized).toBe(false);
-
-      global.window.Ammo = originalAmmo;
+    it('should have RAPIER module available', async () => {
+      expect(physicsSystem.getRAPIER()).toBeDefined();
     });
   });
 
   describe('stepSimulation', () => {
     it('should step physics simulation', () => {
       const delta = 0.016;
+
       physicsSystem.stepSimulation(delta);
 
-      const physicsWorld = physicsSystem.getPhysicsWorld();
-      expect(physicsWorld.stepSimulation).toHaveBeenCalledWith(delta, 10);
+      expect(mockWorld.step).toHaveBeenCalled();
     });
 
     it('should handle errors gracefully', () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const physicsWorld = physicsSystem.getPhysicsWorld();
-      physicsWorld.stepSimulation.mockImplementationOnce(() => {
+
+      mockWorld.step.mockImplementationOnce(() => {
         throw new Error('Physics error');
       });
 
@@ -109,6 +109,13 @@ describe('PhysicsSystem', () => {
       expect(consoleSpy).toHaveBeenCalled();
 
       consoleSpy.mockRestore();
+      // Restore step function
+      mockWorld.step.mockImplementation(() => {});
+    });
+
+    it('should not step when not initialized', () => {
+      const newSystem = new PhysicsSystem();
+      expect(() => newSystem.stepSimulation(0.016)).not.toThrow();
     });
   });
 
@@ -139,6 +146,18 @@ describe('PhysicsSystem', () => {
     it('should handle undefined VRM', () => {
       const windDir = new THREE.Vector3(1, 0, 0);
       expect(() => physicsSystem.applyWind(undefined, windDir, 1)).not.toThrow();
+    });
+  });
+
+  describe('helper methods', () => {
+    it('should create rigid body', () => {
+      const body = physicsSystem.createRigidBody('dynamic', { x: 0, y: 1, z: 0 });
+      expect(body).toBeDefined();
+    });
+
+    it('should set gravity', () => {
+      physicsSystem.setGravity(0, -9.81, 0);
+      expect(mockWorld.gravity).toEqual({ x: 0, y: -9.81, z: 0 });
     });
   });
 });
