@@ -13,8 +13,14 @@ const DynamicMessageInput = lazy(() =>
  */
 export const MessageInputContainer = ({
   isChatProcessing,
+  audioDevices,
+  selectedDeviceId,
+  micEnabled,
 }: {
   isChatProcessing: boolean;
+  audioDevices?: MediaDeviceInfo[];
+  selectedDeviceId?: string;
+  micEnabled?: boolean;
 }) => {
   const [userMessage, setUserMessage] = useState("");
 
@@ -31,6 +37,9 @@ export const MessageInputContainer = ({
         setUserMessage={setUserMessage}
         isChatProcessing={isChatProcessing}
         onChangeUserMessage={(e) => setUserMessage(e.target.value)}
+        audioDevices={audioDevices}
+        selectedDeviceId={selectedDeviceId}
+        micEnabled={micEnabled}
       />
     </Suspense>
   );

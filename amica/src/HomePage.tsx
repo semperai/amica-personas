@@ -12,6 +12,7 @@ import {
   CubeIcon,
   CubeTransparentIcon,
   LanguageIcon,
+  MicrophoneIcon,
   ShareIcon,
   SpeakerWaveIcon,
   SpeakerXMarkIcon,
@@ -23,6 +24,7 @@ import {
 import { IconBrain } from '@tabler/icons-react';
 
 import { MenuButton } from "@/components/menuButton";
+import { MicrophoneSettings } from "@/components/MicrophoneSettings";
 import { AssistantText } from "@/components/assistantText";
 import { Alert } from "@/components/alert";
 import { UserText } from "@/components/userText";
@@ -106,11 +108,37 @@ export default function Home() {
   const [webcamEnabled, setWebcamEnabled] = useState(false);
   const [showLanguageSelector, setShowLanguageSelector] = useState(false);
 
+  // Microphone settings
+  const [showMicSettings, setShowMicSettings] = useState(false);
+  const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('default');
+  const [autosendEnabled, setAutosendEnabled] = useState(config('autosend_from_mic') === 'true');
+  const [micEnabled, setMicEnabled] = useState(config('stt_backend') !== 'none');
+
   const [isARSupported, setIsARSupported] = useState(false);
   const [isVRSupported, setIsVRSupported] = useState(false);
 
   const [isVRHeadset, setIsVRHeadset] = useState(false);
 
+  // Load audio devices
+  useEffect(() => {
+    const loadAudioDevices = async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioInputs = devices.filter(device => device.kind === 'audioinput');
+        console.log('[Audio Devices] Found', audioInputs.length, 'audio input devices');
+        setAudioDevices(audioInputs);
+      } catch (err) {
+        console.error('[Audio Devices] Failed to enumerate devices:', err);
+      }
+    };
+
+    loadAudioDevices();
+    navigator.mediaDevices.addEventListener('devicechange', loadAudioDevices);
+    return () => {
+      navigator.mediaDevices.removeEventListener('devicechange', loadAudioDevices);
+    };
+  }, []);
 
   useEffect(() => {
     if (muted === null) {
@@ -266,7 +294,12 @@ export default function Home() {
         <VrmViewer chatMode={showChatMode}/>
       </VrmStoreProvider>
 
-      <MessageInputContainer isChatProcessing={chatProcessing} />
+      <MessageInputContainer
+        isChatProcessing={chatProcessing}
+        audioDevices={audioDevices}
+        selectedDeviceId={selectedDeviceId}
+        micEnabled={micEnabled}
+      />
 
       {/* main menu */}
       <div className="absolute z-10 m-2">
@@ -287,6 +320,26 @@ export default function Home() {
                 label="mute"
               />
             )}
+
+            <div className="relative">
+              <MenuButton
+                large={isVRHeadset}
+                icon={MicrophoneIcon}
+                onClick={() => setShowMicSettings(!showMicSettings)}
+                label="microphone settings"
+              />
+              <MicrophoneSettings
+                audioDevices={audioDevices}
+                selectedDeviceId={selectedDeviceId}
+                onDeviceChange={setSelectedDeviceId}
+                autosendEnabled={autosendEnabled}
+                onAutosendToggle={() => setAutosendEnabled(!autosendEnabled)}
+                micEnabled={micEnabled}
+                onMicToggle={() => setMicEnabled(!micEnabled)}
+                isOpen={showMicSettings}
+                onClose={() => setShowMicSettings(false)}
+              />
+            </div>
 
             { webcamEnabled ? (
               <MenuButton

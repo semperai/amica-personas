@@ -1,8 +1,3 @@
-import * as ort from "onnxruntime-web"
-ort.env.wasm.wasmPaths = '/assets/'
-ort.env.wasm.numThreads = 1
-ort.env.wasm.simd = true
-
 import { useContext, useEffect, useRef, useState } from "react";
 import { useMicVAD } from "@ricky0123/vad-react"
 import { Mic, Pause, Send, Loader2 } from "lucide-react";
@@ -22,6 +17,9 @@ export default function MessageInput({
   setUserMessage,
   isChatProcessing,
   onChangeUserMessage,
+  audioDevices = [],
+  selectedDeviceId = 'default',
+  micEnabled = true,
 }: {
   userMessage: string;
   setUserMessage: (message: string) => void;
@@ -29,6 +27,9 @@ export default function MessageInput({
   onChangeUserMessage: (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => void;
+  audioDevices?: MediaDeviceInfo[];
+  selectedDeviceId?: string;
+  micEnabled?: boolean;
 }) {
   const transcriber = useTranscriber();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -39,17 +40,34 @@ export default function MessageInput({
 
   const vad = useMicVAD({
     startOnLoad: false,
-    model: 'v5',
+    model: 'v5' as const,
     modelURL: '/silero_vad_v5.onnx',
     workletURL: '/vad.worklet.bundle.min.js',
-    baseAssetPath: '/',
-    onnxWASMBasePath: '/assets/',
     onFrameProcessed: (probabilities) => {
-      console.log('[VAD] Frame processed, speech probability:', probabilities.isSpeech);
+      // Log every 50 frames to verify processing is happening (more frequent for testing)
+      if (!window._vadFrameCount) {
+        window._vadFrameCount = 0;
+        console.log('[VAD] onFrameProcessed callback is firing! Starting frame count.');
+      }
+      window._vadFrameCount++;
+
+      if (window._vadFrameCount % 50 === 0) {
+        console.log('[VAD] Processed', window._vadFrameCount, 'frames, current speech probability:', probabilities.isSpeech, 'full probabilities:', probabilities);
+      }
+
+      if (probabilities.isSpeech > 0.3) {
+        console.log('[VAD] SPEECH DETECTED! Probability:', probabilities.isSpeech, 'full:', probabilities);
+      }
+    },
+    onVADMisfire: () => {
+      console.log('[VAD] VAD misfire (speech segment too short)');
     },
     onSpeechStart: () => {
       console.log('[VAD] ===== Speech started =====');
       console.time('performance_speech');
+    },
+    onSpeechRealStart: () => {
+      console.log('[VAD] ===== Speech REALLY started (not a misfire) =====');
     },
     onSpeechEnd: (audio: Float32Array) => {
       console.log('[VAD] ===== Speech ended =====');
@@ -135,12 +153,26 @@ export default function MessageInput({
     },
   });
 
-  console.log('[VAD] Status:', {
-    loading: vad.loading,
-    listening: vad.listening,
-    userSpeaking: vad.userSpeaking,
-    errored: vad.errored,
-  });
+  // Always print VAD status with setInterval for testing
+  const selectedDevice = audioDevices.find(d => d.deviceId === selectedDeviceId);
+
+  useEffect(() => {
+    const statusInterval = setInterval(() => {
+      console.log('[VAD] Status:', {
+        loading: vad.loading,
+        listening: vad.listening,
+        userSpeaking: vad.userSpeaking,
+        errored: !!vad.errored,
+        micEnabled,
+        selectedDeviceId,
+        selectedDeviceName: selectedDevice?.label || selectedDeviceId,
+        totalDevices: audioDevices.length,
+        frameCount: window._vadFrameCount || 0,
+      });
+    }, 2000); // Print every 2 seconds
+
+    return () => clearInterval(statusInterval);
+  }, [vad.loading, vad.listening, vad.userSpeaking, vad.errored, micEnabled, selectedDeviceId, selectedDevice, audioDevices.length]);
 
   if (vad.errored) {
     console.error('[VAD] ERROR:', vad.errored);
@@ -148,6 +180,24 @@ export default function MessageInput({
 
   useEffect(() => {
     console.log('[VAD] State changed - listening:', vad.listening, 'userSpeaking:', vad.userSpeaking);
+
+    // Check if we have an audio context and it's running
+    if (vad.listening) {
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+          console.log('[VAD] Microphone access granted');
+          console.log('[VAD] Audio tracks:', stream.getAudioTracks().map(t => ({
+            label: t.label,
+            enabled: t.enabled,
+            muted: t.muted,
+            readyState: t.readyState,
+          })));
+          // Don't stop the stream, VAD is using it
+        })
+        .catch(err => {
+          console.error('[VAD] Microphone access denied or failed:', err);
+        });
+    }
   }, [vad.listening, vad.userSpeaking]);
 
   function handleTranscriptionResult(preprocessed: string) {
@@ -227,13 +277,14 @@ export default function MessageInput({
         <div className="bg-white/20 backdrop-blur-xl border border-white/10 rounded-lg shadow-lg p-2">
           <div className="flex items-center gap-2">
             <button
-              disabled={config('stt_backend') === 'none' || vad.loading || Boolean(vad.errored)}
+              disabled={!micEnabled || config('stt_backend') === 'none' || vad.loading || Boolean(vad.errored)}
               onClick={() => {
                 console.log('[VAD] Microphone button clicked');
                 console.log('[VAD] Current state before toggle:', {
                   listening: vad.listening,
                   loading: vad.loading,
                   errored: vad.errored,
+                  micEnabled,
                   sttBackend: config('stt_backend'),
                 });
                 vad.toggle();
