@@ -5,3 +5,4 @@ dist/
 builds/*/
 !builds/.gitkeep
 coverage/
+test-results/
