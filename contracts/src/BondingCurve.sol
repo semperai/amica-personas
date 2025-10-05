@@ -101,9 +101,7 @@ contract BondingCurve {
         uint256 numerator = virtualToken * amountIn;
         uint256 denominator = virtualETH + amountIn;
 
-        // Check for overflow in multiplication
-        if (numerator / virtualToken != amountIn) revert Overflow();
-
+        // Note: Solidity 0.8.26+ has built-in overflow protection
         uint256 virtualTokenOut = numerator / denominator;
 
         // Cap output at available tokens
