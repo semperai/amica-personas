@@ -101,6 +101,12 @@ export async function loadConfig(): Promise<void> {
     return;
   }
 
+  // Start loading progress
+  if (typeof window !== "undefined") {
+    (window as any).chatvrm_loading_stage = { stage: "Loading configuration...", progress: 5 };
+    (window as any).chatvrm_loading_stage_cnt = ((window as any).chatvrm_loading_stage_cnt || 0) + 1;
+  }
+
   try {
     const response = await fetch('/config');
 

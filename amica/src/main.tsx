@@ -13,6 +13,12 @@ Sentry.init({
 
 // Load configuration before rendering the app
 loadConfig().then(() => {
+  // Remove the initial loading overlay
+  const initialLoading = document.getElementById('initial-loading');
+  if (initialLoading) {
+    initialLoading.remove();
+  }
+
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
       <App />

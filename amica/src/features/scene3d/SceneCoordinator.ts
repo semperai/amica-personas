@@ -198,6 +198,125 @@ export class SceneCoordinator {
     this.render?.getScreenshotBlob(callback);
   }
 
+  // Convenience getters for scenarios
+  public get ammo() {
+    return this.physics.isInitialized ? (window as any).Ammo : null;
+  }
+
+  public get scene(): THREE.Scene | undefined {
+    return this.render?.scene;
+  }
+
+  public get camera(): THREE.Camera | undefined {
+    return this.render?.camera;
+  }
+
+  public get renderer(): THREE.WebGLRenderer | undefined {
+    return this.render?.renderer;
+  }
+
+  public get physicsWorld() {
+    return this.physics.getPhysicsWorld();
+  }
+
+  public get igroup(): THREE.Group | undefined {
+    return this.render?.igroup;
+  }
+
+  public getModel() {
+    return this.vrm?.getModel();
+  }
+
+  public getElapsedTime(): number {
+    return this.clock.getElapsedTime();
+  }
+
+  // Animation control
+  public playAnimation(animationClip: THREE.AnimationClip) {
+    const model = this.vrm?.getModel();
+    if (model && animationClip) {
+      model.loadAnimation(animationClip);
+    }
+  }
+
+  // Emotion/Expression control
+  public setExpression(expressionName: string, value: number) {
+    const model = this.vrm?.getModel();
+    if (model?.vrm?.expressionManager) {
+      model.vrm.expressionManager.setValue(expressionName, value);
+    }
+  }
+
+  public triggerEmotion(emotion: string, duration?: number) {
+    const model = this.vrm?.getModel();
+    if (model?.emoteController) {
+      model.emoteController.playEmotion(emotion, duration);
+    }
+  }
+
+  // Camera control
+  public setCameraPosition(x: number, y: number, z: number) {
+    if (this.render?.camera) {
+      this.render.camera.position.set(x, y, z);
+    }
+  }
+
+  public setCameraLookAt(x: number, y: number, z: number) {
+    if (this.render?.camera) {
+      this.render.camera.lookAt(x, y, z);
+    }
+  }
+
+  // Lighting control
+  public addLight(light: THREE.Light) {
+    if (this.render?.scene) {
+      this.render.scene.add(light);
+      return light;
+    }
+    return null;
+  }
+
+  public removeLight(light: THREE.Light) {
+    if (this.render?.scene) {
+      this.render.scene.remove(light);
+    }
+  }
+
+  // Chat/Bot interaction
+  public sendMessage(message: string) {
+    if (this.chat) {
+      // Trigger chat message programmatically
+      this.chat.handleUserMessage?.(message);
+    }
+  }
+
+  // Splat loading
+  public async loadSplat(url: string) {
+    await this.environment?.loadSplat(url);
+  }
+
+  // Particle control
+  public createParticle(options: {
+    position: THREE.Vector3;
+    velocity: THREE.Vector3;
+    color?: THREE.Color;
+    size?: number;
+    lifetime?: number;
+  }) {
+    if (this.particles) {
+      const particle = this.particles.getRenderer().createParticle();
+      if (particle && options) {
+        particle.position.copy(options.position);
+        particle.velocity.copy(options.velocity);
+        if (options.color) particle.color.copy(options.color);
+        if (options.size !== undefined) particle.size = options.size;
+        if (options.lifetime !== undefined) particle.lifetime = options.lifetime;
+      }
+      return particle;
+    }
+    return null;
+  }
+
   // Main update loop
   public update(time?: DOMHighResTimeStamp, frame?: XRFrame) {
     let utime = performance.now();
