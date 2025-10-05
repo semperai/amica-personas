@@ -105,6 +105,7 @@ contract PersonaTokenFactory is
 
     /// @notice Slippage constants for PositionManager
     uint256 private constant MAX_SLIPPAGE_INCREASE = 5208; // 5208/10000 = ~52% increase allowance
+    uint256 private constant MAX_SLIPPAGE_DECREASE = 500; // 500/10000 = 5% decrease allowance
 
     /**
      * @notice Core data for each persona
@@ -1140,12 +1141,11 @@ contract PersonaTokenFactory is
 
         (bytes memory actions, bytes[] memory mintParams) = _mintLiquidityParams(
             poolKey,
-            TICK_LOWER, // full range
-            TICK_UPPER, // full range
+            TICK_LOWER,
+            TICK_UPPER,
             liquidity,
-            token0Amount, // max
-            token1Amount, // max
-            address(this), // recipient is the factory
+            token0Amount,
+            token1Amount,
             hookData
         );
 
@@ -1254,9 +1254,12 @@ contract PersonaTokenFactory is
         uint256 liquidity,
         uint256 amount0Max,
         uint256 amount1Max,
-        address recipient,
         bytes memory hookData
-    ) internal pure returns (bytes memory, bytes[] memory) {
+    ) internal view returns (bytes memory, bytes[] memory) {
+        // Calculate minimum amounts with slippage protection inline
+        uint256 amount0Min = (amount0Max * (10000 - MAX_SLIPPAGE_DECREASE)) / 10000;
+        uint256 amount1Min = (amount1Max * (10000 - MAX_SLIPPAGE_DECREASE)) / 10000;
+
         bytes memory actions = abi.encodePacked(
             uint8(Actions.MINT_POSITION),
             uint8(Actions.SETTLE_PAIR),
@@ -1272,12 +1275,12 @@ contract PersonaTokenFactory is
             liquidity,
             amount0Max,
             amount1Max,
-            recipient,
+            address(this), // recipient
             hookData
         );
         params[1] = abi.encode(poolKey.currency0, poolKey.currency1);
-        params[2] = abi.encode(poolKey.currency0, recipient);
-        params[3] = abi.encode(poolKey.currency1, recipient);
+        params[2] = abi.encode(poolKey.currency0, address(this));
+        params[3] = abi.encode(poolKey.currency1, address(this));
 
         return (actions, params);
     }
