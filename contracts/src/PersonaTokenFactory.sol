@@ -1318,7 +1318,7 @@ contract PersonaTokenFactory is
             _getTokenAmounts(persona.agentToken != address(0));
 
         // Send tokens to AMICA protocol
-        IERC20(persona.token).transfer(address(amicaToken), amounts.amica);
+        IERC20(persona.token).safeTransfer(address(amicaToken), amounts.amica);
 
         // If there are agent tokens, send them to persona token contract
         PreGraduationState storage preGradState = preGraduationStates[tokenId];
@@ -1326,7 +1326,7 @@ contract PersonaTokenFactory is
             persona.agentToken != address(0)
                 && preGradState.totalAgentDeposited > 0
         ) {
-            IERC20(persona.agentToken).transfer(
+            IERC20(persona.agentToken).safeTransfer(
                 persona.token, preGradState.totalAgentDeposited
             );
         }
