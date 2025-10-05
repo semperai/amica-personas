@@ -3,6 +3,7 @@
 /lib
 /builds
 /coverage
+/test-results
 
 /**Versions.json
 
