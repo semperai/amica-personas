@@ -426,18 +426,16 @@ class Scenario {
   }
 
   cleanupFallenObjects() {
-    const world = this.$.physicsWorld;
-
     for (let i = this.rigidBodies.length - 1; i >= 0; i--) {
       const mesh = this.rigidBodies[i];
       if (mesh.position.y < -10) {
         this.$.scene.remove(mesh);
         if (mesh.userData.physicsBody) {
-          world.removeRigidBody(mesh.userData.physicsBody);
+          this.$.removeRigidBody(mesh.userData.physicsBody);
         }
         // Remove anchor if it exists (for pendulum)
         if (mesh.userData.anchor) {
-          world.removeRigidBody(mesh.userData.anchor);
+          this.$.removeRigidBody(mesh.userData.anchor);
         }
         this.rigidBodies.splice(i, 1);
       }
@@ -445,17 +443,15 @@ class Scenario {
   }
 
   clearAllPhysicsObjects() {
-    const world = this.$.physicsWorld;
-
     // Remove all rigid bodies
     for (const mesh of this.rigidBodies) {
       this.$.scene.remove(mesh);
       if (mesh.userData.physicsBody) {
-        world.removeRigidBody(mesh.userData.physicsBody);
+        this.$.removeRigidBody(mesh.userData.physicsBody);
       }
       // Remove anchor if it exists (for pendulum)
       if (mesh.userData.anchor) {
-        world.removeRigidBody(mesh.userData.anchor);
+        this.$.removeRigidBody(mesh.userData.anchor);
       }
     }
 
