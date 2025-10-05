@@ -86,7 +86,7 @@ export class SceneCoordinator {
     this.particles = new ParticleManager(this.render.scene);
 
     // Setup callback to notify VRM manager when room is loaded
-    this.environment.setOnRoomLoadedCallback(() => {
+    this.environment.onRoomLoaded(() => {
       this.vrm?.roomWasLoaded();
     });
 
