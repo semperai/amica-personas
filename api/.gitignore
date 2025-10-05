@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+
+# Coverage
+coverage/
+
+# Environment files
+.env
+.env.local
+
+# Test outputs
+test-results/
+
+# Uploads
+uploads/
+
+# Temporary files
+*.log
+*.tmp
+*.mp3
+test.json
+
+# OS files
+.DS_Store
