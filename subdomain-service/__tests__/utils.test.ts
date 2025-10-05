@@ -3,8 +3,8 @@ import {
   getAmicaVersion,
   buildAmicaConfig,
   injectConfig,
-} from '../utils';
-import { Persona } from '../types';
+} from '../src/utils';
+import { Persona } from '../src/types';
 
 describe('parseSubdomain', () => {
   test('should parse valid subdomain', () => {
