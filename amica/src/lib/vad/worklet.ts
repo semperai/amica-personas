@@ -3,9 +3,9 @@
 
 const LOG_PREFIX = "[VAD Worklet]";
 const log = {
-  debug: (...args) => console.debug(LOG_PREFIX, ...args),
-  error: (...args) => console.error(LOG_PREFIX, ...args),
-  warn: (...args) => console.warn(LOG_PREFIX, ...args),
+  debug: (...args: any[]) => console.debug(LOG_PREFIX, ...args),
+  error: (...args: any[]) => console.error(LOG_PREFIX, ...args),
+  warn: (...args: any[]) => console.warn(LOG_PREFIX, ...args),
 };
 
 const Message = {
@@ -18,8 +18,17 @@ const Message = {
   FrameProcessed: "FRAME_PROCESSED",
 };
 
+interface ResamplerOptions {
+  nativeSampleRate: number;
+  targetSampleRate: number;
+  targetFrameSize: number;
+}
+
 class Resampler {
-  constructor(options) {
+  options: ResamplerOptions;
+  inputBuffer: number[];
+
+  constructor(options: ResamplerOptions) {
     this.options = options;
     if (options.nativeSampleRate < 16000) {
       log.error("nativeSampleRate is too low. Should have 16000 = targetSampleRate <= nativeSampleRate");
@@ -27,7 +36,7 @@ class Resampler {
     this.inputBuffer = [];
   }
 
-  process(inputFrame) {
+  process(inputFrame: Float32Array): Float32Array[] {
     const outputFrames = [];
     for (const sample of inputFrame) {
       this.inputBuffer.push(sample);
@@ -81,8 +90,18 @@ class Resampler {
   }
 }
 
+interface WorkletOptions {
+  frameSamples: number;
+}
+
 class VadWorkletProcessor extends AudioWorkletProcessor {
-  constructor(options) {
+  options: WorkletOptions;
+  resampler!: Resampler;
+  _initialized: boolean;
+  _stopProcessing: boolean;
+  _frameCount: number;
+
+  constructor(options: any) {
     super();
     this._initialized = false;
     this._stopProcessing = false;
@@ -119,7 +138,11 @@ class VadWorkletProcessor extends AudioWorkletProcessor {
     });
   }
 
-  process(inputs, outputs, parameters) {
+  process(
+    inputs: Float32Array[][],
+    outputs: Float32Array[][],
+    parameters: Record<string, Float32Array>
+  ): boolean {
     if (this._stopProcessing) {
       log.debug("Stop processing flag set, returning false");
       return false;
