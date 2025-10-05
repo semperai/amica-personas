@@ -5,6 +5,5 @@
   "exclude_low": false,
   "exclude_medium": false,
   "exclude_high": false,
-  "json": "-",
-  "markdown": "slither-report.md"
+  "json": "-"
 }
