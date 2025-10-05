@@ -104,6 +104,46 @@ describe('DebugSystem', () => {
 
       expect(mockGUI.add).toHaveBeenCalled();
     });
+
+    it('should setup y-offset with debounce', async () => {
+      vi.useFakeTimers();
+
+      const onRoomX = vi.fn();
+      const onRoomY = vi.fn();
+      const onRoomZ = vi.fn();
+      const onRoomScale = vi.fn();
+      const onYOffset = vi.fn();
+
+      // Track the onChange callback
+      let yOffsetOnChange: ((value: number) => void) | null = null;
+      mockGUI.add = vi.fn().mockImplementation(() => ({
+        onChange: vi.fn((callback: any) => {
+          yOffsetOnChange = callback;
+          return { onChange: vi.fn() };
+        })
+      }));
+
+      debugSystem.setupGUIControls(
+        onRoomX,
+        onRoomY,
+        onRoomZ,
+        onRoomScale,
+        onYOffset,
+      );
+
+      // Simulate y-offset changes
+      if (yOffsetOnChange) {
+        yOffsetOnChange(0.1);
+        yOffsetOnChange(0.15); // Should clear previous timeout
+
+        // Fast-forward time to trigger debounced callback
+        vi.advanceTimersByTime(1000);
+
+        expect(onYOffset).toHaveBeenCalledWith(0.15);
+      }
+
+      vi.useRealTimers();
+    });
   });
 
   describe('performance recording', () => {
