@@ -1,5 +1,5 @@
-import { useContext, useEffect, useRef, useState } from "react";
-import { useMicVAD } from "@ricky0123/vad-react"
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useMicVAD } from "@/hooks/useMicVAD"
 import { Mic, Pause, Send, Loader2 } from "lucide-react";
 import { useTranscriber } from "@/hooks/useTranscriber";
 import { cleanTranscript, cleanFromPunctuation, cleanFromWakeWord } from "@/utils/stringProcessing";
@@ -31,6 +31,8 @@ export default function MessageInput({
   selectedDeviceId?: string;
   micEnabled?: boolean;
 }) {
+  console.log('[ChatInput] Component render - selectedDeviceId:', selectedDeviceId);
+
   const transcriber = useTranscriber();
   const inputRef = useRef<HTMLInputElement>(null);
   const [whisperOpenAIOutput, setWhisperOpenAIOutput] = useState<any | null>(null);
@@ -38,11 +40,30 @@ export default function MessageInput({
   const { chat: bot } = useContext(ChatContext);
   const { alert } = useContext(AlertContext);
 
+  // Memoize getStream to prevent VAD from recreating on every render
+  const getStream = useMemo(() => {
+    console.log('[ChatInput] Creating new getStream function for deviceId:', selectedDeviceId);
+    return async () => {
+      console.log('[VAD] getStream called with deviceId:', selectedDeviceId);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          deviceId: selectedDeviceId !== 'default' ? { exact: selectedDeviceId } : undefined,
+          channelCount: 1,
+          echoCancellation: true,
+          autoGainControl: true,
+          noiseSuppression: true,
+        },
+      });
+      console.log('[VAD] Got stream with tracks:', stream.getAudioTracks().map(t => t.label));
+      return stream;
+    };
+  }, [selectedDeviceId]);
+
   const vad = useMicVAD({
     startOnLoad: false,
     model: 'v5' as const,
-    modelURL: '/silero_vad_v5.onnx',
-    workletURL: '/vad.worklet.bundle.min.js',
+    baseAssetPath: '/',
+    getStream,
     onFrameProcessed: (probabilities) => {
       // Log every 50 frames to verify processing is happening (more frequent for testing)
       if (!window._vadFrameCount) {
