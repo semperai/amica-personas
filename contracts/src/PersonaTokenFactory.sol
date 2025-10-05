@@ -436,7 +436,7 @@ contract PersonaTokenFactory is
 
     /**
      * @notice Pauses all contract operations
-     * @dev Only callable by owner
+     * @dev Only callable by owner. Emits Paused event from PausableUpgradeable.
      */
     function pause() external onlyOwner {
         _pause();
@@ -444,7 +444,7 @@ contract PersonaTokenFactory is
 
     /**
      * @notice Unpauses contract operations
-     * @dev Only callable by owner
+     * @dev Only callable by owner. Emits Unpaused event from PausableUpgradeable.
      */
     function unpause() external onlyOwner {
         _unpause();
