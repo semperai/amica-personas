@@ -128,41 +128,6 @@ describe('Room', () => {
     });
   });
 
-  describe('loadRoom legacy API', () => {
-    it('should support legacy loadRoom signature', async () => {
-      const mockScene = new THREE.Group();
-      const onProgress = vi.fn();
-      const mockLoader = {
-        load: vi.fn((url, onLoad, onProgressCallback, onError) => {
-          onProgressCallback({ loaded: 100, total: 100 });
-          onLoad({ scene: mockScene });
-        }),
-      };
-      (GLTFLoader as any).mockImplementation(() => mockLoader);
-
-      await room.loadRoom('test-room.glb', onProgress);
-
-      expect(room.room).toBe(mockScene);
-      expect(onProgress).toHaveBeenCalledWith('100% loaded');
-    });
-
-    it('should handle progress reporting with decimals', async () => {
-      const mockScene = new THREE.Group();
-      const onProgress = vi.fn();
-      const mockLoader = {
-        load: vi.fn((url, onLoad, onProgressCallback, onError) => {
-          onProgressCallback({ loaded: 33, total: 100 });
-          onLoad({ scene: mockScene });
-        }),
-      };
-      (GLTFLoader as any).mockImplementation(() => mockLoader);
-
-      await room.loadRoom('test-room.glb', onProgress);
-
-      expect(onProgress).toHaveBeenCalledWith('33% loaded');
-    });
-  });
-
   describe('loadSplat with config API', () => {
     it('should load splat with minimal config', async () => {
       const mockSplat = {
@@ -235,23 +200,6 @@ describe('Room', () => {
       // This test is skipped because mocking construction errors for Gaussian splat
       // requires complex mock setup that conflicts with the module-level mock
       // The error handling path is tested indirectly through the main loading tests
-    });
-  });
-
-  describe('loadSplat legacy API', () => {
-    it('should support legacy loadSplat signature', async () => {
-      const mockSplat = {
-        addSplatScene: vi.fn().mockResolvedValue(undefined),
-      };
-      const GaussianSplats3D = await import('@mkkellogg/gaussian-splats-3d');
-      (GaussianSplats3D.default.DropInViewer as any).mockImplementation(() => mockSplat);
-
-      await room.loadSplat('test-splat.ply');
-
-      expect(room.splat).toBe(mockSplat);
-      expect(mockSplat.addSplatScene).toHaveBeenCalledWith('test-splat.ply', {
-        splatAlphaRemovalThreshold: 20,
-      });
     });
   });
 
@@ -444,7 +392,10 @@ describe('Room', () => {
       };
       (GLTFLoader as any).mockImplementation(() => mockLoader);
 
-      await room.loadRoom('test-room.glb', onProgress);
+      await room.loadRoom({
+        url: 'test-room.glb',
+        onProgress,
+      });
 
       // NaN should result in "NaN% loaded" - this is the current behavior
       expect(onProgress).toHaveBeenCalled();

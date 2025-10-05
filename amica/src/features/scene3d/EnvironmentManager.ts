@@ -36,6 +36,14 @@ export interface SplatLoadConfig {
   rotation?: THREE.Euler;
   /** Scale of the splat */
   scale?: THREE.Vector3;
+  /** Enable progressive loading */
+  progressiveLoad?: boolean;
+  /** Use shared memory for workers (requires special headers) */
+  sharedMemoryForWorkers?: boolean;
+  /** Enable GPU-accelerated sorting */
+  gpuAcceleratedSort?: boolean;
+  /** Alpha removal threshold for splat optimization */
+  splatAlphaRemovalThreshold?: number;
   /** Completion callback */
   onComplete?: () => void;
   /** Error callback */
@@ -97,43 +105,13 @@ export class EnvironmentManager {
     return () => this.callbacks.onSplatLoaded.delete(callback);
   }
 
-  /**
-   * @deprecated Use onRoomLoaded() instead
-   */
-  public setOnRoomLoadedCallback(callback: () => void): void {
-    this.onRoomLoaded(callback);
-  }
 
   // ========== Room Management API ==========
 
   /**
    * Load a room with configuration options
    */
-  public async loadRoom(config: RoomLoadConfig): Promise<void>;
-  /**
-   * @deprecated Use loadRoom(config) instead
-   */
-  public async loadRoom(
-    url: string,
-    pos: THREE.Vector3,
-    rot: THREE.Euler,
-    scale: THREE.Vector3,
-    setLoadingProgress: (progress: string) => void,
-  ): Promise<void>;
-  public async loadRoom(
-    urlOrConfig: string | RoomLoadConfig,
-    pos?: THREE.Vector3,
-    rot?: THREE.Euler,
-    scale?: THREE.Vector3,
-    setLoadingProgress?: (progress: string) => void,
-  ): Promise<void> {
-    // Handle legacy API
-    if (typeof urlOrConfig === 'string') {
-      return this._loadRoomLegacy(urlOrConfig, pos!, rot!, scale!, setLoadingProgress!);
-    }
-
-    // Use new config-based API
-    const config = urlOrConfig;
+  public async loadRoom(config: RoomLoadConfig): Promise<void> {
     const {
       url,
       position = new THREE.Vector3(0, 0, 0),
@@ -156,16 +134,20 @@ export class EnvironmentManager {
       setLoadingStage("Loading environment...", 85);
 
       // Load room with progress tracking
-      await this.room.loadRoom(url, (progress: string) => {
-        onProgress?.(progress);
-        // Extract percentage from progress string like "45.67% loaded"
-        const match = progress.match(/(\d+\.?\d*)\s*%/);
-        if (match) {
-          const percentage = parseFloat(match[1]);
-          // Map room loading (0-100%) to our overall progress (85-95%)
-          const overallProgress = 85 + (percentage / 100) * 10;
-          setLoadingStage(`Loading environment... ${Math.round(percentage)}%`, overallProgress);
-        }
+      await this.room.loadRoom({
+        url,
+        onProgress: (progress: string) => {
+          onProgress?.(progress);
+          // Extract percentage from progress string like "45.67% loaded"
+          const match = progress.match(/(\d+\.?\d*)\s*%/);
+          if (match) {
+            const percentage = parseFloat(match[1]);
+            // Map room loading (0-100%) to our overall progress (85-95%)
+            const overallProgress = 85 + (percentage / 100) * 10;
+            setLoadingStage(`Loading environment... ${Math.round(percentage)}%`, overallProgress);
+          }
+        },
+        onError,
       });
 
       onProgress?.(`Room load complete`);
@@ -197,55 +179,6 @@ export class EnvironmentManager {
     }
   }
 
-  /**
-   * Legacy room loading implementation
-   * @private
-   */
-  private async _loadRoomLegacy(
-    url: string,
-    pos: THREE.Vector3,
-    rot: THREE.Euler,
-    scale: THREE.Vector3,
-    setLoadingProgress: (progress: string) => void,
-  ): Promise<void> {
-    if (this.room?.room) {
-      this.unloadRoom();
-    }
-
-    this.room = new Room();
-    setLoadingProgress("Loading room");
-    setLoadingStage("Loading environment...", 85);
-
-    // Wrap the room's progress callback to update our loading stage
-    await this.room.loadRoom(url, (progress: string) => {
-      setLoadingProgress(progress);
-      // Extract percentage from progress string like "45.67% loaded"
-      const match = progress.match(/(\d+\.?\d*)\s*%/);
-      if (match) {
-        const percentage = parseFloat(match[1]);
-        // Map room loading (0-100%) to our overall progress (85-95%)
-        const overallProgress = 85 + (percentage / 100) * 10;
-        setLoadingStage(`Loading environment... ${Math.round(percentage)}%`, overallProgress);
-      }
-    });
-
-    setLoadingProgress(`Room load complete`);
-    setLoadingStage("Environment loaded", 95);
-
-    if (!this.room?.room) return;
-
-    this.room.room.position.set(pos.x, pos.y, pos.z);
-    this.room.room.rotation.set(rot.x, rot.y, rot.z);
-    this.room.room.scale.set(scale.x, scale.y, scale.z);
-    this.scene.add(this.room.room);
-
-    // Notify that room was loaded
-    this.callbacks.onRoomLoaded.forEach(cb => cb());
-
-    setLoadingStage("Ready!", 100);
-    // Complete loading after a brief delay to show 100%
-    setTimeout(() => completeLoading(), 500);
-  }
 
   /**
    * Unload the current room and clean up resources
@@ -283,33 +216,33 @@ export class EnvironmentManager {
   /**
    * Load a Gaussian splat with configuration options
    */
-  public async loadSplat(config: SplatLoadConfig): Promise<void>;
-  /**
-   * @deprecated Use loadSplat(config) instead
-   */
-  public async loadSplat(url: string): Promise<void>;
-  public async loadSplat(urlOrConfig: string | SplatLoadConfig): Promise<void> {
-    // Handle legacy API
-    if (typeof urlOrConfig === 'string') {
-      return this._loadSplatLegacy(urlOrConfig);
-    }
-
-    // Use new config-based API
+  public async loadSplat(config: SplatLoadConfig): Promise<void> {
     const {
       url,
       position = new THREE.Vector3(0, 4, 0),
       rotation = new THREE.Euler(0, 0, Math.PI),
       scale,
+      progressiveLoad,
+      sharedMemoryForWorkers,
+      gpuAcceleratedSort,
+      splatAlphaRemovalThreshold,
       onComplete,
       onError,
-    } = urlOrConfig;
+    } = config;
 
     try {
       if (!this.room) {
         this.room = new Room();
       }
 
-      await this.room.loadSplat(url);
+      await this.room.loadSplat({
+        url,
+        progressiveLoad,
+        sharedMemoryForWorkers,
+        gpuAcceleratedSort,
+        splatAlphaRemovalThreshold,
+        onError,
+      });
 
       if (!this.room?.splat) {
         throw new Error("Splat failed to load");
@@ -333,24 +266,6 @@ export class EnvironmentManager {
     }
   }
 
-  /**
-   * Legacy splat loading implementation
-   * @private
-   */
-  private async _loadSplatLegacy(url: string): Promise<void> {
-    if (!this.room) {
-      this.room = new Room();
-    }
-
-    await this.room.loadSplat(url);
-    console.log("splat loaded");
-
-    if (!this.room?.splat) return;
-
-    this.room.splat.position.set(0, 4, 0);
-    this.room.splat.rotation.set(0, 0, Math.PI);
-    this.scene.add(this.room.splat);
-  }
 
   /**
    * Unload the current splat

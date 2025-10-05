@@ -174,7 +174,13 @@ export class SceneCoordinator {
     scale: THREE.Vector3,
     onProgress: (progress: string) => void,
   ) {
-    await this.environment?.loadRoom(url, pos, rot, scale, onProgress);
+    await this.environment?.loadRoom({
+      url,
+      position: pos,
+      rotation: rot,
+      scale,
+      onProgress,
+    });
 
     this.debug.params["room-x"] = pos.x;
     this.debug.params["room-y"] = pos.y;
@@ -292,7 +298,7 @@ export class SceneCoordinator {
 
   // Splat loading
   public async loadSplat(url: string) {
-    await this.environment?.loadSplat(url);
+    await this.environment?.loadSplat({ url });
   }
 
   // Particle control

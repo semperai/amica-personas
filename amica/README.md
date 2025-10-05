@@ -116,6 +116,20 @@ npm run tauri dev
 
 View the [documentation](https://docs.heyamica.com) for more information on how to configure and use Amica.
 
+### 📸 Screenshot Tool
+
+Amica includes an automated screenshot tool for capturing clean images without UI elements. Perfect for sharing your character on websites!
+
+```bash
+# Basic screenshot
+npm run screenshot
+
+# Custom configuration
+npm run screenshot -- --vrm_url=/vrm/model.vrm --bg_color=#ffffff --output=custom.png
+```
+
+See [docs/SCREENSHOT.md](docs/SCREENSHOT.md) for complete usage instructions.
+
 ## 📜 History
 
 This project originated as a fork of ChatVRM by Pixiv:

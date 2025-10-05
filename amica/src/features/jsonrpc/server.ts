@@ -857,12 +857,12 @@ export class JsonRpcServer {
       const rot = params.rotation || { x: 0, y: 0, z: 0 };
       const scale = params.scale || { x: 1, y: 1, z: 1 };
 
-      await ctx.viewer.environment.loadRoom(
-        params.roomUrl,
-        pos,
-        { x: rot.x, y: rot.y, z: rot.z } as any,
-        scale,
-        (progress) => {
+      await ctx.viewer.environment.loadRoom({
+        url: params.roomUrl,
+        position: new THREE.Vector3(pos.x, pos.y, pos.z),
+        rotation: new THREE.Euler(rot.x, rot.y, rot.z),
+        scale: new THREE.Vector3(scale.x, scale.y, scale.z),
+        onProgress: (progress) => {
           // Optionally send progress events
           if (params.onProgress && this.transport) {
             this.transport.broadcast({
@@ -872,7 +872,7 @@ export class JsonRpcServer {
             });
           }
         }
-      );
+      });
 
       const room = ctx.viewer.environment?.getRoom();
       return {
@@ -970,23 +970,20 @@ export class JsonRpcServer {
     });
 
     this.registerHandler('room.loadSplat', async (params, ctx) => {
-      const room = ctx.viewer.environment?.getRoom();
       if (!ctx.viewer.environment?.loadSplat) {
         throw new Error('Viewer not initialized');
       }
 
-      const pos = params.position || { x: 0, y: 0, z: 0 };
-      const rot = params.rotation || { x: 0, y: 0, z: 0 };
-      const scale = params.scale || { x: 1, y: 1, z: 1 };
+      const pos = params.position || { x: 0, y: 4, z: 0 };
+      const rot = params.rotation || { x: 0, y: 0, z: Math.PI };
+      const scale = params.scale;
 
-      await ctx.viewer.environment.loadSplat(params.splatUrl);
-
-      // Apply transform if provided
-      if (room) {
-        room.position.set(pos.x, pos.y, pos.z);
-        room.rotation.set(rot.x, rot.y, rot.z);
-        room.scale.set(scale.x, scale.y, scale.z);
-      }
+      await ctx.viewer.environment.loadSplat({
+        url: params.splatUrl,
+        position: new THREE.Vector3(pos.x, pos.y, pos.z),
+        rotation: new THREE.Euler(rot.x, rot.y, rot.z),
+        scale: scale ? new THREE.Vector3(scale.x, scale.y, scale.z) : undefined,
+      });
 
       return {
         success: true,

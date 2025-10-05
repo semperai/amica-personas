@@ -69,11 +69,6 @@ describe('EnvironmentManager', () => {
       expect(typeof unsubscribe).toBe('function');
     });
 
-    it('should support legacy setOnRoomLoadedCallback', () => {
-      const callback = vi.fn();
-      manager.setOnRoomLoadedCallback(callback);
-      // Should not throw
-    });
   });
 
   describe('loadRoom with config API', () => {
@@ -202,28 +197,6 @@ describe('EnvironmentManager', () => {
           url: 'test-room.glb',
         })
       ).rejects.toThrow('Room failed to load');
-    });
-  });
-
-  describe('loadRoom legacy API', () => {
-    it('should support legacy loadRoom signature', async () => {
-      const mockRoom = new Room();
-      mockRoom.room = new THREE.Group();
-      (mockRoom.loadRoom as any).mockResolvedValue(undefined);
-      (Room as any).mockImplementation(() => mockRoom);
-
-      const onProgress = vi.fn();
-
-      await manager.loadRoom(
-        'test-room.glb',
-        new THREE.Vector3(0, 0, 0),
-        new THREE.Euler(0, 0, 0),
-        new THREE.Vector3(1, 1, 1),
-        onProgress
-      );
-
-      expect(manager.hasRoom()).toBe(true);
-      expect(onProgress).toHaveBeenCalled();
     });
   });
 
@@ -401,26 +374,6 @@ describe('EnvironmentManager', () => {
       ).rejects.toThrow('Failed to load splat');
 
       expect(onError).toHaveBeenCalledWith(error);
-    });
-  });
-
-  describe('loadSplat legacy API', () => {
-    beforeEach(() => {
-      scene.add = vi.fn();
-    });
-
-    it('should support legacy loadSplat signature', async () => {
-      const mockRoom = new Room();
-      const mockSplatObj: any = {}
-      mockSplatObj.position = new THREE.Vector3();
-      mockSplatObj.rotation = new THREE.Euler();
-      mockRoom.splat = mockSplatObj;
-      (mockRoom.loadSplat as any).mockResolvedValue(undefined);
-      (Room as any).mockImplementation(() => mockRoom);
-
-      await manager.loadSplat('test-splat.ply');
-
-      expect(manager.hasSplat()).toBe(true);
     });
   });
 

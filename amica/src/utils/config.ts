@@ -93,6 +93,29 @@ let configLoaded = false;
 let configError: string | null = null;
 
 /**
+ * Parse URL parameters for config overrides
+ */
+function parseUrlConfigOverrides(): Record<string, string> {
+  const overrides: Record<string, string> = {};
+
+  if (typeof window === "undefined") {
+    return overrides;
+  }
+
+  const urlParams = new URLSearchParams(window.location.search);
+
+  // Check each URL parameter - if it matches a valid config key, use it as override
+  urlParams.forEach((value, key) => {
+    if (defaults.hasOwnProperty(key)) {
+      overrides[key] = value;
+      console.log(`[Config] URL override: ${key} = ${value}`);
+    }
+  });
+
+  return overrides;
+}
+
+/**
  * Load configuration from /config endpoint
  * Called once on app initialization
  */
@@ -143,6 +166,10 @@ export async function loadConfig(): Promise<void> {
     console.warn('[Config] Error loading config:', error);
     configError = error instanceof Error ? error.message : 'Unknown error';
   }
+
+  // Apply URL parameter overrides (highest priority)
+  const urlOverrides = parseUrlConfigOverrides();
+  Object.assign(loadedConfig, urlOverrides);
 
   configLoaded = true;
 }
