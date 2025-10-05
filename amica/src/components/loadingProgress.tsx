@@ -128,7 +128,7 @@ export function LoadingProgress() {
     <>
       {/* Main loading bar overlay */}
       {loadingStage && (
-        <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-white via-gray-50 to-gray-100 z-50 p-4" style={{ fontFamily: 'Fredoka, sans-serif' }}>
+        <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-white via-gray-50 to-gray-100 z-[9999] p-4" style={{ fontFamily: 'Fredoka, sans-serif' }}>
           <div className="w-full max-w-[600px] px-4 sm:px-8">
             {/* Stage text - larger on mobile */}
             <div className="text-gray-800 text-xl sm:text-2xl md:text-3xl mb-4 sm:mb-6 text-center font-bold tracking-wide">
