@@ -303,18 +303,19 @@ export class SceneCoordinator {
     size?: number;
     lifetime?: number;
   }) {
-    if (this.particles) {
-      const particle = this.particles.getRenderer().createParticle();
-      if (particle && options) {
-        particle.position.copy(options.position);
-        particle.velocity.copy(options.velocity);
-        if (options.color) particle.color.copy(options.color);
-        if (options.size !== undefined) particle.size = options.size;
-        if (options.lifetime !== undefined) particle.lifetime = options.lifetime;
-      }
-      return particle;
+    return this.particles?.createParticle(options);
+  }
+
+  public createParticleEffect(
+    type: 'fountain' | 'firework' | 'sparkle' | 'smoke' | 'magic' | 'energy' | 'custom',
+    position?: THREE.Vector3,
+    options?: {
+      color?: THREE.Color;
+      size?: number;
+      lifetime?: number;
     }
-    return null;
+  ) {
+    return this.particles?.createEffect(type, position, options);
   }
 
   // Main update loop
@@ -350,6 +351,9 @@ export class SceneCoordinator {
     ptime = performance.now();
     this.vrm?.updateModel(delta);
     this.debug.recordModelTime(performance.now() - ptime);
+
+    // Update particles
+    this.particles?.update(delta);
 
     // Render
     ptime = performance.now();

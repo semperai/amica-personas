@@ -6,6 +6,7 @@
  */
 
 import * as THREE from 'three';
+import { vi, type Mock } from 'vitest';
 
 export interface MockScope {
   // Scene
@@ -31,36 +32,37 @@ export interface MockScope {
   chat?: any;
 
   // Methods
-  loadVrm: jest.Mock;
-  unloadVRM: jest.Mock;
-  loadRoom: jest.Mock;
-  unloadRoom: jest.Mock;
-  loadSplat: jest.Mock;
-  playAnimation: jest.Mock;
-  setExpression: jest.Mock;
-  triggerEmotion: jest.Mock;
-  setCameraPosition: jest.Mock;
-  setCameraLookAt: jest.Mock;
-  addLight: jest.Mock;
-  removeLight: jest.Mock;
-  sendMessage: jest.Mock;
-  createParticle: jest.Mock;
-  getModel: jest.Mock;
-  getElapsedTime: jest.Mock;
+  loadVrm: Mock;
+  unloadVRM: Mock;
+  loadRoom: Mock;
+  unloadRoom: Mock;
+  loadSplat: Mock;
+  playAnimation: Mock;
+  setExpression: Mock;
+  triggerEmotion: Mock;
+  setCameraPosition: Mock;
+  setCameraLookAt: Mock;
+  addLight: Mock;
+  removeLight: Mock;
+  sendMessage: Mock;
+  createParticle: Mock;
+  createParticleEffect: Mock;
+  getModel: Mock;
+  getElapsedTime: Mock;
 }
 
 export interface MockHookManager {
-  register: jest.Mock;
-  unregister: jest.Mock;
-  trigger: jest.Mock;
-  getMetrics: jest.Mock;
+  register: Mock;
+  unregister: Mock;
+  trigger: Mock;
+  getMetrics: Mock;
 }
 
 export interface ScenarioTestContext {
   scope: MockScope;
   THREE: typeof THREE;
   hookManager: MockHookManager;
-  config: jest.Mock;
+  config: Mock;
 }
 
 export interface ScenarioTestOptions {
@@ -80,57 +82,57 @@ export function createMockScope(): MockScope {
 
   // Mock Rapier.js
   const mockRigidBody = {
-    translation: jest.fn().mockReturnValue({ x: 0, y: 0, z: 0 }),
-    rotation: jest.fn().mockReturnValue({ x: 0, y: 0, z: 0, w: 1 }),
-    setTranslation: jest.fn(),
-    setRotation: jest.fn(),
-    applyImpulse: jest.fn(),
-    applyImpulseAtPoint: jest.fn(),
+    translation: vi.fn().mockReturnValue({ x: 0, y: 0, z: 0 }),
+    rotation: vi.fn().mockReturnValue({ x: 0, y: 0, z: 0, w: 1 }),
+    setTranslation: vi.fn(),
+    setRotation: vi.fn(),
+    applyImpulse: vi.fn(),
+    applyImpulseAtPoint: vi.fn(),
   };
 
   const mockRapier = {
     RigidBodyDesc: {
-      dynamic: jest.fn().mockReturnValue({
-        setTranslation: jest.fn().mockReturnThis(),
-        setRotation: jest.fn().mockReturnThis(),
+      dynamic: vi.fn().mockReturnValue({
+        setTranslation: vi.fn().mockReturnThis(),
+        setRotation: vi.fn().mockReturnThis(),
       }),
-      fixed: jest.fn().mockReturnValue({
-        setTranslation: jest.fn().mockReturnThis(),
-        setRotation: jest.fn().mockReturnThis(),
+      fixed: vi.fn().mockReturnValue({
+        setTranslation: vi.fn().mockReturnThis(),
+        setRotation: vi.fn().mockReturnThis(),
       }),
-      kinematicPositionBased: jest.fn().mockReturnValue({
-        setTranslation: jest.fn().mockReturnThis(),
-        setRotation: jest.fn().mockReturnThis(),
+      kinematicPositionBased: vi.fn().mockReturnValue({
+        setTranslation: vi.fn().mockReturnThis(),
+        setRotation: vi.fn().mockReturnThis(),
       }),
     },
     ColliderDesc: {
-      cuboid: jest.fn().mockReturnValue({
-        setMass: jest.fn().mockReturnThis(),
-        setFriction: jest.fn().mockReturnThis(),
-        setRestitution: jest.fn().mockReturnThis(),
+      cuboid: vi.fn().mockReturnValue({
+        setMass: vi.fn().mockReturnThis(),
+        setFriction: vi.fn().mockReturnThis(),
+        setRestitution: vi.fn().mockReturnThis(),
       }),
-      ball: jest.fn().mockReturnValue({
-        setMass: jest.fn().mockReturnThis(),
-        setFriction: jest.fn().mockReturnThis(),
-        setRestitution: jest.fn().mockReturnThis(),
+      ball: vi.fn().mockReturnValue({
+        setMass: vi.fn().mockReturnThis(),
+        setFriction: vi.fn().mockReturnThis(),
+        setRestitution: vi.fn().mockReturnThis(),
       }),
-      cylinder: jest.fn().mockReturnValue({
-        setMass: jest.fn().mockReturnThis(),
-        setFriction: jest.fn().mockReturnThis(),
-        setRestitution: jest.fn().mockReturnThis(),
+      cylinder: vi.fn().mockReturnValue({
+        setMass: vi.fn().mockReturnThis(),
+        setFriction: vi.fn().mockReturnThis(),
+        setRestitution: vi.fn().mockReturnThis(),
       }),
     },
     JointData: {
-      spherical: jest.fn(),
+      spherical: vi.fn(),
     },
   };
 
   const mockPhysicsWorld = {
-    createRigidBody: jest.fn().mockReturnValue(mockRigidBody),
-    createCollider: jest.fn(),
-    removeRigidBody: jest.fn(),
-    createImpulseJoint: jest.fn(),
-    step: jest.fn(),
+    createRigidBody: vi.fn().mockReturnValue(mockRigidBody),
+    createCollider: vi.fn(),
+    removeRigidBody: vi.fn(),
+    createImpulseJoint: vi.fn(),
+    step: vi.fn(),
     gravity: { x: 0, y: -7.8, z: 0 },
   };
 
@@ -141,22 +143,23 @@ export function createMockScope(): MockScope {
     rapier: mockRapier,
     physicsWorld: mockPhysicsWorld,
 
-    loadVrm: jest.fn().mockResolvedValue(undefined),
-    unloadVRM: jest.fn(),
-    loadRoom: jest.fn().mockResolvedValue(undefined),
-    unloadRoom: jest.fn(),
-    loadSplat: jest.fn().mockResolvedValue(undefined),
-    playAnimation: jest.fn(),
-    setExpression: jest.fn(),
-    triggerEmotion: jest.fn(),
-    setCameraPosition: jest.fn((x, y, z) => camera.position.set(x, y, z)),
-    setCameraLookAt: jest.fn((x, y, z) => camera.lookAt(x, y, z)),
-    addLight: jest.fn((light) => scene.add(light)),
-    removeLight: jest.fn((light) => scene.remove(light)),
-    sendMessage: jest.fn(),
-    createParticle: jest.fn().mockReturnValue({}),
-    getModel: jest.fn().mockReturnValue(null),
-    getElapsedTime: jest.fn().mockReturnValue(0),
+    loadVrm: vi.fn().mockResolvedValue(undefined),
+    unloadVRM: vi.fn(),
+    loadRoom: vi.fn().mockResolvedValue(undefined),
+    unloadRoom: vi.fn(),
+    loadSplat: vi.fn().mockResolvedValue(undefined),
+    playAnimation: vi.fn(),
+    setExpression: vi.fn(),
+    triggerEmotion: vi.fn(),
+    setCameraPosition: vi.fn((x, y, z) => camera.position.set(x, y, z)),
+    setCameraLookAt: vi.fn((x, y, z) => camera.lookAt(x, y, z)),
+    addLight: vi.fn((light) => scene.add(light)),
+    removeLight: vi.fn((light) => scene.remove(light)),
+    sendMessage: vi.fn(),
+    createParticle: vi.fn().mockReturnValue({}),
+    createParticleEffect: vi.fn().mockReturnValue({}),
+    getModel: vi.fn().mockReturnValue(null),
+    getElapsedTime: vi.fn().mockReturnValue(0),
   };
 }
 
@@ -165,10 +168,10 @@ export function createMockScope(): MockScope {
  */
 export function createMockHookManager(): MockHookManager {
   return {
-    register: jest.fn().mockReturnValue('hook-id-123'),
-    unregister: jest.fn(),
-    trigger: jest.fn(),
-    getMetrics: jest.fn().mockReturnValue({
+    register: vi.fn().mockReturnValue('hook-id-123'),
+    unregister: vi.fn(),
+    trigger: vi.fn(),
+    getMetrics: vi.fn().mockReturnValue({
       calls: 0,
       avgDuration: 0,
       errors: 0,
@@ -179,7 +182,7 @@ export function createMockHookManager(): MockHookManager {
 /**
  * Create a mock config function for testing
  */
-export function createMockConfig(overrides: Record<string, string> = {}): jest.Mock {
+export function createMockConfig(overrides: Record<string, string> = {}): Mock {
   const defaults: Record<string, string> = {
     vrm_url: '/vrm/test.vrm',
     animation_url: '/animations/idle.vrma',
@@ -189,7 +192,7 @@ export function createMockConfig(overrides: Record<string, string> = {}): jest.M
     ...overrides,
   };
 
-  return jest.fn((key: string) => {
+  return vi.fn((key: string) => {
     if (!(key in defaults)) {
       throw new Error(`Config key not found: ${key}`);
     }
@@ -232,7 +235,7 @@ export class ScenarioTestRunner {
     // Setup mock elapsed time
     if (options.initialElapsedTime !== undefined) {
       this.totalDelta = options.initialElapsedTime;
-      this.context.scope.getElapsedTime = jest.fn(() => this.totalDelta);
+      this.context.scope.getElapsedTime = vi.fn(() => this.totalDelta);
     }
   }
 
@@ -255,7 +258,7 @@ export class ScenarioTestRunner {
       this.totalDelta += delta;
 
       // Update elapsed time mock
-      this.context.scope.getElapsedTime = jest.fn(() => this.totalDelta);
+      this.context.scope.getElapsedTime = vi.fn(() => this.totalDelta);
     }
   }
 
@@ -413,7 +416,7 @@ export class ScenarioAssertions {
     expect(scope.createParticle).toHaveBeenCalledTimes(
       expect.any(Number)
     );
-    expect((scope.createParticle as jest.Mock).mock.calls.length).toBeGreaterThanOrEqual(minCount);
+    expect((scope.createParticle as Mock).mock.calls.length).toBeGreaterThanOrEqual(minCount);
   }
 
   /**
@@ -441,7 +444,7 @@ export class ScenarioAssertions {
   static assertPhysicsBodyAdded(runner: ScenarioTestRunner, minCount: number = 1) {
     const scope = runner.getScope();
     expect(scope.physicsWorld.addRigidBody).toHaveBeenCalled();
-    expect((scope.physicsWorld.addRigidBody as jest.Mock).mock.calls.length)
+    expect((scope.physicsWorld.addRigidBody as Mock).mock.calls.length)
       .toBeGreaterThanOrEqual(minCount);
   }
 
