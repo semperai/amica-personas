@@ -262,20 +262,18 @@ type AmicaWithdrawal @entity {
 
 type FeeConfig @entity {
   id: ID! # "fee-config"
-  feePercentage: Int!
-  creatorShare: Int!
   minAmicaForReduction: BigInt!
   maxAmicaForReduction: BigInt!
-  minReductionMultiplier: Int!
-  maxReductionMultiplier: Int!
+  baseFee: Int! # uint24 - base fee in Uniswap V4 format (per million)
+  maxDiscountedFee: Int! # uint24 - maximum discounted fee (per million)
   lastUpdated: DateTime!
 }
 
 type UserSnapshot @entity {
   id: ID! # user address
   user: String! @unique @index
-  currentBalance: BigInt!
-  currentBlock: BigInt!
+  activeBalance: BigInt!
+  activeBlock: BigInt!
   pendingBalance: BigInt!
   pendingBlock: BigInt!
   lastUpdated: DateTime!

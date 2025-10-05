@@ -10,6 +10,7 @@ import { assertNotNull } from '@subsquid/util-internal'
 import { Store } from '@subsquid/typeorm-store'
 import * as factoryAbi from './abi/PersonaTokenFactory'
 import * as amicaAbi from './abi/AmicaTokenMainnet'
+import * as feeReductionAbi from './abi/FeeReductionSystem'
 
 // Base deployment data
 export const DEPLOYMENT = {
@@ -19,6 +20,8 @@ export const DEPLOYMENT = {
     amicaToken: '0xC0ba25570F4cB592e83FF5f052cC9DD69D5b3caE'.toLowerCase(),
     personaFactory: '0x62966fd253C2c3507A305f296E54cabD74AEA083'.toLowerCase(),
     erc20Implementation: '0x4b140c2d84c75D50E28b46f4126fF9C1c5e4C3DD'.toLowerCase(),
+    // TODO: Update this address when FeeReductionSystem is deployed
+    feeReductionSystem: '0x0000000000000000000000000000000000000000'.toLowerCase(),
   },
   startBlock: 31632211,
 }
@@ -86,11 +89,21 @@ export const processor = new EvmBatchProcessor()
       amicaAbi.events.TokenWithdrawn.topic,
     ]
   })
+  // FeeReductionSystem events (fee snapshots and config)
+  .addLog({
+    address: [DEPLOYMENT.addresses.feeReductionSystem],
+    topic0: [
+      feeReductionAbi.events.SnapshotUpdated.topic,
+      feeReductionAbi.events.SnapshotActivated.topic,
+      feeReductionAbi.events.FeeReductionConfigUpdated.topic,
+    ]
+  })
 
 // Log event topic registration
 console.log('Registered event topics:')
 console.log('- PersonaFactory:', Object.keys(factoryAbi.events).length, 'events')
 console.log('- AmicaToken:', Object.keys(amicaAbi.events).length, 'events')
+console.log('- FeeReductionSystem:', Object.keys(feeReductionAbi.events).length, 'events')
 
 export type Fields = EvmBatchProcessorFields<typeof processor>
 export type Context = DataHandlerContext<Store, Fields>

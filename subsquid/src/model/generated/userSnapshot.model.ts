@@ -14,10 +14,10 @@ export class UserSnapshot {
     user!: string
 
     @BigIntColumn_({nullable: false})
-    currentBalance!: bigint
+    activeBalance!: bigint
 
     @BigIntColumn_({nullable: false})
-    currentBlock!: bigint
+    activeBlock!: bigint
 
     @BigIntColumn_({nullable: false})
     pendingBalance!: bigint

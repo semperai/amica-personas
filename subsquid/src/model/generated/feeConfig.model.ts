@@ -1,4 +1,4 @@
-import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, IntColumn as IntColumn_, BigIntColumn as BigIntColumn_, DateTimeColumn as DateTimeColumn_} from "@subsquid/typeorm-store"
+import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, BigIntColumn as BigIntColumn_, IntColumn as IntColumn_, DateTimeColumn as DateTimeColumn_} from "@subsquid/typeorm-store"
 
 @Entity_()
 export class FeeConfig {
@@ -9,12 +9,6 @@ export class FeeConfig {
     @PrimaryColumn_()
     id!: string
 
-    @IntColumn_({nullable: false})
-    feePercentage!: number
-
-    @IntColumn_({nullable: false})
-    creatorShare!: number
-
     @BigIntColumn_({nullable: false})
     minAmicaForReduction!: bigint
 
@@ -22,10 +16,10 @@ export class FeeConfig {
     maxAmicaForReduction!: bigint
 
     @IntColumn_({nullable: false})
-    minReductionMultiplier!: number
+    baseFee!: number
 
     @IntColumn_({nullable: false})
-    maxReductionMultiplier!: number
+    maxDiscountedFee!: number
 
     @DateTimeColumn_({nullable: false})
     lastUpdated!: Date
