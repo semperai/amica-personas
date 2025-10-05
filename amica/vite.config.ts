@@ -27,14 +27,7 @@ export default defineConfig({
           src: 'node_modules/@xenova/transformers/dist/ort-wasm-simd.wasm',
           dest: 'assets',
         },
-        {
-          src: 'node_modules/@ricky0123/vad-web/dist/vad.worklet.bundle.min.js',
-          dest: 'assets',
-        },
-        {
-          src: 'node_modules/@ricky0123/vad-web/dist/*.onnx',
-          dest: 'assets',
-        },
+        // VAD worklet and models are now in public/ directory
         {
           src: 'node_modules/onnxruntime-web/dist/*.wasm',
           dest: 'assets',
