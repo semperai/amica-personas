@@ -10,6 +10,7 @@ import {ReentrancyGuardUpgradeable} from
 import {PausableUpgradeable} from
     "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {IPermit2} from "permit2/src/interfaces/IPermit2.sol";
@@ -77,6 +78,7 @@ contract PersonaTokenFactory is
     using Strings for uint256;
     using CurrencyLibrary for Currency;
     using PoolIdLibrary for PoolKey;
+    using SafeERC20 for IERC20;
 
     /// @notice Total supply for each persona token (1 billion with 18 decimals)
     uint256 private constant PERSONA_TOKEN_SUPPLY = 1_000_000_000 ether;
@@ -516,11 +518,9 @@ contract PersonaTokenFactory is
         if (IERC20(pairingToken).balanceOf(msg.sender) < totalPayment) {
             revert Insufficient(0);
         }
-        if (
-            !IERC20(pairingToken).transferFrom(
-                msg.sender, address(this), totalPayment
-            )
-        ) revert Failed(1);
+        IERC20(pairingToken).safeTransferFrom(
+            msg.sender, address(this), totalPayment
+        );
 
         uint256 tokenId = ++_currentTokenId;
         _mint(msg.sender, tokenId);
@@ -732,9 +732,7 @@ contract PersonaTokenFactory is
         bondingBalances[tokenId][msg.sender] -= amountIn;
 
         // Transfer pairing tokens to user
-        if (!IERC20(persona.pairToken).transfer(to, amountOut)) {
-            revert Failed(0);
-        }
+        IERC20(persona.pairToken).safeTransfer(to, amountOut);
 
         emit TokensSold(tokenId, msg.sender, amountIn, amountOut);
 
@@ -783,11 +781,9 @@ contract PersonaTokenFactory is
         }
 
         if (!isInternal) {
-            if (
-                !IERC20(persona.pairToken).transferFrom(
-                    msg.sender, address(this), amountIn
-                )
-            ) revert Failed(0);
+            IERC20(persona.pairToken).safeTransferFrom(
+                msg.sender, address(this), amountIn
+            );
         }
 
         preGradState.totalPairingTokensCollected += amountIn;
@@ -922,9 +918,7 @@ contract PersonaTokenFactory is
         hasClaimedTokens[tokenId][msg.sender] = true;
 
         // Transfer all persona tokens in one go
-        if (!IERC20(persona.token).transfer(msg.sender, totalClaimable)) {
-            revert Failed(0);
-        }
+        IERC20(persona.token).safeTransfer(msg.sender, totalClaimable);
 
         // Emit appropriate events
         if (purchasedAmount > 0) {
