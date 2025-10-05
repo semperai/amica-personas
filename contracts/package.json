@@ -5,6 +5,6 @@
   "description": "Amica Personas Smart Contracts",
   "scripts": {
     "test": "forge test",
-    "test:coverage": "forge coverage --report lcov && forge test --junit > test-results/junit.xml"
+    "test:coverage": "forge coverage --report lcov && mkdir -p test-results && forge test --junit > test-results/junit.xml"
   }
 }
