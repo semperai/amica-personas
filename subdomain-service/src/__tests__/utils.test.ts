@@ -2,9 +2,9 @@ import {
   parseSubdomain,
   getAmicaVersion,
   buildAmicaConfig,
-  escapeHtml,
-} from '../utils';
-import { Persona } from '../types';
+  injectConfig,
+} from '../src/utils';
+import { Persona } from '../src/types';
 
 describe('parseSubdomain', () => {
   test('should parse valid subdomain', () => {
@@ -145,41 +145,169 @@ describe('buildAmicaConfig', () => {
   });
 });
 
-describe('escapeHtml', () => {
-  test('should escape HTML special characters', () => {
-    const unsafe = '<script>alert("XSS")</script>';
-    const escaped = escapeHtml(unsafe);
+describe('injectConfig', () => {
+  const mockConfig = {
+    personaName: 'Test AI',
+    personaSymbol: 'TEST',
+    chainId: 42161,
+    tokenId: '123',
+    domain: 'test-ai',
+    erc20Token: '0xtoken',
+    creator: '0xcreator',
+    owner: '0xowner',
+    isGraduated: false,
+    metadata: {
+      system_prompt: 'You are a helpful AI',
+      vrm_url: 'https://example.com/avatar.vrm',
+      bg_color: '#FF5733',
+      bg_url: 'https://example.com/bg.jpg',
+      openai_apikey: 'sk-test-key',
+      chatbot_backend: 'openai',
+    },
+  };
 
-    expect(escaped).toBe('&lt;script&gt;alert(&quot;XSS&quot;)&lt;/script&gt;');
-    expect(escaped).not.toContain('<');
-    expect(escaped).not.toContain('>');
+  test('should inject script before </head>', () => {
+    const html = '<html><head><title>Test</title></head><body></body></html>';
+    const result = injectConfig(html, mockConfig);
+
+    expect(result).toContain('<script>');
+    expect(result).toContain('window.__AMICA_PERSONA__');
+    expect(result).toContain('</script>');
+    expect(result.indexOf('</script>')).toBeLessThan(result.indexOf('</head>'));
   });
 
-  test('should escape ampersands', () => {
-    expect(escapeHtml('Tom & Jerry')).toBe('Tom &amp; Jerry');
+  test('should inject script at beginning of <body> if no </head>', () => {
+    const html = '<html><body><h1>Test</h1></body></html>';
+    const result = injectConfig(html, mockConfig);
+
+    expect(result).toContain('<script>');
+    expect(result.indexOf('<script>')).toBeLessThan(result.indexOf('<h1>'));
   });
 
-  test('should escape quotes', () => {
-    expect(escapeHtml('He said "hello"')).toBe('He said &quot;hello&quot;');
-    expect(escapeHtml("It's fine")).toBe('It&#039;s fine');
+  test('should inject script at beginning if no standard tags', () => {
+    const html = '<div>Test</div>';
+    const result = injectConfig(html, mockConfig);
+
+    expect(result).toContain('<script>');
+    expect(result.indexOf('<script>')).toBe(0);
   });
 
-  test('should handle empty string', () => {
-    expect(escapeHtml('')).toBe('');
+  test('should inject persona name as localStorage', () => {
+    const html = '<html><head></head><body></body></html>';
+    const result = injectConfig(html, mockConfig);
+
+    expect(result).toContain("localStorage.setItem('chatvrm_name', \"Test AI\")");
   });
 
-  test('should handle string with no special chars', () => {
-    expect(escapeHtml('Normal text 123')).toBe('Normal text 123');
+  test('should inject all valid metadata as localStorage', () => {
+    const html = '<html><head></head><body></body></html>';
+    const result = injectConfig(html, mockConfig);
+
+    expect(result).toContain("localStorage.setItem('chatvrm_system_prompt'");
+    expect(result).toContain("localStorage.setItem('chatvrm_vrm_url'");
+    expect(result).toContain("localStorage.setItem('chatvrm_bg_color'");
+    expect(result).toContain("localStorage.setItem('chatvrm_bg_url'");
+    expect(result).toContain("localStorage.setItem('chatvrm_openai_apikey'");
+    expect(result).toContain("localStorage.setItem('chatvrm_chatbot_backend'");
   });
 
-  test('should escape multiple special characters', () => {
-    const unsafe = `<div class="test" data-value='5 & 6'>Text</div>`;
-    const escaped = escapeHtml(unsafe);
+  test('should not inject invalid config keys as localStorage', () => {
+    const configWithInvalidKeys = {
+      ...mockConfig,
+      metadata: {
+        system_prompt: 'Test',
+        invalid_key_that_doesnt_exist: 'Should not be injected',
+        another_fake_key: 'Also should not appear',
+      },
+    };
 
-    expect(escaped).toContain('&lt;');
-    expect(escaped).toContain('&gt;');
-    expect(escaped).toContain('&quot;');
-    expect(escaped).toContain('&#039;');
-    expect(escaped).toContain('&amp;');
+    const html = '<html><head></head><body></body></html>';
+    const result = injectConfig(html, configWithInvalidKeys);
+
+    // Valid key should be injected
+    expect(result).toContain("localStorage.setItem('chatvrm_system_prompt'");
+
+    // Invalid keys should NOT be in localStorage.setItem calls
+    expect(result).not.toContain("localStorage.setItem('chatvrm_invalid_key_that_doesnt_exist'");
+    expect(result).not.toContain("localStorage.setItem('chatvrm_another_fake_key'");
+
+    // But they will still appear in window.__AMICA_PERSONA__ (full config storage)
+    expect(result).toContain('window.__AMICA_PERSONA__');
+  });
+
+  test('should store full persona config in window.__AMICA_PERSONA__', () => {
+    const html = '<html><head></head><body></body></html>';
+    const result = injectConfig(html, mockConfig);
+
+    expect(result).toContain('window.__AMICA_PERSONA__ =');
+    expect(result).toContain('"personaName": "Test AI"');
+    expect(result).toContain('"chainId": 42161');
+    expect(result).toContain('"tokenId": "123"');
+  });
+
+  test('should properly escape JSON strings', () => {
+    const configWithSpecialChars = {
+      ...mockConfig,
+      metadata: {
+        system_prompt: 'You are "AI" with \'quotes\' and\nnewlines',
+      },
+    };
+
+    const html = '<html><head></head><body></body></html>';
+    const result = injectConfig(html, configWithSpecialChars);
+
+    // Should not break the script
+    expect(result).toContain('<script>');
+    expect(result).toContain('</script>');
+    // Should be valid JSON
+    expect(() => {
+      const scriptMatch = result.match(/window\.__AMICA_PERSONA__ = ({.*?});/s);
+      if (scriptMatch) {
+        JSON.parse(scriptMatch[1]);
+      }
+    }).not.toThrow();
+  });
+
+  test('should handle empty metadata', () => {
+    const configNoMetadata = {
+      ...mockConfig,
+      metadata: {},
+    };
+
+    const html = '<html><head></head><body></body></html>';
+    const result = injectConfig(html, configNoMetadata);
+
+    // Should still inject persona name
+    expect(result).toContain("localStorage.setItem('chatvrm_name'");
+    // Should still have the persona config
+    expect(result).toContain('window.__AMICA_PERSONA__');
+  });
+
+  test('should handle all config keys dynamically', () => {
+    const allConfigKeys = {
+      ...mockConfig,
+      metadata: {
+        // Test a variety of config keys
+        tts_backend: 'elevenlabs',
+        stt_backend: 'whisper',
+        wake_word: 'Hey AI',
+        elevenlabs_apikey: 'test-key',
+        openai_model: 'gpt-4',
+        bg_color: '#000000',
+        animation_url: '/animations/custom.vrma',
+      },
+    };
+
+    const html = '<html><head></head><body></body></html>';
+    const result = injectConfig(html, allConfigKeys);
+
+    // All should be injected
+    expect(result).toContain("localStorage.setItem('chatvrm_tts_backend'");
+    expect(result).toContain("localStorage.setItem('chatvrm_stt_backend'");
+    expect(result).toContain("localStorage.setItem('chatvrm_wake_word'");
+    expect(result).toContain("localStorage.setItem('chatvrm_elevenlabs_apikey'");
+    expect(result).toContain("localStorage.setItem('chatvrm_openai_model'");
+    expect(result).toContain("localStorage.setItem('chatvrm_bg_color'");
+    expect(result).toContain("localStorage.setItem('chatvrm_animation_url'");
   });
 });
