@@ -55,7 +55,7 @@ export const functions = {
     pause: fun("0x8456cb59", "pause()", {}, ),
     paused: viewFun("0x5c975abb", "paused()", {}, p.bool),
     personaTokenImplementation: viewFun("0x77974f11", "personaTokenImplementation()", {}, p.address),
-    personas: viewFun("0x40291e6a", "personas(uint256)", {"_0": p.uint256}, {"token": p.address, "pairToken": p.address, "agentToken": p.address, "graduationTimestamp": p.uint256, "agentTokenThreshold": p.uint256, "poolId": p.bytes32}),
+    personas: viewFun("0x40291e6a", "personas(uint256)", {"_0": p.uint256}, {"token": p.address, "pairToken": p.address, "agentToken": p.address, "graduationTimestamp": p.uint256, "agentTokenThreshold": p.uint256, "poolId": p.bytes32, "positionTokenId": p.uint256}),
     poolManager: viewFun("0xdc4c90d3", "poolManager()", {}, p.address),
     positionManager: viewFun("0x791b98bc", "positionManager()", {}, p.address),
     preGraduationStates: viewFun("0x8b40d243", "preGraduationStates(uint256)", {"_0": p.uint256}, {"totalPairingTokensCollected": p.uint256, "tokensPurchased": p.uint256, "totalAgentDeposited": p.uint256}),

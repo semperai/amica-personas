@@ -9,7 +9,6 @@ import {
 import { assertNotNull } from '@subsquid/util-internal'
 import { Store } from '@subsquid/typeorm-store'
 import * as factoryAbi from './abi/PersonaTokenFactory'
-import * as bridgeAbi from './abi/AmicaBridgeWrapper'
 import * as amicaAbi from './abi/AmicaTokenMainnet'
 
 // Base deployment data
@@ -19,7 +18,6 @@ export const DEPLOYMENT = {
   addresses: {
     amicaToken: '0xC0ba25570F4cB592e83FF5f052cC9DD69D5b3caE'.toLowerCase(),
     personaFactory: '0x62966fd253C2c3507A305f296E54cabD74AEA083'.toLowerCase(),
-    bridgeWrapper: '0xe17B125b85AbCC0Ff212cf33d06d928d4736aA04'.toLowerCase(),
     erc20Implementation: '0x4b140c2d84c75D50E28b46f4126fF9C1c5e4C3DD'.toLowerCase(),
   },
   startBlock: 31632211,
@@ -77,17 +75,6 @@ export const processor = new EvmBatchProcessor()
       factoryAbi.events.PairingConfigUpdated.topic,
     ]
   })
-  // BridgeWrapper events
-  .addLog({
-    address: [DEPLOYMENT.addresses.bridgeWrapper],
-    topic0: [
-      bridgeAbi.events.TokensWrapped.topic,
-      bridgeAbi.events.TokensUnwrapped.topic,
-      bridgeAbi.events.EmergencyWithdraw.topic,
-      bridgeAbi.events.BridgeMetricsUpdated.topic,
-      bridgeAbi.events.BridgeTokensUpdated.topic,
-    ]
-  })
   // AmicaToken events (track all AMICA transfers and claims)
   .addLog({
     address: [DEPLOYMENT.addresses.amicaToken],
@@ -103,7 +90,6 @@ export const processor = new EvmBatchProcessor()
 // Log event topic registration
 console.log('Registered event topics:')
 console.log('- PersonaFactory:', Object.keys(factoryAbi.events).length, 'events')
-console.log('- BridgeWrapper:', Object.keys(bridgeAbi.events).length, 'events')
 console.log('- AmicaToken:', Object.keys(amicaAbi.events).length, 'events')
 
 export type Fields = EvmBatchProcessorFields<typeof processor>

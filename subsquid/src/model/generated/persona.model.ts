@@ -52,6 +52,9 @@ export class Persona {
     @StringColumn_({nullable: true})
     poolId!: string | undefined | null
 
+    @BigIntColumn_({nullable: true})
+    positionTokenId!: bigint | undefined | null
+
     @BooleanColumn_({nullable: false})
     pairCreated!: boolean
 

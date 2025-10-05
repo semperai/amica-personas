@@ -1,7 +1,6 @@
 import { TypeormDatabase } from '@subsquid/typeorm-store'
 import { processor, Context, Log, DEPLOYMENT } from './processor'
 import * as factoryAbi from './abi/PersonaTokenFactory'
-import * as bridgeAbi from './abi/AmicaBridgeWrapper'
 import * as amicaAbi from './abi/AmicaTokenMainnet'
 import {
   Persona,
@@ -9,8 +8,6 @@ import {
   Trade,
   AgentDeposit,
   AgentReward,
-  BridgeActivity,
-  BridgeAction,
   FeeConfig,
   UserSnapshot,
   GlobalStats,
@@ -32,13 +29,6 @@ import {
   handleAgentTokensWithdrawn,
   handleAgentRewardsDistributed
 } from './handlers/agent'
-import {
-  handleTokensWrapped,
-  handleTokensUnwrapped,
-  handleEmergencyWithdraw,
-  handleBridgeMetricsUpdated,
-  handleBridgeTokensUpdated
-} from './handlers/bridge'
 import { handleAmicaTransfer, handleAmicaTokenClaimed, handleAmicaTokenDeposited, handleAmicaTokenConfigured, handleAmicaTokenWithdrawn } from './handlers/amica-token'
 import { updateGlobalStats, updateDailyStats } from './handlers/stats'
 import { handleTransfer } from './handlers/transfers'
@@ -53,7 +43,6 @@ console.log(`Chain: ${DEPLOYMENT.chainName} (${DEPLOYMENT.chainId})`)
 console.log(`Start Block: ${DEPLOYMENT.startBlock}`)
 console.log('Addresses:')
 console.log(`  - PersonaFactory: ${DEPLOYMENT.addresses.personaFactory}`)
-console.log(`  - BridgeWrapper: ${DEPLOYMENT.addresses.bridgeWrapper}`)
 console.log(`  - AmicaToken: ${DEPLOYMENT.addresses.amicaToken}`)
 console.log('Environment:')
 console.log(`  - RPC_BASE_HTTP: ${process.env.RPC_BASE_HTTP ? 'Set' : 'Not set'}`)
@@ -71,7 +60,6 @@ processor.run(new TypeormDatabase({ supportHotBlocks: true }), async (ctx) => {
   let totalLogsProcessed = 0
   let eventsProcessed = {
     personaFactory: 0,
-    bridgeWrapper: 0,
     amicaToken: 0,
     errors: 0
   }
@@ -198,45 +186,6 @@ processor.run(new TypeormDatabase({ supportHotBlocks: true }), async (ctx) => {
           }
         }
 
-        // BridgeWrapper events
-        else if (address === DEPLOYMENT.addresses.bridgeWrapper) {
-          eventsProcessed.bridgeWrapper++
-          const topic = log.topics[0]
-          ctx.log.debug(`BridgeWrapper event: ${topic} at block ${blockNumber}`)
-
-          switch (topic) {
-            case bridgeAbi.events.TokensWrapped.topic:
-              ctx.log.info('Processing TokensWrapped event')
-              await handleTokensWrapped(ctx, log, timestamp, blockNumber)
-              datesToUpdate.add(getDateString(timestamp))
-              break
-
-            case bridgeAbi.events.TokensUnwrapped.topic:
-              ctx.log.info('Processing TokensUnwrapped event')
-              await handleTokensUnwrapped(ctx, log, timestamp, blockNumber)
-              datesToUpdate.add(getDateString(timestamp))
-              break
-
-            case bridgeAbi.events.EmergencyWithdraw.topic:
-              ctx.log.info('Processing EmergencyWithdraw event')
-              await handleEmergencyWithdraw(ctx, log, timestamp, blockNumber)
-              break
-
-            case bridgeAbi.events.BridgeMetricsUpdated.topic:
-              ctx.log.info('Processing BridgeMetricsUpdated event')
-              await handleBridgeMetricsUpdated(ctx, log, timestamp, blockNumber)
-              break
-
-            case bridgeAbi.events.BridgeTokensUpdated.topic:
-              ctx.log.info('Processing BridgeTokensUpdated event')
-              await handleBridgeTokensUpdated(ctx, log, timestamp, blockNumber)
-              break
-
-            default:
-              ctx.log.warn(`Unknown BridgeWrapper event topic: ${topic}`)
-          }
-        }
-
         // AmicaToken events
         else if (address === DEPLOYMENT.addresses.amicaToken) {
           eventsProcessed.amicaToken++
@@ -291,7 +240,6 @@ processor.run(new TypeormDatabase({ supportHotBlocks: true }), async (ctx) => {
   ctx.log.info(`Batch processing complete:`)
   ctx.log.info(`  - Total logs: ${totalLogsProcessed}`)
   ctx.log.info(`  - PersonaFactory events: ${eventsProcessed.personaFactory}`)
-  ctx.log.info(`  - BridgeWrapper events: ${eventsProcessed.bridgeWrapper}`)
   ctx.log.info(`  - AmicaToken events: ${eventsProcessed.amicaToken}`)
   ctx.log.info(`  - Errors: ${eventsProcessed.errors}`)
   

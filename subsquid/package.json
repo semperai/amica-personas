@@ -17,7 +17,7 @@
     "bump": "npx npm-check-updates --filter /subsquid/ -u && npm i -f",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "vitest run --coverage --reporter=default --reporter=junit --outputFile=test-results/junit.xml",
     "test:local": "./test-local.sh test",
     "test:validate": "ts-node scripts/validate-indexing.ts",
     "test:events": "ts-node scripts/test-event-queries.ts",

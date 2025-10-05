@@ -104,9 +104,9 @@
         "internalType": "bool"
       },
       {
-        "name": "reason",
-        "type": "string",
-        "internalType": "string"
+        "name": "status",
+        "type": "uint8",
+        "internalType": "enum PersonaFactoryViewer.GraduationStatus"
       }
     ],
     "stateMutability": "view"

@@ -7,18 +7,22 @@ export const events = {
     Initialized: event("0xc7f505b2f371ae2175ee4913f4499e1f2633a7b5936321eed1cdaeb6115181d2", "Initialized(uint64)", {"version": p.uint64}),
     OwnershipTransferred: event("0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0", "OwnershipTransferred(address,address)", {"previousOwner": indexed(p.address), "newOwner": indexed(p.address)}),
     Paused: event("0x62e78cea01bee320cd4e420270b5ea74000d11b0c9f74754ebdbfc544b05a258", "Paused(address)", {"account": p.address}),
+    TokenClaimed: event("0x29842d15961c304dad3345dcde04db3059d13a4455ed0646e5daf7c993a04bc6", "TokenClaimed(address,address,uint256,uint256)", {"user": indexed(p.address), "claimedToken": indexed(p.address), "amountBurned": p.uint256, "amountClaimed": p.uint256}),
     TokenConfigured: event("0xeb022320d64fb88f594cd0b37fc220d3d43d351eaba21f49ae97e0a082cb860b", "TokenConfigured(address,bool,uint256,uint8)", {"token": indexed(p.address), "enabled": p.bool, "exchangeRate": p.uint256, "decimals": p.uint8}),
     TokenDeposited: event("0x080c225c8e9d9f966820ef915f5f555d575e9c3a188f1252d19e94aa2250f09d", "TokenDeposited(address,address,uint256,uint256)", {"user": indexed(p.address), "token": indexed(p.address), "amountDeposited": p.uint256, "amountMinted": p.uint256}),
     TokenWithdrawn: event("0x8210728e7c071f615b840ee026032693858fbcd5e5359e67e438c890f59e5620", "TokenWithdrawn(address,address,uint256)", {"token": indexed(p.address), "to": indexed(p.address), "amount": p.uint256}),
     Transfer: event("0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef", "Transfer(address,address,uint256)", {"from": indexed(p.address), "to": indexed(p.address), "value": p.uint256}),
     Unpaused: event("0x5db9ee0a495bf2e6ff9c91a7834c1ba4fdd244a5e8aa4e537bd38aeae4b073aa", "Unpaused(address)", {"account": p.address}),
+    Upgraded: event("0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b", "Upgraded(address)", {"implementation": indexed(p.address)}),
 }
 
 export const functions = {
     MAX_SUPPLY: viewFun("0x32cb6b0c", "MAX_SUPPLY()", {}, p.uint256),
+    UPGRADE_INTERFACE_VERSION: viewFun("0xad3cb1cc", "UPGRADE_INTERFACE_VERSION()", {}, p.string),
     allowance: viewFun("0xdd62ed3e", "allowance(address,address)", {"owner": p.address, "spender": p.address}, p.uint256),
     approve: fun("0x095ea7b3", "approve(address,uint256)", {"spender": p.address, "value": p.uint256}, p.bool),
     balanceOf: viewFun("0x70a08231", "balanceOf(address)", {"account": p.address}, p.uint256),
+    burnAndClaim: fun("0x9ebfab6f", "burnAndClaim(uint256,address[])", {"amountToBurn": p.uint256, "tokens": p.array(p.address)}, ),
     configureToken: fun("0xfde86590", "configureToken(address,bool,uint256,uint8)", {"token": p.address, "enabled": p.bool, "exchangeRate": p.uint256, "decimals": p.uint8}, ),
     configuredTokens: viewFun("0x7313f7a2", "configuredTokens(uint256)", {"_0": p.uint256}, p.address),
     decimals: viewFun("0x313ce567", "decimals()", {}, p.uint8),
@@ -29,7 +33,9 @@ export const functions = {
     owner: viewFun("0x8da5cb5b", "owner()", {}, p.address),
     pause: fun("0x8456cb59", "pause()", {}, ),
     paused: viewFun("0x5c975abb", "paused()", {}, p.bool),
+    previewBurnAndClaim: viewFun("0xf0e7f373", "previewBurnAndClaim(uint256,address[])", {"amountToBurn": p.uint256, "tokens": p.array(p.address)}, p.array(p.uint256)),
     previewDepositAndMint: viewFun("0xc5ed6132", "previewDepositAndMint(address,uint256)", {"token": p.address, "amount": p.uint256}, p.uint256),
+    proxiableUUID: viewFun("0x52d1902d", "proxiableUUID()", {}, p.bytes32),
     remainingSupply: viewFun("0xda0239a6", "remainingSupply()", {}, p.uint256),
     renounceOwnership: fun("0x715018a6", "renounceOwnership()", {}, ),
     symbol: viewFun("0x95d89b41", "symbol()", {}, p.string),
@@ -39,6 +45,7 @@ export const functions = {
     transferFrom: fun("0x23b872dd", "transferFrom(address,address,uint256)", {"from": p.address, "to": p.address, "value": p.uint256}, p.bool),
     transferOwnership: fun("0xf2fde38b", "transferOwnership(address)", {"newOwner": p.address}, ),
     unpause: fun("0x3f4ba83a", "unpause()", {}, ),
+    upgradeToAndCall: fun("0x4f1ef286", "upgradeToAndCall(address,bytes)", {"newImplementation": p.address, "data": p.bytes}, ),
     withdrawToken: fun("0x01e33667", "withdrawToken(address,address,uint256)", {"token": p.address, "to": p.address, "amount": p.uint256}, ),
 }
 
@@ -46,6 +53,10 @@ export class Contract extends ContractBase {
 
     MAX_SUPPLY() {
         return this.eth_call(functions.MAX_SUPPLY, {})
+    }
+
+    UPGRADE_INTERFACE_VERSION() {
+        return this.eth_call(functions.UPGRADE_INTERFACE_VERSION, {})
     }
 
     allowance(owner: AllowanceParams["owner"], spender: AllowanceParams["spender"]) {
@@ -80,8 +91,16 @@ export class Contract extends ContractBase {
         return this.eth_call(functions.paused, {})
     }
 
+    previewBurnAndClaim(amountToBurn: PreviewBurnAndClaimParams["amountToBurn"], tokens: PreviewBurnAndClaimParams["tokens"]) {
+        return this.eth_call(functions.previewBurnAndClaim, {amountToBurn, tokens})
+    }
+
     previewDepositAndMint(token: PreviewDepositAndMintParams["token"], amount: PreviewDepositAndMintParams["amount"]) {
         return this.eth_call(functions.previewDepositAndMint, {token, amount})
+    }
+
+    proxiableUUID() {
+        return this.eth_call(functions.proxiableUUID, {})
     }
 
     remainingSupply() {
@@ -106,15 +125,20 @@ export type ApprovalEventArgs = EParams<typeof events.Approval>
 export type InitializedEventArgs = EParams<typeof events.Initialized>
 export type OwnershipTransferredEventArgs = EParams<typeof events.OwnershipTransferred>
 export type PausedEventArgs = EParams<typeof events.Paused>
+export type TokenClaimedEventArgs = EParams<typeof events.TokenClaimed>
 export type TokenConfiguredEventArgs = EParams<typeof events.TokenConfigured>
 export type TokenDepositedEventArgs = EParams<typeof events.TokenDeposited>
 export type TokenWithdrawnEventArgs = EParams<typeof events.TokenWithdrawn>
 export type TransferEventArgs = EParams<typeof events.Transfer>
 export type UnpausedEventArgs = EParams<typeof events.Unpaused>
+export type UpgradedEventArgs = EParams<typeof events.Upgraded>
 
 /// Function types
 export type MAX_SUPPLYParams = FunctionArguments<typeof functions.MAX_SUPPLY>
 export type MAX_SUPPLYReturn = FunctionReturn<typeof functions.MAX_SUPPLY>
+
+export type UPGRADE_INTERFACE_VERSIONParams = FunctionArguments<typeof functions.UPGRADE_INTERFACE_VERSION>
+export type UPGRADE_INTERFACE_VERSIONReturn = FunctionReturn<typeof functions.UPGRADE_INTERFACE_VERSION>
 
 export type AllowanceParams = FunctionArguments<typeof functions.allowance>
 export type AllowanceReturn = FunctionReturn<typeof functions.allowance>
@@ -124,6 +148,9 @@ export type ApproveReturn = FunctionReturn<typeof functions.approve>
 
 export type BalanceOfParams = FunctionArguments<typeof functions.balanceOf>
 export type BalanceOfReturn = FunctionReturn<typeof functions.balanceOf>
+
+export type BurnAndClaimParams = FunctionArguments<typeof functions.burnAndClaim>
+export type BurnAndClaimReturn = FunctionReturn<typeof functions.burnAndClaim>
 
 export type ConfigureTokenParams = FunctionArguments<typeof functions.configureToken>
 export type ConfigureTokenReturn = FunctionReturn<typeof functions.configureToken>
@@ -155,8 +182,14 @@ export type PauseReturn = FunctionReturn<typeof functions.pause>
 export type PausedParams = FunctionArguments<typeof functions.paused>
 export type PausedReturn = FunctionReturn<typeof functions.paused>
 
+export type PreviewBurnAndClaimParams = FunctionArguments<typeof functions.previewBurnAndClaim>
+export type PreviewBurnAndClaimReturn = FunctionReturn<typeof functions.previewBurnAndClaim>
+
 export type PreviewDepositAndMintParams = FunctionArguments<typeof functions.previewDepositAndMint>
 export type PreviewDepositAndMintReturn = FunctionReturn<typeof functions.previewDepositAndMint>
+
+export type ProxiableUUIDParams = FunctionArguments<typeof functions.proxiableUUID>
+export type ProxiableUUIDReturn = FunctionReturn<typeof functions.proxiableUUID>
 
 export type RemainingSupplyParams = FunctionArguments<typeof functions.remainingSupply>
 export type RemainingSupplyReturn = FunctionReturn<typeof functions.remainingSupply>
@@ -184,6 +217,9 @@ export type TransferOwnershipReturn = FunctionReturn<typeof functions.transferOw
 
 export type UnpauseParams = FunctionArguments<typeof functions.unpause>
 export type UnpauseReturn = FunctionReturn<typeof functions.unpause>
+
+export type UpgradeToAndCallParams = FunctionArguments<typeof functions.upgradeToAndCall>
+export type UpgradeToAndCallReturn = FunctionReturn<typeof functions.upgradeToAndCall>
 
 export type WithdrawTokenParams = FunctionArguments<typeof functions.withdrawToken>
 export type WithdrawTokenReturn = FunctionReturn<typeof functions.withdrawToken>

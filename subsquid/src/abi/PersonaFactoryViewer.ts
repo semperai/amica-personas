@@ -6,7 +6,7 @@ export const functions = {
     calculateBuyAmount: viewFun("0x03ff40fb", "calculateBuyAmount(uint256,uint256)", {"tokenId": p.uint256, "amountIn": p.uint256}, p.uint256),
     calculateCostBetween: viewFun("0xa1c5f322", "calculateCostBetween(uint256,uint256,uint256)", {"tokenId": p.uint256, "fromTokens": p.uint256, "toTokens": p.uint256}, p.uint256),
     calculateSellAmount: viewFun("0xebff160b", "calculateSellAmount(uint256,uint256)", {"tokenId": p.uint256, "amountIn": p.uint256}, p.uint256),
-    canGraduate: viewFun("0x24a2fb98", "canGraduate(uint256)", {"tokenId": p.uint256}, {"eligible": p.bool, "reason": p.string}),
+    canGraduate: viewFun("0x24a2fb98", "canGraduate(uint256)", {"tokenId": p.uint256}, {"eligible": p.bool, "status": p.uint8}),
     factory: viewFun("0xc45a0155", "factory()", {}, p.address),
     getBondingCurveState: viewFun("0x2bf971f2", "getBondingCurveState(uint256)", {"tokenId": p.uint256}, {"totalPairingTokensCollected": p.uint256, "tokensPurchased": p.uint256, "availableTokens": p.uint256}),
     getBondingCurveStateBatch: viewFun("0xdfdb3fc9", "getBondingCurveStateBatch(uint256[])", {"tokenIds": p.array(p.uint256)}, {"totalPairingTokensCollected": p.array(p.uint256), "tokensPurchased": p.array(p.uint256), "availableTokens": p.array(p.uint256)}),

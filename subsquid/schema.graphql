@@ -14,6 +14,7 @@ type Persona @entity {
   # Domain and Pool Info
   domain: String! @index
   poolId: String
+  positionTokenId: BigInt
 
   # Status
   pairCreated: Boolean!
@@ -33,7 +34,7 @@ type Persona @entity {
   graduationThreshold: BigInt!
   totalAgentDeposited: BigInt!
   minAgentTokens: BigInt!
-  
+
   # Relations
   trades: [Trade!]! @derivedFrom(field: "persona")
   metadata: [PersonaMetadata!]! @derivedFrom(field: "persona")

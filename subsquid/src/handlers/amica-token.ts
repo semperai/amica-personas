@@ -31,8 +31,8 @@ export async function handleAmicaTransfer(
     // Context flags
     isToFactory: event.to.toLowerCase() === DEPLOYMENT.addresses.personaFactory,
     isFromFactory: event.from.toLowerCase() === DEPLOYMENT.addresses.personaFactory,
-    isToBridge: event.to.toLowerCase() === DEPLOYMENT.addresses.bridgeWrapper,
-    isFromBridge: event.from.toLowerCase() === DEPLOYMENT.addresses.bridgeWrapper,
+    isToBridge: false, // Bridge wrapper deprecated
+    isFromBridge: false, // Bridge wrapper deprecated
   })
 
   await ctx.store.insert(transfer)
