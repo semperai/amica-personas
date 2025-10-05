@@ -13,7 +13,7 @@
     "lint": "eslint src --ext ts,tsx",
     "test": "npm run generate:paths && vitest run",
     "test:ci": "npm run generate:paths && vitest run --reporter=json --reporter=default --outputFile=test-results.json",
-    "test:coverage": "npm run generate:paths && vitest run --coverage",
+    "test:coverage": "npm run generate:paths && vitest run --coverage --reporter=default --reporter=junit --outputFile=test-results/junit.xml",
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
