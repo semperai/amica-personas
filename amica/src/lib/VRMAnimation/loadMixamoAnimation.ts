@@ -8,82 +8,107 @@ import { mixamoVRMRigMap } from './mixamoVRMRigMap';
  *
  * @param {string} url A url of mixamo animation data
  * @param {VRM} vrm A target VRM
+ * @param {Function} onProgress Optional progress callback
  * @returns {Promise<THREE.AnimationClip>} The converted AnimationClip
  */
-export function loadMixamoAnimation(url: string, vrm: VRM) {
+export function loadMixamoAnimation(
+  url: string,
+  vrm: VRM,
+  onProgress?: (progress: string) => void
+) {
   const loader = new FBXLoader(); // A loader which loads FBX
-  return loader.loadAsync(url).then((asset) => {
-    const clip = THREE.AnimationClip.findByName(asset.animations, 'mixamo.com'); // extract the AnimationClip
-
-    const tracks: THREE.VectorKeyframeTrack[] = []; // KeyframeTracks compatible with VRM will be added here
-
-    const restRotationInverse = new THREE.Quaternion();
-    const parentRestWorldRotation = new THREE.Quaternion();
-    const _quatA = new THREE.Quaternion();
-    const _vec3 = new THREE.Vector3();
-
-    // Adjust with reference to hips height.
-    // Check for null clip
-    if (!clip) {
-      throw new Error('Animation clip not found');
-    }
-
-    const vrmHipsY = 0; // vrm.humanoid?.getNormalizedBoneNode('hips')!.getWorldPosition(_vec3).y;
-    const vrmRootY = 0; // vrm.scene.getWorldPosition(_vec3).y;
-    const vrmHipsHeight = 0; // Math.abs(vrmHipsY - vrmRootY);
-    const hipsPositionScale = 0; // vrmHipsHeight / motionHipsHeight;
-
-    clip.tracks.forEach((track) => {
-      // Convert each tracks for VRM use, and push to `tracks`
-      const trackSplitted = track.name.split('.');
-      const mixamoRigName: string = trackSplitted[0];
-      // @ts-ignore
-      const vrmBoneName = mixamoVRMRigMap[mixamoRigName];
-      const vrmNodeName = vrm.humanoid?.getNormalizedBoneNode(vrmBoneName)?.name;
-      const mixamoRigNode = asset.getObjectByName(mixamoRigName);
-
-      if (vrmNodeName != null) {
-        const propertyName = trackSplitted[1];
-
-        // Store rotations of rest-pose.
-        // TODO check null
-        mixamoRigNode!.getWorldQuaternion(restRotationInverse).invert();
-        mixamoRigNode!.parent!.getWorldQuaternion(parentRestWorldRotation);
-
-        if (track instanceof THREE.QuaternionKeyframeTrack) {
-          // Retarget rotation of mixamoRig to NormalizedBone.
-          for (let i = 0; i < track.values.length; i += 4) {
-            const flatQuaternion = track.values.slice(i, i + 4);
-            _quatA.fromArray(flatQuaternion);
-
-            // 親のレスト時ワールド回転 * トラックの回転 * レスト時ワールド回転の逆
-            _quatA
-              .premultiply(parentRestWorldRotation)
-              .multiply(restRotationInverse);
-
-            _quatA.toArray(flatQuaternion);
-
-            flatQuaternion.forEach((v, index) => {
-              track.values[index + i] = v;
-            });
-          }
-
-          tracks.push(
-            new THREE.QuaternionKeyframeTrack(
-              `${vrmNodeName}.${propertyName}`,
-              track.times,
-              track.values.map((v, i) => (vrm.meta?.metaVersion === '0' && i % 2 === 0 ? - v : v)),
-            ),
-          );
-
-        } else if (track instanceof THREE.VectorKeyframeTrack) {
-          const value = track.values.map((v, i) => (vrm.meta?.metaVersion === '0' && i % 3 !== 1 ? - v : v) * hipsPositionScale);
-          tracks.push(new THREE.VectorKeyframeTrack(`${vrmNodeName}.${propertyName}`, track.times, value));
-
+  return new Promise<THREE.AnimationClip>((resolve, reject) => {
+    loader.load(
+      url,
+      (asset) => {
+        // Process the animation (same code as before)
+        const processedClip = processAnimation(asset, vrm);
+        resolve(processedClip);
+      },
+      (xhr) => {
+        if (onProgress) {
+          const percentage = (xhr.loaded / xhr.total) * 100;
+          onProgress(`${percentage.toFixed(2)}% loaded`);
         }
+      },
+      (error) => {
+        reject(error);
       }
-    });
-
-    return new THREE.AnimationClip('vrmAnimation', clip.duration, tracks);
+    );
   });
+}
+
+function processAnimation(asset: THREE.Group, vrm: VRM): THREE.AnimationClip {
+  const clip = THREE.AnimationClip.findByName(asset.animations, 'mixamo.com'); // extract the AnimationClip
+
+  const tracks: THREE.VectorKeyframeTrack[] = []; // KeyframeTracks compatible with VRM will be added here
+
+  const restRotationInverse = new THREE.Quaternion();
+  const parentRestWorldRotation = new THREE.Quaternion();
+  const _quatA = new THREE.Quaternion();
+  const _vec3 = new THREE.Vector3();
+
+  // Adjust with reference to hips height.
+  // Check for null clip
+  if (!clip) {
+    throw new Error('Animation clip not found');
+  }
+
+  const vrmHipsY = 0; // vrm.humanoid?.getNormalizedBoneNode('hips')!.getWorldPosition(_vec3).y;
+  const vrmRootY = 0; // vrm.scene.getWorldPosition(_vec3).y;
+  const vrmHipsHeight = 0; // Math.abs(vrmHipsY - vrmRootY);
+  const hipsPositionScale = 0; // vrmHipsHeight / motionHipsHeight;
+
+  clip.tracks.forEach((track) => {
+    // Convert each tracks for VRM use, and push to `tracks`
+    const trackSplitted = track.name.split('.');
+    const mixamoRigName: string = trackSplitted[0];
+    // @ts-ignore
+    const vrmBoneName = mixamoVRMRigMap[mixamoRigName];
+    const vrmNodeName = vrm.humanoid?.getNormalizedBoneNode(vrmBoneName)?.name;
+    const mixamoRigNode = asset.getObjectByName(mixamoRigName);
+
+    if (vrmNodeName != null) {
+      const propertyName = trackSplitted[1];
+
+      // Store rotations of rest-pose.
+      // TODO check null
+      mixamoRigNode!.getWorldQuaternion(restRotationInverse).invert();
+      mixamoRigNode!.parent!.getWorldQuaternion(parentRestWorldRotation);
+
+      if (track instanceof THREE.QuaternionKeyframeTrack) {
+        // Retarget rotation of mixamoRig to NormalizedBone.
+        for (let i = 0; i < track.values.length; i += 4) {
+          const flatQuaternion = track.values.slice(i, i + 4);
+          _quatA.fromArray(flatQuaternion);
+
+          // 親のレスト時ワールド回転 * トラックの回転 * レスト時ワールド回転の逆
+          _quatA
+            .premultiply(parentRestWorldRotation)
+            .multiply(restRotationInverse);
+
+          _quatA.toArray(flatQuaternion);
+
+          flatQuaternion.forEach((v, index) => {
+            track.values[index + i] = v;
+          });
+        }
+
+        tracks.push(
+          new THREE.QuaternionKeyframeTrack(
+            `${vrmNodeName}.${propertyName}`,
+            track.times,
+            track.values.map((v, i) => (vrm.meta?.metaVersion === '0' && i % 2 === 0 ? - v : v)),
+          ),
+        );
+
+      } else if (track instanceof THREE.VectorKeyframeTrack) {
+        const value = track.values.map((v, i) => (vrm.meta?.metaVersion === '0' && i % 3 !== 1 ? - v : v) * hipsPositionScale);
+        tracks.push(new THREE.VectorKeyframeTrack(`${vrmNodeName}.${propertyName}`, track.times, value));
+
+      }
+    }
+  });
+
+  return new THREE.AnimationClip('vrmAnimation', clip.duration, tracks);
 }

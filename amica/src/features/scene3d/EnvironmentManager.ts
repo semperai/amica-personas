@@ -1,12 +1,18 @@
 import * as THREE from "three";
 import { Room } from "./EnvironmentRoom";
+import { setLoadingStage, completeLoading } from "@/utils/fileLoadingProgress";
 
 export class EnvironmentManager {
   private room?: Room;
   private scene: THREE.Scene;
+  private onRoomLoadedCallback?: () => void;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
+  }
+
+  public setOnRoomLoadedCallback(callback: () => void): void {
+    this.onRoomLoadedCallback = callback;
   }
 
   public async loadRoom(
@@ -22,8 +28,23 @@ export class EnvironmentManager {
 
     this.room = new Room();
     setLoadingProgress("Loading room");
-    await this.room.loadRoom(url, setLoadingProgress);
+    setLoadingStage("Loading environment...", 85);
+
+    // Wrap the room's progress callback to update our loading stage
+    await this.room.loadRoom(url, (progress: string) => {
+      setLoadingProgress(progress);
+      // Extract percentage from progress string like "45.67% loaded"
+      const match = progress.match(/(\d+\.?\d*)\s*%/);
+      if (match) {
+        const percentage = parseFloat(match[1]);
+        // Map room loading (0-100%) to our overall progress (85-95%)
+        const overallProgress = 85 + (percentage / 100) * 10;
+        setLoadingStage(`Loading environment... ${Math.round(percentage)}%`, overallProgress);
+      }
+    });
+
     setLoadingProgress(`Room load complete`);
+    setLoadingStage("Environment loaded", 95);
 
     if (!this.room?.room) return;
 
@@ -31,6 +52,15 @@ export class EnvironmentManager {
     this.room.room.rotation.set(rot.x, rot.y, rot.z);
     this.room.room.scale.set(scale.x, scale.y, scale.z);
     this.scene.add(this.room.room);
+
+    // Notify that room was loaded
+    if (this.onRoomLoadedCallback) {
+      this.onRoomLoadedCallback();
+    }
+
+    setLoadingStage("Ready!", 100);
+    // Complete loading after a brief delay to show 100%
+    setTimeout(() => completeLoading(), 500);
   }
 
   public unloadRoom(): void {

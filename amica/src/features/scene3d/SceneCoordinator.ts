@@ -85,6 +85,16 @@ export class SceneCoordinator {
     this.environment = new EnvironmentManager(this.render.scene);
     this.particles = new ParticleManager(this.render.scene);
 
+    // Setup callback to notify VRM manager when room is loaded
+    this.environment.setOnRoomLoadedCallback(() => {
+      this.vrm?.roomWasLoaded();
+    });
+
+    // Setup callback when scenario setup is complete
+    this.scenario.setOnScenarioSetupComplete(() => {
+      this.handleScenarioSetupComplete();
+    });
+
     // Initialize XR system
     this.xr = new XRSystem(
       this.render.renderer,
@@ -108,6 +118,17 @@ export class SceneCoordinator {
     this.render.renderer.setAnimationLoop(() => {
       this.update();
     });
+  }
+
+  private handleScenarioSetupComplete() {
+    // Check if a room was loaded during scenario setup
+    // If not, complete the loading now
+    if (this.vrm?.shouldCompleteLoadingAfterVrm()) {
+      import("@/utils/fileLoadingProgress").then(({ setLoadingStage, completeLoading }) => {
+        setLoadingStage("Ready!", 100);
+        setTimeout(() => completeLoading(), 500);
+      });
+    }
   }
 
   // High-level XR session management
