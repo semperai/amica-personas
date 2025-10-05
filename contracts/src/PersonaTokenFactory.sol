@@ -951,11 +951,9 @@ contract PersonaTokenFactory is
         if (persona.graduationTimestamp > 0) revert NotAllowed(2);
         if (amount == 0) revert Invalid(1);
 
-        if (
-            !IERC20(persona.agentToken).transferFrom(
-                msg.sender, address(this), amount
-            )
-        ) revert Failed(0);
+        IERC20(persona.agentToken).safeTransferFrom(
+            msg.sender, address(this), amount
+        );
 
         agentDeposits[tokenId][msg.sender] += amount;
 
@@ -1002,9 +1000,7 @@ contract PersonaTokenFactory is
         PreGraduationState storage preGradState = preGraduationStates[tokenId];
         preGradState.totalAgentDeposited -= amount;
 
-        if (!IERC20(persona.agentToken).transfer(msg.sender, amount)) {
-            revert Failed(0);
-        }
+        IERC20(persona.agentToken).safeTransfer(msg.sender, amount);
 
         emit AgentTokensWithdrawn(
             tokenId, msg.sender, amount, preGradState.totalAgentDeposited
