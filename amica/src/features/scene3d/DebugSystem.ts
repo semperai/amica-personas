@@ -44,6 +44,7 @@ export class DebugSystem {
     // Initialize GUI
     this.gui = new GUI();
     this.gui.domElement.style.marginTop = "56px";
+    this.gui.domElement.style.display = "none"; // Hidden initially, shown after loading
 
     // Initialize Stats
     this.stats = new Stats();
@@ -52,6 +53,7 @@ export class DebugSystem {
     this.stats.dom.style.position = "absolute";
     this.stats.dom.style.top = "56px";
     this.stats.dom.style.left = window.innerWidth - 80 + "px";
+    this.stats.dom.style.display = "none"; // Hidden initially, shown after loading
     document.body.appendChild(this.stats.dom);
 
     // Setup stats panels

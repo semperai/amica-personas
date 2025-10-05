@@ -30,5 +30,13 @@ export function completeLoading() {
   if (typeof window !== "undefined") {
     (<any>window).chatvrm_loading_stage = null;
     (<any>window).chatvrm_loading_stage_cnt++;
+
+    // Show debug UI elements when loading completes
+    const statsElements = document.querySelectorAll('.stats-js, .lil-gui');
+    statsElements.forEach((el) => {
+      if (el instanceof HTMLElement) {
+        el.style.display = 'block';
+      }
+    });
   }
 }
