@@ -41,7 +41,8 @@ amica-personas/
 ├── amica/             # 3D AI persona viewer (React/Three.js)
 ├── website/           # Platform frontend (Next.js)
 ├── subsquid/          # Multi-chain indexer
-└── subdomain-service/ # .amica.bot domain service
+├── subdomain-service/ # .amica.bot domain service
+└── api/               # Credit-based API service for AI features
 ```
 
 ## Quick Start
@@ -128,6 +129,23 @@ docker-compose up -d
 npm install
 npm run build
 npm run dev
+```
+
+### API Service
+
+```bash
+cd api
+
+# Install dependencies
+npm install
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your API keys and configuration
+
+# Start development server
+npm run dev
+# Visit http://localhost:3001
 ```
 
 ## AMICA Token Utility
