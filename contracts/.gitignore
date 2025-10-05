@@ -3,6 +3,7 @@ cache/
 out/
 cache_forge/
 lcov.info
+test-results/
 
 # Ignores development broadcast logs
 !/broadcast

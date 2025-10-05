@@ -25,14 +25,12 @@ describe('Processor Configuration', () => {
       expect(DEPLOYMENT.addresses).toBeDefined();
       expect(DEPLOYMENT.addresses.amicaToken).toBeDefined();
       expect(DEPLOYMENT.addresses.personaFactory).toBeDefined();
-      expect(DEPLOYMENT.addresses.bridgeWrapper).toBeDefined();
       expect(DEPLOYMENT.addresses.erc20Implementation).toBeDefined();
     });
 
     it('should have lowercase addresses', () => {
       expect(DEPLOYMENT.addresses.amicaToken).toBe(DEPLOYMENT.addresses.amicaToken.toLowerCase());
       expect(DEPLOYMENT.addresses.personaFactory).toBe(DEPLOYMENT.addresses.personaFactory.toLowerCase());
-      expect(DEPLOYMENT.addresses.bridgeWrapper).toBe(DEPLOYMENT.addresses.bridgeWrapper.toLowerCase());
       expect(DEPLOYMENT.addresses.erc20Implementation).toBe(DEPLOYMENT.addresses.erc20Implementation.toLowerCase());
     });
 
@@ -41,7 +39,6 @@ describe('Processor Configuration', () => {
 
       expect(isValidAddress(DEPLOYMENT.addresses.amicaToken)).toBe(true);
       expect(isValidAddress(DEPLOYMENT.addresses.personaFactory)).toBe(true);
-      expect(isValidAddress(DEPLOYMENT.addresses.bridgeWrapper)).toBe(true);
       expect(isValidAddress(DEPLOYMENT.addresses.erc20Implementation)).toBe(true);
     });
 
@@ -49,7 +46,6 @@ describe('Processor Configuration', () => {
       const addresses = [
         DEPLOYMENT.addresses.amicaToken,
         DEPLOYMENT.addresses.personaFactory,
-        DEPLOYMENT.addresses.bridgeWrapper,
         DEPLOYMENT.addresses.erc20Implementation,
       ];
 
@@ -63,10 +59,6 @@ describe('Processor Configuration', () => {
 
     it('should have expected personaFactory address', () => {
       expect(DEPLOYMENT.addresses.personaFactory).toBe('0x62966fd253c2c3507a305f296e54cabd74aea083');
-    });
-
-    it('should have expected bridgeWrapper address', () => {
-      expect(DEPLOYMENT.addresses.bridgeWrapper).toBe('0xe17b125b85abcc0ff212cf33d06d928d4736aa04');
     });
 
     it('should have expected erc20Implementation address', () => {
