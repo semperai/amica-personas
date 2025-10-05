@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { setLoadingStage, completeLoading } from "@/utils/fileLoadingProgress";
+import { config } from "@/utils/config";
 
 export class ScenarioLoader {
   private scenario: any;
@@ -11,7 +12,7 @@ export class ScenarioLoader {
 
     this.scenarioLoading = true;
 
-    setLoadingStage("Initializing scene...", 10);
+    setLoadingStage("Initializing scene...", 15);
     const res = await fetch(url);
     const classCode = await res.text();
 
@@ -21,9 +22,10 @@ export class ScenarioLoader {
       scope,
       THREE,
       hookManager,
+      config,
     });
 
-    setLoadingStage("Setting up scenario...", 30);
+    setLoadingStage("Setting up scenario...", 35);
     await this.scenario.setup();
     this.scenarioLoading = false;
 

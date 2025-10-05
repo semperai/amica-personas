@@ -10,6 +10,7 @@
     "build:worker:generateMeshBVH": "esbuild src/workers/bvh/generateMeshBVH.worker.js --bundle --minify --sourcemap --outfile=public/generateMeshBVH.worker.js",
     "preview": "vite preview",
     "generate:paths": "npx node scripts/generate_paths.js",
+    "create:scenario": "node scripts/create-scenario.js",
     "lint": "eslint src --ext ts,tsx",
     "test": "npm run generate:paths && vitest run",
     "test:ci": "npm run generate:paths && vitest run --reporter=json --reporter=default --outputFile=test-results.json",
@@ -17,6 +18,7 @@
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
+    "test:scenarios": "vitest run scenarios",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
@@ -25,6 +27,7 @@
     "act": "act -j test"
   },
   "dependencies": {
+    "@dimforge/rapier3d-compat": "^0.19.1",
     "@headlessui/react": "^2.2.9",
     "@heroicons/react": "^2.2.0",
     "@mkkellogg/gaussian-splats-3d": "^0.4.7",

@@ -4,13 +4,13 @@ import './instrument';
 import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import fs from 'fs';
-import { createClient } from 'urql';
+import { createClient, fetchExchange } from 'urql';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import * as Sentry from '@sentry/node';
 import { GET_PERSONA_BY_DOMAIN } from './graphql';
 import { PersonasResponse } from './types';
-import { parseSubdomain, getAmicaVersion, buildAmicaConfig, log } from './utils';
+import { parseSubdomain, getAmicaVersion, buildAmicaConfig, log, escapeHtml } from './utils';
 
 dotenv.config();
 
@@ -22,7 +22,7 @@ const CHAIN_ID = parseInt(process.env.CHAIN_ID || '42161', 10);
 // GraphQL client
 const graphqlClient = createClient({
   url: GRAPHQL_ENDPOINT,
-  exchanges: [],
+  exchanges: [fetchExchange],
 });
 
 // CORS configuration
@@ -114,6 +114,7 @@ function renderLandingPage(): string {
  * 404 page for non-existent personas
  */
 function render404Page(subdomain: string): string {
+  const escapedSubdomain = escapeHtml(subdomain);
   return `
     <!DOCTYPE html>
     <html lang="en">
@@ -186,7 +187,7 @@ function render404Page(subdomain: string): string {
         <div class="container">
           <div class="error-code">404</div>
           <h1>Persona Not Found</h1>
-          <p>The persona <span class="subdomain">${subdomain}</span> doesn't exist on Arbitrum One.</p>
+          <p>The persona <span class="subdomain">${escapedSubdomain}</span> doesn't exist on Arbitrum One.</p>
           <p>It may not have been created yet, or it could be on a different chain.</p>
           <a href="https://amica.bot" class="cta">← Back to Amica</a>
         </div>
@@ -199,6 +200,7 @@ function render404Page(subdomain: string): string {
  * Error page for server errors
  */
 function renderErrorPage(error: Error): string {
+  const escapedMessage = escapeHtml(error.message);
   return `
     <!DOCTYPE html>
     <html lang="en">
@@ -265,7 +267,7 @@ function renderErrorPage(error: Error): string {
         <div class="container">
           <h1>Oops! Something went wrong</h1>
           <p>We encountered an error while loading this persona. Please try again later.</p>
-          <pre>${error.message}</pre>
+          <pre>${escapedMessage}</pre>
           <a href="https://amica.bot" class="cta">← Back to Amica</a>
         </div>
       </body>

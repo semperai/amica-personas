@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuites name="vitest tests" tests="1" failures="0" errors="0" time="4.701">
+    <testsuite name="src/__tests__/example.test.ts" timestamp="2025-10-05T08:22:04.269Z" hostname="coinhero-demo-machine.local" tests="1" failures="0" errors="0" skipped="0" time="0.00313975">
+        <testcase classname="src/__tests__/example.test.ts" name="Example &gt; should pass" time="0.001532333">
+        </testcase>
+    </testsuite>
+</testsuites>

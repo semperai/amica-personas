@@ -1,5 +1,4 @@
 import { Persona, PersonaMetadata, AmicaConfig } from './types';
-import { isValidConfigKey, AMICA_LOCALSTORAGE_PREFIX } from './amica-config-keys';
 
 /**
  * Parse subdomain from hostname
@@ -14,8 +13,18 @@ export function parseSubdomain(hostname: string): string | null {
     return null;
   }
 
-  // Return the first part as the subdomain
-  return parts[0];
+  const subdomain = parts[0];
+
+  // Validate subdomain format: alphanumeric and hyphens only, 1-63 chars
+  // Must start and end with alphanumeric character
+  const subdomainRegex = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/i;
+
+  if (!subdomainRegex.test(subdomain)) {
+    return null;
+  }
+
+  // Return the validated subdomain
+  return subdomain;
 }
 
 /**
@@ -62,47 +71,17 @@ export function buildAmicaConfig(persona: Persona): AmicaConfig {
 
 
 /**
- * Inject configuration into HTML
- * @param html - Original HTML content
- * @param config - Amica configuration to inject
- * @returns HTML with injected configuration script
+ * HTML escape function to prevent XSS
+ * @param unsafe - Unsafe string that may contain HTML
+ * @returns Escaped string safe for HTML
  */
-export function injectConfig(html: string, config: AmicaConfig): string {
-  // Build localStorage injection script for valid config keys
-  const localStorageLines: string[] = [];
-
-  // Inject persona name
-  localStorageLines.push(
-    `localStorage.setItem('${AMICA_LOCALSTORAGE_PREFIX}name', ${JSON.stringify(config.personaName)});`
-  );
-
-  // Inject metadata as localStorage for valid keys
-  for (const [key, value] of Object.entries(config.metadata)) {
-    if (isValidConfigKey(key)) {
-      localStorageLines.push(
-        `localStorage.setItem('${AMICA_LOCALSTORAGE_PREFIX}${key}', ${JSON.stringify(value)});`
-      );
-    }
-  }
-
-  // Build the full script tag with persona config and localStorage
-  const script = `<script>
-window.__AMICA_PERSONA__ = ${JSON.stringify(config, null, 2)};
-${localStorageLines.join('\n')}
-</script>`;
-
-  // Try to inject before </head>
-  if (html.includes('</head>')) {
-    return html.replace('</head>', `${script}\n</head>`);
-  }
-
-  // If no </head>, inject at beginning of <body>
-  if (html.includes('<body>')) {
-    return html.replace('<body>', `<body>\n${script}`);
-  }
-
-  // If no standard tags, inject at the beginning
-  return script + html;
+export function escapeHtml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 /**
