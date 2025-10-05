@@ -7,10 +7,12 @@ import request from 'supertest';
 import express from 'express';
 import { createClient, Client, fetchExchange } from 'urql';
 
-// Mock urql
-jest.mock('urql');
+import { vi, Mock } from 'vitest';
 
-const MockedCreateClient = createClient as jest.MockedFunction<typeof createClient>;
+// Mock urql
+vi.mock('urql');
+
+const MockedCreateClient = createClient as ReturnType<typeof vi.fn>;
 
 // Mock persona data
 const mockPersonaData = {
@@ -89,12 +91,12 @@ function createTestServer() {
 }
 
 describe('Subdomain Server', () => {
-  let mockQuery: jest.Mock;
+  let mockQuery: Mock;
 
   beforeEach(() => {
     // Reset mocks
     MockedCreateClient.mockClear();
-    mockQuery = jest.fn();
+    mockQuery = vi.fn();
 
     // Setup default mock implementation
     MockedCreateClient.mockReturnValue({
@@ -218,11 +220,11 @@ describe('Subdomain Server', () => {
 });
 
 describe('Error Handling', () => {
-  let mockQuery: jest.Mock;
+  let mockQuery: Mock;
 
   beforeEach(() => {
     MockedCreateClient.mockClear();
-    mockQuery = jest.fn();
+    mockQuery = vi.fn();
     MockedCreateClient.mockReturnValue({
       query: mockQuery,
     } as any);

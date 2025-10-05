@@ -8,9 +8,9 @@
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
     "typecheck": "tsc --noEmit",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "mkdir -p test-results && vitest run --coverage --reporter=default --reporter=junit --outputFile=test-results/junit.xml"
   },
   "dependencies": {
     "@sentry/node": "^10.17.0",
@@ -23,15 +23,13 @@
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
-    "@types/jest": "^30.0.0",
     "@types/node": "^24.6.2",
     "@types/supertest": "^6.0.3",
-    "jest": "^30.2.0",
-    "jest-junit": "^16.0.0",
+    "@vitest/coverage-v8": "^2.1.8",
     "supertest": "^7.1.4",
-    "ts-jest": "^29.4.4",
     "tsx": "^4.20.6",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^2.1.8"
   },
   "engines": {
     "node": ">=22.0.0"

@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        package: [contracts, amica, subdomain-service, subsquid]
+        package: [contracts, amica, subdomain-service, subsquid, website]
 
     steps:
       - name: Checkout code

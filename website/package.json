@@ -7,7 +7,10 @@
     "build": "next build --turbo",
     "start": "next start",
     "lint": "eslint .",
-    "check": "tsc --noEmit && eslint ."
+    "check": "tsc --noEmit && eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "mkdir -p test-results && vitest run --coverage --reporter=default --reporter=junit --outputFile=test-results/junit.xml"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.9",
@@ -34,13 +37,18 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
     "@tailwindcss/postcss": "^4.1.14",
+    "@testing-library/react": "^16.2.3",
     "@types/node": "^24.6.2",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/coverage-v8": "^2.1.8",
     "eslint": "^9.37.0",
     "eslint-config-next": "^15.5.4",
+    "jsdom": "^26.0.0",
     "tailwindcss": "^4",
     "typescript": "^5.9.3",
+    "vitest": "^2.1.8",
     "wait-on": "^9.0.1"
   },
   "overrides": {
