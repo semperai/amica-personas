@@ -1,4 +1,4 @@
-import { GET_PERSONA_BY_DOMAIN } from '../graphql';
+import { GET_PERSONA_BY_DOMAIN } from '../src/graphql';
 
 describe('GraphQL Queries', () => {
   describe('GET_PERSONA_BY_DOMAIN', () => {

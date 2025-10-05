@@ -1,4 +1,4 @@
-import { isValidConfigKey, AMICA_CONFIG_KEYS, AMICA_LOCALSTORAGE_PREFIX } from '../amica-config-keys';
+import { isValidConfigKey, AMICA_CONFIG_KEYS, AMICA_LOCALSTORAGE_PREFIX } from '../src/amica-config-keys';
 
 describe('amica-config-keys', () => {
   describe('AMICA_CONFIG_KEYS', () => {
