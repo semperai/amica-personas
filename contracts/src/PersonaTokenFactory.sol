@@ -1054,7 +1054,7 @@ contract PersonaTokenFactory is
         // TAKE_PAIR to withdraw collected fees
         params[1] = abi.encode(poolKey.currency0, poolKey.currency1, to);
 
-        uint256 deadline = block.timestamp + 60; // 1 minute deadline
+        uint256 deadline = block.timestamp + 900; // 15 minute deadline
 
         // Execute fee collection through position manager
         positionManager.modifyLiquidities{value: 0 /* not ETH */ }(
