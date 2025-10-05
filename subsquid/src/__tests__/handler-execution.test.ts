@@ -56,7 +56,15 @@ vi.mock('../abi/PersonaTokenFactory', () => ({
   },
   Contract: vi.fn().mockImplementation(() => ({
     metadata: vi.fn().mockResolvedValue('test metadata value'),
-    personas: vi.fn().mockResolvedValue({ positionTokenId: 123n }),
+    personas: vi.fn().mockResolvedValue({
+      positionTokenId: 123n,
+      poolId: '0x0000000000000000000000000000000000000000000000000000000000000000',
+      pairToken: '0xPAIRTOKEN',
+      agentToken: '0x0000000000000000000000000000000000000000',
+      agentTokenThreshold: 1000n,
+      graduationTimestamp: 0n,
+    }),
+    ownerOf: vi.fn().mockResolvedValue('0xCREATOR'),
   })),
 }));
 
@@ -141,20 +149,38 @@ describe('Handler Execution Tests', () => {
   });
 
   describe('Agent Handlers', () => {
-    it('should execute handleAgentTokenAssociated', async () => {
+    it('should execute handleAgentTokenAssociated - persona not found', async () => {
       const factoryAbi = await import('../abi/PersonaTokenFactory');
       (factoryAbi.events.AgentTokenAssociated.decode as any).mockReturnValue({
         tokenId: 1n,
         agentToken: '0xAGENT',
       });
 
+      (mockCtx.store.get as any).mockResolvedValue(null);
+
       await agentHandlers.handleAgentTokenAssociated(mockCtx, mockLog);
 
-      expect(factoryAbi.events.AgentTokenAssociated.decode).toHaveBeenCalled();
-      expect(mockCtx.log.error).toHaveBeenCalled(); // Persona not found
+      expect(mockCtx.log.error).toHaveBeenCalled();
+      expect(mockCtx.store.save).not.toHaveBeenCalled();
     });
 
-    it('should execute handleAgentTokensDeposited', async () => {
+    it('should execute handleAgentTokenAssociated - success path', async () => {
+      const factoryAbi = await import('../abi/PersonaTokenFactory');
+      (factoryAbi.events.AgentTokenAssociated.decode as any).mockReturnValue({
+        tokenId: 1n,
+        agentToken: '0xAGENT',
+      });
+
+      const mockPersona = { id: '1', agentToken: null };
+      (mockCtx.store.get as any).mockResolvedValue(mockPersona);
+
+      await agentHandlers.handleAgentTokenAssociated(mockCtx, mockLog);
+
+      expect(mockPersona.agentToken).toBe('0xagent');
+      expect(mockCtx.store.save).toHaveBeenCalledWith(mockPersona);
+    });
+
+    it('should execute handleAgentTokensDeposited - persona not found', async () => {
       const factoryAbi = await import('../abi/PersonaTokenFactory');
       (factoryAbi.events.AgentTokensDeposited.decode as any).mockReturnValue({
         tokenId: 1n,
@@ -162,54 +188,171 @@ describe('Handler Execution Tests', () => {
         amount: 1000n,
       });
 
+      (mockCtx.store.get as any).mockResolvedValue(null);
+
       await agentHandlers.handleAgentTokensDeposited(mockCtx, mockLog, timestamp, blockNumber);
 
-      expect(factoryAbi.events.AgentTokensDeposited.decode).toHaveBeenCalled();
+      expect(mockCtx.log.error).toHaveBeenCalled();
     });
 
-    it('should execute handleAgentTokensWithdrawn', async () => {
+    it('should execute handleAgentTokensDeposited - success path', async () => {
+      const factoryAbi = await import('../abi/PersonaTokenFactory');
+      (factoryAbi.events.AgentTokensDeposited.decode as any).mockReturnValue({
+        tokenId: 1n,
+        depositor: '0xDEPOSITOR',
+        amount: 1000n,
+      });
+
+      const mockPersona = { id: '1', totalAgentDeposited: 0n };
+      (mockCtx.store.get as any).mockResolvedValue(mockPersona);
+
+      await agentHandlers.handleAgentTokensDeposited(mockCtx, mockLog, timestamp, blockNumber);
+
+      expect(mockCtx.store.insert).toHaveBeenCalled();
+      expect(mockPersona.totalAgentDeposited).toBe(1000n);
+      expect(mockCtx.store.save).toHaveBeenCalledWith(mockPersona);
+    });
+
+    it('should execute handleAgentTokensWithdrawn - persona not found', async () => {
       const factoryAbi = await import('../abi/PersonaTokenFactory');
       (factoryAbi.events.AgentTokensWithdrawn.decode as any).mockReturnValue({
         tokenId: 1n,
-        user: '0xUSER',
-        amountWithdrawn: 500n,
+        depositor: '0xUSER',
+        amount: 500n,
       });
 
-      await agentHandlers.handleAgentTokensWithdrawn(mockCtx, mockLog, timestamp);
+      (mockCtx.store.get as any).mockResolvedValue(null);
 
-      expect(factoryAbi.events.AgentTokensWithdrawn.decode).toHaveBeenCalled();
+      await agentHandlers.handleAgentTokensWithdrawn(mockCtx, mockLog);
+
+      expect(mockCtx.log.error).toHaveBeenCalled();
     });
 
-    it('should execute handleAgentRewardsDistributed', async () => {
+    it('should execute handleAgentTokensWithdrawn - success path with deposits', async () => {
+      const factoryAbi = await import('../abi/PersonaTokenFactory');
+      (factoryAbi.events.AgentTokensWithdrawn.decode as any).mockReturnValue({
+        tokenId: 1n,
+        depositor: '0xUSER',
+        amount: 500n,
+      });
+
+      const mockPersona = { id: '1', totalAgentDeposited: 1000n };
+      const mockDeposits = [
+        { id: '1-1', amount: 300n, withdrawn: false },
+        { id: '1-2', amount: 400n, withdrawn: false },
+      ];
+
+      (mockCtx.store.get as any).mockResolvedValue(mockPersona);
+      (mockCtx.store.find as any).mockResolvedValue(mockDeposits);
+
+      await agentHandlers.handleAgentTokensWithdrawn(mockCtx, mockLog);
+
+      expect(mockDeposits[0].withdrawn).toBe(true);
+      expect(mockDeposits[1].withdrawn).toBe(false);
+      expect(mockPersona.totalAgentDeposited).toBe(500n);
+      expect(mockCtx.store.save).toHaveBeenCalled();
+    });
+
+    it('should execute handleAgentRewardsDistributed - persona not found', async () => {
       const factoryAbi = await import('../abi/PersonaTokenFactory');
       (factoryAbi.events.AgentRewardsDistributed.decode as any).mockReturnValue({
         tokenId: 1n,
-        totalRewards: 1000n,
+        recipient: '0xRECIPIENT',
+        personaTokens: 1000n,
       });
+
+      (mockCtx.store.get as any).mockResolvedValue(null);
 
       await agentHandlers.handleAgentRewardsDistributed(mockCtx, mockLog, timestamp, blockNumber);
 
-      expect(factoryAbi.events.AgentRewardsDistributed.decode).toHaveBeenCalled();
+      expect(mockCtx.log.error).toHaveBeenCalled();
+    });
+
+    it('should execute handleAgentRewardsDistributed - success path', async () => {
+      const factoryAbi = await import('../abi/PersonaTokenFactory');
+      (factoryAbi.events.AgentRewardsDistributed.decode as any).mockReturnValue({
+        tokenId: 1n,
+        recipient: '0xRECIPIENT',
+        personaTokens: 1000n,
+      });
+
+      const mockPersona = { id: '1' };
+      const mockDeposits = [
+        { id: '1-1', rewardsClaimed: false },
+        { id: '1-2', rewardsClaimed: false },
+      ];
+
+      (mockCtx.store.get as any).mockResolvedValue(mockPersona);
+      (mockCtx.store.find as any).mockResolvedValue(mockDeposits);
+
+      await agentHandlers.handleAgentRewardsDistributed(mockCtx, mockLog, timestamp, blockNumber);
+
+      expect(mockCtx.store.insert).toHaveBeenCalled();
+      expect(mockDeposits[0].rewardsClaimed).toBe(true);
+      expect(mockDeposits[1].rewardsClaimed).toBe(true);
     });
   });
 
   describe('Persona Handlers', () => {
-    it('should execute handlePersonaCreated', async () => {
+    it('should execute handlePersonaCreated - persona already exists', async () => {
       const factoryAbi = await import('../abi/PersonaTokenFactory');
       (factoryAbi.events.PersonaCreated.decode as any).mockReturnValue({
         tokenId: 1n,
-        creator: '0xCREATOR',
+        domain: '0x' + Buffer.from('test').toString('hex').padEnd(64, '0'),
         token: '0xTOKEN',
-        bondingCurve: '0xBONDING',
-        metadata: '0x' + Buffer.from('ipfs://hash').toString('hex').padEnd(64, '0'),
       });
+
+      // Mock existing persona
+      (mockCtx.store.get as any).mockResolvedValue({ id: '1' });
+
+      await personaHandlers.handlePersonaCreated(mockCtx, mockLog, timestamp, blockNumber);
+
+      expect(mockCtx.log.warn).toHaveBeenCalled();
+      expect(mockCtx.store.insert).not.toHaveBeenCalled();
+    });
+
+    it('should execute handlePersonaCreated - success path', async () => {
+      const factoryAbi = await import('../abi/PersonaTokenFactory');
+      (factoryAbi.events.PersonaCreated.decode as any).mockReturnValue({
+        tokenId: 1n,
+        domain: '0x' + Buffer.from('test').toString('hex').padEnd(64, '0'),
+        token: '0xTOKEN',
+      });
+
+      // Mock no existing persona
+      (mockCtx.store.get as any).mockResolvedValue(null);
 
       await personaHandlers.handlePersonaCreated(mockCtx, mockLog, timestamp, blockNumber);
 
       expect(mockCtx.store.insert).toHaveBeenCalled();
+      expect(mockCtx.log.info).toHaveBeenCalled();
     });
 
-    it('should execute handleTransfer', async () => {
+    it('should execute handlePersonaCreated - contract error fallback', async () => {
+      const factoryAbi = await import('../abi/PersonaTokenFactory');
+      (factoryAbi.events.PersonaCreated.decode as any).mockReturnValue({
+        tokenId: 1n,
+        domain: '0x' + Buffer.from('test').toString('hex').padEnd(64, '0'),
+        token: '0xTOKEN',
+      });
+
+      // Mock no existing persona
+      (mockCtx.store.get as any).mockResolvedValue(null);
+
+      // Mock contract to throw error
+      (factoryAbi.Contract as any).mockImplementationOnce(() => ({
+        personas: vi.fn().mockRejectedValue(new Error('Contract error')),
+      }));
+
+      await personaHandlers.handlePersonaCreated(mockCtx, mockLog, timestamp, blockNumber);
+
+      expect(mockCtx.log.error).toHaveBeenCalled();
+      expect(mockCtx.store.insert).toHaveBeenCalled(); // Still inserts with minimal data
+    });
+  });
+
+  describe('Transfer Handlers', () => {
+    it('should execute handleTransfer - persona not found', async () => {
       const factoryAbi = await import('../abi/PersonaTokenFactory');
       (factoryAbi.events.Transfer.decode as any).mockReturnValue({
         from: '0xFROM',
@@ -217,9 +360,30 @@ describe('Handler Execution Tests', () => {
         tokenId: 1n,
       });
 
+      (mockCtx.store.get as any).mockResolvedValue(null);
+
       await transfersHandlers.handleTransfer(mockCtx, mockLog, timestamp, blockNumber);
 
-      expect(factoryAbi.events.Transfer.decode).toHaveBeenCalled();
+      expect(mockCtx.log.error).toHaveBeenCalled();
+      expect(mockCtx.store.save).not.toHaveBeenCalled();
+    });
+
+    it('should execute handleTransfer - success path', async () => {
+      const factoryAbi = await import('../abi/PersonaTokenFactory');
+      (factoryAbi.events.Transfer.decode as any).mockReturnValue({
+        from: '0xFROM',
+        to: '0xTO',
+        tokenId: 1n,
+      });
+
+      const mockPersona = { id: '1', owner: '0xfrom' };
+      (mockCtx.store.get as any).mockResolvedValue(mockPersona);
+
+      await transfersHandlers.handleTransfer(mockCtx, mockLog, timestamp, blockNumber);
+
+      expect(mockPersona.owner).toBe('0xto');
+      expect(mockCtx.store.save).toHaveBeenCalledWith(mockPersona);
+      expect(mockCtx.store.insert).toHaveBeenCalled();
     });
   });
 
@@ -311,23 +475,86 @@ describe('Handler Execution Tests', () => {
       expect(mockCtx.store.insert).toHaveBeenCalled();
     });
 
-    it('should execute handleMetadataUpdated', async () => {
+    it('should execute handleMetadataUpdated - persona not found', async () => {
       const factoryAbi = await import('../abi/PersonaTokenFactory');
       (factoryAbi.events.MetadataUpdated.decode as any).mockReturnValue({
         tokenId: 1n,
         key: '0x' + Buffer.from('image').toString('hex').padEnd(64, '0'),
       });
 
-      // Mock persona lookup
-      const mockPersona = {
-        id: '1',
-        metadataHash: '0xOLD',
-      };
-      (mockCtx.store.get as any).mockResolvedValue(mockPersona);
+      // Mock no persona
+      (mockCtx.store.get as any).mockResolvedValue(null);
+
+      await metadataHandlers.handleMetadataUpdated(mockCtx, mockLog, timestamp, blockNumber);
+
+      expect(mockCtx.log.error).toHaveBeenCalled();
+      expect(mockCtx.store.save).not.toHaveBeenCalled();
+    });
+
+    it('should execute handleMetadataUpdated - create new metadata', async () => {
+      const factoryAbi = await import('../abi/PersonaTokenFactory');
+      (factoryAbi.events.MetadataUpdated.decode as any).mockReturnValue({
+        tokenId: 1n,
+        key: '0x' + Buffer.from('image').toString('hex').padEnd(64, '0'),
+      });
+
+      const mockPersona = { id: '1' };
+
+      // First call returns persona, second call returns null (no existing metadata)
+      (mockCtx.store.get as any)
+        .mockResolvedValueOnce(mockPersona)
+        .mockResolvedValueOnce(null);
 
       await metadataHandlers.handleMetadataUpdated(mockCtx, mockLog, timestamp, blockNumber);
 
       expect(mockCtx.store.save).toHaveBeenCalled();
+      expect(mockCtx.log.info).toHaveBeenCalled();
+    });
+
+    it('should execute handleMetadataUpdated - update existing metadata', async () => {
+      const factoryAbi = await import('../abi/PersonaTokenFactory');
+      (factoryAbi.events.MetadataUpdated.decode as any).mockReturnValue({
+        tokenId: 1n,
+        key: '0x' + Buffer.from('image').toString('hex').padEnd(64, '0'),
+      });
+
+      const mockPersona = { id: '1' };
+      const mockExistingMetadata = {
+        id: '1-key',
+        value: 'old value',
+        updatedAt: new Date('2024-01-01'),
+      };
+
+      // First call returns persona, second call returns existing metadata
+      (mockCtx.store.get as any)
+        .mockResolvedValueOnce(mockPersona)
+        .mockResolvedValueOnce(mockExistingMetadata);
+
+      await metadataHandlers.handleMetadataUpdated(mockCtx, mockLog, timestamp, blockNumber);
+
+      expect(mockExistingMetadata.value).toBe('test metadata value');
+      expect(mockCtx.store.save).toHaveBeenCalled();
+    });
+
+    it('should execute handleMetadataUpdated - contract error', async () => {
+      const factoryAbi = await import('../abi/PersonaTokenFactory');
+      (factoryAbi.events.MetadataUpdated.decode as any).mockReturnValue({
+        tokenId: 1n,
+        key: '0x' + Buffer.from('image').toString('hex').padEnd(64, '0'),
+      });
+
+      const mockPersona = { id: '1' };
+      (mockCtx.store.get as any).mockResolvedValue(mockPersona);
+
+      // Mock contract to throw error
+      (factoryAbi.Contract as any).mockImplementationOnce(() => ({
+        metadata: vi.fn().mockRejectedValue(new Error('Contract error')),
+      }));
+
+      await metadataHandlers.handleMetadataUpdated(mockCtx, mockLog, timestamp, blockNumber);
+
+      expect(mockCtx.log.error).toHaveBeenCalled();
+      expect(mockCtx.store.save).not.toHaveBeenCalled();
     });
 
     it('should execute handleV4PoolCreated', async () => {
