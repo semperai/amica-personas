@@ -15,14 +15,25 @@ export function configServerPlugin(): Plugin {
     configureServer(server) {
       const configPath = path.join(process.cwd(), 'amica.toml');
 
-      // Watch amica.toml for changes and trigger full reload
+      // Watch amica.toml for changes
       server.watcher.add(configPath);
       server.watcher.on('change', (file) => {
         if (file === configPath) {
+          console.log('[Config Server] amica.toml changed, notifying clients');
+
+          // Send custom HMR event to reset config state
           server.ws.send({
-            type: 'full-reload',
-            path: '*'
+            type: 'custom',
+            event: 'amica-config-changed'
           });
+
+          // Then trigger full reload
+          setTimeout(() => {
+            server.ws.send({
+              type: 'full-reload',
+              path: '*'
+            });
+          }, 100);
         }
       });
 

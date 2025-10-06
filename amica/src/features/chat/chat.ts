@@ -384,10 +384,18 @@ export class Chat {
 
   public async makeAndHandleStream(messages: Message[]) {
     try {
+      console.log('[Chat] Creating chat response stream', {
+        backend: config("chatbot_backend"),
+        messageCount: messages.length,
+      });
       this.streams.push(await this.getChatResponseStream(messages));
     } catch (e: any) {
       const errMsg = e.toString();
-      console.error(errMsg);
+      console.error('[Chat] Failed to create chat response stream', {
+        backend: config("chatbot_backend"),
+        error: errMsg,
+        stack: e.stack,
+      });
       this.alert?.error("Failed to get chat response", errMsg);
       return errMsg;
     }
@@ -589,13 +597,26 @@ export class Chat {
     console.debug("getChatResponseStream", messages);
     const chatbotBackend = config("chatbot_backend");
 
+    console.log('[Chat] Getting chat response stream', {
+      backend: chatbotBackend,
+      messageCount: messages.length,
+    });
+
     // Trigger before hook
     const beforeContext = await this.hookManager.trigger('before:llm:request', {
       messages,
       backend: chatbotBackend
     });
 
+    if (beforeContext.backend !== chatbotBackend) {
+      console.log('[Chat] Backend changed by hook', {
+        original: chatbotBackend,
+        modified: beforeContext.backend,
+      });
+    }
+
     let stream: ReadableStream<Uint8Array>;
+    console.log('[Chat] Routing to backend provider:', beforeContext.backend);
     switch (beforeContext.backend) {
       case "arbius_llm":
         stream = await getArbiusChatResponseStream(beforeContext.messages);
@@ -616,8 +637,11 @@ export class Chat {
         stream = await getKoboldAiChatResponseStream(beforeContext.messages);
         break;
       default:
+        console.log('[Chat] Unknown backend, using echo provider:', beforeContext.backend);
         stream = await getEchoChatResponseStream(beforeContext.messages);
     }
+
+    console.log('[Chat] Stream created successfully');
 
     // Trigger after hook
     await this.hookManager.trigger('after:llm:request', {

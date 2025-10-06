@@ -18,19 +18,52 @@ async function getExtra(messages: Message[]) {
   const prompt = buildPrompt(messages);
   const stop_sequence: string[] = [`${config("name")}:`, ...`${config("koboldai_stop_sequence")}`.split("||")];
 
-  const res = await fetch(`${config("koboldai_url")}/api/extra/generate/stream`, {
-    headers: headers,
-    method: "POST",
-    body: JSON.stringify({
-      prompt,
-      stop_sequence
-    }),
+  const requestUrl = `${config("koboldai_url")}/api/extra/generate/stream`;
+  const requestBody = {
+    prompt,
+    stop_sequence
+  };
+
+  console.log('[KoboldAI Extra] Starting chat request', {
+    url: requestUrl,
+    messageCount: messages.length,
+    promptLength: prompt.length,
   });
+
+  let res;
+  try {
+    res = await fetch(requestUrl, {
+      headers: headers,
+      method: "POST",
+      body: JSON.stringify(requestBody),
+    });
+    console.log('[KoboldAI Extra] Fetch completed', {
+      status: res.status,
+      statusText: res.statusText,
+      ok: res.ok,
+      headers: Object.fromEntries(res.headers.entries()),
+    });
+  } catch (error: any) {
+    console.error('[KoboldAI Extra] Fetch failed', {
+      url: requestUrl,
+      error: error.message,
+      errorType: error.name,
+      stack: error.stack,
+    });
+    throw new Error(`Network error connecting to KoboldAI (${config("koboldai_url")}): ${error.message}`);
+  }
 
   const reader = res.body?.getReader();
   if (res.status !== 200 || ! reader) {
-    throw new Error(`KoboldAi chat error (${res.status})`);
+    console.error('[KoboldAI Extra] Invalid response', {
+      status: res.status,
+      statusText: res.statusText,
+      hasBody: !!res.body,
+    });
+    throw new Error(`KoboldAi chat error (${res.status}): ${res.statusText}`);
   }
+
+  console.log('[KoboldAI Extra] Stream reader created successfully');
 
   const stream = new ReadableStream({
     async start(controller: ReadableStreamDefaultController) {
@@ -96,17 +129,53 @@ async function getNormal(messages: Message[]) {
   const prompt = buildPrompt(messages);
   const stop_sequence: string[] = [`${config("name")}:`, ...`${config("koboldai_stop_sequence")}`.split("||")];
 
-  const res = await fetch(`${config("koboldai_url")}/api/v1/generate`, {
-    headers: headers,
-    method: "POST",
-    body: JSON.stringify({
-      prompt,
-      stop_sequence
-    }),
+  const requestUrl = `${config("koboldai_url")}/api/v1/generate`;
+  const requestBody = {
+    prompt,
+    stop_sequence
+  };
+
+  console.log('[KoboldAI] Starting chat request', {
+    url: requestUrl,
+    messageCount: messages.length,
+    promptLength: prompt.length,
   });
 
+  let res;
+  try {
+    res = await fetch(requestUrl, {
+      headers: headers,
+      method: "POST",
+      body: JSON.stringify(requestBody),
+    });
+    console.log('[KoboldAI] Fetch completed', {
+      status: res.status,
+      statusText: res.statusText,
+      ok: res.ok,
+      headers: Object.fromEntries(res.headers.entries()),
+    });
+  } catch (error: any) {
+    console.error('[KoboldAI] Fetch failed', {
+      url: requestUrl,
+      error: error.message,
+      errorType: error.name,
+      stack: error.stack,
+    });
+    throw new Error(`Network error connecting to KoboldAI (${config("koboldai_url")}): ${error.message}`);
+  }
+
+  if (res.status !== 200) {
+    console.error('[KoboldAI] Invalid response', {
+      status: res.status,
+      statusText: res.statusText,
+    });
+    throw new Error(`KoboldAI chat error (${res.status}): ${res.statusText}`);
+  }
+
+  console.log('[KoboldAI] Parsing response JSON');
   const json = await res.json();
   if (json.results.length === 0) {
+    console.error('[KoboldAI] Empty results array');
     throw new Error(`KoboldAi result length 0`);
   }
 

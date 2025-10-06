@@ -3,9 +3,10 @@
 
 const LOG_PREFIX = "[VAD Worklet]";
 const log = {
-  debug: (...args: any[]) => console.debug(LOG_PREFIX, ...args),
-  error: (...args: any[]) => console.error(LOG_PREFIX, ...args),
-  warn: (...args: any[]) => console.warn(LOG_PREFIX, ...args),
+  debug: (...args: unknown[]) => console.debug(LOG_PREFIX, ...args),
+  info: (...args: unknown[]) => console.log(LOG_PREFIX, ...args),
+  error: (...args: unknown[]) => console.error(LOG_PREFIX, ...args),
+  warn: (...args: unknown[]) => console.warn(LOG_PREFIX, ...args),
 };
 
 const Message = {
@@ -101,7 +102,7 @@ class VadWorkletProcessor extends AudioWorkletProcessor {
   _stopProcessing: boolean;
   _frameCount: number;
 
-  constructor(options: any) {
+  constructor(options: AudioWorkletNodeOptions) {
     super();
     this._initialized = false;
     this._stopProcessing = false;
@@ -121,14 +122,14 @@ class VadWorkletProcessor extends AudioWorkletProcessor {
   }
 
   async init() {
-    log.debug("Initializing worklet, sampleRate:", sampleRate);
+    log.info("Initializing worklet, sampleRate:", sampleRate);
     this.resampler = new Resampler({
       nativeSampleRate: sampleRate,
       targetSampleRate: 16000,
       targetFrameSize: this.options.frameSamples,
     });
     this._initialized = true;
-    log.debug("Worklet initialized successfully");
+    log.info("Worklet initialized successfully");
 
     // Send initialization message to main thread
     this.port.postMessage({

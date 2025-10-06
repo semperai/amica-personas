@@ -6,19 +6,53 @@ export async function getOllamaChatResponseStream(messages: Message[]) {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
-  const res = await fetch(`${config("ollama_url")}/api/chat`, {
-    headers: headers,
-    method: "POST",
-    body: JSON.stringify({
-      model: config("ollama_model"),
-      messages,
-    }),
+
+  const requestUrl = `${config("ollama_url")}/api/chat`;
+  const requestBody = {
+    model: config("ollama_model"),
+    messages,
+  };
+
+  console.log('[Ollama] Starting chat request', {
+    url: requestUrl,
+    model: config("ollama_model"),
+    messageCount: messages.length,
   });
+
+  let res;
+  try {
+    res = await fetch(requestUrl, {
+      headers: headers,
+      method: "POST",
+      body: JSON.stringify(requestBody),
+    });
+    console.log('[Ollama] Fetch completed', {
+      status: res.status,
+      statusText: res.statusText,
+      ok: res.ok,
+      headers: Object.fromEntries(res.headers.entries()),
+    });
+  } catch (error: any) {
+    console.error('[Ollama] Fetch failed', {
+      url: requestUrl,
+      error: error.message,
+      errorType: error.name,
+      stack: error.stack,
+    });
+    throw new Error(`Network error connecting to Ollama (${config("ollama_url")}): ${error.message}`);
+  }
 
   const reader = res.body?.getReader();
   if (res.status !== 200 || ! reader) {
-    throw new Error(`Ollama chat error (${res.status})`);
+    console.error('[Ollama] Invalid response', {
+      status: res.status,
+      statusText: res.statusText,
+      hasBody: !!res.body,
+    });
+    throw new Error(`Ollama chat error (${res.status}): ${res.statusText}`);
   }
+
+  console.log('[Ollama] Stream reader created successfully');
 
   const stream = new ReadableStream({
     async start(controller: ReadableStreamDefaultController) {
@@ -77,21 +111,54 @@ export async function getOllamaVisionChatResponse(messages: Message[], imageData
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
-  const res = await fetch(`${config("vision_ollama_url")}/api/chat`, {
-    headers: headers,
-    method: "POST",
-    body: JSON.stringify({
-      model: config("vision_ollama_model"),
-      messages,
-      images: [imageData],
-      stream: false,
-    }),
+
+  const requestUrl = `${config("vision_ollama_url")}/api/chat`;
+  const requestBody = {
+    model: config("vision_ollama_model"),
+    messages,
+    images: [imageData],
+    stream: false,
+  };
+
+  console.log('[Ollama Vision] Starting vision request', {
+    url: requestUrl,
+    model: config("vision_ollama_model"),
+    messageCount: messages.length,
+    hasImageData: !!imageData,
   });
 
-  if (res.status !== 200) {
-    throw new Error(`Ollama chat error (${res.status})`);
+  let res;
+  try {
+    res = await fetch(requestUrl, {
+      headers: headers,
+      method: "POST",
+      body: JSON.stringify(requestBody),
+    });
+    console.log('[Ollama Vision] Fetch completed', {
+      status: res.status,
+      statusText: res.statusText,
+      ok: res.ok,
+      headers: Object.fromEntries(res.headers.entries()),
+    });
+  } catch (error: any) {
+    console.error('[Ollama Vision] Fetch failed', {
+      url: requestUrl,
+      error: error.message,
+      errorType: error.name,
+      stack: error.stack,
+    });
+    throw new Error(`Network error connecting to Ollama Vision (${config("vision_ollama_url")}): ${error.message}`);
   }
 
+  if (res.status !== 200) {
+    console.error('[Ollama Vision] Invalid response', {
+      status: res.status,
+      statusText: res.statusText,
+    });
+    throw new Error(`Ollama chat error (${res.status}): ${res.statusText}`);
+  }
+
+  console.log('[Ollama Vision] Parsing response JSON');
   const json = await res.json();
   return json.response;
 }

@@ -10,23 +10,57 @@ export async function getLlamaCppChatResponseStream(messages: Message[]) {
   };
   const prompt = buildPrompt(messages);
   const stop: string[] = [`${config("name")}:`, ...`${config("llamacpp_stop_sequence")}`.split("||")];
-  const res = await fetch(`${config("llamacpp_url")}/completion`, {
-    headers: headers,
-    method: "POST",
-    body: JSON.stringify({
-      stream: true,
-      n_predict: 400,
-      temperature: 0.7,
-      cache_prompt: true,
-      stop,
-      prompt,
-    }),
+
+  const requestUrl = `${config("llamacpp_url")}/completion`;
+  const requestBody = {
+    stream: true,
+    n_predict: 400,
+    temperature: 0.7,
+    cache_prompt: true,
+    stop,
+    prompt,
+  };
+
+  console.log('[LlamaCpp] Starting chat request', {
+    url: requestUrl,
+    messageCount: messages.length,
+    promptLength: prompt.length,
   });
+
+  let res;
+  try {
+    res = await fetch(requestUrl, {
+      headers: headers,
+      method: "POST",
+      body: JSON.stringify(requestBody),
+    });
+    console.log('[LlamaCpp] Fetch completed', {
+      status: res.status,
+      statusText: res.statusText,
+      ok: res.ok,
+      headers: Object.fromEntries(res.headers.entries()),
+    });
+  } catch (error: any) {
+    console.error('[LlamaCpp] Fetch failed', {
+      url: requestUrl,
+      error: error.message,
+      errorType: error.name,
+      stack: error.stack,
+    });
+    throw new Error(`Network error connecting to LlamaCpp (${config("llamacpp_url")}): ${error.message}`);
+  }
 
   const reader = res.body?.getReader();
   if (res.status !== 200 || ! reader) {
-    throw new Error(`LlamaCpp chat error (${res.status})`);
+    console.error('[LlamaCpp] Invalid response', {
+      status: res.status,
+      statusText: res.statusText,
+      hasBody: !!res.body,
+    });
+    throw new Error(`LlamaCpp chat error (${res.status}): ${res.statusText}`);
   }
+
+  console.log('[LlamaCpp] Stream reader created successfully');
 
   const stream = new ReadableStream({
     async start(controller: ReadableStreamDefaultController) {
@@ -100,35 +134,71 @@ export async function getLlavaCppChatResponse(messages: Message[], imageData: st
   };
   const prompt = buildVisionPrompt(messages);
 
-  const res = await fetch(`${config("vision_llamacpp_url")}/completion`, {
-    headers: headers,
-    method: "POST",
-    body: JSON.stringify({
-      stream: true,
-      n_predict: 400,
-      temperature: 0.7,
-      cache_prompt: true,
-      stop: [
-        "</s>",
-        `${config('name')}:`,
-        "User:"
-      ],
-      image_data: [{
-        data: imageData,
-        id: 10,
-      }],
-      prompt,
-    }),
+  const requestUrl = `${config("vision_llamacpp_url")}/completion`;
+  const requestBody = {
+    stream: true,
+    n_predict: 400,
+    temperature: 0.7,
+    cache_prompt: true,
+    stop: [
+      "</s>",
+      `${config('name')}:`,
+      "User:"
+    ],
+    image_data: [{
+      data: imageData,
+      id: 10,
+    }],
+    prompt,
+  };
+
+  console.log('[LlamaCpp Vision] Starting vision request', {
+    url: requestUrl,
+    messageCount: messages.length,
+    hasImageData: !!imageData,
   });
 
+  let res;
+  try {
+    res = await fetch(requestUrl, {
+      headers: headers,
+      method: "POST",
+      body: JSON.stringify(requestBody),
+    });
+    console.log('[LlamaCpp Vision] Fetch completed', {
+      status: res.status,
+      statusText: res.statusText,
+      ok: res.ok,
+      headers: Object.fromEntries(res.headers.entries()),
+    });
+  } catch (error: any) {
+    console.error('[LlamaCpp Vision] Fetch failed', {
+      url: requestUrl,
+      error: error.message,
+      errorType: error.name,
+      stack: error.stack,
+    });
+    throw new Error(`Network error connecting to LlamaCpp Vision (${config("vision_llamacpp_url")}): ${error.message}`);
+  }
+
   if (! res.ok) {
-    throw new Error(`LlamaCpp llava chat error (${res.status})`);
+    console.error('[LlamaCpp Vision] Invalid response', {
+      status: res.status,
+      statusText: res.statusText,
+    });
+    throw new Error(`LlamaCpp llava chat error (${res.status}): ${res.statusText}`);
   }
 
   const reader = res.body?.getReader();
   if (res.status !== 200 || ! reader) {
-    throw new Error(`LlamaCpp vision error (${res.status})`);
+    console.error('[LlamaCpp Vision] Stream error', {
+      status: res.status,
+      hasBody: !!res.body,
+    });
+    throw new Error(`LlamaCpp vision error (${res.status}): ${res.statusText}`);
   }
+
+  console.log('[LlamaCpp Vision] Stream reader created successfully');
 
   // Fetch the original image
   const stream = new ReadableStream({

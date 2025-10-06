@@ -226,3 +226,26 @@ export function getConfigError(): string | null {
 export function setConfig(key: string, value: string): void {
   loadedConfig[key] = value;
 }
+
+/**
+ * Reset config state to force reload on next access
+ * Used for HMR (Hot Module Replacement) when config file changes
+ */
+export function resetConfig(): void {
+  loadedConfig = {};
+  configLoaded = false;
+  configError = null;
+  console.log('[Config] Config state reset for reload');
+}
+
+// Listen for config file changes in development
+if (import.meta.hot) {
+  import.meta.hot.on('amica-config-changed', () => {
+    console.log('[Config] amica.toml changed, resetting config state');
+    resetConfig();
+    // Reload config immediately so it's fresh after page reload
+    loadConfig().catch(err => {
+      console.error('[Config] Failed to reload config:', err);
+    });
+  });
+}

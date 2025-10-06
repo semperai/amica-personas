@@ -3,6 +3,7 @@
   const LOG_PREFIX = "[VAD Worklet]";
   const log = {
     debug: (...args) => console.debug(LOG_PREFIX, ...args),
+    info: (...args) => console.log(LOG_PREFIX, ...args),
     error: (...args) => console.error(LOG_PREFIX, ...args),
     warn: (...args) => console.warn(LOG_PREFIX, ...args)
   };
@@ -86,14 +87,14 @@
       this.init();
     }
     async init() {
-      log.debug("Initializing worklet, sampleRate:", sampleRate);
+      log.info("Initializing worklet, sampleRate:", sampleRate);
       this.resampler = new Resampler({
         nativeSampleRate: sampleRate,
         targetSampleRate: 16e3,
         targetFrameSize: this.options.frameSamples
       });
       this._initialized = true;
-      log.debug("Worklet initialized successfully");
+      log.info("Worklet initialized successfully");
       this.port.postMessage({
         message: "WORKLET_INITIALIZED",
         sampleRate,
