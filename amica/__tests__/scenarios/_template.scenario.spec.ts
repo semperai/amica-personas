@@ -167,6 +167,11 @@ describe('YourScenario', () => {
       await runner.setup();
     });
 
+    it('should have a scenario instance', () => {
+      const scenario = runner.getScenario();
+      expect(scenario).toBeDefined();
+    });
+
     // TODO: Add state management tests
 
     // Example: Test angle updates

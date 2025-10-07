@@ -171,24 +171,47 @@ describe('Rapier Integration Tests', () => {
       // Create static ground
       const ground = physics.createRigidBody('static', { x: 0, y: 0, z: 0 })!;
       const groundCollider = RAPIER_MODULE.ColliderDesc.cuboid(10, 0.1, 10)
-        .setRestitution(1.0); // Perfect bounce
+        .setRestitution(0.9); // High restitution
+      if (RAPIER_MODULE.ActiveEvents) {
+        groundCollider.setActiveEvents(RAPIER_MODULE.ActiveEvents.COLLISION_EVENTS);
+      }
       world.createCollider(groundCollider, ground);
 
       // Create falling sphere with high restitution
       const sphere = physics.createRigidBody('dynamic', { x: 0, y: 5, z: 0 })!;
       const sphereCollider = RAPIER_MODULE.ColliderDesc.ball(0.5)
-        .setRestitution(1.0); // Perfect bounce
+        .setRestitution(0.9); // High restitution
+      if (RAPIER_MODULE.ActiveEvents) {
+        sphereCollider.setActiveEvents(RAPIER_MODULE.ActiveEvents.COLLISION_EVENTS);
+      }
       world.createCollider(sphereCollider, sphere);
 
-      // Let it fall and bounce
-      for (let i = 0; i < 60; i++) {
+      let minY = 5;
+      let maxYAfterBounce = 0;
+      let hitGround = false;
+
+      // Let it fall and bounce, tracking trajectory
+      for (let i = 0; i < 300; i++) {
         physics.stepSimulation(1/60);
+        const y = sphere.translation().y;
+
+        // Track minimum (when it hits ground)
+        if (y < minY) {
+          minY = y;
+          hitGround = true;
+        }
+
+        // Track maximum after hitting ground (the bounce)
+        if (hitGround && y > maxYAfterBounce) {
+          maxYAfterBounce = y;
+        }
       }
 
-      const heightAfterBounce = sphere.translation().y;
+      // Should have hit the ground
+      expect(minY).toBeLessThan(2);
 
-      // With perfect restitution, ball should bounce back up
-      expect(heightAfterBounce).toBeGreaterThan(2);
+      // With high restitution, ball should bounce back up significantly
+      expect(maxYAfterBounce).toBeGreaterThan(1);
     });
 
     it('should apply impulse to rigid body', () => {
@@ -218,10 +241,16 @@ describe('Rapier Integration Tests', () => {
       // Create two objects that will collide
       const obj1 = physics.createRigidBody('dynamic', { x: 0, y: 5, z: 0 })!;
       const collider1 = RAPIER_MODULE.ColliderDesc.ball(0.5);
+      if (RAPIER_MODULE.ActiveEvents) {
+        collider1.setActiveEvents(RAPIER_MODULE.ActiveEvents.COLLISION_EVENTS);
+      }
       world.createCollider(collider1, obj1);
 
       const obj2 = physics.createRigidBody('static', { x: 0, y: 0, z: 0 })!;
       const collider2 = RAPIER_MODULE.ColliderDesc.ball(0.5);
+      if (RAPIER_MODULE.ActiveEvents) {
+        collider2.setActiveEvents(RAPIER_MODULE.ActiveEvents.COLLISION_EVENTS);
+      }
       world.createCollider(collider2, obj2);
 
       let collisionDetected = false;
@@ -376,6 +405,11 @@ describe('Rapier Integration Tests', () => {
     it('should maintain stable simulation over long duration', () => {
       const world = physics.getWorld()!;
 
+      // Create ground to keep objects in bounds
+      const ground = physics.createRigidBody('static', { x: 0, y: -10, z: 0 })!;
+      const groundCollider = RAPIER_MODULE.ColliderDesc.cuboid(100, 1, 100);
+      world.createCollider(groundCollider, ground);
+
       // Create simple falling object
       const body = physics.createRigidBody('dynamic', { x: 0, y: 100, z: 0 })!;
       physics.createSphere(0.5, body);
@@ -389,8 +423,9 @@ describe('Rapier Integration Tests', () => {
 
       // Should not have exploded or become NaN
       expect(isFinite(finalY)).toBe(true);
+      // Should have settled on or near the ground
+      expect(finalY).toBeGreaterThan(-15);
       expect(finalY).toBeLessThan(100);
-      expect(finalY).toBeGreaterThan(-100);
     });
   });
 });

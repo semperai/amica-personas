@@ -511,11 +511,13 @@ describe('JsonRpcServer', () => {
 
       expect(response.result.success).toBe(true);
       expect(mockSceneCoordinator.environment!.loadRoom).toHaveBeenCalledWith(
-        'https://example.com/room.glb',
-        { x: 0, y: 0, z: 0 },
-        { x: 0, y: 0, z: 0 },
-        { x: 1, y: 1, z: 1 },
-        expect.any(Function)
+        expect.objectContaining({
+          url: 'https://example.com/room.glb',
+          position: expect.anything(),
+          rotation: expect.anything(),
+          scale: expect.anything(),
+          onProgress: expect.any(Function)
+        })
       );
     });
 

@@ -120,6 +120,12 @@ export class PhysicsTestHelper {
       colliderDesc.setFriction(bodyConfig.friction);
     }
 
+    // Enable collision events for all colliders created in tests
+    // This allows the event queue to generate collision events
+    if (this.rapier.ActiveEvents) {
+      colliderDesc.setActiveEvents(this.rapier.ActiveEvents.COLLISION_EVENTS);
+    }
+
     const collider = this.world.createCollider(colliderDesc, body);
     this.colliders.push(collider);
 
@@ -162,6 +168,13 @@ export class PhysicsTestHelper {
   }
 
   /**
+   * Step physics simulation once
+   */
+  step(): void {
+    this.world.step(this.eventQueue);
+  }
+
+  /**
    * Simulate until a condition is met or timeout
    */
   simulateUntil(
@@ -198,21 +211,22 @@ export class PhysicsTestHelper {
 
   /**
    * Check if two bodies are colliding
+   * Uses Rapier's intersection test between colliders
    */
   areBodiesColliding(body1: RAPIER.RigidBody, body2: RAPIER.RigidBody): boolean {
-    const events = this.getCollisionEvents();
+    // Check all collider pairs between the two bodies for intersection
+    for (let i = 0; i < body1.numColliders(); i++) {
+      const collider1 = body1.collider(i);
+      if (!collider1) continue;
 
-    for (const event of events) {
-      const collider1 = this.world.getCollider(event.handle1);
-      const collider2 = this.world.getCollider(event.handle2);
+      for (let j = 0; j < body2.numColliders(); j++) {
+        const collider2 = body2.collider(j);
+        if (!collider2) continue;
 
-      if (!collider1 || !collider2) continue;
-
-      const b1 = collider1.parent();
-      const b2 = collider2.parent();
-
-      if ((b1 === body1 && b2 === body2) || (b1 === body2 && b2 === body1)) {
-        return event.started;
+        // Use Rapier's intersection test
+        if (this.world.intersectionPair(collider1, collider2)) {
+          return true;
+        }
       }
     }
 
