@@ -22,7 +22,7 @@ export const env = cleanEnv(process.env, {
   CREDITS_PER_CHAT: num({ default: 1 }),
   CREDITS_PER_TTS: num({ default: 7 }),
   CREDITS_PER_STT: num({ default: 2 }),
-  TIMEOUT_CHAT: num({ default: 3000 }),
+  TIMEOUT_CHAT: num({ default: 30000 }),
   TIMEOUT_FISH: num({ default: 10000 }),
   TIMEOUT_WHISPER: num({ default: 5000 }),
   ANON_API_KEY: str({ default: "default" }),
