@@ -6,7 +6,8 @@
 
 set -e
 
-API_URL="${API_URL:-https://api-01.heyamica.com}"
+# API_URL="${API_URL:-https://api-01.heyamica.com}"
+API_URL="http://127.0.0.1:8080"
 TEXT="${1:-What do you think you want to think about? Are you thinking about eating pancakes and strawberries? Where are you?}"
 API_KEY="${2:-default}"
 OUTPUT_FILE="${3:-output_tts.mp3}"

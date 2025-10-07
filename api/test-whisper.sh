@@ -5,7 +5,8 @@
 
 set -e
 
-API_URL="${API_URL:-https://api-01.heyamica.com}"
+# API_URL="${API_URL:-https://api-01.heyamica.com}"
+API_URL="http://127.0.0.1:8080"
 AUDIO_FILE="${1:-}"
 API_KEY="${2:-default}"
 
