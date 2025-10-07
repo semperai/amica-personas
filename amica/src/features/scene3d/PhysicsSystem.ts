@@ -19,21 +19,22 @@ export class PhysicsSystem {
 
     try {
       // Initialize Rapier
-      this.RAPIER = await import("@dimforge/rapier3d-compat");
+      const rapierModule = await import("@dimforge/rapier3d-compat");
+      this.RAPIER = rapierModule.default;
 
       // Initialize WASM module (only call init() once globally)
-      if (!this.RAPIER.init) {
-        console.warn("Rapier already initialized globally");
+      if (typeof this.RAPIER.init === 'function') {
+        await this.RAPIER.init({});
       } else {
-        await this.RAPIER.init();
+        console.warn("Rapier already initialized globally");
       }
 
       // Create the physics world
       const gravity = { x: 0.0, y: -7.8, z: 0.0 };
       this.world = new this.RAPIER.World(gravity);
 
-      // EventQueue is created automatically by the world, we don't need to create it
-      // this.eventQueue = new this.RAPIER.EventQueue(true);
+      // Create event queue for collision detection
+      this.eventQueue = new this.RAPIER.EventQueue(true);
 
       this.isInitialized = true;
       console.log("Rapier physics initialized successfully");

@@ -249,6 +249,9 @@ describe('Rapier Integration Tests', () => {
 
       physics.removeRigidBody(body);
 
+      // Process deferred removals
+      physics.stepSimulation(1/60);
+
       const numBodiesAfter = world.bodies.len();
 
       expect(numBodiesAfter).toBe(numBodiesBefore - 1);

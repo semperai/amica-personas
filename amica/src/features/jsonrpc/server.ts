@@ -18,6 +18,7 @@ import { Chat } from '@/features/chat/chat';
 import { SceneCoordinator } from "@/features/scene3d/SceneCoordinator";
 import { HookManager } from '@/features/hooks/hookManager';
 import { HookEvent } from '@/features/hooks/hookEvents';
+import * as THREE from 'three';
 
 export type JsonRpcHandler<M extends AmicaMethod> = (
   params: MethodParamsMap[M],

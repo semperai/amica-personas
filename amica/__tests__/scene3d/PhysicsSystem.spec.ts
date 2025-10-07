@@ -2,27 +2,34 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { PhysicsSystem } from '@/features/scene3d/PhysicsSystem';
 import * as THREE from 'three';
 
-// Mock Rapier.js
-let mockWorld: any;
-let mockEventQueue: any;
-
-vi.mock('@dimforge/rapier3d-compat', () => {
-  mockWorld = {
+// Mock Rapier.js - use vi.hoisted to ensure proper initialization order
+const { mockWorld, mockEventQueue } = vi.hoisted(() => {
+  const mockWorld = {
     step: vi.fn(),
-    createRigidBody: vi.fn(),
-    createCollider: vi.fn(),
+    createRigidBody: vi.fn(() => ({
+      translation: () => ({ x: 0, y: 0, z: 0 }),
+      rotation: () => ({ x: 0, y: 0, z: 0, w: 1 }),
+      setTranslation: vi.fn(),
+      setRotation: vi.fn(),
+    })),
+    createCollider: vi.fn(() => ({})),
     removeRigidBody: vi.fn(),
     createImpulseJoint: vi.fn(),
     gravity: { x: 0, y: -7.8, z: 0 },
   };
 
-  mockEventQueue = {
+  const mockEventQueue = {
     drainCollisionEvents: vi.fn(),
     drainContactForceEvents: vi.fn(),
   };
 
+  return { mockWorld, mockEventQueue };
+});
+
+vi.mock('@dimforge/rapier3d-compat', () => {
   return {
     default: {
+      init: vi.fn().mockResolvedValue(undefined),
       World: vi.fn(() => mockWorld),
       EventQueue: vi.fn(() => mockEventQueue),
       RigidBodyDesc: {

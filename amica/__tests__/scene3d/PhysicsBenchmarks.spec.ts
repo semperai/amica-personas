@@ -252,7 +252,7 @@ describe('Physics Performance Benchmarks', () => {
   });
 
   describe('Scaling Tests', () => {
-    it('should scale linearly with object count', () => {
+    it('should scale linearly with object count', async () => {
       const results: { count: number; time: number }[] = [];
 
       for (const objectCount of [10, 50, 100, 200]) {
