@@ -34,7 +34,8 @@ export class PhysicsSystem {
       this.world = new this.RAPIER.World(gravity);
 
       // Create event queue for collision detection
-      this.eventQueue = new this.RAPIER.EventQueue(true);
+      // In Rapier 0.14+, EventQueue constructor no longer takes parameters
+      this.eventQueue = new this.RAPIER.EventQueue();
 
       this.isInitialized = true;
       console.log("Rapier physics initialized successfully");
@@ -52,7 +53,12 @@ export class PhysicsSystem {
       // Remove any bodies that were queued for deletion BEFORE stepping
       this.processDeferredRemovals();
 
-      this.world.step();
+      // Step the world with the event queue to enable collision events
+      if (this.eventQueue) {
+        this.world.step(this.eventQueue);
+      } else {
+        this.world.step();
+      }
     } catch (e) {
       // Rapier errors often indicate memory corruption from improper body management
       // Common causes: removing bodies during physics step, using freed bodies

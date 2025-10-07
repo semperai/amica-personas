@@ -505,7 +505,19 @@ export const ScenarioTestUtils = {
    * Load scenario code from string
    */
   loadScenarioFromCode(code: string): any {
-    const ClassDefinition = new Function(`return ${code}`)();
+    // Handle both class declarations and expressions
+    const trimmedCode = code.trim();
+    let evalCode = trimmedCode;
+
+    // If it's a class declaration (starts with 'class'), wrap it to return the class
+    if (trimmedCode.startsWith('class ')) {
+      // Extract class name
+      const classNameMatch = trimmedCode.match(/^class\s+(\w+)/);
+      const className = classNameMatch ? classNameMatch[1] : 'Scenario';
+      evalCode = `${trimmedCode}; return ${className};`;
+    }
+
+    const ClassDefinition = new Function(evalCode)();
     return ClassDefinition;
   },
 
