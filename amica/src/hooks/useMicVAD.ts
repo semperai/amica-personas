@@ -81,11 +81,8 @@ export function useMicVAD(options: Partial<ReactRealTimeVADOptions>) {
     let myvad: MicVAD | null = null;
     let canceled = false;
 
-    console.log('[useMicVAD] ========================================');
-    console.log('[useMicVAD] VAD useEffect triggered!');
-    console.log('[useMicVAD] getStream key (first 100 chars):', getStreamKey.slice(0, 100));
-    console.log('[useMicVAD] model:', model);
-    console.log('[useMicVAD] ========================================');
+    // Reduced logging - only log when VAD is recreated
+    console.log('[useMicVAD] Initializing VAD with model:', model);
 
     const setup = async (): Promise<void> => {
       try {
@@ -96,10 +93,6 @@ export function useMicVAD(options: Partial<ReactRealTimeVADOptions>) {
         const vadOptions: RealTimeVADOptions = {
           ...fullOptions,
           onFrameProcessed: (probs, frame) => {
-            if (!window._vadWrapperCalled) {
-              window._vadWrapperCalled = true;
-              console.log('[useMicVAD] onFrameProcessed WRAPPER is being called!');
-            }
             const isSpeaking = probs.isSpeech > fullOptions.userSpeakingThreshold;
             setUserSpeaking(isSpeaking);
             onFrameProcessedRef.current(probs, frame);
@@ -117,26 +110,22 @@ export function useMicVAD(options: Partial<ReactRealTimeVADOptions>) {
             onVADMisfireRef.current();
           },
           getStream: () => {
-            console.log('[useMicVAD] getStream wrapper called');
             return getStreamRef.current();
           },
         };
 
-        console.log('[useMicVAD] Creating MicVAD instance...');
         myvad = await MicVAD.new(vadOptions);
 
         if (canceled) {
-          console.log('[useMicVAD] Setup canceled, destroying VAD');
           myvad.destroy();
           return;
         }
 
-        console.log('[useMicVAD] MicVAD created successfully');
+        console.log('[useMicVAD] VAD ready');
         setVAD(myvad);
         setLoading(false);
 
         if (fullOptions.startOnLoad) {
-          console.log('[useMicVAD] Starting VAD (startOnLoad=true)');
           myvad.start();
           setListening(true);
         }
@@ -156,9 +145,6 @@ export function useMicVAD(options: Partial<ReactRealTimeVADOptions>) {
     });
 
     return function cleanUp() {
-      console.log('[useMicVAD] ========================================');
-      console.log('[useMicVAD] CLEANUP: Destroying VAD instance');
-      console.log('[useMicVAD] ========================================');
       canceled = true;
       if (myvad) {
         myvad.destroy();
@@ -170,7 +156,6 @@ export function useMicVAD(options: Partial<ReactRealTimeVADOptions>) {
   }, [getStreamKey, model]); // Recreate when getStream changes or model changes
 
   const pause = useCallback(() => {
-    console.log('[useMicVAD] Pausing VAD');
     if (!loading && !errored) {
       vad?.pause();
       setListening(false);
@@ -178,7 +163,6 @@ export function useMicVAD(options: Partial<ReactRealTimeVADOptions>) {
   }, [loading, errored, vad]);
 
   const start = useCallback(() => {
-    console.log('[useMicVAD] Starting VAD');
     if (!loading && !errored) {
       vad?.start();
       setListening(true);

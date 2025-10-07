@@ -412,9 +412,11 @@ export class Model {
    * 音声を再生し、リップシンクを行う
    */
   public async speak(buffer: ArrayBuffer, screenplay: Screenplay) {
+    console.log('[VRM] Starting speak -', { bufferSize: buffer.byteLength, expression: screenplay.expression });
     this.emoteController?.playEmotion(screenplay.expression);
     await new Promise((resolve) => {
       this._lipSync?.playFromArrayBuffer(buffer, () => {
+        console.log('[VRM] Speak completed');
         resolve(true);
       });
     });

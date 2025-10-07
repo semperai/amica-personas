@@ -10,14 +10,17 @@ export async function openaiTTS(
 
   try {
     const url = `${config("openai_tts_url")}/v1/audio/speech`;
-    console.debug('openai-tts request', { url, model: config("openai_tts_model"), voice: config("openai_tts_voice") });
+    const model = config("openai_tts_model");
+    const voice = config("openai_tts_voice");
+
+    console.log('[TTS] OpenAI TTS request -', { url, model, voice, messageLength: message.length });
 
     const res = await fetch(url, {
       method: "POST",
       body: JSON.stringify({
-        model: config("openai_tts_model"),
+        model,
         input: message,
-        voice: config("openai_tts_voice"),
+        voice,
       }),
       headers: {
         "Content-Type": "application/json",
@@ -53,7 +56,7 @@ export async function openaiTTS(
     }
 
     const data = (await res.arrayBuffer()) as any;
-    console.debug('openai-tts success', { size: data.byteLength });
+    console.log('[TTS] OpenAI TTS response -', { audioSize: data.byteLength });
 
     return { audio: data };
   } catch (e) {

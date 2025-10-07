@@ -31,8 +31,6 @@ export default function MessageInput({
   selectedDeviceId?: string;
   micEnabled?: boolean;
 }) {
-  console.log('[ChatInput] Component render - selectedDeviceId:', selectedDeviceId);
-
   const transcriber = useTranscriber();
   const inputRef = useRef<HTMLInputElement>(null);
   const [whisperOpenAIOutput, setWhisperOpenAIOutput] = useState<any | null>(null);
@@ -42,9 +40,7 @@ export default function MessageInput({
 
   // Memoize getStream to prevent VAD from recreating on every render
   const getStream = useMemo(() => {
-    console.log('[ChatInput] Creating new getStream function for deviceId:', selectedDeviceId);
     return async () => {
-      console.log('[VAD] getStream called with deviceId:', selectedDeviceId);
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           deviceId: selectedDeviceId !== 'default' ? { exact: selectedDeviceId } : undefined,
@@ -54,7 +50,6 @@ export default function MessageInput({
           noiseSuppression: true,
         },
       });
-      console.log('[VAD] Got stream with tracks:', stream.getAudioTracks().map(t => t.label));
       return stream;
     };
   }, [selectedDeviceId]);
@@ -65,35 +60,19 @@ export default function MessageInput({
     baseAssetPath: '/',
     getStream,
     onFrameProcessed: (probabilities) => {
-      // Log every 50 frames to verify processing is happening (more frequent for testing)
-      if (!window._vadFrameCount) {
-        window._vadFrameCount = 0;
-        console.log('[VAD] onFrameProcessed callback is firing! Starting frame count.');
-      }
-      window._vadFrameCount++;
-
-      if (window._vadFrameCount % 50 === 0) {
-        console.log('[VAD] Processed', window._vadFrameCount, 'frames, current speech probability:', probabilities.isSpeech, 'full probabilities:', probabilities);
-      }
-
-      if (probabilities.isSpeech > 0.3) {
-        console.log('[VAD] SPEECH DETECTED! Probability:', probabilities.isSpeech, 'full:', probabilities);
-      }
+      // Removed excessive VAD logging - no per-frame logging
     },
     onVADMisfire: () => {
-      console.log('[VAD] VAD misfire (speech segment too short)');
+      // Speech segment too short - no logging needed
     },
     onSpeechStart: () => {
-      console.log('[VAD] ===== Speech started =====');
       console.time('performance_speech');
     },
     onSpeechRealStart: () => {
-      console.log('[VAD] ===== Speech REALLY started (not a misfire) =====');
+      console.log('[VAD] Speech detected');
     },
     onSpeechEnd: (audio: Float32Array) => {
-      console.log('[VAD] ===== Speech ended =====');
-      console.log('[VAD] Audio length:', audio.length, 'samples');
-      console.log('[VAD] Audio duration:', (audio.length / 16000).toFixed(2), 'seconds');
+      console.log('[VAD] Speech ended -', (audio.length / 16000).toFixed(2), 'seconds');
       console.timeEnd('performance_speech');
       console.time('performance_transcribe');
       (window as any).chatvrm_latency_tracker = {
@@ -103,69 +82,62 @@ export default function MessageInput({
 
       try {
         const sttBackend = config("stt_backend");
-        console.log('[STT] Using backend:', sttBackend);
 
         switch (sttBackend) {
           case 'whisper_browser': {
-            console.log('[STT] Starting whisper_browser transcription');
             // since VAD sample rate is same as whisper we do nothing here
             // both are 16000
             const audioCtx = new AudioContext();
             const buffer = audioCtx.createBuffer(1, audio.length, 16000);
             buffer.copyToChannel(new Float32Array(audio), 0, 0);
             transcriber.start(buffer);
-            console.log('[STT] whisper_browser transcription started');
             break;
           }
           case 'whisper_openai': {
-            console.log('[STT] Starting whisper_openai transcription');
             const wav = new WaveFile();
             wav.fromScratch(1, 16000, '32f', audio);
             const file = new File([new Uint8Array(wav.toBuffer())], "input.wav", { type: "audio/wav" });
-            console.log('[STT] Created WAV file, size:', file.size);
 
             let prompt;
             // TODO load prompt if it exists
 
             (async () => {
               try {
-                console.log('[STT] Calling OpenAI Whisper API...');
+                console.log('[STT] OpenAI Whisper request -', { url: config("openai_whisper_url"), model: config("openai_whisper_model"), fileSize: file.size });
                 const transcript = await openaiWhisper(file, prompt);
-                console.log('[STT] OpenAI Whisper response:', transcript);
+                console.log('[STT] OpenAI Whisper response -', { text: transcript });
                 setWhisperOpenAIOutput(transcript);
               } catch (e: any) {
-                console.error('[STT] whisper_openai error', e);
+                console.error('[STT] OpenAI Whisper error:', e);
                 alert.error('whisper_openai error', e.toString());
               }
             })();
             break;
           }
           case 'whispercpp': {
-            console.log('[STT] Starting whispercpp transcription');
             const wav = new WaveFile();
             wav.fromScratch(1, 16000, '32f', audio);
             wav.toBitDepth('16');
             const file = new File([new Uint8Array(wav.toBuffer())], "input.wav", { type: "audio/wav" });
-            console.log('[STT] Created WAV file, size:', file.size);
 
             let prompt;
             // TODO load prompt if it exists
 
             (async () => {
               try {
-                console.log('[STT] Calling Whisper.cpp API...');
+                console.log('[STT] Whisper.cpp request -', { url: config("whispercpp_url"), fileSize: file.size });
                 const transcript = await whispercpp(file, prompt);
-                console.log('[STT] Whisper.cpp response:', transcript);
+                console.log('[STT] Whisper.cpp response -', { text: transcript });
                 setWhisperCppOutput(transcript);
               } catch (e: any) {
-                console.error('[STT] whispercpp error', e);
+                console.error('[STT] Whisper.cpp error:', e);
                 alert.error('whispercpp error', e.toString());
               }
             })();
             break;
           }
           default:
-            console.log('[STT] Unknown or no backend configured:', sttBackend);
+            console.warn('[STT] Unknown backend:', sttBackend);
         }
       } catch (e: any) {
         console.error('[STT] stt_backend error', e);
@@ -177,30 +149,13 @@ export default function MessageInput({
   // Always print VAD status with setInterval for testing
   const selectedDevice = audioDevices.find(d => d.deviceId === selectedDeviceId);
 
-  useEffect(() => {
-    const statusInterval = setInterval(() => {
-      console.log('[VAD] Status:', {
-        loading: vad.loading,
-        listening: vad.listening,
-        userSpeaking: vad.userSpeaking,
-        errored: !!vad.errored,
-        micEnabled,
-        selectedDeviceId,
-        selectedDeviceName: selectedDevice?.label || selectedDeviceId,
-        totalDevices: audioDevices.length,
-        frameCount: window._vadFrameCount || 0,
-      });
-    }, 2000); // Print every 2 seconds
-
-    return () => clearInterval(statusInterval);
-  }, [vad.loading, vad.listening, vad.userSpeaking, vad.errored, micEnabled, selectedDeviceId, selectedDevice, audioDevices.length]);
+  // Removed VAD status interval logging
 
   if (vad.errored) {
     console.error('[VAD] ERROR:', vad.errored);
   }
 
   useEffect(() => {
-    console.log('[VAD] State changed - listening:', vad.listening, 'userSpeaking:', vad.userSpeaking);
 
     // Check if we have an audio context and it's running
     if (vad.listening) {

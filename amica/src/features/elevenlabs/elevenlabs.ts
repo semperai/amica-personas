@@ -12,9 +12,10 @@ export async function elevenlabs(
   }
 
   // Request body
+  const model = config("elevenlabs_model");
   const body = {
     text: message,
-    model_id: config("elevenlabs_model"),
+    model_id: model,
     voice_settings: {
       stability: 0,
       similarity_boost: 0,
@@ -23,7 +24,10 @@ export async function elevenlabs(
     }
   };
 
-  const elevenlabsRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?optimize_streaming_latency=0&output_format=mp3_44100_128`, {
+  const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
+  console.log('[TTS] ElevenLabs request -', { url, model, voiceId, messageLength: message.length });
+
+  const elevenlabsRes = await fetch(`${url}?optimize_streaming_latency=0&output_format=mp3_44100_128`, {
     method: "POST",
     body: JSON.stringify(body),
     headers: {
@@ -33,9 +37,11 @@ export async function elevenlabs(
     },
   });
   if (! elevenlabsRes.ok) {
+    console.error('[TTS] ElevenLabs error:', elevenlabsRes.status, elevenlabsRes.statusText);
     throw new Error(`ElevenLabs API Error (${elevenlabsRes.status})`);
   }
   const data = (await elevenlabsRes.arrayBuffer()) as any;
+  console.log('[TTS] ElevenLabs response -', { audioSize: data.byteLength });
 
   return { audio: data };
 }

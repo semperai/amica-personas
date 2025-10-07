@@ -221,7 +221,6 @@ export class Chat {
         }
 
         if (ttsJob.streamIdx !== this.currentStreamIdx) {
-          console.log("skipping tts for streamIdx");
           continue;
         }
 
@@ -244,7 +243,6 @@ export class Chat {
           break;
         }
         if (speak.streamIdx !== this.currentStreamIdx) {
-          console.log("skipping speak for streamIdx");
           continue;
         }
 
@@ -260,10 +258,24 @@ export class Chat {
         this.bubbleMessage("assistant", speak.screenplay.text);
 
         if (speak.audioBuffer) {
+          const model = this.viewer?.vrm?.getModel();
+          console.log('[Chat] Processing speak job -', {
+            audioBufferSize: speak.audioBuffer.byteLength,
+            hasViewer: !!this.viewer,
+            hasVrm: !!this.viewer?.vrm,
+            hasModel: !!model,
+            hasModelSpeak: !!model?.speak
+          });
           this.setChatSpeaking!(true);
-          await this.viewer!.model?.speak(speak.audioBuffer, speak.screenplay);
+          if (model?.speak) {
+            await model.speak(speak.audioBuffer, speak.screenplay);
+          } else {
+            console.error('[Chat] Cannot speak - VRM model not loaded');
+          }
           this.setChatSpeaking!(false);
           this.isAwake() ? this.updateAwake() : null;
+        } else {
+          console.warn('[Chat] Speak job has null audioBuffer');
         }
       } while (this.speakJobs.size() > 0);
       await wait(50);
@@ -384,7 +396,7 @@ export class Chat {
 
   public async makeAndHandleStream(messages: Message[]) {
     try {
-      console.log('[Chat] Creating chat response stream', {
+      console.debug('[Chat] Creating chat response stream', {
         backend: config("chatbot_backend"),
         messageCount: messages.length,
       });
@@ -412,7 +424,7 @@ export class Chat {
 
   public async handleChatResponseStream() {
     if (this.streams.length === 0) {
-      console.log("no stream!");
+      console.warn("No stream available");
       return;
     }
 
@@ -441,11 +453,9 @@ export class Chat {
     try {
       while (true) {
         if (this.currentStreamIdx !== streamIdx) {
-          console.log("wrong stream idx");
           break;
         }
         const { done, value } = await reader.read();
-        console.log("monkey", value);
         if (!firstTokenEncountered) {
           console.timeEnd("performance_time_to_first_token");
           firstTokenEncountered = true;
@@ -597,7 +607,7 @@ export class Chat {
     console.debug("getChatResponseStream", messages);
     const chatbotBackend = config("chatbot_backend");
 
-    console.log('[Chat] Getting chat response stream', {
+    console.debug('[Chat] Getting chat response stream', {
       backend: chatbotBackend,
       messageCount: messages.length,
     });
@@ -609,14 +619,14 @@ export class Chat {
     });
 
     if (beforeContext.backend !== chatbotBackend) {
-      console.log('[Chat] Backend changed by hook', {
+      console.debug('[Chat] Backend changed by hook', {
         original: chatbotBackend,
         modified: beforeContext.backend,
       });
     }
 
     let stream: ReadableStream<Uint8Array>;
-    console.log('[Chat] Routing to backend provider:', beforeContext.backend);
+    console.debug('[Chat] Routing to backend provider:', beforeContext.backend);
     switch (beforeContext.backend) {
       case "arbius_llm":
         stream = await getArbiusChatResponseStream(beforeContext.messages);
@@ -637,11 +647,11 @@ export class Chat {
         stream = await getKoboldAiChatResponseStream(beforeContext.messages);
         break;
       default:
-        console.log('[Chat] Unknown backend, using echo provider:', beforeContext.backend);
+        console.warn('[Chat] Unknown backend, using echo provider:', beforeContext.backend);
         stream = await getEchoChatResponseStream(beforeContext.messages);
     }
 
-    console.log('[Chat] Stream created successfully');
+    console.debug('[Chat] Stream created successfully');
 
     // Trigger after hook
     await this.hookManager.trigger('after:llm:request', {
