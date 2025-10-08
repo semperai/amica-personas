@@ -667,18 +667,19 @@ export class AudioNodeVAD {
     this.frameProcessor.resume()
   }
 
-  receive = (node: AudioNode) => {
+  receive = async (node: AudioNode) => {
     log.debug('[VAD] Connecting source node to AudioWorkletNode')
     log.debug('[VAD] AudioContext state:', this.ctx.state)
 
     // FIX: Resume AudioContext if suspended
     if (this.ctx.state === 'suspended') {
       log.debug('[VAD] AudioContext is suspended, resuming...')
-      this.ctx.resume().then(() => {
+      try {
+        await this.ctx.resume()
         log.debug('[VAD] AudioContext resumed, state:', this.ctx.state)
-      }).catch((error) => {
+      } catch (error) {
         log.error('[VAD] Failed to resume AudioContext:', error as Error)
-      })
+      }
     }
 
     log.debug('[VAD] Source node:', node)
