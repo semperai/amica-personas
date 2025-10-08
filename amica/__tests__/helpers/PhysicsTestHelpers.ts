@@ -161,6 +161,7 @@ export class PhysicsTestHelper {
   simulate(durationSeconds: number, fps = 60): void {
     const frames = Math.floor(durationSeconds * fps);
     const dt = 1 / fps;
+    this.world.timestep = dt;
 
     for (let i = 0; i < frames; i++) {
       this.world.step(this.eventQueue);
@@ -184,6 +185,7 @@ export class PhysicsTestHelper {
   ): { success: boolean; duration: number } {
     const maxFrames = Math.floor(maxDuration * fps);
     const dt = 1 / fps;
+    this.world.timestep = dt;
 
     for (let i = 0; i < maxFrames; i++) {
       this.world.step(this.eventQueue);
