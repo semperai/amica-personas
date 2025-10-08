@@ -12,11 +12,12 @@ export async function piper(
       const res = await fetch(url.toString());
 
       if (!res.ok) {
-        console.error('[TTS] Piper error:', res.status, res.statusText);
-        throw new Error(`Piper API Error (${res.status})`);
+        const errorText = await res.text().catch(() => '');
+        console.error('[TTS] Piper error:', res.status, res.statusText, errorText);
+        throw new Error(`Piper API Error (${res.status}: ${res.statusText})`);
       }
 
-      const data = (await res.arrayBuffer()) as any;
+      const data = await res.arrayBuffer();
       console.log('[TTS] Piper response -', { audioSize: data.byteLength });
 
       return { audio: data };

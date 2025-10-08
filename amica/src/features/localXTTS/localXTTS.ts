@@ -28,7 +28,7 @@ export async function localXTTSTTS(message:string){
     });
     if (!res.ok) {
       console.error('[TTS] LocalXTTS error:', res.status, res.statusText);
-      throw new Error("localXTTS TTS API Error");
+      throw new Error(`LocalXTTS TTS API Error (${res.status}: ${res.statusText})`);
     }
     const data = await res.json();
     console.log('[TTS] LocalXTTS response -', { outputUrl: data.output_file_url });
