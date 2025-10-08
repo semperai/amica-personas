@@ -85,40 +85,44 @@ export class Model {
     const helperRoot = new THREE.Group();
     helperRoot.renderOrder = 10000;
 
-    // the type of material to use
-    // should usually be MToonMaterial
+    // Determine material type based on renderer and config
     let materialType: any;
-    switch (config("mtoon_material_type")) {
-      case "mtoon":
-        materialType = MToonMaterial;
-        break;
-      case "mtoon_node":
-        // @ts-ignore
-        const { MToonNodeMaterial } = await import("@pixiv/three-vrm/nodes");
-        materialType = MToonNodeMaterial;
-        break;
-      case "meshtoon":
-        materialType = THREE.MeshToonMaterial;
-        break;
-      case "basic":
-        materialType = THREE.MeshBasicMaterial;
-        break;
-      case "depth":
-        materialType = THREE.MeshDepthMaterial;
-        break;
-      case "normal":
-        materialType = THREE.MeshNormalMaterial;
-        break;
-      default:
-        console.error("mtoon_material_type not found");
-        break;
-    }
+    const useWebGPU = config("use_webgpu") === "true";
+    const configuredMaterialType = config("mtoon_material_type");
 
-    if (config("use_webgpu") === "true") {
-      // create a WebGPU compatible MToonMaterialLoaderPlugin
+    // WebGPU requires MToonNodeMaterial for proper rendering
+    if (useWebGPU) {
+      console.log('[VRM] Using WebGPU renderer - loading MToonNodeMaterial');
       // @ts-ignore
-      // TODO currently MToonNodeMaterial is broken in amica
-      // materialType = MTonNodeMaterial;
+      const { MToonNodeMaterial } = await import("@pixiv/three-vrm/nodes");
+      materialType = MToonNodeMaterial;
+    } else {
+      // WebGL renderer - use configured material type
+      switch (configuredMaterialType) {
+        case "mtoon":
+          materialType = MToonMaterial;
+          break;
+        case "mtoon_node":
+          console.warn('[VRM] mtoon_node requires WebGPU - falling back to MToonMaterial');
+          materialType = MToonMaterial;
+          break;
+        case "meshtoon":
+          materialType = THREE.MeshToonMaterial;
+          break;
+        case "basic":
+          materialType = THREE.MeshBasicMaterial;
+          break;
+        case "depth":
+          materialType = THREE.MeshDepthMaterial;
+          break;
+        case "normal":
+          materialType = THREE.MeshNormalMaterial;
+          break;
+        default:
+          console.error("[VRM] Unknown mtoon_material_type:", configuredMaterialType);
+          materialType = MToonMaterial;
+          break;
+      }
     }
 
     loader.register((parser) => {
