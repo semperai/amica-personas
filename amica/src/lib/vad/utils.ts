@@ -126,11 +126,13 @@ export async function audioFileToArray(audioFileData: Blob) {
   }
   let _audioBuffer = audioBuffer as AudioBuffer
   let out = new Float32Array(_audioBuffer.length)
+  const channelCount = _audioBuffer.numberOfChannels
   for (let i = 0; i < _audioBuffer.length; i++) {
-    for (let j = 0; j < _audioBuffer.numberOfChannels; j++) {
-      // @ts-ignore
-      out[i] += _audioBuffer.getChannelData(j)[i]
+    let sample = 0
+    for (let j = 0; j < channelCount; j++) {
+      sample += _audioBuffer.getChannelData(j)[i] ?? 0
     }
+    out[i] = sample / channelCount
   }
   return { audio: out, sampleRate: _audioBuffer.sampleRate }
 }
