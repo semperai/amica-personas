@@ -203,46 +203,62 @@ describe("VAD Performance Tracking", () => {
   });
 
   describe("PerformanceTimer", () => {
-    test("should measure elapsed time when enabled", async () => {
-      const timer = new PerformanceTimer(true);
+    test("should measure elapsed time when enabled", () => {
+      let fakeTime = 0;
+      vi.spyOn(performance, 'now').mockImplementation(() => fakeTime);
 
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      const timer = new PerformanceTimer(true);
+      fakeTime += 50;
 
       const elapsed = timer.elapsed();
-      expect(elapsed).toBeGreaterThanOrEqual(45); // Allow some variance
-      // Generous upper bound for slow CI environments (3x margin)
-      expect(elapsed).toBeLessThan(150);
+      expect(elapsed).toBe(50);
+
+      vi.restoreAllMocks();
     });
 
-    test("should return 0 when disabled", async () => {
-      const timer = new PerformanceTimer(false);
+    test("should return 0 when disabled", () => {
+      let fakeTime = 0;
+      vi.spyOn(performance, 'now').mockImplementation(() => fakeTime);
 
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      const timer = new PerformanceTimer(false);
+      fakeTime += 50;
 
       const elapsed = timer.elapsed();
       expect(elapsed).toBe(0);
+
+      vi.restoreAllMocks();
     });
 
-    test("should return duration with end()", async () => {
-      const timer = new PerformanceTimer(true);
+    test("should return duration with end()", () => {
+      let fakeTime = 0;
+      vi.spyOn(performance, 'now').mockImplementation(() => fakeTime);
 
-      await new Promise((resolve) => setTimeout(resolve, 30));
+      const timer = new PerformanceTimer(true);
+      fakeTime += 30;
 
       const duration = timer.end();
-      expect(duration).toBeGreaterThanOrEqual(25);
-      expect(duration).toBeLessThan(80);
+      expect(duration).toBe(30);
+
+      vi.restoreAllMocks();
     });
 
-    test("should allow multiple elapsed() calls", async () => {
+    test("should allow multiple elapsed() calls", () => {
+      let fakeTime = 0;
+      vi.spyOn(performance, 'now').mockImplementation(() => fakeTime);
+
       const timer = new PerformanceTimer(true);
 
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      fakeTime += 20;
       const elapsed1 = timer.elapsed();
 
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      fakeTime += 20;
       const elapsed2 = timer.elapsed();
 
+      expect(elapsed1).toBe(20);
+      expect(elapsed2).toBe(40);
       expect(elapsed2).toBeGreaterThan(elapsed1);
+
+      vi.restoreAllMocks();
     });
   });
 
