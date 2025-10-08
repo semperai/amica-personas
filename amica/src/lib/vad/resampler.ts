@@ -11,13 +11,13 @@ export class Resampler {
 
   constructor(public options: ResamplerOptions) {
     if (options.nativeSampleRate < 16000) {
-      log.error(
-        "nativeSampleRate is too low. Should have 16000 = targetSampleRate <= nativeSampleRate"
+      log.warn(
+        `nativeSampleRate (${options.nativeSampleRate}) is below 16000 Hz. Expected targetSampleRate (${options.targetSampleRate}) <= nativeSampleRate.`
       )
     }
     if (options.nativeSampleRate < options.targetSampleRate) {
       throw new Error(
-        "Resampler only supports downsampling. nativeSampleRate must be >= targetSampleRate."
+        `Resampler only supports downsampling. nativeSampleRate (${options.nativeSampleRate}) must be >= targetSampleRate (${options.targetSampleRate}).`
       )
     }
     this.inputBuffer = []

@@ -21,7 +21,7 @@ describe("Resampler", () => {
           targetSampleRate: 16000,
           targetFrameSize: 512,
         });
-      }).toThrow("Resampler only supports downsampling. nativeSampleRate must be >= targetSampleRate.");
+      }).toThrow(/Resampler only supports downsampling\. nativeSampleRate \(\d+\) must be >= targetSampleRate \(\d+\)\./);
     });
   });
 
