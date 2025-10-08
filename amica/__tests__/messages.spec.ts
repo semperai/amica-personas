@@ -7,7 +7,7 @@ describe("messages", () => {
   let consoleSpy: MockInstance<any>;
 
   beforeEach(() => {
-    consoleSpy = vi.spyOn(console, "log").mockImplementation();
+    consoleSpy = vi.spyOn(console, "debug").mockImplementation();
   });
 
   afterEach(() => {
@@ -262,7 +262,7 @@ describe("messages", () => {
       const texts = ["[happy] Hello"];
       textsToScreenplay(texts);
 
-      expect(consoleSpy).toHaveBeenCalledWith("Emotion detect :", "happy");
+      expect(consoleSpy).toHaveBeenCalledWith("[Chat] Emotion:", "happy");
     });
 
     test("should not log for unrecognized emotions", () => {
