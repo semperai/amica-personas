@@ -142,13 +142,13 @@ export default function Home() {
     loadAudioDevices();
 
     // Guard: Only add event listener if navigator.mediaDevices is available
-    if (navigator.mediaDevices) {
+    if (navigator.mediaDevices?.addEventListener) {
       navigator.mediaDevices.addEventListener('devicechange', loadAudioDevices);
     }
 
     return () => {
       // Guard: Only remove event listener if navigator.mediaDevices is available
-      if (navigator.mediaDevices) {
+      if (navigator.mediaDevices?.removeEventListener) {
         navigator.mediaDevices.removeEventListener('devicechange', loadAudioDevices);
       }
     };
