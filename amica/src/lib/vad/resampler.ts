@@ -80,7 +80,8 @@ export class Resampler {
         }
         inputIndex++
       }
-      outputFrame[outputIndex] = sum / num
+      // Defensive guard: prevent NaN if num is 0 (shouldn't happen with downsampling, but safe)
+      outputFrame[outputIndex] = num ? sum / num : 0
       outputIndex++
     }
 
