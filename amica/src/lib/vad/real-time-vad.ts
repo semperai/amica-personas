@@ -308,7 +308,12 @@ export class MicVAD {
     this.audioNodeVAD.receive(this.sourceNode)
 
     if (this.audioContext.state === "suspended") {
-      await this.audioContext.resume()
+      try {
+        await this.audioContext.resume()
+      } catch (error) {
+        log.error('Failed to resume AudioContext:', error)
+        throw new Error('Failed to resume audio context')
+      }
     }
     this.audioNodeVAD.start()
     this.listening = true
@@ -393,7 +398,11 @@ export class MicVAD {
       log.warn("Source node not initialized")
     }
     this.audioNodeVAD.destroy()
-    this.audioContext.close()
+    try {
+      this.audioContext.close()
+    } catch (error) {
+      log.error('Failed to close AudioContext:', error)
+    }
   }
 
   /**
@@ -667,6 +676,8 @@ export class AudioNodeVAD {
       console.log('[VAD] AudioContext is suspended, resuming...')
       this.ctx.resume().then(() => {
         console.log('[VAD] AudioContext resumed, state:', this.ctx.state)
+      }).catch((error) => {
+        console.error('[VAD] Failed to resume AudioContext:', error)
       })
     }
 

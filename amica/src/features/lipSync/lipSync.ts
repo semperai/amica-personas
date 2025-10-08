@@ -35,7 +35,12 @@ export class LipSync {
   public async playFromArrayBuffer(buffer: ArrayBuffer, onEnded?: () => void) {
     // Resume AudioContext if suspended (required by modern browsers)
     if (this.audio.state === 'suspended') {
-      await this.audio.resume();
+      try {
+        await this.audio.resume();
+      } catch (error) {
+        console.error('Failed to resume AudioContext:', error);
+        throw new Error('Failed to resume audio playback');
+      }
     }
 
     const audioBuffer = await this.audio.decodeAudioData(buffer);

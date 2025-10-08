@@ -248,8 +248,12 @@ export const Moshi:FC<ConversationProps> = ({
         {
           (!isOver || isBypass) && (
             <button
-              onClick={() => {
-                audioContext.current.resume();
+              onClick={async () => {
+                try {
+                  await audioContext.current.resume();
+                } catch (error) {
+                  console.error('Failed to resume AudioContext:', error);
+                }
                 isConnected ? stop() : start();
               }}
             >
