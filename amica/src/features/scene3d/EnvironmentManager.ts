@@ -186,6 +186,7 @@ export class EnvironmentManager {
   public unloadRoom(): void {
     if (this.room?.room) {
       this.scene.remove(this.room.room);
+      this.room.room = undefined;
       this.callbacks.onRoomUnloaded.forEach(cb => cb());
     }
   }
