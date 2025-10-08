@@ -548,27 +548,34 @@ describe('EnvironmentManager', () => {
       const sceneAddSpy = vi.spyOn(mockScene, 'add');
       manager = new EnvironmentManager(mockScene);
 
-      const mockRoom1 = new Room();
-      mockRoom1.room = new THREE.Group();
-      (mockRoom1.loadRoom as any).mockResolvedValue(undefined);
-
-      const mockRoom2 = new Room();
-      mockRoom2.room = new THREE.Group();
-      (mockRoom2.loadRoom as any).mockResolvedValue(undefined);
+      const mockRoom1Group = new THREE.Group();
+      const mockRoom2Group = new THREE.Group();
 
       (Room as any)
-        .mockImplementationOnce(() => mockRoom1)
-        .mockImplementationOnce(() => mockRoom2);
+        .mockImplementationOnce(() => ({
+          room: mockRoom1Group,
+          splat: undefined,
+          loadRoom: vi.fn().mockResolvedValue(undefined),
+          loadSplat: vi.fn(),
+          dispose: vi.fn(),
+        }))
+        .mockImplementationOnce(() => ({
+          room: mockRoom2Group,
+          splat: undefined,
+          loadRoom: vi.fn().mockResolvedValue(undefined),
+          loadSplat: vi.fn(),
+          dispose: vi.fn(),
+        }));
 
       const unloadCallback = vi.fn();
       manager.onRoomUnloaded(unloadCallback);
 
       await manager.loadRoom({ url: 'room1.glb' });
-      expect(sceneAddSpy).toHaveBeenCalledWith(mockRoom1.room);
+      expect(sceneAddSpy).toHaveBeenCalledWith(mockRoom1Group);
 
       await manager.loadRoom({ url: 'room2.glb' });
-      expect(sceneRemoveSpy).toHaveBeenCalledWith(mockRoom1.room);
-      expect(sceneAddSpy).toHaveBeenCalledWith(mockRoom2.room);
+      expect(sceneRemoveSpy).toHaveBeenCalledWith(mockRoom1Group);
+      expect(sceneAddSpy).toHaveBeenCalledWith(mockRoom2Group);
       expect(unloadCallback).toHaveBeenCalledTimes(1);
     });
   });

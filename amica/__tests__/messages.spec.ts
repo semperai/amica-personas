@@ -1,4 +1,5 @@
-import { describe, expect, test, jest, beforeEach, afterEach } from "vitest";
+import { describe, expect, test, jest, beforeEach, afterEach, vi } from "vitest";
+import type { MockInstance } from "vitest";
 import { textsToScreenplay } from "../src/features/chat/messages";
 import type { Screenplay, EmotionType } from "../src/features/chat/messages";
 

@@ -14,21 +14,14 @@ describe("Resampler", () => {
       expect(resampler.inputBuffer).toEqual([]);
     });
 
-    test("should warn when native sample rate is too low", () => {
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
-      new Resampler({
-        nativeSampleRate: 8000,
-        targetSampleRate: 16000,
-        targetFrameSize: 512,
-      });
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining("[VAD]"),
-        "nativeSampleRate is too low. Should have 16000 = targetSampleRate <= nativeSampleRate"
-      );
-
-      consoleErrorSpy.mockRestore();
+    test("should throw when native sample rate is less than target sample rate", () => {
+      expect(() => {
+        new Resampler({
+          nativeSampleRate: 8000,
+          targetSampleRate: 16000,
+          targetFrameSize: 512,
+        });
+      }).toThrow("Resampler only supports downsampling. nativeSampleRate must be >= targetSampleRate.");
     });
   });
 
