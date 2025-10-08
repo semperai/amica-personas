@@ -562,7 +562,7 @@ export class AudioNodeVAD {
             case 'WORKLET_INITIALIZED':
               log.debug('[VAD] Worklet initialized!', ev.data);
               break
-            case Message.AudioFrame:
+            case Message.AudioFrame: {
               let buffer: ArrayBuffer = ev.data.data
               if (!(buffer instanceof ArrayBuffer)) {
                 buffer = new ArrayBuffer(ev.data.data.byteLength)
@@ -571,6 +571,7 @@ export class AudioNodeVAD {
               const frame = new Float32Array(buffer)
               await this.processFrame(frame)
               break
+            }
           }
         }
 
