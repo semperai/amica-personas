@@ -1,4 +1,5 @@
 import { AmicaConfig } from '@/types/config';
+import { setLoadingStage } from '@/utils/fileLoadingProgress';
 
 const defaults = {
   autosend_from_mic: import.meta.env.VITE_AUTOSEND_FROM_MIC ?? 'true',
@@ -125,10 +126,7 @@ export async function loadConfig(): Promise<void> {
   }
 
   // Start loading progress
-  if (typeof window !== "undefined") {
-    (window as any).chatvrm_loading_stage = { stage: "Loading configuration...", progress: 5 };
-    (window as any).chatvrm_loading_stage_cnt = ((window as any).chatvrm_loading_stage_cnt || 0) + 1;
-  }
+  setLoadingStage("Loading configuration...", 5);
 
   try {
     const response = await fetch('/config');
