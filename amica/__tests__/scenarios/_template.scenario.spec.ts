@@ -262,9 +262,12 @@ describe('YourScenario', () => {
     it('should run efficiently', () => {
       const perf = ScenarioTestUtils.measureUpdatePerformance(runner, 100);
 
-      // Update should be fast (< 1ms per frame)
-      expect(perf.avgMs).toBeLessThan(1);
-      expect(perf.maxMs).toBeLessThan(5);
+      // TODO: Adjust these thresholds based on your scenario's complexity
+      // Simple scenarios: < 1ms avg (1000 fps), < 5ms max (200 fps)
+      // Complex scenarios with physics/particles: < 5-10ms avg (100-200 fps), < 20ms max (50 fps)
+      // These are lenient defaults suitable for CI environments
+      expect(perf.avgMs).toBeLessThan(5);   // 5ms avg (200 fps)
+      expect(perf.maxMs).toBeLessThan(20);  // 20ms max (50 fps worst case)
     });
 
     it('should handle many frames without degradation', () => {
@@ -312,6 +315,24 @@ describe('YourScenario', () => {
     it('should handle rapid updates', () => {
       expect(() => {
         runner.updateFrames(100, 0.001); // Very fast updates
+      }).not.toThrow();
+    });
+
+    it('should handle negative delta gracefully', () => {
+      expect(() => {
+        runner.update(-0.016);
+      }).not.toThrow();
+    });
+
+    it('should handle NaN delta', () => {
+      expect(() => {
+        runner.update(NaN);
+      }).not.toThrow();
+    });
+
+    it('should handle Infinity delta', () => {
+      expect(() => {
+        runner.update(Infinity);
       }).not.toThrow();
     });
 
