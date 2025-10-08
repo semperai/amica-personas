@@ -200,6 +200,53 @@ describe("VAD Performance Tracking", () => {
       const metrics2 = tracker.getMetrics();
       expect(metrics2.framesProcessed).toBe(1); // Original unchanged
     });
+
+    test("should handle negative duration values", () => {
+      const tracker = new VADPerformanceTracker(true);
+
+      tracker.recordFrameProcessing(-5);
+      tracker.recordModelInference(-10);
+
+      const metrics = tracker.getMetrics();
+      expect(metrics.framesProcessed).toBe(1);
+      expect(metrics.avgFrameProcessingTime).toBe(-5);
+      expect(metrics.minFrameProcessingTime).toBe(-5);
+      expect(metrics.maxFrameProcessingTime).toBe(-5);
+    });
+
+    test("should handle NaN duration values", () => {
+      const tracker = new VADPerformanceTracker(true);
+
+      tracker.recordFrameProcessing(NaN);
+      tracker.recordModelInference(NaN);
+
+      const metrics = tracker.getMetrics();
+      expect(metrics.framesProcessed).toBe(1);
+      expect(metrics.avgFrameProcessingTime).toBeNaN();
+      expect(metrics.minFrameProcessingTime).toBeNaN();
+      expect(metrics.maxFrameProcessingTime).toBeNaN();
+    });
+
+    test("should handle exactly maxSamples boundary", () => {
+      const tracker = new VADPerformanceTracker(true);
+
+      // Record exactly maxSamples (1000) frame times
+      for (let i = 0; i < 1000; i++) {
+        tracker.recordFrameProcessing(5);
+      }
+
+      let metrics = tracker.getMetrics();
+      expect(metrics.framesProcessed).toBe(1000);
+      expect(metrics.avgFrameProcessingTime).toBe(5);
+
+      // Record one more to exceed maxSamples
+      tracker.recordFrameProcessing(10);
+
+      metrics = tracker.getMetrics();
+      expect(metrics.framesProcessed).toBe(1001);
+      // Average should include the new value but oldest sample should be dropped
+      expect(metrics.avgFrameProcessingTime).toBeCloseTo(5.005, 2);
+    });
   });
 
   describe("PerformanceTimer", () => {
