@@ -49,6 +49,12 @@ export class PhysicsSystem {
   public stepSimulation(delta: number) {
     if (!this.isInitialized || !this.world) return;
 
+    // Clamp delta to a reasonable range to avoid:
+    // - Huge timesteps on lag spikes (max 1/15 = ~66ms for 15 FPS minimum)
+    // - Tiny timesteps that cause instability (min 1/240 = ~4ms for 240 FPS maximum)
+    const clampedDelta = Math.min(Math.max(delta, 1 / 240), 1 / 15);
+    this.world.timestep = clampedDelta;
+
     try {
       // Remove any bodies that were queued for deletion BEFORE stepping
       this.processDeferredRemovals();
