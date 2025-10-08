@@ -30,7 +30,7 @@ jobs:
           version: nightly
 
       - name: Install dependencies
-        run: cd ${{ matrix.package }} && npm ci
+        run: cd ${{ matrix.package }} && npm ci && npm install
 
       - name: Compile contracts
         if: matrix.package == 'contracts'
