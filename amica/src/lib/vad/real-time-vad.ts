@@ -726,9 +726,12 @@ export class AudioNodeVAD {
   }
 
   setFrameProcessorOptions = (options: Partial<FrameProcessorOptions>) => {
-    this.frameProcessor.options = {
+    // Merge and validate options to prevent invalid runtime states
+    const nextOptions = {
       ...this.frameProcessor.options,
       ...options,
     }
+    validateOptions(nextOptions)
+    this.frameProcessor.options = nextOptions
   }
 }
