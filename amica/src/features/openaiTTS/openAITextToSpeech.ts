@@ -30,29 +30,16 @@ export async function openaiTTS(
 
     if (! res.ok) {
       // Try to get error details from response
-      let errorDetails = `HTTP ${res.status} ${res.statusText}`;
-      try {
-        const contentType = res.headers.get("content-type");
-        if (contentType?.includes("application/json")) {
-          const errorJson = await res.json();
-          errorDetails += ` - ${JSON.stringify(errorJson)}`;
-        } else {
-          const errorText = await res.text();
-          errorDetails += ` - ${errorText.substring(0, 200)}`;
-        }
-      } catch (parseErr) {
-        // If we can't parse the error, just use status
-      }
-
+      // Note: Intentionally not logging error response body to avoid exposing user message (PII)
+      // Error responses from OpenAI may echo back the input text
       console.error('OpenAI TTS API Error:', {
         status: res.status,
         statusText: res.statusText,
         url,
-        headers: Object.fromEntries(res.headers.entries()),
-        errorDetails
+        messageLength: message.length
       });
 
-      throw new Error(`OpenAI TTS API Error: ${errorDetails}`);
+      throw new Error(`OpenAI TTS API Error: ${res.status} ${res.statusText}`);
     }
 
     const data = (await res.arrayBuffer()) as any;

@@ -18,8 +18,8 @@ export async function piper(
       const res = await fetch(url.toString());
 
       if (!res.ok) {
-        const errorText = await res.text().catch(() => '');
-        console.error('[TTS] Piper error:', res.status, res.statusText, errorText);
+        // Note: Intentionally not logging error response body as it may contain user message (PII)
+        console.error('[TTS] Piper error:', res.status, res.statusText);
         throw new Error(`Piper API Error (${res.status}: ${res.statusText})`);
       }
 
