@@ -48,18 +48,38 @@ function parseArgs(): ScreenshotOptions {
 
     const [key, value] = arg.slice(2).split('=');
 
+    if (value === undefined && key !== 'help') {
+      console.error(`Error: Missing value for argument --${key}`);
+      process.exit(1);
+    }
+
     switch (key) {
       case 'output':
         options.output = value;
         break;
       case 'width':
-        options.width = parseInt(value, 10);
+        const width = parseInt(value, 10);
+        if (isNaN(width)) {
+          console.error(`Error: Invalid width value: ${value}`);
+          process.exit(1);
+        }
+        options.width = width;
         break;
       case 'height':
-        options.height = parseInt(value, 10);
+        const height = parseInt(value, 10);
+        if (isNaN(height)) {
+          console.error(`Error: Invalid height value: ${value}`);
+          process.exit(1);
+        }
+        options.height = height;
         break;
       case 'wait':
-        options.wait = parseInt(value, 10);
+        const wait = parseInt(value, 10);
+        if (isNaN(wait)) {
+          console.error(`Error: Invalid wait value: ${value}`);
+          process.exit(1);
+        }
+        options.wait = wait;
         break;
       case 'headless':
         options.headless = value !== 'false';
