@@ -123,16 +123,32 @@ contract FeeReductionSystemInvariantTest is Test {
                 assertGt(blocksRemaining, 0, "Should have blocks remaining if pending and delay not passed");
             }
 
-            if (activeBlock > 0 && block.number >= activeBlock + feeSystem.SNAPSHOT_DELAY()) {
-                // Active snapshot should be usable
-                uint256 effectiveBalance = feeSystem.getEffectiveBalance(user);
-                if (amicaToken.balanceOf(user) >= activeBalance) {
-                    assertEq(
-                        effectiveBalance,
-                        activeBalance,
-                        "Active snapshot should determine the effective balance once delay passes"
-                    );
-                }
+            // Verify that effective balance uses the correct snapshot based on priority
+            uint256 effectiveBalance = feeSystem.getEffectiveBalance(user);
+            uint256 currentBalance = amicaToken.balanceOf(user);
+
+            // Determine which snapshot should be active (pending takes priority over active)
+            uint256 expectedSnapshot;
+            bool hasActiveSnapshot = false;
+
+            if (pendingBlock > 0 && block.number >= pendingBlock + feeSystem.SNAPSHOT_DELAY()) {
+                // Pending snapshot has become active
+                expectedSnapshot = pendingBalance;
+                hasActiveSnapshot = true;
+            } else if (activeBlock > 0 && block.number >= activeBlock + feeSystem.SNAPSHOT_DELAY()) {
+                // Active snapshot is usable
+                expectedSnapshot = activeBalance;
+                hasActiveSnapshot = true;
+            }
+
+            if (hasActiveSnapshot) {
+                // Effective balance should be min(currentBalance, expectedSnapshot)
+                uint256 expectedEffective = currentBalance < expectedSnapshot ? currentBalance : expectedSnapshot;
+                assertEq(
+                    effectiveBalance,
+                    expectedEffective,
+                    "Active snapshot should determine the effective balance once delay passes"
+                );
             }
         }
     }
