@@ -295,7 +295,7 @@ export class MicVAD {
    */
   resume = async () => {
     if (!this.stream) {
-      console.warn("Stream not initialized")
+      log.warn("Stream not initialized")
       return
     }
     this.stream = await this.options.resumeStream(this.stream)
@@ -647,7 +647,7 @@ export class AudioNodeVAD {
           }
         }
       } catch (error) {
-        console.error("Error processing audio:", error)
+        log.error("Error processing audio:", error as Error)
       } finally {
         processingAudio = false
       }
@@ -663,28 +663,28 @@ export class AudioNodeVAD {
   }
 
   start = () => {
-    console.log('[AudioNodeVAD] start() called, resuming frame processor')
+    log.debug('[AudioNodeVAD] start() called, resuming frame processor')
     this.frameProcessor.resume()
   }
 
   receive = (node: AudioNode) => {
-    console.log('[VAD] Connecting source node to AudioWorkletNode')
-    console.log('[VAD] AudioContext state:', this.ctx.state)
+    log.debug('[VAD] Connecting source node to AudioWorkletNode')
+    log.debug('[VAD] AudioContext state:', this.ctx.state)
 
     // FIX: Resume AudioContext if suspended
     if (this.ctx.state === 'suspended') {
-      console.log('[VAD] AudioContext is suspended, resuming...')
+      log.debug('[VAD] AudioContext is suspended, resuming...')
       this.ctx.resume().then(() => {
-        console.log('[VAD] AudioContext resumed, state:', this.ctx.state)
+        log.debug('[VAD] AudioContext resumed, state:', this.ctx.state)
       }).catch((error) => {
-        console.error('[VAD] Failed to resume AudioContext:', error)
+        log.error('[VAD] Failed to resume AudioContext:', error as Error)
       })
     }
 
-    console.log('[VAD] Source node:', node)
-    console.log('[VAD] AudioWorkletNode:', this.audioNode)
+    log.debug('[VAD] Source node:', node)
+    log.debug('[VAD] AudioWorkletNode:', this.audioNode)
     node.connect(this.audioNode)
-    console.log('[VAD] Source connected successfully')
+    log.debug('[VAD] Source connected successfully')
   }
 
   processFrame = async (frame: Float32Array) => {
