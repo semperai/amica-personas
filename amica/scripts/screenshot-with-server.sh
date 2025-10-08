@@ -5,15 +5,12 @@
 set -e
 
 # Parse arguments
-SCREENSHOT_ARGS=""
-for arg in "$@"; do
-  SCREENSHOT_ARGS="$SCREENSHOT_ARGS $arg"
-done
+SCREENSHOT_ARGS=("$@")
 
 # Check if dev server is running
 if curl -s http://localhost:5173 > /dev/null 2>&1; then
   echo "✓ Dev server is already running"
-  npm run screenshot -- $SCREENSHOT_ARGS
+  npm run screenshot -- "${SCREENSHOT_ARGS[@]}"
   exit 0
 fi
 
@@ -23,7 +20,7 @@ echo "You have two options:"
 echo ""
 echo "1. Start dev server in another terminal and run screenshot separately:"
 echo "   Terminal 1: npm run dev"
-echo "   Terminal 2: npm run screenshot $SCREENSHOT_ARGS"
+echo "   Terminal 2: npm run screenshot -- ${SCREENSHOT_ARGS[*]}"
 echo ""
 echo "2. Let this script start the dev server, take screenshot, and stop it:"
 echo "   (Warning: This will start and stop the dev server)"
@@ -55,7 +52,7 @@ if [ "$choice" = "2" ]; then
   # Take screenshot
   echo ""
   echo "Taking screenshot..."
-  npm run screenshot -- $SCREENSHOT_ARGS
+  npm run screenshot -- "${SCREENSHOT_ARGS[@]}"
 
   # Stop dev server
   echo ""
@@ -69,5 +66,5 @@ else
   echo "  npm run dev"
   echo ""
   echo "Then run the screenshot command:"
-  echo "  npm run screenshot $SCREENSHOT_ARGS"
+  echo "  npm run screenshot -- ${SCREENSHOT_ARGS[*]}"
 fi

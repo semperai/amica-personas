@@ -4,6 +4,5 @@
   "exclude_informational": false,
   "exclude_low": false,
   "exclude_medium": false,
-  "exclude_high": false,
-  "json": "-"
+  "exclude_high": false
 }

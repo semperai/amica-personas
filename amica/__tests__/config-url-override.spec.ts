@@ -1,9 +1,17 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 describe('Config URL Override', () => {
+  const originalFetch = global.fetch;
+
   beforeEach(() => {
     // Reset modules before each test to get fresh config
     vi.resetModules();
+  });
+
+  afterEach(() => {
+    // Restore the original fetch and clean up mocks
+    vi.restoreAllMocks();
+    global.fetch = originalFetch;
   });
 
   it('should parse URL parameters and override config', async () => {

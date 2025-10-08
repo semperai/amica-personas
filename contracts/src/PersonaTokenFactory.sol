@@ -104,7 +104,6 @@ contract PersonaTokenFactory is
     uint256 private constant CLAIM_DELAY = 1 days;
 
     /// @notice Slippage constants for PositionManager
-    uint256 private constant MAX_SLIPPAGE_INCREASE = 5208; // 5208/10000 = ~52% increase allowance
     uint256 private constant MAX_SLIPPAGE_DECREASE = 500; // 500/10000 = 5% decrease allowance
 
     /**
@@ -1256,10 +1255,6 @@ contract PersonaTokenFactory is
         uint256 amount1Max,
         bytes memory hookData
     ) internal view returns (bytes memory, bytes[] memory) {
-        // Calculate minimum amounts with slippage protection inline
-        uint256 amount0Min = (amount0Max * (10000 - MAX_SLIPPAGE_DECREASE)) / 10000;
-        uint256 amount1Min = (amount1Max * (10000 - MAX_SLIPPAGE_DECREASE)) / 10000;
-
         bytes memory actions = abi.encodePacked(
             uint8(Actions.MINT_POSITION),
             uint8(Actions.SETTLE_PAIR),
