@@ -168,7 +168,9 @@ describe("Resampler", () => {
 
         const outputs = resampler.process(input);
 
-        expect(outputs.length).toBeGreaterThanOrEqual(0);
+        // For 1:1 ratio (no resampling), should produce exactly 1 frame
+        const expectedFrames = ratio === 1 ? 1 : 1;
+        expect(outputs.length).toBe(expectedFrames);
         if (outputs.length > 0) {
           expect(outputs[0]?.length).toBe(frameSize);
         }
