@@ -107,9 +107,6 @@ contract BondingCurveInvariantTest is Test {
         uint256 soldTokens = handler.totalTokensPurchased();
         uint256 ethBalance = handler.totalETHDeposited();
 
-        // ETH balance should always be non-negative
-        assertGe(ethBalance, 0, "ETH balance must be non-negative");
-
         // Tokens purchased should never exceed total supply
         assertLe(soldTokens, TOTAL_SUPPLY, "Cannot purchase more than total supply");
 
@@ -129,9 +126,6 @@ contract BondingCurveInvariantTest is Test {
         ethIn = bound(ethIn, 0.01 ether, 1000 ether);
         // Leave room for at least 1 ether of tokens
         reserveSold = bound(reserveSold, 0, TOTAL_SUPPLY - 1 ether);
-
-        // Skip if ethIn ended up as 0 after bounding
-        if (ethIn == 0) return;
 
         uint256 tokensOut = curve.calculateAmountOut(ethIn, reserveSold, TOTAL_SUPPLY);
 
