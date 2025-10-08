@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
+const mockLocation = (url: string) => {
+  const urlObject = new URL(url);
+  vi.spyOn(window, 'location', 'get').mockReturnValue(urlObject as unknown as Location);
+};
+
 describe('Config URL Override', () => {
   const originalFetch = global.fetch;
 
@@ -17,12 +22,7 @@ describe('Config URL Override', () => {
   it('should parse URL parameters and override config', async () => {
     // Mock window.location with URL parameters
     const mockUrl = 'http://localhost:5173/?vrm_url=/vrm/custom.vrm&bg_color=%23ffffff&name=TestAmica';
-    Object.defineProperty(window, 'location', {
-      value: {
-        search: new URL(mockUrl).search,
-      },
-      writable: true,
-    });
+    mockLocation(mockUrl);
 
     // Mock fetch to return empty config
     global.fetch = vi.fn().mockResolvedValue({
@@ -45,12 +45,7 @@ describe('Config URL Override', () => {
   it('should ignore URL parameters that are not valid config keys', async () => {
     // Mock window.location with invalid URL parameters
     const mockUrl = 'http://localhost:5173/?invalid_key=test&vrm_url=/vrm/test.vrm';
-    Object.defineProperty(window, 'location', {
-      value: {
-        search: new URL(mockUrl).search,
-      },
-      writable: true,
-    });
+    mockLocation(mockUrl);
 
     // Mock fetch to return empty config
     global.fetch = vi.fn().mockResolvedValue({
@@ -74,12 +69,7 @@ describe('Config URL Override', () => {
   it('should prioritize URL parameters over /config endpoint', async () => {
     // Mock window.location with URL parameter
     const mockUrl = 'http://localhost:5173/?name=URLOverride';
-    Object.defineProperty(window, 'location', {
-      value: {
-        search: new URL(mockUrl).search,
-      },
-      writable: true,
-    });
+    mockLocation(mockUrl);
 
     // Mock fetch to return config with different name
     global.fetch = vi.fn().mockResolvedValue({
@@ -104,12 +94,7 @@ describe('Config URL Override', () => {
   it('should handle URL encoded values', async () => {
     // Mock window.location with URL encoded parameters
     const mockUrl = 'http://localhost:5173/?system_prompt=Hello%20World%21&bg_color=%23ff0000';
-    Object.defineProperty(window, 'location', {
-      value: {
-        search: new URL(mockUrl).search,
-      },
-      writable: true,
-    });
+    mockLocation(mockUrl);
 
     // Mock fetch to return empty config
     global.fetch = vi.fn().mockResolvedValue({
