@@ -95,10 +95,16 @@ export class RaycastSystem {
    * Setup mouse tracking for raycasting
    */
   public setupMouseTracking(canvas: HTMLCanvasElement) {
-    canvas.addEventListener("mousemove", (event) => {
-      this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-      this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-    });
+    const handler = (event: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      // Skip calculation if canvas has zero size to avoid division by zero
+      if (rect.width === 0 || rect.height === 0) return;
+
+      // Calculate mouse position relative to canvas, then convert to NDC (-1 to 1)
+      this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    };
+    canvas.addEventListener("mousemove", handler);
   }
 
   /**
