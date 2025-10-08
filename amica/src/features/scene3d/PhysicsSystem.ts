@@ -172,12 +172,18 @@ export class PhysicsSystem {
   }
 
   // Helper to remove a rigid body (deferred until after physics step)
-  public removeRigidBody(rigidBody: RAPIER.RigidBody) {
-    if (!this.isInitialized || !this.world) return;
+  public removeRigidBody(rigidBody: RAPIER.RigidBody | null | undefined) {
+    if (!this.isInitialized || !this.world || !rigidBody) return;
+
+    // Guard against invalid objects - only accept actual RigidBody instances
+    if (this.RAPIER && !(rigidBody instanceof this.RAPIER.RigidBody)) {
+      console.warn('[Physics] Attempted to remove invalid rigid body (not a RigidBody instance)');
+      return;
+    }
 
     // Queue for removal after the current physics step completes
     // This prevents "recursive use" errors
-    this.bodiesToRemove.push(rigidBody);
+    this.bodiesToRemove.push(rigidBody as RAPIER.RigidBody);
   }
 
   public setGravity(x: number, y: number, z: number) {
