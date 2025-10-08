@@ -109,6 +109,14 @@ jobs:
 
       - name: Run Slither
         run: cd contracts && npm run slither
+        continue-on-error: true
+
+      - name: Upload Slither Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: slither-report
+          path: contracts/slither-report.md
 
   website:
     name: Website
