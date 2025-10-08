@@ -81,25 +81,29 @@ export class PhysicsTestHelper {
     // Create collider
     let colliderDesc;
     switch (colliderConfig.shape) {
-      case 'box':
+      case 'box': {
         const size = colliderConfig.size || { x: 0.5, y: 0.5, z: 0.5 };
         colliderDesc = this.rapier.ColliderDesc.cuboid(size.x, size.y, size.z);
         break;
-      case 'sphere':
+      }
+      case 'sphere': {
         colliderDesc = this.rapier.ColliderDesc.ball(colliderConfig.radius || 0.5);
         break;
-      case 'cylinder':
+      }
+      case 'cylinder': {
         colliderDesc = this.rapier.ColliderDesc.cylinder(
           colliderConfig.halfHeight || 0.5,
           colliderConfig.radius || 0.5
         );
         break;
-      case 'capsule':
+      }
+      case 'capsule': {
         colliderDesc = this.rapier.ColliderDesc.capsule(
           colliderConfig.halfHeight || 0.5,
           colliderConfig.radius || 0.5
         );
         break;
+      }
     }
 
     if (colliderConfig.mass !== undefined) {
