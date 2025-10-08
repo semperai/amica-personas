@@ -127,7 +127,11 @@ contract FeeReductionSystemInvariantTest is Test {
                 // Active snapshot should be usable
                 uint256 effectiveBalance = feeSystem.getEffectiveBalance(user);
                 if (amicaToken.balanceOf(user) >= activeBalance) {
-                    assertGe(effectiveBalance, 0, "Should have some effective balance");
+                    assertEq(
+                        effectiveBalance,
+                        activeBalance,
+                        "Active snapshot should determine the effective balance once delay passes"
+                    );
                 }
             }
         }
