@@ -327,16 +327,16 @@ export class Chat {
     this.currentStreamIdx++;
     try {
       if (this.reader) {
-        console.debug("cancelling");
+        console.debug('[Chat] Cancelling stream');
         if (!this.reader?.closed) {
           await this.reader?.cancel();
         }
         // this.reader = null;
         // this.stream = null;
-        console.debug("finished cancelling");
+        console.debug('[Chat] Finished cancelling stream');
       }
     } catch (e: any) {
-      console.error(e.toString());
+      console.error('[Chat] Error during interruption:', e.toString());
     }
 
     // TODO if llm type is llama.cpp, we can send /stop message here
@@ -352,11 +352,11 @@ export class Chat {
     }
 
     console.time("performance_interrupting");
-    console.debug("interrupting...");
+    console.debug('[Chat] Interrupting current stream...');
     await this.interrupt();
     console.timeEnd("performance_interrupting");
     await wait(0);
-    console.debug("wait complete");
+    console.debug('[Chat] Interruption wait complete');
 
     console.debug('[Chat] Received user message:', message.substring(0, 50));
 
@@ -405,7 +405,7 @@ export class Chat {
 
     if (this.streams[this.streams.length - 1] == null) {
       const errMsg = "Error: Null stream encountered.";
-      console.error(errMsg);
+      console.error('[Chat]', errMsg);
       this.alert?.error("Null stream encountered", errMsg);
       return errMsg;
     }
@@ -415,7 +415,7 @@ export class Chat {
 
   public async handleChatResponseStream() {
     if (this.streams.length === 0) {
-      console.warn("No stream available");
+      console.warn('[Chat] No stream available');
       return;
     }
 
@@ -471,7 +471,7 @@ export class Chat {
           callback: (aiTalks: Screenplay[]): boolean => {
             // Generate & play audio for each sentence, display responses
             if (streamIdx !== this.currentStreamIdx) {
-              console.log("wrong stream idx");
+              console.log('[Chat] Wrong stream index - stopping processing');
               return true; // should break
             }
             this.ttsJobs.enqueue({
@@ -506,7 +506,7 @@ export class Chat {
     } catch (e: any) {
       const errMsg = e.toString();
       this.bubbleMessage!("assistant", errMsg);
-      console.error(errMsg);
+      console.error('[Chat] Stream processing error:', errMsg);
     } finally {
       if (!reader.closed) {
         reader.releaseLock();
@@ -581,7 +581,7 @@ export class Chat {
         }
       }
     } catch (e: any) {
-      console.error(e.toString());
+      console.error('[Chat] TTS generation error:', e.toString());
       this.alert?.error("Failed to get TTS response", e.toString());
     }
 
@@ -595,7 +595,7 @@ export class Chat {
   }
 
   public async getChatResponseStream(messages: Message[]) {
-    console.debug("getChatResponseStream", messages);
+    console.debug('[Chat] getChatResponseStream called with', messages.length, 'messages');
     const chatbotBackend = config("chatbot_backend");
 
     console.debug('[Chat] Getting chat response stream', {
@@ -709,7 +709,7 @@ export class Chat {
 
         res = await getOpenAiVisionChatResponse(messages);
       } else {
-        console.warn("vision_backend not supported", visionBackend);
+        console.warn('[Chat] Vision backend not supported:', visionBackend);
         return;
       }
 
@@ -728,7 +728,7 @@ export class Chat {
         },
       ]);
     } catch (e: any) {
-      console.error("getVisionResponse", e.toString());
+      console.error('[Chat] Vision response error:', e.toString());
       this.alert?.error("Failed to get vision response", e.toString());
     }
   }
