@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { fetchWithRetry } from "@/utils/fetchWithRetry";
 import { setupMockEnv, mockEnv } from "./mockEnv";
 
 setupMockEnv();
+
+import { fetchWithRetry } from "@/utils/fetchWithRetry";
 
 describe("fetchWithRetry", () => {
   beforeEach(() => {

@@ -1,6 +1,10 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { Request, Response, NextFunction } from "express";
 import { StatusCodes } from "http-status-codes";
+import { setupMockEnv } from "../utils/mockEnv";
+
+setupMockEnv();
+
 import errorHandler from "@/middleware/errorHandler";
 import * as logger from "@/utils/logger";
 import { apiCallErrors } from "@/metrics";
