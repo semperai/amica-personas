@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # Screenshot Examples for Amica
 # Make sure to run `npm run dev` in another terminal before running these examples
 

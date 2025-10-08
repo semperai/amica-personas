@@ -18,7 +18,6 @@
  */
 
 import { chromium, Browser, Page } from '@playwright/test';
-import { AmicaConfigKey } from '../src/types/config';
 
 interface ScreenshotOptions {
   output: string;
