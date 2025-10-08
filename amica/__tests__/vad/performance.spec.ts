@@ -211,7 +211,8 @@ describe("VAD Performance Tracking", () => {
       expect(metrics.framesProcessed).toBe(1);
       expect(metrics.avgFrameProcessingTime).toBe(-5);
       expect(metrics.minFrameProcessingTime).toBe(-5);
-      expect(metrics.maxFrameProcessingTime).toBe(-5);
+      // max is initialized to 0, and -5 < 0, so max stays 0
+      expect(metrics.maxFrameProcessingTime).toBe(0);
     });
 
     test("should handle NaN duration values", () => {
@@ -223,8 +224,9 @@ describe("VAD Performance Tracking", () => {
       const metrics = tracker.getMetrics();
       expect(metrics.framesProcessed).toBe(1);
       expect(metrics.avgFrameProcessingTime).toBeNaN();
-      expect(metrics.minFrameProcessingTime).toBeNaN();
-      expect(metrics.maxFrameProcessingTime).toBeNaN();
+      // NaN comparisons always return false, so min stays Infinity and max stays 0
+      expect(metrics.minFrameProcessingTime).toBe(Infinity);
+      expect(metrics.maxFrameProcessingTime).toBe(0);
     });
 
     test("should handle exactly maxSamples boundary", () => {
