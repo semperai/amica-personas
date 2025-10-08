@@ -290,11 +290,14 @@ describe('Rapier Integration Tests', () => {
       // Create a body in a different physics instance
       const otherPhysics = new PhysicsSystem();
 
-      // This should not throw
+      // This should not throw when queueing removal
       expect(() => {
         const fakeBody = {} as any;
         physics.removeRigidBody(fakeBody);
       }).not.toThrow();
+
+      // And should not throw when processing the deferred removal
+      expect(() => physics.stepSimulation(1/60)).not.toThrow();
     });
   });
 
