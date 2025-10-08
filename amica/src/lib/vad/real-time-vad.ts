@@ -306,6 +306,12 @@ export class MicVAD {
       mediaStream: this.stream,
     })
     this.audioNodeVAD.receive(this.sourceNode)
+
+    if (this.audioContext.state === "suspended") {
+      await this.audioContext.resume()
+    }
+    this.audioNodeVAD.start()
+    this.listening = true
   }
 
   /**
