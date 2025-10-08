@@ -4,10 +4,16 @@ export async function piper(
     message: string,
   ) {
     try {
-      const url = new URL(config("piper_url"));
+      const baseUrl = config("piper_url");
+      const url = new URL(baseUrl);
       url.searchParams.append('text', message);
 
-      console.log('[TTS] Piper request -', { url: url.toString(), messageLength: message.length });
+      // Note: Using GET with query params for compatibility with existing Piper server
+      // Security considerations:
+      // - Message content is exposed in URL (server logs, browser history, proxies)
+      // - URL length limits may truncate long messages
+      // Consider migrating to POST with body if server supports it
+      console.log('[TTS] Piper request -', { baseUrl, messageLength: message.length });
 
       const res = await fetch(url.toString());
 
