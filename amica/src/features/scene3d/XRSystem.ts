@@ -123,7 +123,7 @@ export class XRSystem {
         this.igroup.listenToXRControllerEvents(this.controller2);
       }
     } catch (e) {
-      console.log("No controller available", e);
+      console.debug('[XR] Controller not available:', e);
     }
   }
 
@@ -172,7 +172,7 @@ export class XRSystem {
       this.handGroup.visible = false;
       this.scene.add(this.handGroup);
     } catch (e) {
-      console.log("No hands available", e);
+      console.debug('[XR] Hand tracking not available:', e);
     }
   }
 
@@ -181,7 +181,7 @@ export class XRSystem {
     immersiveType: XRSessionMode,
     onSessionEnd: () => void,
   ) {
-    console.log("session", session);
+    console.log('[XR] Session started -', immersiveType);
 
     this.renderer.xr.setReferenceSpaceType("local");
     await this.renderer.xr.setSession(session);

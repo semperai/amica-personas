@@ -68,7 +68,7 @@ export class SceneCoordinator {
   }
 
   public async setup(canvas: HTMLCanvasElement) {
-    console.log("setup canvas");
+    console.log('[Scene] Initializing 3D scene');
 
     // Initialize render system
     this.render = await RenderSystem.create(canvas);

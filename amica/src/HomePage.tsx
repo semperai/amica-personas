@@ -126,7 +126,7 @@ export default function Home() {
       try {
         const devices = await navigator.mediaDevices.enumerateDevices();
         const audioInputs = devices.filter(device => device.kind === 'audioinput');
-        console.log('[Audio Devices] Found', audioInputs.length, 'audio input devices');
+        console.log('[Audio] Found', audioInputs.length, 'input devices');
         setAudioDevices(audioInputs);
       } catch (err) {
         console.error('[Audio Devices] Failed to enumerate devices:', err);
@@ -156,11 +156,11 @@ export default function Home() {
       setIsVRHeadset(deviceInfo.isVRDevice);
 
       window.navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
-        console.log('ar supported', supported);
+        console.log('[XR] AR support:', supported);
         setIsARSupported(supported);
       });
       window.navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
-        console.log('vr supported', supported);
+        console.log('[XR] VR support:', supported);
         setIsVRSupported(supported);
       });
     }
@@ -188,7 +188,7 @@ export default function Home() {
   };
 
   const toggleXR = async (immersiveType: XRSessionMode) => {
-    console.log('Toggle XR', immersiveType);
+    console.log('[XR] Toggle', immersiveType);
 
     if (! window.navigator.xr) {
       console.error("WebXR not supported");

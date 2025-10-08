@@ -250,7 +250,7 @@ export class Chat {
           if ((window as any).chatvrm_latency_tracker.active) {
             const ms =
               +new Date() - (window as any).chatvrm_latency_tracker.start;
-            console.log("performance_latency", ms);
+            console.debug('[Performance] Total latency:', ms, 'ms');
             (window as any).chatvrm_latency_tracker.active = false;
           }
         }
@@ -259,23 +259,14 @@ export class Chat {
 
         if (speak.audioBuffer) {
           const model = this.viewer?.vrm?.getModel();
-          console.log('[Chat] Processing speak job -', {
-            audioBufferSize: speak.audioBuffer.byteLength,
-            hasViewer: !!this.viewer,
-            hasVrm: !!this.viewer?.vrm,
-            hasModel: !!model,
-            hasModelSpeak: !!model?.speak
-          });
           this.setChatSpeaking!(true);
           if (model?.speak) {
             await model.speak(speak.audioBuffer, speak.screenplay);
           } else {
-            console.error('[Chat] Cannot speak - VRM model not loaded');
+            console.warn('[Chat] VRM model not loaded - cannot speak');
           }
           this.setChatSpeaking!(false);
           this.isAwake() ? this.updateAwake() : null;
-        } else {
-          console.warn('[Chat] Speak job has null audioBuffer');
         }
       } while (this.speakJobs.size() > 0);
       await wait(50);
@@ -367,7 +358,7 @@ export class Chat {
     await wait(0);
     console.debug("wait complete");
 
-    console.log("receiveMessageFromUser", message);
+    console.debug('[Chat] Received user message:', message.substring(0, 50));
 
     // Trigger before hook
     const beforeContext = await this.hookManager.trigger('before:user:message:receive', { message });

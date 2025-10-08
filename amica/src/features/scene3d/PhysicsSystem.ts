@@ -38,7 +38,7 @@ export class PhysicsSystem {
       this.eventQueue = new this.RAPIER.EventQueue();
 
       this.isInitialized = true;
-      console.log("Rapier physics initialized successfully");
+      console.log('[Physics] Rapier initialized');
       return true;
     } catch (error) {
       console.error("Failed to initialize Rapier physics:", error);
@@ -203,7 +203,7 @@ export class PhysicsSystem {
 
       this.RAPIER = undefined;
       this.isInitialized = false;
-      console.log("Physics system disposed");
+      console.log('[Physics] Disposed');
     } catch (error) {
       console.error("Error disposing physics system:", error);
     }
