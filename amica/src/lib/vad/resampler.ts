@@ -15,6 +15,11 @@ export class Resampler {
         "nativeSampleRate is too low. Should have 16000 = targetSampleRate <= nativeSampleRate"
       )
     }
+    if (options.nativeSampleRate < options.targetSampleRate) {
+      throw new Error(
+        "Resampler only supports downsampling. nativeSampleRate must be >= targetSampleRate."
+      )
+    }
     this.inputBuffer = []
   }
 
