@@ -498,10 +498,8 @@ export class RaycastSystem {
   public cleanupModelBVH() {
     if (this.modelMeshHelper) {
       const geometry = this.modelMeshHelper.geometry;
+      (geometry as any)?.disposeBoundsTree?.();
       geometry?.dispose();
-      for (const key in geometry?.attributes) {
-        geometry?.deleteAttribute(key);
-      }
       this.scene.remove(this.modelMeshHelper);
       if (this.modelBVHHelper) {
         this.scene.remove(this.modelBVHHelper);
@@ -520,12 +518,9 @@ export class RaycastSystem {
     for (const item of this.roomBVHHelperGroup.children) {
       if (item instanceof MeshBVHHelper) {
         try {
-          // @ts-ignore
-          const geometry = item.geometry;
+          const geometry = (item as any).geometry as THREE.BufferGeometry | undefined;
+          (geometry as any)?.disposeBoundsTree?.();
           geometry?.dispose();
-          for (const key in geometry?.attributes) {
-            geometry?.deleteAttribute(key);
-          }
         } catch (e) {
           console.error("error disposing room geometry", e);
         }
