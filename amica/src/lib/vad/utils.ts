@@ -97,27 +97,18 @@ export async function audioFileToArray(audioFileData: Blob) {
   const ctx = new OfflineAudioContext(1, 1, 44100)
   const reader = new FileReader()
   let audioBuffer: AudioBuffer | null = null
-  await new Promise<void>((res) => {
-    reader.addEventListener("loadend", (_ev) => {
+  await new Promise<void>((resolve, reject) => {
+    reader.addEventListener("loadend", () => {
       const audioData = reader.result as ArrayBuffer
-      ctx.decodeAudioData(
-        audioData,
-        (buffer) => {
+      ctx
+        .decodeAudioData(audioData.slice(0))
+        .then((buffer) => {
           audioBuffer = buffer
-          ctx
-            .startRendering()
-            .then((_renderedBuffer) => {
-              console.log("Rendering completed successfully")
-              res()
-            })
-            .catch((err) => {
-              console.error(`Rendering failed: ${err}`)
-            })
-        },
-        (e) => {
-          console.log(`Error with decoding audio data: ${e}`)
-        }
-      )
+          resolve()
+        })
+        .catch((error) => {
+          reject(new Error(`Failed to decode audio data: ${error}`))
+        })
     })
     reader.readAsArrayBuffer(audioFileData)
   })
