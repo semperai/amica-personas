@@ -202,10 +202,39 @@ async function setupReadyFlag(page: Page): Promise<void> {
     // This will be checked by waitForAmicaReady
     (window as any).__amicaSceneReady = false;
 
-    // Set to true after a short delay to allow rendering
-    setTimeout(() => {
-      (window as any).__amicaSceneReady = true;
-    }, 2000);
+    // Poll for actual scene readiness
+    const checkReady = () => {
+      // Check if the canvas exists
+      const canvas = document.querySelector('canvas');
+      if (!canvas) {
+        setTimeout(checkReady, 100);
+        return;
+      }
+
+      // Check for THREE.js scene
+      // @ts-ignore - accessing internal THREE.js objects
+      const threeScene = (window as any).__scene || (window as any).scene;
+
+      // Check if VRM model is loaded by looking for scene children
+      // A loaded scene typically has multiple objects (lights, camera, model)
+      const hasSceneObjects = threeScene && threeScene.children && threeScene.children.length > 3;
+
+      // Check if WebGL context is initialized
+      const gl = canvas.getContext('webgl') || canvas.getContext('webgl2');
+      const hasWebGL = gl !== null;
+
+      // Check if canvas has been drawn to (non-zero dimensions and not blank)
+      const hasContent = canvas.width > 0 && canvas.height > 0;
+
+      if (hasSceneObjects && hasWebGL && hasContent) {
+        (window as any).__amicaSceneReady = true;
+      } else {
+        setTimeout(checkReady, 100);
+      }
+    };
+
+    // Initial delay before polling to allow basic initialization
+    setTimeout(checkReady, 1000);
   });
 }
 
