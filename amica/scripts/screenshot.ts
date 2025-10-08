@@ -18,6 +18,8 @@
  */
 
 import { chromium, Browser, Page } from '@playwright/test';
+import { fileURLToPath } from 'url';
+import { resolve } from 'path';
 
 interface ScreenshotOptions {
   output: string;
@@ -361,8 +363,12 @@ async function main(): Promise<void> {
   await takeScreenshot(options);
 }
 
-// Run if called directly
-if (require.main === module) {
+// Run if called directly (ES module compatible)
+// In ES modules, check if this file's URL matches the entry point
+const currentFile = fileURLToPath(import.meta.url);
+const entryPoint = resolve(process.argv[1]);
+
+if (currentFile === entryPoint) {
   main().catch((error) => {
     console.error('Fatal error:', error);
     process.exit(1);
