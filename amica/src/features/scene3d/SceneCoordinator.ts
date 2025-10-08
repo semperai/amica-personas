@@ -245,8 +245,18 @@ export class SceneCoordinator {
   // Animation control
   public playAnimation(animationClip: THREE.AnimationClip) {
     const model = this.vrm?.getModel();
-    if (model && animationClip) {
+    if (!model) {
+      console.warn('Cannot play animation: model not loaded');
+      return;
+    }
+    if (!animationClip) {
+      console.warn('Cannot play animation: invalid animation clip');
+      return;
+    }
+    if (typeof model.loadAnimation === 'function') {
       model.loadAnimation(animationClip);
+    } else {
+      console.warn('Cannot play animation: model does not support loadAnimation');
     }
   }
 
@@ -279,15 +289,13 @@ export class SceneCoordinator {
   }
 
   // Lighting control
-  public addLight(light: THREE.Light) {
+  public addLight(light: THREE.Light): void {
     if (this.render?.scene) {
       this.render.scene.add(light);
-      return light;
     }
-    return null;
   }
 
-  public removeLight(light: THREE.Light) {
+  public removeLight(light: THREE.Light): void {
     if (this.render?.scene) {
       this.render.scene.remove(light);
     }
@@ -296,8 +304,13 @@ export class SceneCoordinator {
   // Chat/Bot interaction
   public sendMessage(message: string) {
     if (this.chat) {
-      // Trigger chat message programmatically
-      this.chat.handleUserMessage?.(message);
+      if (typeof this.chat.handleUserMessage === 'function') {
+        this.chat.handleUserMessage(message);
+      } else {
+        console.warn('Cannot send message: chat.handleUserMessage is not available');
+      }
+    } else {
+      console.warn('Cannot send message: chat not initialized');
     }
   }
 
