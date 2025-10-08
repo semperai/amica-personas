@@ -123,6 +123,12 @@ export default function Home() {
   // Load audio devices
   useEffect(() => {
     const loadAudioDevices = async () => {
+      // Guard: Check if navigator.mediaDevices is available
+      if (!navigator.mediaDevices?.enumerateDevices) {
+        console.warn('[Audio Devices] navigator.mediaDevices not available');
+        return;
+      }
+
       try {
         const devices = await navigator.mediaDevices.enumerateDevices();
         const audioInputs = devices.filter(device => device.kind === 'audioinput');
@@ -134,9 +140,17 @@ export default function Home() {
     };
 
     loadAudioDevices();
-    navigator.mediaDevices.addEventListener('devicechange', loadAudioDevices);
+
+    // Guard: Only add event listener if navigator.mediaDevices is available
+    if (navigator.mediaDevices) {
+      navigator.mediaDevices.addEventListener('devicechange', loadAudioDevices);
+    }
+
     return () => {
-      navigator.mediaDevices.removeEventListener('devicechange', loadAudioDevices);
+      // Guard: Only remove event listener if navigator.mediaDevices is available
+      if (navigator.mediaDevices) {
+        navigator.mediaDevices.removeEventListener('devicechange', loadAudioDevices);
+      }
     };
   }, []);
 
