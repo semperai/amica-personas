@@ -58,7 +58,7 @@ function parseArgs(): ScreenshotOptions {
       case 'output':
         options.output = value;
         break;
-      case 'width':
+      case 'width': {
         const width = parseInt(value, 10);
         if (isNaN(width)) {
           console.error(`Error: Invalid width value: ${value}`);
@@ -66,7 +66,8 @@ function parseArgs(): ScreenshotOptions {
         }
         options.width = width;
         break;
-      case 'height':
+      }
+      case 'height': {
         const height = parseInt(value, 10);
         if (isNaN(height)) {
           console.error(`Error: Invalid height value: ${value}`);
@@ -74,7 +75,8 @@ function parseArgs(): ScreenshotOptions {
         }
         options.height = height;
         break;
-      case 'wait':
+      }
+      case 'wait': {
         const wait = parseInt(value, 10);
         if (isNaN(wait)) {
           console.error(`Error: Invalid wait value: ${value}`);
@@ -82,6 +84,7 @@ function parseArgs(): ScreenshotOptions {
         }
         options.wait = wait;
         break;
+      }
       case 'headless':
         options.headless = value !== 'false';
         break;
