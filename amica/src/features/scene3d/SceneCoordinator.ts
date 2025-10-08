@@ -14,7 +14,7 @@ import { PhysicsSystem } from "./PhysicsSystem";
 import { RaycastSystem } from "./RaycastSystem";
 import { VRMManager } from "./VRMManager";
 import { EnvironmentManager } from "./EnvironmentManager";
-import { ParticleManager } from "./ParticleManager";
+import { ParticleManager, ParticleOptions, ParticleEffectType } from "./ParticleManager";
 import { DebugSystem } from "./DebugSystem";
 import { ScenarioLoader } from "./ScenarioLoader";
 
@@ -307,24 +307,14 @@ export class SceneCoordinator {
   }
 
   // Particle control
-  public createParticle(options: {
-    position: THREE.Vector3;
-    velocity: THREE.Vector3;
-    color?: THREE.Color;
-    size?: number;
-    lifetime?: number;
-  }) {
+  public createParticle(options: ParticleOptions) {
     return this.particles?.createParticle(options);
   }
 
   public createParticleEffect(
-    type: 'fountain' | 'firework' | 'sparkle' | 'smoke' | 'magic' | 'energy' | 'custom',
+    type: ParticleEffectType,
     position?: THREE.Vector3,
-    options?: {
-      color?: THREE.Color;
-      size?: number;
-      lifetime?: number;
-    }
+    options?: ParticleOptions
   ) {
     return this.particles?.createEffect(type, position, options);
   }
