@@ -45,7 +45,7 @@ export async function openaiWhisper(
     }
 
     const data = await res.json();
-    console.debug('whisper-openai res', data);
+    console.debug('[Whisper] Transcription successful');
 
     return { text: data.text.trim() };
   } catch (e) {
