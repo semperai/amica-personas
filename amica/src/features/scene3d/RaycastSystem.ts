@@ -48,7 +48,6 @@ export interface RaycastHit {
 export interface RaycastOptions {
   maxDistance?: number;
   layers?: THREE.Layers;
-  recursive?: boolean;
   firstHitOnly?: boolean;
 }
 
