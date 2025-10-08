@@ -286,10 +286,30 @@ export class RaycastSystem {
     this.applyRaycastOptions(options);
     this.raycaster.set(origin, direction.clone().normalize());
 
-    const hits: RaycastHit[] = [];
-    const allIntersections = this.getAllIntersections();
+    // Collect intersections by type
+    this.intersectsModel = [];
+    this.intersectsRoom = [];
+    this.intersectsCustom = [];
 
-    for (const intersection of allIntersections) {
+    if (this.modelTargets.length > 0) {
+      this.intersectsModel = this.raycaster.intersectObjects(this.modelTargets, true);
+    }
+    if (this.roomTargets.length > 0) {
+      this.intersectsRoom = this.raycaster.intersectObjects(this.roomTargets, true);
+    }
+    if (this.customTargets.length > 0) {
+      this.intersectsCustom = this.raycaster.intersectObjects(this.customTargets, true);
+    }
+
+    const hits: RaycastHit[] = [];
+
+    for (const intersection of this.intersectsModel) {
+      hits.push(this.convertIntersectionToHit(intersection, 'model'));
+    }
+    for (const intersection of this.intersectsRoom) {
+      hits.push(this.convertIntersectionToHit(intersection, 'room'));
+    }
+    for (const intersection of this.intersectsCustom) {
       hits.push(this.convertIntersectionToHit(intersection, 'object'));
     }
 

@@ -281,6 +281,26 @@ describe('RaycastSystem', () => {
 
       expect(hits).toHaveLength(0);
     });
+
+    it('should preserve hit type information for custom targets', () => {
+      const cube1 = createMesh(0, 0, 2);
+      const cube2 = createMesh(0, 0, 4);
+
+      raycastSystem.addCustomTarget(cube1);
+      raycastSystem.addCustomTarget(cube2);
+
+      const hits = raycastSystem.raycastAll(
+        new THREE.Vector3(0, 0, 10),
+        new THREE.Vector3(0, 0, -1)
+      );
+
+      expect(hits.length).toBeGreaterThanOrEqual(2);
+
+      // All custom targets should have type 'object'
+      hits.forEach(hit => {
+        expect(hit.type).toBe('object');
+      });
+    });
   });
 
   describe('raycast options', () => {
