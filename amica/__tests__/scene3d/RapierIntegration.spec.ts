@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { PhysicsSystem } from '@/features/scene3d/PhysicsSystem';
+import { createPhysicsTestHelper } from '../helpers/PhysicsTestHelpers';
 import RAPIER from '@dimforge/rapier3d-compat';
 
 /**
@@ -445,6 +446,45 @@ describe('Rapier Integration Tests', () => {
       // Should have settled on or near the ground
       expect(finalY).toBeGreaterThan(-15);
       expect(finalY).toBeLessThan(100);
+    });
+  });
+
+  describe('Determinism', () => {
+    it('should produce deterministic results across multiple runs', async () => {
+      const runSimulation = async () => {
+        const testPhysics = new PhysicsSystem();
+        const initialized = await testPhysics.initialize();
+        expect(initialized).toBe(true);
+
+        const testHelper = createPhysicsTestHelper(
+          testPhysics.getRAPIER()!,
+          testPhysics.getWorld()!,
+          testPhysics.getEventQueue()!
+        );
+
+        // Create a simple falling ball
+        const ball = testHelper.createBody(
+          { position: { x: 0, y: 10, z: 0 }, mass: 1 },
+          { shape: 'sphere', radius: 0.5 }
+        );
+
+        // Create ground
+        testHelper.createGround();
+
+        // Simulate for 1 second
+        testHelper.simulate(1.0, 60);
+
+        const pos = ball.translation();
+        return { x: pos.x, y: pos.y, z: pos.z };
+      };
+
+      const result1 = await runSimulation();
+      const result2 = await runSimulation();
+
+      // Results should be identical (deterministic)
+      expect(result1.x).toBeCloseTo(result2.x, 10);
+      expect(result1.y).toBeCloseTo(result2.y, 10);
+      expect(result1.z).toBeCloseTo(result2.z, 10);
     });
   });
 });
