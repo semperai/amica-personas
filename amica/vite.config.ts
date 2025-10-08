@@ -43,6 +43,7 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+    dedupe: ['three'],
   },
   base: process.env.BASE_PATH || '/',
   define: {

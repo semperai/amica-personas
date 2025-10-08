@@ -35,10 +35,11 @@ export class RenderSystem {
 
     let WebRendererType = THREE.WebGLRenderer;
     if (config("use_webgpu") === "true") {
+      // Import from three/webgpu to match MToonNodeMaterial's imports
+      // This ensures we use the same Three.js instance
       // @ts-ignore
-      WebRendererType = (
-        await import("three/src/renderers/webgpu/WebGPURenderer.js")
-      ).default;
+      const { WebGPURenderer } = await import("three/webgpu");
+      WebRendererType = WebGPURenderer;
     }
 
     const renderer = new WebRendererType({
@@ -48,13 +49,26 @@ export class RenderSystem {
       powerPreference: "high-performance",
     }) as THREE.WebGLRenderer;
 
+    // WebGPU renderer requires async initialization
+    if (config("use_webgpu") === "true") {
+      console.log('[Renderer] Initializing WebGPU renderer...');
+      await (renderer as any).init();
+      console.log('[Renderer] WebGPU renderer initialized');
+    }
+
     renderer.setClearColor(0x000000, 0);
-    renderer.shadowMap.enabled = false;
+
+    // shadowMap is only available in WebGL renderer
+    if (renderer.shadowMap) {
+      renderer.shadowMap.enabled = false;
+    }
+
     renderer.setSize(width, height);
     renderer.setPixelRatio(window.devicePixelRatio);
 
     // XR features are only available in WebGL renderer
-    if (config("use_webgpu") !== "true") {
+    // WebGPU renderer has different XR API that doesn't support these methods
+    if (renderer.xr && typeof renderer.xr.setFramebufferScaleFactor === 'function') {
       renderer.xr.enabled = true;
       renderer.xr.setFramebufferScaleFactor(2.0);
       renderer.xr.setFoveation(0);
@@ -63,13 +77,29 @@ export class RenderSystem {
     // Create scene
     const scene = new THREE.Scene();
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
-    directionalLight.position.set(1.0, 1.0, 1.0).normalize();
-    directionalLight.castShadow = false;
-    scene.add(directionalLight);
+    // Setup lighting - WebGPU and WebGL use different light systems
+    if (config("use_webgpu") === "true") {
+      // WebGPU uses node-based lighting system
+      // Import lighting nodes from three/webgpu
+      // @ts-ignore
+      const { DirectionalLight, AmbientLight } = await import("three/webgpu");
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 2);
-    scene.add(ambientLight);
+      const directionalLight = new DirectionalLight(0xffffff, 1.2);
+      directionalLight.position.set(1.0, 1.0, 1.0).normalize();
+      scene.add(directionalLight);
+
+      const ambientLight = new AmbientLight(0xffffff, 2);
+      scene.add(ambientLight);
+    } else {
+      // WebGL uses standard Three.js lights
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+      directionalLight.position.set(1.0, 1.0, 1.0).normalize();
+      directionalLight.castShadow = false;
+      scene.add(directionalLight);
+
+      const ambientLight = new THREE.AmbientLight(0xffffff, 2);
+      scene.add(ambientLight);
+    }
 
     // Create camera
     const camera = new THREE.PerspectiveCamera(20.0, width / height, 0.1, 20.0);

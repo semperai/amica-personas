@@ -27,6 +27,7 @@ export class Model {
   public mixer?: THREE.AnimationMixer;
   public emoteController?: EmoteController;
   public proceduralAnimation?: ProceduralAnimation;
+  public mtoonMaterials: any[] = [];
 
   private _lookAtTargetParent: THREE.Object3D;
   private _lipSync?: LipSync;
@@ -94,7 +95,7 @@ export class Model {
     if (useWebGPU) {
       console.log('[VRM] Using WebGPU renderer - loading MToonNodeMaterial');
       // @ts-ignore
-      const { MToonNodeMaterial } = await import("@pixiv/three-vrm/nodes");
+      const { MToonNodeMaterial } = await import("@pixiv/three-vrm-materials-mtoon/nodes");
       materialType = MToonNodeMaterial;
     } else {
       // WebGL renderer - use configured material type
@@ -176,8 +177,18 @@ export class Model {
           const vrm = (this.vrm = gltf.userData.vrm);
           vrm.scene.name = "VRMRoot";
 
+          // Optimize VRM model
           VRMUtils.removeUnnecessaryVertices(gltf.scene);
-          VRMUtils.removeUnnecessaryJoints(gltf.scene);
+
+          // Use combineSkeletons instead of deprecated removeUnnecessaryJoints
+          // combineSkeletons provides better performance improvement
+          try {
+            VRMUtils.combineSkeletons(gltf.scene);
+          } catch (e) {
+            console.warn('[VRM] Failed to combine skeletons:', e);
+            // Fallback to old method if combineSkeletons fails
+            VRMUtils.removeUnnecessaryJoints(gltf.scene);
+          }
 
           // await downscaleModelTextures(gltf, 128);
 
@@ -203,6 +214,13 @@ export class Model {
           });
 
           // this.setTransparency(0.5);
+
+          // Store MToon materials for WebGPU compatibility
+          // The plugin stores materials in gltf.userData.vrmMToonMaterials
+          if (gltf.userData.vrmMToonMaterials) {
+            this.mtoonMaterials = gltf.userData.vrmMToonMaterials;
+            console.log('[VRM] Stored', this.mtoonMaterials.length, 'MToon materials for updates');
+          }
 
           if (config("debug_gfx") === "true") {
             vrm.scene.add(helperRoot);
@@ -435,6 +453,14 @@ export class Model {
     this.vrm?.update(delta);
     if (config("animation_procedural") === "true") {
       this.proceduralAnimation?.update(delta);
+    }
+
+    // Update MToon materials (required for WebGPU)
+    // MToonNodeMaterial requires manual updates for proper rendering
+    if (this.mtoonMaterials.length > 0) {
+      for (const material of this.mtoonMaterials) {
+        material.update(delta);
+      }
     }
   }
 }
