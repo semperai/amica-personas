@@ -2,9 +2,7 @@
  * Unit tests for caching functionality
  */
 
-import { describe, test, expect, beforeEach, vi, afterEach } from 'vitest';
-import request from 'supertest';
-import express from 'express';
+import { describe, test, expect } from 'vitest';
 
 // Mock data
 const mockPersonaData = {
