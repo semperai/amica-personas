@@ -1,8 +1,10 @@
 {
   "filter_paths": "lib/|test/|script/",
   "exclude_dependencies": true,
-  "exclude_informational": false,
+  "exclude_informational": true,
   "exclude_low": false,
   "exclude_medium": false,
-  "exclude_high": false
+  "exclude_high": false,
+  "json": "-",
+  "markdown": "slither-report.md"
 }
