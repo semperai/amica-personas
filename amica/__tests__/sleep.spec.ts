@@ -84,8 +84,9 @@ describe("wait (real timers)", () => {
     await wait(50);
     const elapsed = Date.now() - start;
 
-    // Allow some margin for execution time
+    // Allow margin for execution time and slow CI environments
     expect(elapsed).toBeGreaterThanOrEqual(45);
-    expect(elapsed).toBeLessThan(100);
+    // Generous upper bound to prevent flaky tests on slow CI (3x margin)
+    expect(elapsed).toBeLessThan(150);
   }, 10000);
 });

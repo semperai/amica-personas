@@ -195,9 +195,12 @@ describe("VAD Validation", () => {
       ).not.toThrow();
     });
 
-    test("should accept relative URLs as valid", () => {
-      // Relative URLs are valid in browser context
+    test("should accept relative paths without extension as valid", () => {
+      // Any string is valid as a relative URL in browser context
+      // "not-a-url" resolves to http://localhost/not-a-url
       expect(() => validateModelURL("not-a-url")).not.toThrow();
+      expect(() => validateModelURL("model")).not.toThrow();
+      expect(() => validateModelURL("some/path")).not.toThrow();
     });
   });
 

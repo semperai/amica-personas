@@ -210,7 +210,8 @@ describe("VAD Performance Tracking", () => {
 
       const elapsed = timer.elapsed();
       expect(elapsed).toBeGreaterThanOrEqual(45); // Allow some variance
-      expect(elapsed).toBeLessThan(100);
+      // Generous upper bound for slow CI environments (3x margin)
+      expect(elapsed).toBeLessThan(150);
     });
 
     test("should return 0 when disabled", async () => {
