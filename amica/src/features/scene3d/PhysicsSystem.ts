@@ -1,12 +1,13 @@
 import * as THREE from "three";
 import { VRM } from "@pixiv/three-vrm";
-import RAPIER from "@dimforge/rapier3d-compat";
+
+type RapierModule = Awaited<typeof import("@dimforge/rapier3d-compat")>;
 
 export class PhysicsSystem {
-  private RAPIER?: typeof RAPIER;
-  private world?: RAPIER.World;
-  private eventQueue?: RAPIER.EventQueue;
-  private bodiesToRemove: RAPIER.RigidBody[] = [];
+  private RAPIER?: RapierModule;
+  private world?: InstanceType<RapierModule['World']>;
+  private eventQueue?: InstanceType<RapierModule['EventQueue']>;
+  private bodiesToRemove: InstanceType<RapierModule['RigidBody']>[] = [];
 
   public isInitialized = false;
 
@@ -20,11 +21,11 @@ export class PhysicsSystem {
     try {
       // Initialize Rapier
       const rapierModule = await import("@dimforge/rapier3d-compat");
-      this.RAPIER = rapierModule.default;
+      this.RAPIER = rapierModule.default as RapierModule;
 
       // Initialize WASM module (only call init() once globally)
       if (typeof this.RAPIER.init === 'function') {
-        await this.RAPIER.init({});
+        await this.RAPIER.init();
       } else {
         console.warn("Rapier already initialized globally");
       }
@@ -34,8 +35,8 @@ export class PhysicsSystem {
       this.world = new this.RAPIER.World(gravity);
 
       // Create event queue for collision detection
-      // In Rapier 0.14+, EventQueue constructor no longer takes parameters
-      this.eventQueue = new this.RAPIER.EventQueue();
+      // In Rapier 0.14+, EventQueue constructor takes autodrainEnabled parameter
+      this.eventQueue = new this.RAPIER.EventQueue(true);
 
       this.isInitialized = true;
       console.log('[Physics] Rapier initialized');
@@ -139,8 +140,8 @@ export class PhysicsSystem {
 
   // Helper method to create a collider
   public createCollider(
-    shape: RAPIER.ColliderDesc,
-    rigidBody: RAPIER.RigidBody
+    shape: InstanceType<RapierModule['ColliderDesc']>,
+    rigidBody: InstanceType<RapierModule['RigidBody']>
   ) {
     if (!this.isInitialized || !this.world) return null;
 
@@ -150,7 +151,7 @@ export class PhysicsSystem {
   // Helper methods for common shapes
   public createBox(
     halfExtents: { x: number; y: number; z: number },
-    rigidBody: RAPIER.RigidBody
+    rigidBody: InstanceType<RapierModule['RigidBody']>
   ) {
     if (!this.RAPIER) return null;
     const shape = this.RAPIER.ColliderDesc.cuboid(
@@ -161,7 +162,7 @@ export class PhysicsSystem {
     return this.createCollider(shape, rigidBody);
   }
 
-  public createSphere(radius: number, rigidBody: RAPIER.RigidBody) {
+  public createSphere(radius: number, rigidBody: InstanceType<RapierModule['RigidBody']>) {
     if (!this.RAPIER) return null;
     const shape = this.RAPIER.ColliderDesc.ball(radius);
     return this.createCollider(shape, rigidBody);
@@ -170,7 +171,7 @@ export class PhysicsSystem {
   public createCylinder(
     halfHeight: number,
     radius: number,
-    rigidBody: RAPIER.RigidBody
+    rigidBody: InstanceType<RapierModule['RigidBody']>
   ) {
     if (!this.RAPIER) return null;
     const shape = this.RAPIER.ColliderDesc.cylinder(halfHeight, radius);
@@ -178,7 +179,7 @@ export class PhysicsSystem {
   }
 
   // Helper to remove a rigid body (deferred until after physics step)
-  public removeRigidBody(rigidBody: RAPIER.RigidBody | null | undefined) {
+  public removeRigidBody(rigidBody: InstanceType<RapierModule['RigidBody']> | null | undefined) {
     if (!this.isInitialized || !this.world || !rigidBody) return;
 
     // Guard against invalid objects - only accept actual RigidBody instances
@@ -189,7 +190,7 @@ export class PhysicsSystem {
 
     // Queue for removal after the current physics step completes
     // This prevents "recursive use" errors
-    this.bodiesToRemove.push(rigidBody as RAPIER.RigidBody);
+    this.bodiesToRemove.push(rigidBody);
   }
 
   public setGravity(x: number, y: number, z: number) {
