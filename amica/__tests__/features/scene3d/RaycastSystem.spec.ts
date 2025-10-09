@@ -324,22 +324,33 @@ describe('RaycastSystem', () => {
       expect(hitWithoutLimit).not.toBeNull(); // Within range
     });
 
-    it('should respect firstHitOnly option', () => {
-      const cube1 = createMesh(0, 0, 0);
-      const cube2 = createMesh(0, 0, 2);
+    it('should respect firstHitOnly option in raycastFromPoint', () => {
+      // Create two cubes along the same ray path
+      const cube1 = createMesh(0, 0, 2); // Closer
+      const cube2 = createMesh(0, 0, 4); // Further
 
       raycastSystem.addCustomTarget(cube1);
       raycastSystem.addCustomTarget(cube2);
 
-      const hits = raycastSystem.raycastAll(
+      // With firstHitOnly (default behavior of raycastFromPoint)
+      const singleHit = raycastSystem.raycastFromPoint(
         new THREE.Vector3(0, 0, 5),
         new THREE.Vector3(0, 0, -1),
         { firstHitOnly: true }
       );
 
-      // Note: raycastAll temporarily disables firstHitOnly,
-      // but we can test that the option is applied
-      expect(Array.isArray(hits)).toBe(true);
+      expect(singleHit).not.toBeNull();
+      expect(singleHit!.object).toBe(cube2); // Should hit the closer one (cube2 at z=4)
+
+      // Compare with raycastAll to verify difference
+      const allHits = raycastSystem.raycastAll(
+        new THREE.Vector3(0, 0, 5),
+        new THREE.Vector3(0, 0, -1)
+      );
+
+      expect(allHits.length).toBeGreaterThanOrEqual(2);
+      // First hit in raycastAll should match single hit
+      expect(allHits[0].object).toBe(singleHit!.object);
     });
   });
 
