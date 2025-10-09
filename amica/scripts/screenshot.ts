@@ -310,7 +310,9 @@ async function takeScreenshot(options: ScreenshotOptions): Promise<void> {
     browser = await chromium.launch({
       headless: options.headless,
       args: [
-        // Disable security features to allow loading local resources without CORS issues
+        // SECURITY NOTE: These flags are required to load local VRM models and assets
+        // without CORS restrictions. This tool is for development use only and should
+        // never be used to browse untrusted websites.
         '--disable-web-security',
         '--disable-features=IsolateOrigins,site-per-process',
       ],
