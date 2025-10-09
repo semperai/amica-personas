@@ -635,6 +635,10 @@ export class Chat {
         break;
       default:
         console.warn('[Chat] Unknown backend, using echo provider:', beforeContext.backend);
+        this.alert?.error(
+          'Unknown chatbot backend',
+          `Backend "${beforeContext.backend}" not recognized. Using echo provider as fallback.`
+        );
         stream = await getEchoChatResponseStream(beforeContext.messages);
     }
 

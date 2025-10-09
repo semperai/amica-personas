@@ -380,9 +380,10 @@ describe('Chat', () => {
 
   describe('getChatResponseStream', () => {
     beforeEach(() => {
+      const mockAlert = { error: vi.fn(), success: vi.fn() };
       chat.initialize(
         {} as any,
-        {} as any,
+        mockAlert as any,
         vi.fn(),
         vi.fn(),
         vi.fn(),
