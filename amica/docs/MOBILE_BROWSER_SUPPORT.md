@@ -12,7 +12,7 @@ This document explains how to fix common issues with Amica on mobile browsers, p
 
 **Solution:** The server must send the following HTTP headers:
 
-```
+```http
 Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 ```
@@ -58,7 +58,7 @@ The `vercel.json` file in the root directory automatically configures the requir
 
 Add a `public/_headers` file (already created):
 
-```
+```text
 /*
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Embedder-Policy: require-corp
@@ -107,7 +107,7 @@ Add to your `.htaccess`:
 
 Look for these log messages to verify proper operation:
 
-```
+```text
 [VAD] Loading worklet from: ...
 [VAD] Worklet loaded successfully
 [VAD] AudioContext state: suspended
@@ -119,16 +119,20 @@ Look for these log messages to verify proper operation:
 
 ### Common Error Messages
 
-**"SharedArrayBuffer not available"**
+#### "SharedArrayBuffer not available"
+
 - Solution: Ensure server sends COOP/COEP headers
 
-**"Microphone permission was denied"**
+#### "Microphone permission was denied"
+
 - Solution: User must allow microphone access in browser settings
 
-**"Mobile browsers require HTTPS for microphone access"**
+#### "Mobile browsers require HTTPS for microphone access"
+
 - Solution: Deploy to HTTPS or use localhost for testing
 
-**"Failed to resume AudioContext"**
+#### "Failed to resume AudioContext"
+
 - Solution: Ensure user interacts with page before starting VAD
 
 ## Browser Compatibility
