@@ -20,10 +20,19 @@ export class GenerateMeshBVHWorker extends WorkerBase {
 				worker = new Worker( '/generateMeshBVH.worker.js' );
 			} catch (fallbackError) {
 				console.error('Failed to create BVH worker entirely:', fallbackError);
-				// Create a no-op worker to prevent crashes
-				// Raycasting will fall back to non-BVH methods
-				const blob = new Blob(['self.onmessage = () => {}'], { type: 'application/javascript' });
-				worker = new Worker( URL.createObjectURL(blob) );
+				// Create a worker that immediately signals BVH is unavailable
+				// This prevents promises from hanging and provides clear error messages
+				const blob = new Blob([`
+					self.onmessage = (e) => {
+						self.postMessage({
+							error: 'BVH worker unavailable - raycasting will work but without acceleration'
+						});
+					}
+				`], { type: 'application/javascript' });
+				const blobUrl = URL.createObjectURL(blob);
+				worker = new Worker(blobUrl);
+				// Clean up the blob URL after worker creation to prevent memory leak
+				URL.revokeObjectURL(blobUrl);
 			}
 		}
 		super( worker );
