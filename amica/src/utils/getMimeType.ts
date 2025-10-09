@@ -17,7 +17,7 @@ export const mimeTypeCheck = () => {
     "video/webm",
   ];
   for (const mime of types) {
-      console.log(mime, MediaRecorder.isTypeSupported(mime));
+      console.log('[Media] MIME type support:', mime, MediaRecorder.isTypeSupported(mime));
   }
 }
 
@@ -31,7 +31,7 @@ const getVideoMimeType = () => {
   if (MediaRecorder.isTypeSupported("video/mp4")) {
     return "video/mp4";
   }
-  console.log("No supported video mime type found")
+  console.log("[Media] No supported video mime type found")
   return "";
 };
 
@@ -48,7 +48,7 @@ const getAudioMimeType = () => {
   if (MediaRecorder.isTypeSupported("audio/mp4")) {
     return "audio/mp4";
   }
-  console.log("No supported audio mime type found")
+  console.log("[Media] No supported audio mime type found")
   return "";
 }
 

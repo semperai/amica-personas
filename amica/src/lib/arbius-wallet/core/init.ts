@@ -22,8 +22,8 @@ export function init(config: AAWalletConfig): void {
   
   // Setup the transaction queue
   setupTransactionQueue();
-  
-  console.log('AA Wallet initialized with config:', config);
+
+  console.log('[AA Wallet] Initialized with config:', config);
 }
 
 /**

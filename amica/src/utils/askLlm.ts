@@ -70,7 +70,7 @@ export async function askLLM(
   }
 
   if (streams.length === 0) {
-    console.log("No stream!");
+    console.log("[LLM] No stream!");
     return "Error: No stream";
   }
 
@@ -96,7 +96,7 @@ export async function askLLM(
   try {
     while (true) {
       if (currentStreamIdx !== currentStreamIdx) {
-        console.log("Wrong stream idx");
+        console.log("[LLM] Wrong stream idx");
         break;
       }
       const { done, value } = await reader.read();
@@ -120,7 +120,7 @@ export async function askLLM(
           callback: (aiTalks: Screenplay[]): boolean => {
             // Generate & play audio for each sentence, display responses
             if (currentStreamIdx !== chat.currentStreamIdx) {
-              console.log('wrong stream idx');
+              console.log('[LLM] Wrong stream idx');
               return true; // should break
             }
             chat.ttsJobs.enqueue({

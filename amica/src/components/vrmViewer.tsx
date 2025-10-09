@@ -58,12 +58,12 @@ export default function VrmViewer({ chatMode }: { chatMode: boolean }) {
         })
           .then((loaded) => {
             if (loaded) {
-              console.log("vrm loaded");
+              console.log("[VRM] vrm loaded");
               setLoadingError(false);
             }
           })
           .catch((e) => {
-            console.error("vrm loading error", e);
+            console.error("[VRM] vrm loading error", e);
             setLoadingError(true);
           });
 

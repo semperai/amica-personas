@@ -20,7 +20,9 @@ class PipelineFactory {
 
   static async getInstance(progress_callback = null) {
     if (this.instance === null) {
-      this.instance = pipeline(this.task, this.model, {
+      this.instance = pipeline({
+        task: this.task,
+        model: this.model,
         quantized: this.quantized,
         progress_callback,
       });

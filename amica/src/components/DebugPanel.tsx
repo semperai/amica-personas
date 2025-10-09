@@ -6,21 +6,104 @@ import { config } from "@/utils/config";
 
 const TOTAL_ITEMS_TO_SHOW = 50;
 
-// Safe JSON stringify that handles circular references
-function safeStringify(obj: any): string {
+// Safe JSON stringify that handles circular references and special objects
+function safeStringify(obj: any, maxDepth = 3, maxKeys = 50): string {
   try {
     const seen = new WeakSet();
-    return JSON.stringify(obj, (key, value) => {
+    let keyCount = 0;
+
+    const replacer = (key: string, value: any): any => {
+      // Limit total number of keys to prevent huge objects
+      if (keyCount > maxKeys) {
+        return '[Max keys reached]';
+      }
+
       if (typeof value === 'object' && value !== null) {
+        keyCount++;
+
+        // Handle circular references
         if (seen.has(value)) {
           return '[Circular]';
         }
         seen.add(value);
+
+        // Handle special browser objects that don't stringify well
+        try {
+          if (value instanceof HTMLElement) {
+            return `<${value.tagName.toLowerCase()}${value.id ? '#' + value.id : ''}${value.className ? '.' + value.className.split(' ').join('.') : ''}>`;
+          }
+          if (value instanceof Window) {
+            return '[Window]';
+          }
+          if (value instanceof Document) {
+            return '[Document]';
+          }
+          if (value instanceof AudioContext) {
+            return `[AudioContext: ${value.state}]`;
+          }
+          if (value instanceof HTMLCanvasElement) {
+            return `[Canvas: ${value.width}x${value.height}]`;
+          }
+        } catch (e) {
+          // instanceof checks can fail for cross-realm objects
+        }
+
+        // Check constructor name for various objects
+        try {
+          if (value.constructor) {
+            const ctorName = value.constructor.name;
+            // Handle various browser/three.js objects
+            if (['MediaStream', 'AudioNode', 'AudioBuffer', 'WebGLRenderingContext', 'WebGL2RenderingContext', 'CanvasRenderingContext2D'].includes(ctorName)) {
+              return `[${ctorName}]`;
+            }
+            // Handle Three.js objects (very large objects)
+            if (ctorName && (ctorName.startsWith('Three') || ctorName.includes('Mesh') || ctorName.includes('Scene') || ctorName.includes('Camera') || ctorName === 'Object3D')) {
+              return `[${ctorName}]`;
+            }
+            // Handle other known large objects
+            if (['Module', 'WebAssembly'].some(s => ctorName.includes(s))) {
+              return `[${ctorName}]`;
+            }
+          }
+        } catch (e) {
+          // Constructor access can fail
+        }
+
+        // For arrays, limit size
+        try {
+          if (Array.isArray(value)) {
+            if (value.length > 20) {
+              return `[Array with ${value.length} items]`;
+            }
+          }
+        } catch (e) {
+          return '[Array]';
+        }
+
+        // For objects, limit number of keys shown
+        try {
+          const keys = Object.keys(value);
+          if (keys.length > 30) {
+            return `{${keys.length} keys: ${keys.slice(0, 3).join(', ')}, ...}`;
+          }
+        } catch (e) {
+          return '[Object]';
+        }
       }
+
       return value;
-    }, 2);
+    };
+
+    const result = JSON.stringify(obj, replacer, 2);
+
+    // Limit total output size
+    if (result && result.length > 10000) {
+      return result.substring(0, 10000) + '\n\n... [Output truncated - too large]';
+    }
+
+    return result || '[Unable to stringify]';
   } catch (e) {
-    return String(obj);
+    return `[Error: ${e instanceof Error ? e.message : String(e)}]`;
   }
 }
 
@@ -54,6 +137,55 @@ function SwitchToggle({ enabled, set }: {
   )
 }
 
+interface StackFrame {
+  functionName: string;
+  fileName: string;
+  lineNumber: string;
+  columnNumber: string;
+}
+
+/**
+ * Parse stack trace into structured format
+ */
+function parseStackTrace(stack?: string): StackFrame[] {
+  if (!stack) return [];
+
+  const frames: StackFrame[] = [];
+  const lines = stack.split('\n');
+
+  for (const line of lines) {
+    // Match various stack trace formats
+    const chromeMatch = line.match(/at\s+(.+?)\s+\((.+?):(\d+):(\d+)\)/);
+    const firefoxMatch = line.match(/(.+?)@(.+?):(\d+):(\d+)/);
+    const simpleMatch = line.match(/at\s+(.+?):(\d+):(\d+)/);
+
+    if (chromeMatch) {
+      frames.push({
+        functionName: chromeMatch[1],
+        fileName: chromeMatch[2],
+        lineNumber: chromeMatch[3],
+        columnNumber: chromeMatch[4],
+      });
+    } else if (firefoxMatch) {
+      frames.push({
+        functionName: firefoxMatch[1],
+        fileName: firefoxMatch[2],
+        lineNumber: firefoxMatch[3],
+        columnNumber: firefoxMatch[4],
+      });
+    } else if (simpleMatch) {
+      frames.push({
+        functionName: '(anonymous)',
+        fileName: simpleMatch[1],
+        lineNumber: simpleMatch[2],
+        columnNumber: simpleMatch[3],
+      });
+    }
+  }
+
+  return frames;
+}
+
 export function DebugPane({ onClickClose }: {
   onClickClose: () => void
 }) {
@@ -63,9 +195,22 @@ export function DebugPane({ onClickClose }: {
   const [typeErrorEnabled, setTypeErrorEnabled] = useState(true);
   const [processedLogs, setProcessedLogs] = useState<Array<{log: any, message: string}>>([]);
   const [isProcessing, setIsProcessing] = useState(true);
+  const [expandedLogs, setExpandedLogs] = useState<Set<number>>(new Set());
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+
+  const toggleExpanded = (index: number) => {
+    setExpandedLogs(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  };
 
   useKeyboardShortcut("Escape", onClickClose);
 
@@ -130,10 +275,29 @@ export function DebugPane({ onClickClose }: {
             if (v === undefined) return 'undefined';
             if (typeof v === 'object') {
               try {
-                if (v.constructor && v.constructor.name !== 'Object') {
-                  return `[${v.constructor.name}]`;
+                // For arrays, show preview
+                if (Array.isArray(v)) {
+                  if (v.length === 0) return '[]';
+                  if (v.length <= 3) return `[${v.join(', ')}]`;
+                  return `[${v.length} items]`;
                 }
-                return safeStringify(v);
+
+                // For objects, show a compact preview
+                const keys = Object.keys(v);
+                if (keys.length === 0) return '{}';
+
+                // Constructor name if available
+                if (v.constructor && v.constructor.name !== 'Object') {
+                  return `{${v.constructor.name}}`;
+                }
+
+                // Show first few keys
+                if (keys.length <= 3) {
+                  const preview = keys.map(k => `${k}: ${typeof v[k] === 'object' ? '...' : v[k]}`).join(', ');
+                  return `{${preview}}`;
+                }
+
+                return `{${keys.length} keys: ${keys.slice(0, 2).join(', ')}, ...}`;
               } catch {
                 return '[Object]';
               }
@@ -258,45 +422,131 @@ export function DebugPane({ onClickClose }: {
             <div className="space-y-1 font-mono text-xs">
               {processedLogs.map((item, idx) => {
                 const { log, message: logMessage } = item;
+                const isExpanded = expandedLogs.has(idx);
+
+                // Try to extract details from any log type
+                let errorObj: any = null;
+                let stackFrames: StackFrame[] = [];
+                let detailsObjects: any[] = [];
+
+                if (log.args) {
+                  const args = Array.isArray(log.args) ? log.args : Object.values(log.args);
+
+                  // For errors, extract stack trace
+                  if (log.type === 'error') {
+                    errorObj = args.find((arg: any) => arg instanceof Error || (arg && arg.stack));
+                    if (errorObj && errorObj.stack) {
+                      stackFrames = parseStackTrace(errorObj.stack);
+                    }
+                  }
+
+                  // For all log types, extract objects/arrays for details
+                  detailsObjects = args.filter((arg: any) => {
+                    if (arg === null || arg === undefined) return false;
+                    if (typeof arg === 'string' || typeof arg === 'number' || typeof arg === 'boolean') return false;
+                    if (arg instanceof Error) return false; // Already handled separately
+                    return typeof arg === 'object';
+                  });
+                }
+
+                const hasDetails = stackFrames.length > 0 || detailsObjects.length > 0;
+
                 return (
                   <div
                     key={log.ts+idx}
                     className={clsx(
-                      "rounded px-2 py-1.5 flex items-start gap-2 border transition-colors text-xs",
-                      log.type === 'error' && 'bg-rose-50 border-rose-200 hover:bg-rose-100',
-                      log.type === 'warn' && 'bg-amber-50 border-amber-200 hover:bg-amber-100',
-                      log.type === 'debug' && 'bg-slate-50 border-slate-200 hover:bg-slate-100',
-                      (log.type === 'info' || log.type === 'log') && 'bg-emerald-50 border-emerald-200 hover:bg-emerald-100',
+                      "rounded border transition-colors text-xs overflow-hidden",
+                      log.type === 'error' && 'bg-rose-50 border-rose-200',
+                      log.type === 'warn' && 'bg-amber-50 border-amber-200',
+                      log.type === 'debug' && 'bg-slate-50 border-slate-200',
+                      (log.type === 'info' || log.type === 'log') && 'bg-emerald-50 border-emerald-200',
                     )}
                   >
-                    {log.type === 'debug' && (
-                      <span className="px-1.5 py-0.5 text-[10px] font-bold text-slate-700 bg-slate-200 rounded uppercase flex-shrink-0">
-                        DBG
-                      </span>
-                    )}
-                    {(log.type === 'info' || log.type === 'log') && (
-                      <span className="px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 bg-emerald-200 rounded uppercase flex-shrink-0">
-                        INF
-                      </span>
-                    )}
-                    {log.type === 'warn' && (
-                      <span className="px-1.5 py-0.5 text-[10px] font-bold text-amber-700 bg-amber-200 rounded uppercase flex-shrink-0">
-                        WRN
-                      </span>
-                    )}
-                    {log.type === 'error' && (
-                      <span className="px-1.5 py-0.5 text-[10px] font-bold text-rose-700 bg-rose-200 rounded uppercase flex-shrink-0">
-                        ERR
-                      </span>
-                    )}
+                    {/* Main log line - clickable if has details */}
+                    <div
+                      onClick={() => hasDetails && toggleExpanded(idx)}
+                      className={clsx(
+                        "px-2 py-1.5 flex items-start gap-2",
+                        hasDetails && "cursor-pointer hover:bg-opacity-80"
+                      )}
+                    >
+                      {log.type === 'debug' && (
+                        <span className="px-1.5 py-0.5 text-[10px] font-bold text-slate-700 bg-slate-200 rounded uppercase flex-shrink-0">
+                          DBG
+                        </span>
+                      )}
+                      {(log.type === 'info' || log.type === 'log') && (
+                        <span className="px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 bg-emerald-200 rounded uppercase flex-shrink-0">
+                          INF
+                        </span>
+                      )}
+                      {log.type === 'warn' && (
+                        <span className="px-1.5 py-0.5 text-[10px] font-bold text-amber-700 bg-amber-200 rounded uppercase flex-shrink-0">
+                          WRN
+                        </span>
+                      )}
+                      {log.type === 'error' && (
+                        <span className="px-1.5 py-0.5 text-[10px] font-bold text-rose-700 bg-rose-200 rounded uppercase flex-shrink-0">
+                          ERR
+                        </span>
+                      )}
 
-                    <span className="text-slate-500 text-[10px] flex-shrink-0 font-semibold">
-                      {new Date(log.ts).toLocaleTimeString()}
-                    </span>
+                      <span className="text-slate-500 text-[10px] flex-shrink-0 font-semibold">
+                        {new Date(log.ts).toLocaleTimeString()}
+                      </span>
 
-                    <span className="text-slate-900 flex-1 break-all leading-tight">
-                      {logMessage}
-                    </span>
+                      <span className="text-slate-900 flex-1 break-all leading-tight">
+                        {logMessage}
+                      </span>
+
+                      {hasDetails && (
+                        <span className="text-slate-400 text-[10px] flex-shrink-0">
+                          {isExpanded ? '▼' : '▶'}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Expanded details */}
+                    {isExpanded && hasDetails && (
+                      <div className="px-2 pb-2 border-t border-slate-200/50">
+                        {/* Stack Frames */}
+                        {stackFrames.length > 0 && (
+                          <div className="mt-2">
+                            <div className="text-[10px] font-semibold text-slate-600 mb-1">
+                              📚 Stack Trace ({stackFrames.length} frames)
+                            </div>
+                            <div className="bg-white/50 rounded border border-slate-200/50">
+                              {stackFrames.map((frame, frameIdx) => (
+                                <div
+                                  key={frameIdx}
+                                  className="px-2 py-1 text-[10px] border-b border-slate-100 last:border-b-0"
+                                >
+                                  <div className="text-blue-600 font-semibold">
+                                    {frame.functionName}
+                                  </div>
+                                  <div className="text-slate-500">
+                                    {frame.fileName}:{frame.lineNumber}:{frame.columnNumber}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Object/Array details */}
+                        {detailsObjects.map((obj, objIdx) => (
+                          <div key={objIdx} className="mt-2">
+                            <div className="text-[10px] font-semibold text-slate-600 mb-1">
+                              {log.type === 'error' ? '🔍 Error Details' : '📦 Object Details'}
+                              {detailsObjects.length > 1 && ` (${objIdx + 1}/${detailsObjects.length})`}
+                            </div>
+                            <pre className="bg-white/50 rounded border border-slate-200/50 p-2 text-[10px] overflow-x-auto max-h-60 overflow-y-auto">
+                              {safeStringify(obj)}
+                            </pre>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
