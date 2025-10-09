@@ -231,40 +231,38 @@ async function setupReadyFlag(page: Page): Promise<void> {
     const maxWaitMs = 50000; // 50s max, before waitForAmicaReady's 60s timeout
 
     const checkReady = () => {
-      // Timeout fallback
+      // Timeout fallback - set the flag on timeout to prevent indefinite waiting
       if (Date.now() - startTime > maxWaitMs) {
-        console.warn('Scene readiness check timed out after', maxWaitMs, 'ms');
-        return;
-      }
-
-      // Check if the canvas exists
-      const canvas = document.querySelector('canvas');
-      if (!canvas) {
-        setTimeout(checkReady, 100);
-        return;
-      }
-
-      // Check for THREE.js scene
-      // @ts-ignore - accessing internal THREE.js objects
-      const threeScene = (window as any).__scene || (window as any).scene;
-
-      // Check if VRM model is loaded by looking for scene children.
-      // A loaded scene typically has multiple objects (lights, camera, model, etc.)
-      // Using >3 as a heuristic; adjust if your scene structure differs.
-      const hasSceneObjects = threeScene && threeScene.children && threeScene.children.length > 3;
-
-      // Check if WebGL context is initialized
-      const gl = canvas.getContext('webgl') || canvas.getContext('webgl2');
-      const hasWebGL = gl !== null;
-
-      // Check if canvas has been drawn to (non-zero dimensions and not blank)
-      const hasContent = canvas.width > 0 && canvas.height > 0;
-
-      if (hasSceneObjects && hasWebGL && hasContent) {
+        console.warn('Scene readiness check timed out after', maxWaitMs, 'ms - marking as ready');
         (window as any).__amicaSceneReady = true;
-      } else {
-        setTimeout(checkReady, 100);
+        return;
       }
+
+      // Check if the SceneCoordinator is available and ready
+      const coordinator = (window as any).__amicaCoordinator;
+      if (coordinator && coordinator.isReady) {
+        // Additional checks for robustness
+        const canvas = document.querySelector('canvas');
+        const hasCanvas = canvas && canvas.width > 0 && canvas.height > 0;
+
+        // Check if VRM model is loaded (optional - scene might be ready without VRM)
+        const hasModel = coordinator.vrm && coordinator.vrm.getModel && coordinator.vrm.getModel();
+
+        // Check if scene has been initialized
+        const hasScene = coordinator.scene && coordinator.scene.children && coordinator.scene.children.length > 0;
+
+        if (hasCanvas && hasScene) {
+          (window as any).__amicaSceneReady = true;
+          console.log('Amica scene ready:', {
+            hasModel: !!hasModel,
+            sceneChildCount: coordinator.scene.children.length
+          });
+          return;
+        }
+      }
+
+      // Continue polling
+      setTimeout(checkReady, 100);
     };
 
     // Initial delay before polling to allow basic initialization
