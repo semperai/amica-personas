@@ -12,6 +12,34 @@ interface RegisteredHook<T extends HookEvent = HookEvent> {
   id: string;
 }
 
+/**
+ * HookManager - Central system for managing lifecycle hooks
+ *
+ * Hook Implementation Contract:
+ * ---------------------------
+ * All hooks MUST follow these rules to ensure system stability:
+ *
+ * 1. Return Type: Hooks MUST return an object (not array, null, or primitive)
+ *    ✓ return { ...context, modified: true }
+ *    ✗ return [context.field1, context.field2]
+ *    ✗ return null
+ *
+ * 2. Readonly Fields: Hooks MUST preserve _event and _timestamp fields
+ *    ✓ return { ...context, newField: value }
+ *    ✗ return { ...context, _event: 'different:event' }
+ *
+ * 3. Type Contract: Return type must match HookEventMap[T] for the event
+ *    - For 'before:llm:request': return { messages: Message[], backend: string }
+ *    - For 'on:llm:chunk': return { chunk: string, streamIdx: number }
+ *
+ * 4. Immutability: Do not mutate input context directly, return new object
+ *    ✓ return { ...context, modified: true }
+ *    ✗ context.field = newValue; return context
+ *
+ * Runtime Validation:
+ * - Development/Test: Full validation with detailed warnings
+ * - Production: Minimal validation to prevent crashes
+ */
 export class HookManager {
   private hooks: Map<HookEvent, RegisteredHook<any>[]> = new Map();
   private metrics: Map<string, HookMetrics> = new Map();
@@ -138,10 +166,10 @@ export class HookManager {
 
         // Runtime validation in development/test builds
         if (process.env.NODE_ENV !== 'production') {
-          // Validate that hook returned a context object
-          if (!result || typeof result !== 'object') {
+          // Validate that hook returned a context object (not array, null, or primitive)
+          if (!result || typeof result !== 'object' || Array.isArray(result)) {
             console.warn(
-              `[HookManager] Hook ${hook.id} for event ${event} returned invalid type: ${typeof result}. ` +
+              `[HookManager] Hook ${hook.id} for event ${event} returned invalid type: ${Array.isArray(result) ? 'array' : typeof result}. ` +
               `Expected object matching HookContext<${event}>.`
             );
           }
@@ -151,6 +179,16 @@ export class HookManager {
               `[HookManager] Hook ${hook.id} for event ${event} modified readonly field _event. ` +
               `Expected "${event}", got "${result._event}".`
             );
+          }
+        } else {
+          // Production: minimal validation to catch critical errors
+          // Check that result is a valid object to prevent runtime crashes
+          if (!result || typeof result !== 'object' || Array.isArray(result)) {
+            console.error(
+              `[HookManager] Hook ${hook.id} for event ${event} returned invalid result. Using previous context.`
+            );
+            // Return previous context to maintain system stability
+            continue;
           }
         }
 
@@ -183,7 +221,14 @@ export class HookManager {
     // Return mutable context data
     // Note: Double cast is required because TypeScript cannot verify that hooks
     // preserve the expected context shape. Runtime validation above ensures
-    // type correctness in development/test builds.
+    // type correctness in development/test builds, and production has minimal
+    // validation to prevent crashes.
+    //
+    // Hook Contract Requirements:
+    // 1. Hooks MUST return an object (not array, null, or primitive)
+    // 2. Hooks MUST preserve readonly fields (_event, _timestamp)
+    // 3. Hooks MUST return a type matching HookEventMap[T] for their event
+    // 4. Hooks should not mutate the input context directly
     const { _event, _timestamp, _hookId, ...result } = context;
     return result as unknown as HookEventMap[T];
   }
