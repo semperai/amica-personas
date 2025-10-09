@@ -20,6 +20,14 @@ import { TransparencyOptimizer, checkAndOptimizeTransparency } from '@/utils/gra
 import { config } from "@/utils/config";
 
 /**
+ * Type for materials that support the update method (MToonMaterial, MToonNodeMaterial)
+ */
+type MaterialWithUpdate = THREE.Material & {
+  update?: (delta: number) => void;
+  isMToonMaterial?: boolean;
+};
+
+/**
  * 3Dキャラクターを管理するクラス
  */
 export class Model {
@@ -27,7 +35,7 @@ export class Model {
   public mixer?: THREE.AnimationMixer;
   public emoteController?: EmoteController;
   public proceduralAnimation?: ProceduralAnimation;
-  public mtoonMaterials: any[] = [];
+  public mtoonMaterials: MaterialWithUpdate[] = [];
 
   private _lookAtTargetParent: THREE.Object3D;
   private _lipSync?: LipSync;
