@@ -90,19 +90,19 @@ export default function VrmViewer({ chatMode }: { chatMode: boolean }) {
   const canvasRef = useCallback(
     (canvas: HTMLCanvasElement) => {
       if (canvas && (!isVrmLocal || !isLoadingVrmList)) {
-        new Promise(async (resolve, reject) => {
+        (async () => {
           try {
             console.log('[VrmViewer] Setting up viewer...');
             await viewer.setup(canvas);
 
             console.log('[VrmViewer] Loading scenario from:', config('scenario_url'));
             await viewer.scenario.loadScenario(config('scenario_url'), viewer, globalHookManager);
-            resolve(true);
+            return true;
           } catch (e) {
             console.error('[VrmViewer] Setup or scenario loading failed:', e);
-            reject(e);
+            throw e;
           }
-        })
+        })()
           .then((loaded) => {
             if (loaded) {
               console.log("[VRM] vrm loaded successfully");
