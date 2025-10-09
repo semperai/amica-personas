@@ -6,7 +6,9 @@ export class GenerateMeshBVHWorker extends WorkerBase {
 
 	constructor() {
 
-		const worker = new Worker( new URL( './generateMeshBVH.worker.js', import.meta.url ), { type: 'module' } );
+		// Use the pre-built worker from public directory for better mobile compatibility
+		// Mobile Chrome can have issues with import.meta.url and inline worker creation
+		const worker = new Worker( '/generateMeshBVH.worker.js', { type: 'module' } );
 		super( worker );
 		this.name = 'GenerateMeshBVHWorker';
 
