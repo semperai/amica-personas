@@ -69,11 +69,13 @@ export default function VrmViewer({ chatMode }: { chatMode: boolean }) {
             if (loaded) {
               console.log("[VRM] vrm loaded");
               setLoadingError(false);
+              setIsLoading(false);
             }
           })
           .catch((e) => {
             console.error("[VRM] vrm loading error", e);
             setLoadingError(true);
+            setIsLoading(false);
           });
 
         // Replace VRM with Drag and Drop
