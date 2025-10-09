@@ -22,7 +22,7 @@ export const mimeTypeCheck = () => {
 }
 
 const getVideoMimeType = () => {
-  if (!MediaRecorder.isTypeSupported){
+  if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) {
     return "video/mp4";
   }
   if (MediaRecorder.isTypeSupported("video/webm")) {
@@ -36,7 +36,7 @@ const getVideoMimeType = () => {
 };
 
 const getAudioMimeType = () => {
-  if (!MediaRecorder.isTypeSupported){
+  if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) {
     return "audio/mp4";
   }
   if (MediaRecorder.isTypeSupported("audio/webm")) {
