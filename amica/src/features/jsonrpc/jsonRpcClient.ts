@@ -104,28 +104,38 @@ export class AmicaJsonRpcClient {
       id,
     };
 
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
       const timeoutMs = timeout || this.defaultTimeout;
       const timeoutHandle = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error(`Request timed out after ${timeoutMs}ms`));
       }, timeoutMs);
 
-      this.pending.set(id, { resolve, reject, timeout: timeoutHandle });
+      const cleanup = () => {
+        clearTimeout(timeoutHandle);
+        this.pending.delete(id);
+      };
+      const pendingEntry = { resolve, reject, timeout: timeoutHandle };
 
       if (this.transport === 'websocket') {
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+          cleanup();
           reject(new Error('WebSocket not connected'));
           return;
         }
+        this.pending.set(id, pendingEntry);
         this.ws.send(JSON.stringify(request));
       } else {
-        try {
-          const result = await this.sendHttpRequest<M>(request);
-          resolve(result);
-        } catch (error) {
-          reject(error);
-        }
+        this.pending.set(id, pendingEntry);
+        this.sendHttpRequest<M>(request)
+          .then((result) => {
+            cleanup();
+            resolve(result);
+          })
+          .catch((error) => {
+            cleanup();
+            reject(error);
+          });
       }
     });
   }
