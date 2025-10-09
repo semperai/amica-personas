@@ -54,6 +54,7 @@ export class RenderSystem {
     if (!gl) {
       throw new Error('WebGL is not supported on this device. Please try a different browser.');
     }
+    testCanvas.remove();
 
     console.log('[Renderer] WebGL supported. Creating renderer...');
     console.log('[Renderer] Device:', isMobile ? 'Mobile' : 'Desktop');
