@@ -81,7 +81,9 @@ export class RenderSystem {
       }
     } else {
       // Mobile-optimized settings
-      const rendererOptions = {
+      const rendererOptions: THREE.WebGLRendererParameters & {
+        failIfMajorPerformanceCaveat?: boolean;
+      } = {
         canvas: canvas,
         alpha: true,
         antialias: !isMobile, // Disable antialias on mobile for better performance
