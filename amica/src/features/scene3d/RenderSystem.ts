@@ -19,6 +19,7 @@ export class RenderSystem {
   public cameraControls: OrbitControls;
   public igroup: InteractiveGroup;
 
+  private isMobile: boolean;
   private sendScreenshotToCallback: boolean = false;
   private screenshotCallback: BlobCallback | undefined;
 
@@ -28,12 +29,14 @@ export class RenderSystem {
     camera: THREE.PerspectiveCamera,
     cameraControls: OrbitControls,
     igroup: InteractiveGroup,
+    isMobile: boolean,
   ) {
     this.renderer = renderer;
     this.scene = scene;
     this.camera = camera;
     this.cameraControls = cameraControls;
     this.igroup = igroup;
+    this.isMobile = isMobile;
   }
 
   public static async create(canvas: HTMLCanvasElement): Promise<RenderSystem> {
@@ -178,7 +181,7 @@ export class RenderSystem {
       igroup.listenToPointerEvents(renderer, camera);
     }
 
-    return new RenderSystem(renderer, scene, camera, cameraControls, igroup);
+    return new RenderSystem(renderer, scene, camera, cameraControls, igroup, isMobile);
   }
 
   public setupResizeHandler() {
@@ -191,7 +194,10 @@ export class RenderSystem {
     const parentElement = this.renderer.domElement.parentElement;
     if (!parentElement) return;
 
-    this.renderer.setPixelRatio(window.devicePixelRatio);
+    const pixelRatio = this.isMobile
+      ? Math.min(window.devicePixelRatio, 2)
+      : window.devicePixelRatio;
+    this.renderer.setPixelRatio(pixelRatio);
     this.renderer.setSize(
       parentElement.clientWidth,
       parentElement.clientHeight,
@@ -206,7 +212,10 @@ export class RenderSystem {
     const parentElement = this.renderer.domElement.parentElement;
     if (!parentElement) return;
 
-    this.renderer.setPixelRatio(window.devicePixelRatio);
+    const pixelRatio = this.isMobile
+      ? Math.min(window.devicePixelRatio, 2)
+      : window.devicePixelRatio;
+    this.renderer.setPixelRatio(pixelRatio);
 
     let width = parentElement.clientWidth;
     let height = parentElement.clientHeight;
