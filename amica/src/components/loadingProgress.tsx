@@ -109,24 +109,31 @@ export function LoadingProgress() {
         const stage = (window as any).chatvrm_loading_stage;
         const stageCntWindow = (window as any).chatvrm_loading_stage_cnt;
         if (stageCnt !== stageCntWindow) {
+          console.debug('[LoadingProgress] Stage change detected', { stage, stageCnt: stageCntWindow, shouldShow });
           setStageCnt(stageCntWindow);
 
           if (stage === null) {
-            if (hideTimeoutRef.current !== null) {
-              clearTimeout(hideTimeoutRef.current);
-              hideTimeoutRef.current = null;
-            }
-
-            if (shouldShow) {
-              hideTimeoutRef.current = window.setTimeout(() => {
-                setShouldShow(false);
+            console.debug('[LoadingProgress] Stage is null, hideTimeoutRef.current:', hideTimeoutRef.current);
+            // Only schedule hide if not already hiding
+            if (hideTimeoutRef.current === null) {
+              if (shouldShow) {
+                console.debug('[LoadingProgress] Scheduling hide with 200ms delay');
+                hideTimeoutRef.current = window.setTimeout(() => {
+                  console.debug('[LoadingProgress] Hiding overlay after delay');
+                  setShouldShow(false);
+                  setLoadingStage(null);
+                  hideTimeoutRef.current = null;
+                }, 200);
+                console.debug('[LoadingProgress] Hide timeout scheduled, ref:', hideTimeoutRef.current);
+              } else {
+                console.debug('[LoadingProgress] Hiding overlay immediately (shouldShow is false)');
                 setLoadingStage(null);
-                hideTimeoutRef.current = null;
-              }, 200);
+              }
             } else {
-              setLoadingStage(null);
+              console.debug('[LoadingProgress] Hide already scheduled, ignoring duplicate');
             }
           } else {
+            console.debug('[LoadingProgress] Showing stage:', stage);
             if (hideTimeoutRef.current !== null) {
               clearTimeout(hideTimeoutRef.current);
               hideTimeoutRef.current = null;
@@ -151,7 +158,7 @@ export function LoadingProgress() {
         hideTimeoutRef.current = null;
       }
     };
-  }, [progressCnt, stageCnt, shouldShow]);
+  }, []);
 
   return (
     <>

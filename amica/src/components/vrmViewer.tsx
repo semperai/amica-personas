@@ -35,6 +35,7 @@ export default function VrmViewer({ chatMode }: { chatMode: boolean }) {
     }
 
     let observedActiveStage = false;
+    let hasLoadingStageSystem = false;
 
     const interval = window.setInterval(() => {
       const loadingStage = (window as any).chatvrm_loading_stage ?? null;
@@ -42,6 +43,7 @@ export default function VrmViewer({ chatMode }: { chatMode: boolean }) {
       if (loadingStage !== null) {
         // Loading is active
         observedActiveStage = true;
+        hasLoadingStageSystem = true;
         setIsLoading(true);
       } else if (observedActiveStage) {
         // Loading completed (was active, now null)
@@ -49,7 +51,18 @@ export default function VrmViewer({ chatMode }: { chatMode: boolean }) {
       }
     }, 100);
 
-    return () => window.clearInterval(interval);
+    // Fallback: if loading stage system never activates, hide loading after 5 seconds
+    const fallbackTimeout = window.setTimeout(() => {
+      if (!hasLoadingStageSystem) {
+        console.warn('[VrmViewer] Loading stage system not detected, using fallback');
+        setIsLoading(false);
+      }
+    }, 5000);
+
+    return () => {
+      window.clearInterval(interval);
+      window.clearTimeout(fallbackTimeout);
+    };
   }, []);
 
   const canvasRef = useCallback(
@@ -69,13 +82,11 @@ export default function VrmViewer({ chatMode }: { chatMode: boolean }) {
             if (loaded) {
               console.log("[VRM] vrm loaded");
               setLoadingError(false);
-              setIsLoading(false);
             }
           })
           .catch((e) => {
             console.error("[VRM] vrm loading error", e);
             setLoadingError(true);
-            setIsLoading(false);
           });
 
         // Replace VRM with Drag and Drop
