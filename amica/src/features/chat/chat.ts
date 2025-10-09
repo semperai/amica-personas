@@ -335,7 +335,7 @@ export class Chat {
         console.debug('[Chat] Finished cancelling stream');
       }
     } catch (e: any) {
-      console.error('[Chat] Error during interruption:', e.toString());
+      console.error('[Chat] Error during interruption:', e);
     }
 
     // TODO if llm type is llama.cpp, we can send /stop message here
@@ -580,7 +580,7 @@ export class Chat {
         }
       }
     } catch (e: any) {
-      console.error('[Chat] TTS generation error:', e.toString());
+      console.error('[Chat] TTS generation error:', e);
       this.alert?.error("Failed to get TTS response", e.toString());
     }
 
@@ -728,7 +728,7 @@ export class Chat {
         },
       ]);
     } catch (e: any) {
-      console.error('[Chat] Vision response error:', e.toString());
+      console.error('[Chat] Vision response error:', e);
       this.alert?.error("Failed to get vision response", e.toString());
     }
   }
