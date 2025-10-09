@@ -459,7 +459,9 @@ export class Model {
     // MToonNodeMaterial requires manual updates for proper rendering
     if (this.mtoonMaterials.length > 0) {
       for (const material of this.mtoonMaterials) {
-        material.update(delta);
+        if (typeof material.update === "function") {
+          material.update(delta);
+        }
       }
     }
   }
