@@ -151,6 +151,9 @@ export function MobileErrorOverlay() {
 
   return (
     <div
+      role="alert"
+      aria-live="assertive"
+      aria-atomic="true"
       style={{
         position: 'fixed',
         top: 0,
@@ -198,6 +201,7 @@ export function MobileErrorOverlay() {
               ).join('\n---\n\n');
               navigator.clipboard?.writeText(errorText);
             }}
+            aria-label="Copy error details to clipboard"
             style={{
               padding: '8px 16px',
               backgroundColor: '#238636',
@@ -212,7 +216,12 @@ export function MobileErrorOverlay() {
             📋 Copy
           </button>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => {
+              if (confirm('Reloading will discard any unsaved changes. Continue?')) {
+                window.location.reload();
+              }
+            }}
+            aria-label="Reload page"
             style={{
               padding: '8px 16px',
               backgroundColor: '#1f6feb',
@@ -237,7 +246,9 @@ export function MobileErrorOverlay() {
         border: '1px solid #30363d',
         borderRadius: '6px',
       }}>
-        <div style={{ fontWeight: '600', marginBottom: '8px', color: '#58a6ff' }}>📱 Device Info</div>
+        <div style={{ fontWeight: '600', marginBottom: '8px', color: '#58a6ff' }}>
+          📱 Device Info <span style={{ fontSize: '11px', fontWeight: '400', color: '#8b949e' }}>(displayed locally only)</span>
+        </div>
         <div style={{ fontSize: '12px', fontFamily: 'monospace', color: '#8b949e' }}>
           <div>Screen: {window.screen.width}x{window.screen.height}</div>
           <div>Viewport: {window.innerWidth}x{window.innerHeight}</div>
@@ -397,6 +408,7 @@ export function MobileErrorOverlay() {
             setErrors([]);
             setIsVisible(false);
           }}
+          aria-label="Dismiss error overlay"
           style={{
             padding: '8px 16px',
             backgroundColor: '#21262d',
