@@ -1,12 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 
+/**
+ * Represents a file being loaded with its download progress.
+ */
 type LoadingFile = {
+  /** The name/path of the file being loaded */
   file: string;
+  /** The loading progress as a percentage (0-100) */
   progress: number;
 }
 
+/**
+ * Represents a loading stage with its description and progress.
+ */
 type LoadingStage = {
+  /** The description of the current loading stage */
   stage: string;
+  /** The overall loading progress as a percentage (0-100) */
   progress: number;
 }
 
@@ -59,6 +69,29 @@ const DEBUG_FROZEN_STAGE: LoadingStage = {
 // Progress bar gradient - cyan to blue
 const PROGRESS_BAR_GRADIENT = "from-cyan-400 via-blue-500 to-blue-600";
 
+/**
+ * LoadingProgress Component
+ *
+ * A full-screen loading overlay that displays the current loading stage with a
+ * beautiful animated progress bar. Monitors the global window loading state and
+ * shows/hides the overlay accordingly.
+ *
+ * Features:
+ * - Animated gradient progress bar with shimmer effect
+ * - Rotating funny loading messages
+ * - Smooth transitions when showing/hiding
+ * - Responsive design (mobile-friendly)
+ * - Debug mode for design work (DEBUG_FREEZE_LOADING)
+ *
+ * The component monitors two global state objects on the window:
+ * - `window.chatvrm_loading_stage`: Current loading stage and progress
+ * - `window.chatvrm_loading_progress`: Individual file loading details
+ *
+ * When `chatvrm_loading_stage` becomes null, the overlay hides after a 200ms delay
+ * to ensure smooth transitions.
+ *
+ * @returns A React component that renders the loading overlay
+ */
 export function LoadingProgress() {
   if (typeof window !== "undefined") {
     if(! (window as any).chatvrm_loading_progress) {

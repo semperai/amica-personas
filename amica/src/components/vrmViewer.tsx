@@ -8,6 +8,27 @@ import { ChatContext } from "@/features/chat/chatContext";
 import { globalHookManager } from "@/features/hooks";
 import clsx from "clsx";
 
+/**
+ * VrmViewer Component
+ *
+ * The main 3D viewer component that renders VRM models on a canvas using Three.js.
+ * Handles loading, displaying, and interacting with VRM avatars.
+ *
+ * Features:
+ * - Renders VRM models in a 3D scene
+ * - Supports drag-and-drop VRM file loading
+ * - Monitors loading state via the global loading stage system
+ * - Responsive canvas resizing based on chat mode
+ * - Error handling for loading failures
+ * - Fallback timeout if loading system doesn't activate
+ *
+ * The component coordinates with the LoadingProgress component by monitoring
+ * `window.chatvrm_loading_stage` to determine when to show/hide the canvas.
+ *
+ * @param props - Component props
+ * @param props.chatMode - Whether the viewer is in chat mode (affects positioning)
+ * @returns A React component that renders the 3D VRM viewer
+ */
 export default function VrmViewer({ chatMode }: { chatMode: boolean }) {
   const { chat: bot } = useContext(ChatContext);
   const { viewer } = useContext(ViewerContext);
