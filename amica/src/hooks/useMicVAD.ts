@@ -114,7 +114,22 @@ export function useMicVAD(options: Partial<ReactRealTimeVADOptions>) {
           },
         };
 
-        myvad = await MicVAD.new(vadOptions);
+        // Add timeout to detect if VAD initialization hangs (Brave browser issue)
+        const timeout = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('VAD initialization timeout - this may be a browser compatibility issue')), 15000);
+        });
+
+        try {
+          myvad = await Promise.race([
+            MicVAD.new(vadOptions),
+            timeout
+          ]);
+        } catch (timeoutError) {
+          console.warn('[useMicVAD] Initialization timed out, retrying with legacy model...');
+          // Retry with legacy model if timeout occurs
+          vadOptions.model = 'legacy';
+          myvad = await MicVAD.new(vadOptions);
+        }
 
         if (canceled) {
           myvad.destroy();

@@ -61,7 +61,8 @@ export function DebugPane({ onClickClose }: {
   const [typeInfoEnabled, setTypeInfoEnabled] = useState(true);
   const [typeWarnEnabled, setTypeWarnEnabled] = useState(true);
   const [typeErrorEnabled, setTypeErrorEnabled] = useState(true);
-  const [isReady, setIsReady] = useState(false);
+  const [processedLogs, setProcessedLogs] = useState<Array<{log: any, message: string}>>([]);
+  const [isProcessing, setIsProcessing] = useState(true);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -80,11 +81,8 @@ export function DebugPane({ onClickClose }: {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClickClose]);
 
-  // Get logs safely and defer processing
+  // Get filtered logs (lightweight, just filtering)
   const filteredLogs = useMemo(() => {
-    // Don't process logs until modal is ready
-    if (!isReady) return [];
-
     const logs = (window as any).error_handler_logs || [];
     const recentLogs = logs.slice(-TOTAL_ITEMS_TO_SHOW);
 
@@ -95,25 +93,84 @@ export function DebugPane({ onClickClose }: {
       if (log.type === 'error' && !typeErrorEnabled) return false;
       return true;
     });
-  }, [typeDebugEnabled, typeInfoEnabled, typeWarnEnabled, typeErrorEnabled, isReady]);
+  }, [typeDebugEnabled, typeInfoEnabled, typeWarnEnabled, typeErrorEnabled]);
 
-  // Defer heavy rendering until after modal opens
+  // Process logs asynchronously in chunks to avoid blocking
   useEffect(() => {
-    // Use requestAnimationFrame for better timing
-    const rafId = requestAnimationFrame(() => {
-      setTimeout(() => {
-        setIsReady(true);
-        requestAnimationFrame(() => {
-          scrollRef.current?.scrollIntoView({
-            behavior: "auto",
-            block: "center",
-          });
-        });
-      }, 100);
-    });
+    setIsProcessing(true);
 
-    return () => cancelAnimationFrame(rafId);
-  }, []);
+    const processLogs = async () => {
+      const processed = filteredLogs.map((log: any) => {
+        let logMessage = '';
+        try {
+          let args: any[] = [];
+
+          if (log.args) {
+            if (Array.isArray(log.args)) {
+              args = log.args;
+            } else if (typeof log.args === 'object') {
+              try {
+                args = Array.from(log.args);
+              } catch {
+                args = Object.values(log.args);
+              }
+            }
+          }
+
+          if (args.length === 0) {
+            if (log.message) {
+              args = [log.message];
+            } else if (log.msg) {
+              args = [log.msg];
+            }
+          }
+
+          logMessage = args.map((v: any) => {
+            if (v === null) return 'null';
+            if (v === undefined) return 'undefined';
+            if (typeof v === 'object') {
+              try {
+                if (v.constructor && v.constructor.name !== 'Object') {
+                  return `[${v.constructor.name}]`;
+                }
+                return safeStringify(v);
+              } catch {
+                return '[Object]';
+              }
+            }
+            return String(v);
+          }).join(" ");
+
+          if (logMessage.length > 500) {
+            logMessage = logMessage.substring(0, 500) + '...';
+          }
+
+          if (!logMessage) {
+            logMessage = '(empty log)';
+          }
+        } catch (e) {
+          logMessage = `[Error: ${e instanceof Error ? e.message : 'Unknown error'}]`;
+        }
+
+        return { log, message: logMessage };
+      });
+
+      setProcessedLogs(processed);
+      setIsProcessing(false);
+
+      // Scroll to bottom after processing
+      requestAnimationFrame(() => {
+        scrollRef.current?.scrollIntoView({
+          behavior: "auto",
+          block: "center",
+        });
+      });
+    };
+
+    // Use setTimeout to defer processing and let the modal render first
+    const timeoutId = setTimeout(processLogs, 0);
+    return () => clearTimeout(timeoutId);
+  }, [filteredLogs]);
 
   function onClickCopy() {
     try {
@@ -193,74 +250,14 @@ export function DebugPane({ onClickClose }: {
 
         {/* Log Content */}
         <div className="flex-1 overflow-y-auto bg-white p-3">
-          {!isReady ? (
-            <div className="flex items-center justify-center h-full text-slate-600">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-300 border-t-slate-600 mx-auto mb-2"></div>
-                <div className="text-xs font-medium">Loading logs...</div>
-              </div>
+          {isProcessing ? (
+            <div className="flex items-center justify-center h-32 text-slate-400">
+              <div className="text-xs">Processing logs...</div>
             </div>
           ) : (
             <div className="space-y-1 font-mono text-xs">
-              {filteredLogs.map((log: any, idx: number) => {
-                // Prepare log message string (lightweight)
-                let logMessage = '';
-                try {
-                  // Check different possible argument structures
-                  let args: any[] = [];
-
-                  if (log.args) {
-                    if (Array.isArray(log.args)) {
-                      args = log.args;
-                    } else if (typeof log.args === 'object') {
-                      // Try to convert array-like objects
-                      try {
-                        args = Array.from(log.args);
-                      } catch {
-                        // If that fails, try Object.values
-                        args = Object.values(log.args);
-                      }
-                    }
-                  }
-
-                  // Fallback: check if message or msg property exists
-                  if (args.length === 0) {
-                    if (log.message) {
-                      args = [log.message];
-                    } else if (log.msg) {
-                      args = [log.msg];
-                    }
-                  }
-
-                  logMessage = args.map((v: any) => {
-                    if (v === null) return 'null';
-                    if (v === undefined) return 'undefined';
-                    if (typeof v === 'object') {
-                      try {
-                        // Try to show object in a readable way
-                        if (v.constructor && v.constructor.name !== 'Object') {
-                          return `[${v.constructor.name}]`;
-                        }
-                        return safeStringify(v);
-                      } catch {
-                        return '[Object]';
-                      }
-                    }
-                    return String(v);
-                  }).join(" ");
-
-                  if (logMessage.length > 500) {
-                    logMessage = logMessage.substring(0, 500) + '...';
-                  }
-
-                  // If still empty, show a placeholder
-                  if (!logMessage) {
-                    logMessage = '(empty log)';
-                  }
-                } catch (e) {
-                  logMessage = `[Error: ${e instanceof Error ? e.message : 'Unknown error'}]`;
-                }
-
+              {processedLogs.map((item, idx) => {
+                const { log, message: logMessage } = item;
                 return (
                   <div
                     key={log.ts+idx}

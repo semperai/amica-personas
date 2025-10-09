@@ -86,6 +86,8 @@ export default defineConfig({
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',
+      // Prevent aggressive caching in dev mode
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
     },
   },
   optimizeDeps: {

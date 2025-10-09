@@ -41,6 +41,21 @@ export class RenderSystem {
     const width = parentElement?.clientWidth || canvas.width;
     const height = parentElement?.clientHeight || canvas.height;
 
+    // Mobile-specific checks to prevent crashes
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    // Check WebGL support before attempting to create renderer
+    const testCanvas = document.createElement('canvas');
+    const gl = testCanvas.getContext('webgl2') || testCanvas.getContext('webgl');
+
+    if (!gl) {
+      throw new Error('WebGL is not supported on this device. Please try a different browser.');
+    }
+
+    console.log('[Renderer] WebGL supported. Creating renderer...');
+    console.log('[Renderer] Device:', isMobile ? 'Mobile' : 'Desktop');
+    console.log('[Renderer] User Agent:', navigator.userAgent);
+
     let renderer: WebRenderer;
 
     if (config("use_webgpu") === "true") {
@@ -65,12 +80,25 @@ export class RenderSystem {
         throw new Error('WebGPU initialization failed. Try disabling use_webgpu in config.');
       }
     } else {
-      renderer = new THREE.WebGLRenderer({
+      // Mobile-optimized settings
+      const rendererOptions = {
         canvas: canvas,
         alpha: true,
-        antialias: true,
-        powerPreference: "high-performance",
-      });
+        antialias: !isMobile, // Disable antialias on mobile for better performance
+        powerPreference: isMobile ? "default" : "high-performance",
+        failIfMajorPerformanceCaveat: false, // Don't fail on low-end devices
+        preserveDrawingBuffer: false, // Better performance on mobile
+      };
+
+      console.log('[Renderer] Creating WebGL renderer with options:', rendererOptions);
+
+      try {
+        renderer = new THREE.WebGLRenderer(rendererOptions);
+        console.log('[Renderer] WebGL renderer created successfully');
+      } catch (error) {
+        console.error('[Renderer] Failed to create WebGL renderer:', error);
+        throw new Error(`Failed to create WebGL renderer: ${error}`);
+      }
     }
 
     renderer.setClearColor(0x000000, 0);
@@ -81,7 +109,14 @@ export class RenderSystem {
     }
 
     renderer.setSize(width, height);
-    renderer.setPixelRatio(window.devicePixelRatio);
+
+    // Limit pixel ratio on mobile to prevent performance issues
+    const pixelRatio = isMobile
+      ? Math.min(window.devicePixelRatio, 2)
+      : window.devicePixelRatio;
+
+    console.log('[Renderer] Setting pixel ratio:', pixelRatio);
+    renderer.setPixelRatio(pixelRatio);
 
     // XR features are only available in WebGL renderer
     // WebGPU renderer has different XR API that doesn't support these methods

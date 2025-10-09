@@ -155,6 +155,19 @@ export default function MessageInput({
     console.error('[VAD] ERROR:', vad.errored);
   }
 
+  // Debug: Log button disabled state
+  useEffect(() => {
+    const isDisabled = !micEnabled || config('stt_backend') === 'none' || vad.loading || Boolean(vad.errored);
+    console.log('[Mic Button] State:', {
+      disabled: isDisabled,
+      micEnabled,
+      sttBackend: config('stt_backend'),
+      vadLoading: vad.loading,
+      vadErrored: vad.errored,
+      vadListening: vad.listening,
+    });
+  }, [micEnabled, vad.loading, vad.errored, vad.listening]);
+
   useEffect(() => {
 
     // Check if we have an audio context and it's running
@@ -266,8 +279,18 @@ export default function MessageInput({
                 vad.toggle();
               }}
               className="flex-shrink-0 p-2 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-slate-900"
+              title={
+                !micEnabled ? 'Microphone disabled in settings' :
+                config('stt_backend') === 'none' ? 'No STT backend configured' :
+                vad.loading ? 'Loading voice detection model...' :
+                vad.errored ? `Error: ${vad.errored}` :
+                vad.listening ? 'Stop listening' :
+                'Start listening'
+              }
             >
-              {vad.userSpeaking ? (
+              {vad.loading ? (
+                <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+              ) : vad.userSpeaking ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
               ) : vad.listening ? (
                 <Pause className="h-5 w-5" />
