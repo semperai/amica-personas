@@ -195,38 +195,82 @@ describe("VAD Performance Tracking", () => {
       tracker.recordFrameProcessing(10);
 
       const metrics1 = tracker.getMetrics();
-      (metrics1 as VADPerformanceMetrics).framesProcessed = 999;
+      // Attempt mutation (should not affect internal state)
+      Object.assign(metrics1, { framesProcessed: 999 });
 
       const metrics2 = tracker.getMetrics();
       expect(metrics2.framesProcessed).toBe(1); // Original unchanged
     });
 
-    test("should handle negative duration values", () => {
+    test("should reject negative duration values", () => {
       const tracker = new VADPerformanceTracker(true);
 
       tracker.recordFrameProcessing(-5);
       tracker.recordModelInference(-10);
 
+      // Negative values should be rejected, so no frames recorded
       const metrics = tracker.getMetrics();
-      expect(metrics.framesProcessed).toBe(1);
-      expect(metrics.avgFrameProcessingTime).toBe(-5);
-      expect(metrics.minFrameProcessingTime).toBe(-5);
-      // max is initialized to 0, and -5 < 0, so max stays 0
+      expect(metrics.framesProcessed).toBe(0);
+      expect(metrics.avgFrameProcessingTime).toBe(0);
+      expect(metrics.minFrameProcessingTime).toBe(Infinity);
       expect(metrics.maxFrameProcessingTime).toBe(0);
+
+      // Should log warnings
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.stringContaining("Invalid frame processing duration: -5ms")
+      );
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.stringContaining("Invalid model inference duration: -10ms")
+      );
     });
 
-    test("should handle NaN duration values", () => {
+    test("should reject NaN duration values", () => {
       const tracker = new VADPerformanceTracker(true);
 
       tracker.recordFrameProcessing(NaN);
       tracker.recordModelInference(NaN);
 
+      // NaN values should be rejected, so no frames recorded
       const metrics = tracker.getMetrics();
-      expect(metrics.framesProcessed).toBe(1);
-      expect(metrics.avgFrameProcessingTime).toBeNaN();
-      // NaN comparisons always return false, so min stays Infinity and max stays 0
+      expect(metrics.framesProcessed).toBe(0);
+      expect(metrics.avgFrameProcessingTime).toBe(0);
       expect(metrics.minFrameProcessingTime).toBe(Infinity);
       expect(metrics.maxFrameProcessingTime).toBe(0);
+
+      // Should log warnings
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.stringContaining("Invalid frame processing duration: NaN")
+      );
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.stringContaining("Invalid model inference duration: NaN")
+      );
+    });
+
+    test("should reject Infinity duration values", () => {
+      const tracker = new VADPerformanceTracker(true);
+
+      tracker.recordFrameProcessing(Infinity);
+      tracker.recordModelInference(-Infinity);
+      tracker.recordModelLoad(Infinity);
+      tracker.recordWorkletLoad(-Infinity);
+      tracker.recordInitialization(Infinity);
+
+      // Infinity values should be rejected
+      const metrics = tracker.getMetrics();
+      expect(metrics.framesProcessed).toBe(0);
+      expect(metrics.modelLoadTime).toBe(0);
+      expect(metrics.workletLoadTime).toBe(0);
+      expect(metrics.initializationTime).toBe(0);
+
+      // Should log warnings
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.stringContaining("Invalid")
+      );
     });
 
     test("should handle exactly maxSamples boundary", () => {
