@@ -1,0 +1,40 @@
+import { DeploymentAddresses, Deployment } from '@/lib/deployments';
+
+// Mock deployment addresses for testing
+export const mockDeploymentAddresses: DeploymentAddresses = {
+  amicaToken: '0x1234567890123456789012345678901234567890',
+  amicaTokenImpl: '0x2234567890123456789012345678901234567890',
+  personaFactory: '0x3234567890123456789012345678901234567890',
+  personaFactoryImpl: '0x4234567890123456789012345678901234567890',
+  personaFactoryViewer: '0x5234567890123456789012345678901234567890',
+  proxyAdmin: '0x6234567890123456789012345678901234567890',
+  erc20Implementation: '0x7234567890123456789012345678901234567890',
+  bridgeWrapper: '0x8234567890123456789012345678901234567890',
+  bridgeWrapperImpl: '0x9234567890123456789012345678901234567890',
+  bridgedAmicaAddress: '0xa234567890123456789012345678901234567890',
+  stakingRewards: '0xb234567890123456789012345678901234567890',
+};
+
+export const mockDeployment: Deployment = {
+  chainId: 8453,
+  chainName: 'base',
+  addresses: mockDeploymentAddresses,
+  blockNumber: 12345678,
+  timestamp: '2024-01-01T00:00:00Z',
+  deployer: '0xc234567890123456789012345678901234567890',
+  transactionHashes: {
+    amicaToken: '0xabc123',
+    personaFactory: '0xdef456',
+  },
+};
+
+export const mockMainnetDeploymentAddresses: DeploymentAddresses = {
+  amicaToken: '0xd234567890123456789012345678901234567890',
+  amicaTokenImpl: '0xe234567890123456789012345678901234567890',
+  personaFactory: '0xf234567890123456789012345678901234567890',
+  personaFactoryImpl: '0x0334567890123456789012345678901234567890',
+  personaFactoryViewer: '0x1334567890123456789012345678901234567890',
+  proxyAdmin: '0x2334567890123456789012345678901234567890',
+  erc20Implementation: '0x3334567890123456789012345678901234567890',
+  // No bridge wrapper on mainnet
+};
