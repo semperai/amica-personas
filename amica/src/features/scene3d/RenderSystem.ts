@@ -57,8 +57,13 @@ export class RenderSystem {
 
       // WebGPU renderer requires async initialization
       console.log('[Renderer] Initializing WebGPU renderer...');
-      await renderer.init!();
-      console.log('[Renderer] WebGPU renderer initialized');
+      try {
+        await renderer.init!();
+        console.log('[Renderer] WebGPU renderer initialized');
+      } catch (error) {
+        console.error('[Renderer] Failed to initialize WebGPU renderer:', error);
+        throw new Error('WebGPU initialization failed. Try disabling use_webgpu in config.');
+      }
     } else {
       renderer = new THREE.WebGLRenderer({
         canvas: canvas,
