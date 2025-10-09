@@ -58,8 +58,9 @@ export const ChatLog = ({
             } else {
               bot.bubbleMessage(lastMessage.role, lastMessage.content as string);
             }
+          } else {
+            console.error("[Chat History] Please attach the correct file format.");
           }
-          console.error("[Chat History] Please attach the correct file format.");
         } catch (e: any) {
           console.error("[Chat History] Error loading file:", e.toString());
         }
