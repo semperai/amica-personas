@@ -11,8 +11,9 @@ function safeStringify(obj: any, maxDepth = 3, maxKeys = 50): string {
   try {
     const seen = new WeakSet();
     let keyCount = 0;
+    const depthMap = new WeakMap<object, number>();
 
-    const replacer = (key: string, value: any): any => {
+    const replacer = function(this: any, key: string, value: any): any {
       // Limit total number of keys to prevent huge objects
       if (keyCount > maxKeys) {
         return '[Max keys reached]';
@@ -20,6 +21,16 @@ function safeStringify(obj: any, maxDepth = 3, maxKeys = 50): string {
 
       if (typeof value === 'object' && value !== null) {
         keyCount++;
+
+        // Track depth
+        const parentDepth = depthMap.get(this) ?? 0;
+        const currentDepth = parentDepth + 1;
+
+        if (currentDepth > maxDepth) {
+          return '[Max depth reached]';
+        }
+
+        depthMap.set(value, currentDepth);
 
         // Handle circular references
         if (seen.has(value)) {
@@ -453,7 +464,7 @@ export function DebugPane({ onClickClose }: {
 
                 return (
                   <div
-                    key={log.ts+idx}
+                    key={`${log.ts}-${idx}`}
                     className={clsx(
                       "rounded border transition-colors text-xs overflow-hidden",
                       log.type === 'error' && 'bg-rose-50 border-rose-200',
