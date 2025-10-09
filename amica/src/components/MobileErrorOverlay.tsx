@@ -93,12 +93,17 @@ export function MobileErrorOverlay() {
         }
       }).join(' ');
 
-      // Only show errors from our code (ScenarioLoader, VrmViewer, etc.)
-      if (message.includes('[ScenarioLoader]') ||
-          message.includes('[VrmViewer]') ||
-          message.includes('[VRM]') ||
-          message.includes('Loading') ||
-          message.includes('ERROR')) {
+      // Only show critical errors from our code (ScenarioLoader, VrmViewer, etc.)
+      // DO NOT show VAD errors as they are non-critical (mic features will just be disabled)
+      if ((message.includes('[ScenarioLoader]') ||
+           message.includes('[VrmViewer]') ||
+           message.includes('[VRM]') ||
+           (message.includes('Loading') && !message.includes('[VAD]')) ||
+           message.includes('ERROR')) &&
+          !message.includes('[VAD]') &&
+          !message.includes('[useMicVAD]') &&
+          !message.includes('ModelLoadError') &&
+          !message.includes('silero_vad')) {
         const errorInfo: ErrorInfo = {
           type: 'console',
           level: 'error',
