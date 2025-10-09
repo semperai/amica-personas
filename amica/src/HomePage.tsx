@@ -115,13 +115,23 @@ export default function Home() {
 
   // Initialize from localStorage if available, otherwise use config
   const [autosendEnabled, setAutosendEnabled] = useState(() => {
-    const stored = localStorage.getItem('amica_autosend_from_mic');
-    return stored !== null ? stored === 'true' : config('autosend_from_mic') === 'true';
+    try {
+      const stored = localStorage.getItem('amica_autosend_from_mic');
+      return stored !== null ? stored === 'true' : config('autosend_from_mic') === 'true';
+    } catch (err) {
+      console.warn('[Mic Settings] Failed to load autosend preference:', err);
+      return false;
+    }
   });
 
   const [micEnabled, setMicEnabled] = useState(() => {
-    const stored = localStorage.getItem('amica_mic_enabled');
-    return stored !== null ? stored === 'true' : config('stt_backend') !== 'none';
+    try {
+      const stored = localStorage.getItem('amica_mic_enabled');
+      return stored !== null ? stored === 'true' : config('stt_backend') !== 'none';
+    } catch (err) {
+      console.warn('[Mic Settings] Failed to load mic preference:', err);
+      return false;
+    }
   });
 
   const [isARSupported, setIsARSupported] = useState(false);
@@ -131,12 +141,20 @@ export default function Home() {
 
   // Persist autosend preference to localStorage
   useEffect(() => {
-    localStorage.setItem('amica_autosend_from_mic', autosendEnabled.toString());
+    try {
+      localStorage.setItem('amica_autosend_from_mic', autosendEnabled.toString());
+    } catch (err) {
+      console.warn('[Mic Settings] Failed to save autosend preference:', err);
+    }
   }, [autosendEnabled]);
 
   // Persist mic enabled preference to localStorage
   useEffect(() => {
-    localStorage.setItem('amica_mic_enabled', micEnabled.toString());
+    try {
+      localStorage.setItem('amica_mic_enabled', micEnabled.toString());
+    } catch (err) {
+      console.warn('[Mic Settings] Failed to save mic preference:', err);
+    }
   }, [micEnabled]);
 
   // Load audio devices

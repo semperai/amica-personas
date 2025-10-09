@@ -333,12 +333,37 @@ export class MicVAD {
 
         try {
           this.stream = await this.options.getStream()
+
+          // Validate stream has audio tracks (mobile browsers sometimes return empty streams)
+          const audioTracks = this.stream.getAudioTracks()
+          if (audioTracks.length === 0) {
+            throw new Error('Media stream has no audio tracks. Microphone may not be available.')
+          }
+
+          log.debug('[MicVAD] Got media stream with', audioTracks.length, 'audio track(s)')
+          log.debug('[MicVAD] Audio track settings:', audioTracks[0].getSettings())
         } catch (error) {
           this.initialized = false
-          throw new AudioContextError(
-            "Failed to get media stream. Microphone access may be denied.",
-            error as Error
-          )
+
+          // Provide mobile-specific error messages
+          const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent)
+          let message = "Failed to get media stream. Microphone access may be denied."
+
+          if (isMobile) {
+            message += " On mobile browsers, ensure you've granted microphone permissions and are using HTTPS."
+          }
+
+          if (error instanceof Error) {
+            if (error.name === 'NotAllowedError') {
+              message = "Microphone permission was denied. Please allow microphone access in your browser settings."
+            } else if (error.name === 'NotFoundError') {
+              message = "No microphone found. Please ensure your device has a working microphone."
+            } else if (error.name === 'NotReadableError') {
+              message = "Microphone is already in use by another application or browser tab."
+            }
+          }
+
+          throw new AudioContextError(message, error as Error)
         }
 
         try {
@@ -671,14 +696,22 @@ export class AudioNodeVAD {
     log.debug('[VAD] Connecting source node to AudioWorkletNode')
     log.debug('[VAD] AudioContext state:', this.ctx.state)
 
-    // FIX: Resume AudioContext if suspended
+    // FIX: Resume AudioContext if suspended (critical for mobile browsers)
     if (this.ctx.state === 'suspended') {
       log.debug('[VAD] AudioContext is suspended, resuming...')
       try {
         await this.ctx.resume()
         log.debug('[VAD] AudioContext resumed, state:', this.ctx.state)
+
+        // Mobile browsers may need extra time for AudioContext to stabilize
+        // Wait briefly to ensure context is fully ready before processing audio
+        await new Promise(resolve => setTimeout(resolve, 100))
       } catch (error) {
         log.error('[VAD] Failed to resume AudioContext:', error as Error)
+        throw new AudioContextError(
+          'Failed to resume AudioContext. This is common on mobile browsers - try tapping the screen first.',
+          error as Error
+        )
       }
     }
 

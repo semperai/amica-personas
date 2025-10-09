@@ -67,6 +67,12 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
+    // Enable SharedArrayBuffer support for ONNX Runtime on all browsers including Brave
+    // Required for VAD (Voice Activity Detection) to work properly
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
   },
   optimizeDeps: {
     exclude: ['sharp', 'onnxruntime-node', 'onnxruntime-web'],

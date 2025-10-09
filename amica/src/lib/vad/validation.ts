@@ -181,15 +181,22 @@ export interface BrowserCompatibility {
 
 export function checkBrowserCompatibility(): BrowserCompatibility {
   const warnings: string[] = []
+  const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent)
+  const isBrave = !!(navigator as any).brave
+  const isChromeMobile = /chrome.*mobile/i.test(navigator.userAgent)
 
   const getUserMedia = !!navigator?.mediaDevices?.getUserMedia
   if (!getUserMedia) {
     warnings.push("getUserMedia API not available")
+  } else if (isMobile && window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+    warnings.push("Mobile browsers require HTTPS for microphone access")
   }
 
   const audioContext = typeof AudioContext !== "undefined"
   if (!audioContext) {
     warnings.push("AudioContext API not available")
+  } else if (isMobile) {
+    warnings.push("Mobile browsers may require user interaction before AudioContext can start")
   }
 
   const audioWorklet =
@@ -198,6 +205,8 @@ export function checkBrowserCompatibility(): BrowserCompatibility {
     typeof AudioWorkletNode === "function"
   if (!audioWorklet) {
     warnings.push("AudioWorklet API not available (will use fallback)")
+  } else if (isChromeMobile) {
+    warnings.push("Chrome on Android may have limited AudioWorklet support")
   }
 
   // Check for ONNX Runtime dependencies
@@ -208,6 +217,16 @@ export function checkBrowserCompatibility(): BrowserCompatibility {
     warnings.push(
       "WebAssembly or SharedArrayBuffer not available. ONNX Runtime may not work."
     )
+  } else if (typeof SharedArrayBuffer === "undefined") {
+    if (isBrave) {
+      warnings.push(
+        "SharedArrayBuffer not available in Brave. Server must send Cross-Origin-Opener-Policy and Cross-Origin-Embedder-Policy headers."
+      )
+    } else {
+      warnings.push(
+        "SharedArrayBuffer not available. Ensure server sends proper COOP/COEP headers."
+      )
+    }
   }
 
   const result: BrowserCompatibility = {
@@ -220,6 +239,9 @@ export function checkBrowserCompatibility(): BrowserCompatibility {
 
   if (warnings.length > 0) {
     log.warn("Browser compatibility warnings:", warnings)
+    if (isMobile) {
+      log.warn("Mobile browser detected. VAD may require additional user interaction.")
+    }
   } else {
     log.info("Browser is fully compatible with VAD")
   }
