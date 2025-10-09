@@ -30,12 +30,15 @@ export const vrmStoreReducer = (state: VrmData[], action: VrmDispatchAction): Vr
             break;
         case VrmStoreActionType.updateVrmThumb:
             newState = updateVrmThumb(state, action);
+            break;
         case VrmStoreActionType.setVrmList:
             if (action.vrmList && action.vrmList.length)
                 newState = action.vrmList;
+            break;
         case VrmStoreActionType.loadFromLocalStorage:
             if (action.vrmList && action.callback)
-                newState = LoadFromLocalStorage(action)
+                newState = LoadFromLocalStorage(action);
+            break;
         default:
             break;
     }

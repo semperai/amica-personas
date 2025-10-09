@@ -18,20 +18,41 @@ export async function openaiWhisper(
     formData.append('prompt', prompt);
   }
 
-  console.debug('whisper-openai req', formData);
+  const url = `${config("openai_whisper_url")}/v1/audio/transcriptions`;
+  console.debug('whisper-openai req', { url, model: config('openai_whisper_model'), fileSize: file.size });
 
-  const res = await fetch(`${config("openai_whisper_url")}/v1/audio/transcriptions`, {
-    method: "POST",
-    body: formData,
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-    },
-  });
-  if (! res.ok) {
-    throw new Error(`OpenAI Whisper API Error (${res.status})`);
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      body: formData,
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+      },
+    });
+
+    if (! res.ok) {
+      // Try to get error details from response
+      // Note: Intentionally not logging error response body to avoid exposing transcribed content (PII)
+      // Error responses may contain or reference the audio content
+      console.error('OpenAI Whisper API Error:', {
+        status: res.status,
+        statusText: res.statusText,
+        url,
+        fileSize: file.size
+      });
+
+      throw new Error(`OpenAI Whisper API Error: ${res.status} ${res.statusText}`);
+    }
+
+    const data = await res.json();
+    console.debug('[Whisper] Transcription successful');
+
+    return { text: data.text.trim() };
+  } catch (e) {
+    console.error('OpenAI Whisper Error:', e);
+    if (e instanceof Error && e.message.includes('OpenAI Whisper API Error')) {
+      throw e; // Re-throw API errors with details
+    }
+    throw new Error(`OpenAI Whisper Error: ${e instanceof Error ? e.message : String(e)}`);
   }
-  const data = await res.json();
-  console.debug('whisper-openai res', data);
-
-  return { text: data.text.trim() };
 }

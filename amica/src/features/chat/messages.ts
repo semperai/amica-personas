@@ -69,7 +69,7 @@ export const textsToScreenplay = (
     const systemTag = userInputToSystem(tag);
 
     if (emotions.includes(systemTag as any)) {
-      console.log("Emotion detect :",systemTag);
+      console.debug('[Chat] Emotion:', systemTag);
       expression = systemTag;
       prevExpression = systemTag;
     }

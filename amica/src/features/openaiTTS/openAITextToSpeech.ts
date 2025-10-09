@@ -9,27 +9,48 @@ export async function openaiTTS(
   }
 
   try {
-    const res = await fetch(`${config("openai_tts_url")}/v1/audio/speech`, {
+    const url = `${config("openai_tts_url")}/v1/audio/speech`;
+    const model = config("openai_tts_model");
+    const voice = config("openai_tts_voice");
+
+    console.log('[TTS] OpenAI TTS request -', { url, model, voice, messageLength: message.length });
+
+    const res = await fetch(url, {
       method: "POST",
       body: JSON.stringify({
-        model: config("openai_tts_model"),
+        model,
         input: message,
-        voice: config("openai_tts_voice"),
+        voice,
       }),
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${apiKey}`,
       },
     });
+
     if (! res.ok) {
-      console.error(res);
-      throw new Error("OpenAI TTS API Error");
+      // Try to get error details from response
+      // Note: Intentionally not logging error response body to avoid exposing user message (PII)
+      // Error responses from OpenAI may echo back the input text
+      console.error('OpenAI TTS API Error:', {
+        status: res.status,
+        statusText: res.statusText,
+        url,
+        messageLength: message.length
+      });
+
+      throw new Error(`OpenAI TTS API Error: ${res.status} ${res.statusText}`);
     }
+
     const data = (await res.arrayBuffer()) as any;
+    console.log('[TTS] OpenAI TTS response -', { audioSize: data.byteLength });
 
     return { audio: data };
   } catch (e) {
-    console.error('ERROR', e);
-    throw new Error("OpenAI TTS API Error");
+    console.error('OpenAI TTS Error:', e);
+    if (e instanceof Error && e.message.includes('OpenAI TTS API Error')) {
+      throw e; // Re-throw API errors with details
+    }
+    throw new Error(`OpenAI TTS Error: ${e instanceof Error ? e.message : String(e)}`);
   }
 }

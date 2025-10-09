@@ -24,6 +24,11 @@ body {
   background-repeat: no-repeat;
 }
 
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
 @utility scroll-hidden {
   -ms-overflow-style: none;
   scrollbar-width: none;

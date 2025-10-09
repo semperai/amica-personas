@@ -14,8 +14,18 @@ export function parseSubdomain(hostname: string): string | null {
     return null;
   }
 
-  // Return the first part as the subdomain
-  return parts[0];
+  const subdomain = parts[0];
+
+  // Validate subdomain format: alphanumeric and hyphens only, 1-63 chars
+  // Must start and end with alphanumeric character
+  const subdomainRegex = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/i;
+
+  if (!subdomainRegex.test(subdomain)) {
+    return null;
+  }
+
+  // Return the validated subdomain
+  return subdomain;
 }
 
 /**
@@ -62,47 +72,107 @@ export function buildAmicaConfig(persona: Persona): AmicaConfig {
 
 
 /**
- * Inject configuration into HTML
- * @param html - Original HTML content
- * @param config - Amica configuration to inject
- * @returns HTML with injected configuration script
+ * HTML escape function to prevent XSS
+ * @param unsafe - Unsafe string that may contain HTML
+ * @returns Escaped string safe for HTML
+ */
+export function escapeHtml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/**
+ * Inject a script tag into HTML
+ *
+ * Utility function for injecting JavaScript into HTML before serving.
+ * Can be used for:
+ * - Backwards compatibility patches for older Amica versions
+ * - Feature flags or A/B testing
+ * - Analytics or monitoring code
+ * - Version-specific bug fixes
+ * - Security enhancements
+ *
+ * @param html - Original HTML string
+ * @param scriptContent - JavaScript code to inject (without <script> tags)
+ * @param position - Where to inject: 'head' (before </head>), 'body' (after <body>), or 'start' (beginning of HTML)
+ * @returns Modified HTML with injected script
+ *
+ * @example
+ * ```typescript
+ * // Inject polyfill for older versions
+ * const patched = injectScript(html, 'if (!window.fetch) { /* polyfill *\/ }', 'head');
+ *
+ * // Inject feature flag
+ * const withFlag = injectScript(html, 'window.__FEATURE_FLAGS__ = { newUI: true };', 'head');
+ * ```
+ */
+export function injectScript(html: string, scriptContent: string, position: 'head' | 'body' | 'start' = 'head'): string {
+  const script = `<script>\n${scriptContent}\n</script>`;
+
+  switch (position) {
+    case 'head':
+      if (html.includes('</head>')) {
+        return html.replace('</head>', `${script}\n</head>`);
+      }
+      // Fallthrough to body if no </head>
+    case 'body':
+      if (html.includes('<body>')) {
+        return html.replace('<body>', `<body>\n${script}`);
+      }
+      // Fallthrough to start if no <body>
+    case 'start':
+      return script + html;
+    default:
+      return html;
+  }
+}
+
+/**
+ * Build localStorage initialization script for Amica config
+ *
+ * NOTE: This is maintained for backwards compatibility but not currently used.
+ * Modern Amica versions use the /config endpoint instead.
+ *
+ * Generates JavaScript to set localStorage items from persona config.
+ * Could be useful for:
+ * - Supporting older Amica versions that used localStorage
+ * - Pre-populating config for faster initial load
+ * - Testing or development environments
+ *
+ * @param config - AmicaConfig object
+ * @returns JavaScript code (without <script> tags) that sets localStorage
+ */
+export function buildConfigScript(config: AmicaConfig): string {
+  const scriptLines: string[] = [];
+
+  // Store full persona config in window.__AMICA_PERSONA__
+  scriptLines.push(`window.__AMICA_PERSONA__ = ${JSON.stringify(config, null, 2)};`);
+
+  // Set persona name in localStorage
+  scriptLines.push(`localStorage.setItem('${AMICA_LOCALSTORAGE_PREFIX}name', ${JSON.stringify(config.personaName)});`);
+
+  // Set valid metadata keys in localStorage
+  if (config.metadata) {
+    Object.entries(config.metadata).forEach(([key, value]) => {
+      if (isValidConfigKey(key)) {
+        scriptLines.push(`localStorage.setItem('${AMICA_LOCALSTORAGE_PREFIX}${key}', ${JSON.stringify(value)});`);
+      }
+    });
+  }
+
+  return scriptLines.join('\n');
+}
+
+/**
+ * @deprecated Use injectScript and buildConfigScript instead
+ * Kept for backwards compatibility with existing tests
  */
 export function injectConfig(html: string, config: AmicaConfig): string {
-  // Build localStorage injection script for valid config keys
-  const localStorageLines: string[] = [];
-
-  // Inject persona name
-  localStorageLines.push(
-    `localStorage.setItem('${AMICA_LOCALSTORAGE_PREFIX}name', ${JSON.stringify(config.personaName)});`
-  );
-
-  // Inject metadata as localStorage for valid keys
-  for (const [key, value] of Object.entries(config.metadata)) {
-    if (isValidConfigKey(key)) {
-      localStorageLines.push(
-        `localStorage.setItem('${AMICA_LOCALSTORAGE_PREFIX}${key}', ${JSON.stringify(value)});`
-      );
-    }
-  }
-
-  // Build the full script tag with persona config and localStorage
-  const script = `<script>
-window.__AMICA_PERSONA__ = ${JSON.stringify(config, null, 2)};
-${localStorageLines.join('\n')}
-</script>`;
-
-  // Try to inject before </head>
-  if (html.includes('</head>')) {
-    return html.replace('</head>', `${script}\n</head>`);
-  }
-
-  // If no </head>, inject at beginning of <body>
-  if (html.includes('<body>')) {
-    return html.replace('<body>', `<body>\n${script}`);
-  }
-
-  // If no standard tags, inject at the beginning
-  return script + html;
+  return injectScript(html, buildConfigScript(config), 'head');
 }
 
 /**

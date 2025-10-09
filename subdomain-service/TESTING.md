@@ -61,16 +61,12 @@ The test suite includes:
 - ✓ Handles personas without metadata
 - ✓ Handles graduated personas
 
-**injectConfig**:
-- ✓ Injects script before `</head>`
-- ✓ Injects at beginning of `<body>` if no `</head>`
-- ✓ Injects persona name as localStorage
-- ✓ Dynamically injects all valid metadata
-- ✓ Rejects invalid config keys
-- ✓ Stores full persona config in `window.__AMICA_PERSONA__`
-- ✓ Properly escapes JSON strings
-- ✓ Handles empty metadata
-- ✓ Tests all config keys dynamically
+**escapeHtml**:
+- ✓ Escapes HTML special characters (`<`, `>`, `&`, `"`, `'`)
+- ✓ Prevents XSS attacks
+- ✓ Handles empty strings
+- ✓ Handles strings with no special characters
+- ✓ Escapes multiple special characters correctly
 
 ### Config Key Tests (`amica-config-keys.test.ts`)
 

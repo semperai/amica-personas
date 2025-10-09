@@ -1,0 +1,91 @@
+import { log } from "./logging"
+
+interface ResamplerOptions {
+  nativeSampleRate: number
+  targetSampleRate: number
+  targetFrameSize: number
+}
+
+export class Resampler {
+  inputBuffer: Array<number>
+
+  constructor(public options: ResamplerOptions) {
+    if (options.nativeSampleRate < 16000) {
+      log.warn(
+        `nativeSampleRate (${options.nativeSampleRate}) is below 16000 Hz. Expected targetSampleRate (${options.targetSampleRate}) <= nativeSampleRate.`
+      )
+    }
+    if (options.nativeSampleRate < options.targetSampleRate) {
+      throw new Error(
+        `Resampler only supports downsampling. nativeSampleRate (${options.nativeSampleRate}) must be >= targetSampleRate (${options.targetSampleRate}).`
+      )
+    }
+    this.inputBuffer = []
+  }
+
+  process = (audioFrame: Float32Array): Float32Array[] => {
+    const outputFrames: Array<Float32Array> = []
+
+    for (const sample of audioFrame) {
+      this.inputBuffer.push(sample)
+
+      while (this.hasEnoughDataForFrame()) {
+        const outputFrame = this.generateOutputFrame()
+        outputFrames.push(outputFrame)
+      }
+    }
+
+    return outputFrames
+  }
+
+  async *stream(audioInput: Float32Array) {
+    for (const sample of audioInput) {
+      this.inputBuffer.push(sample)
+
+      while (this.hasEnoughDataForFrame()) {
+        const outputFrame = this.generateOutputFrame()
+        yield outputFrame
+      }
+    }
+  }
+
+  private hasEnoughDataForFrame(): boolean {
+    return (
+      (this.inputBuffer.length * this.options.targetSampleRate) /
+        this.options.nativeSampleRate >=
+      this.options.targetFrameSize
+    )
+  }
+
+  private generateOutputFrame(): Float32Array {
+    const outputFrame = new Float32Array(this.options.targetFrameSize)
+    let outputIndex = 0
+    let inputIndex = 0
+
+    while (outputIndex < this.options.targetFrameSize) {
+      let sum = 0
+      let num = 0
+      while (
+        inputIndex <
+        Math.min(
+          this.inputBuffer.length,
+          ((outputIndex + 1) * this.options.nativeSampleRate) /
+            this.options.targetSampleRate
+        )
+      ) {
+        const value = this.inputBuffer[inputIndex]
+        if (value !== undefined) {
+          sum += value
+          num++
+        }
+        inputIndex++
+      }
+      // Defensive guard: prevent NaN if num is 0 (shouldn't happen with downsampling, but safe)
+      outputFrame[outputIndex] = num ? sum / num : 0
+      outputIndex++
+    }
+
+    this.inputBuffer = this.inputBuffer.slice(inputIndex)
+    return outputFrame
+  }
+}

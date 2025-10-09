@@ -33,6 +33,16 @@ export class LipSync {
   }
 
   public async playFromArrayBuffer(buffer: ArrayBuffer, onEnded?: () => void) {
+    // Resume AudioContext if suspended (required by modern browsers)
+    if (this.audio.state === 'suspended') {
+      try {
+        await this.audio.resume();
+      } catch (error) {
+        console.error('Failed to resume AudioContext:', error);
+        throw new Error('Failed to resume audio playback');
+      }
+    }
+
     const audioBuffer = await this.audio.decodeAudioData(buffer);
 
     const bufferSource = this.audio.createBufferSource();
@@ -41,6 +51,7 @@ export class LipSync {
     bufferSource.connect(this.audio.destination);
     bufferSource.connect(this.analyser);
     bufferSource.start();
+
     if (onEnded) {
       bufferSource.addEventListener("ended", onEnded);
     }

@@ -3,20 +3,20 @@ import {
   computeBoundsTree,
   disposeBoundsTree,
   computeBatchedBoundsTree,
-  disposeBatchedBoundsTree,
   acceleratedRaycast,
 } from "three-mesh-bvh";
 
 import { config } from "@/utils/config";
-import { RenderSystem } from "./RenderSystem";
+import { RenderSystem, WebRenderer } from "./RenderSystem";
 import { XRSystem } from "./XRSystem";
 import { PhysicsSystem } from "./PhysicsSystem";
 import { RaycastSystem } from "./RaycastSystem";
 import { VRMManager } from "./VRMManager";
 import { EnvironmentManager } from "./EnvironmentManager";
-import { ParticleManager } from "./ParticleManager";
+import { ParticleManager, ParticleOptions, ParticleEffectType } from "./ParticleManager";
 import { DebugSystem } from "./DebugSystem";
 import { ScenarioLoader } from "./ScenarioLoader";
+import type { Chat } from "@/features/chat/chat";
 
 // Add the extension functions
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
@@ -26,7 +26,7 @@ THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
 THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
 
 THREE.BatchedMesh.prototype.computeBoundsTree = computeBatchedBoundsTree;
-THREE.BatchedMesh.prototype.disposeBatchedBoundsTree = disposeBatchedBoundsTree;
+THREE.BatchedMesh.prototype.disposeBoundsTree = disposeBoundsTree;
 
 /**
  * Coordinates all 3D scene systems
@@ -39,7 +39,7 @@ THREE.BatchedMesh.prototype.disposeBatchedBoundsTree = disposeBatchedBoundsTree;
  */
 export class SceneCoordinator {
   public isReady: boolean = false;
-  public chat?: any;
+  public chat?: Chat;
 
   // Public systems - access directly for fine-grained control
   public render?: RenderSystem;
@@ -68,7 +68,7 @@ export class SceneCoordinator {
   }
 
   public async setup(canvas: HTMLCanvasElement) {
-    console.log("setup canvas");
+    console.log('[Scene] Initializing 3D scene');
 
     // Initialize render system
     this.render = await RenderSystem.create(canvas);
@@ -86,7 +86,7 @@ export class SceneCoordinator {
     this.particles = new ParticleManager(this.render.scene);
 
     // Setup callback to notify VRM manager when room is loaded
-    this.environment.setOnRoomLoadedCallback(() => {
+    this.environment.onRoomLoaded(() => {
       this.vrm?.roomWasLoaded();
     });
 
@@ -174,7 +174,13 @@ export class SceneCoordinator {
     scale: THREE.Vector3,
     onProgress: (progress: string) => void,
   ) {
-    await this.environment?.loadRoom(url, pos, rot, scale, onProgress);
+    await this.environment?.loadRoom({
+      url,
+      position: pos,
+      rotation: rot,
+      scale,
+      onProgress,
+    });
 
     this.debug.params["room-x"] = pos.x;
     this.debug.params["room-y"] = pos.y;
@@ -196,6 +202,126 @@ export class SceneCoordinator {
   // Screenshot
   public captureScreenshot(callback: BlobCallback) {
     this.render?.getScreenshotBlob(callback);
+  }
+
+  // Convenience getters for scenarios
+  public get rapier() {
+    return this.physics.getRAPIER();
+  }
+
+  public get physicsWorld() {
+    return this.physics.getWorld();
+  }
+
+  // Safe physics body removal (deferred until after physics step)
+  public removeRigidBody(body: any) {
+    this.physics.removeRigidBody(body);
+  }
+
+  public get scene(): THREE.Scene | undefined {
+    return this.render?.scene;
+  }
+
+  public get camera(): THREE.Camera | undefined {
+    return this.render?.camera;
+  }
+
+  public get renderer(): WebRenderer | undefined {
+    return this.render?.renderer;
+  }
+
+  public get igroup(): THREE.Group | undefined {
+    return this.render?.igroup;
+  }
+
+  public getModel() {
+    return this.vrm?.getModel();
+  }
+
+  public getElapsedTime(): number {
+    return this.clock.getElapsedTime();
+  }
+
+  // Animation control
+  public playAnimation(animationClip: THREE.AnimationClip) {
+    const model = this.vrm?.getModel();
+    if (!model) {
+      console.warn('Cannot play animation: model not loaded');
+      return;
+    }
+    if (!animationClip) {
+      console.warn('Cannot play animation: invalid animation clip');
+      return;
+    }
+    model.loadAnimation(animationClip);
+  }
+
+  // Emotion/Expression control
+  public setExpression(expressionName: string, value: number) {
+    const model = this.vrm?.getModel();
+    if (model?.vrm?.expressionManager) {
+      model.vrm.expressionManager.setValue(expressionName, value);
+    }
+  }
+
+  public triggerEmotion(emotion: string, duration?: number) {
+    const model = this.vrm?.getModel();
+    if (model?.emoteController) {
+      model.emoteController.playEmotion(emotion);
+    }
+  }
+
+  // Camera control
+  public setCameraPosition(x: number, y: number, z: number) {
+    if (this.render?.camera) {
+      this.render.camera.position.set(x, y, z);
+    }
+  }
+
+  public setCameraLookAt(x: number, y: number, z: number) {
+    if (this.render?.camera) {
+      this.render.camera.lookAt(x, y, z);
+    }
+  }
+
+  // Lighting control
+  public addLight(light: THREE.Light): void {
+    if (this.render?.scene) {
+      this.render.scene.add(light);
+    }
+  }
+
+  public removeLight(light: THREE.Light): void {
+    if (this.render?.scene) {
+      this.render.scene.remove(light);
+    }
+  }
+
+  // Chat/Bot interaction
+  public sendMessage(message: string) {
+    if (!this.chat) {
+      console.warn('Cannot send message: chat not initialized');
+      return;
+    }
+    this.chat.receiveMessageFromUser(message);
+  }
+
+  // Splat loading
+  public async loadSplat(url: string) {
+    await this.environment?.loadSplat({ url });
+  }
+
+  // Particle control
+  public createParticle(options: ParticleOptions) {
+    return this.particles?.createParticle(options);
+  }
+
+  public createParticleEffect(
+    type: ParticleEffectType,
+    position?: THREE.Vector3,
+    options?: ParticleOptions
+  ) {
+    return this.particles?.createEffect(type, position, options);
   }
 
   // Main update loop
@@ -231,6 +357,9 @@ export class SceneCoordinator {
     ptime = performance.now();
     this.vrm?.updateModel(delta);
     this.debug.recordModelTime(performance.now() - ptime);
+
+    // Update particles
+    this.particles?.update(delta);
 
     // Render
     ptime = performance.now();

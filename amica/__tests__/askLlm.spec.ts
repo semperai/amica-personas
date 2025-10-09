@@ -51,18 +51,6 @@ vi.mock('@/features/chat/llamaCppChat', () => ({
   }),
 }));
 
-vi.mock('@/features/chat/windowAiChat', () => ({
-  getWindowAiChatResponseStream: vi.fn(() => {
-    const stream = new ReadableStream({
-      start(controller) {
-        controller.enqueue('WindowAI response.');
-        controller.close();
-      },
-    });
-    return stream.pipeThrough(new TextDecoderStream());
-  }),
-}));
-
 vi.mock('@/features/chat/ollamaChat', () => ({
   getOllamaChatResponseStream: vi.fn(() => {
     const stream = new ReadableStream({
@@ -175,20 +163,6 @@ describe('askLLM', () => {
     await askLLM('System', 'User', null);
 
     expect(getLlamaCppChatResponseStream).toHaveBeenCalled();
-  });
-
-  it('should use windowai backend when configured', async () => {
-    const { config } = await import('@/utils/config');
-    const { getWindowAiChatResponseStream } = await import('@/features/chat/windowAiChat');
-
-    (config as any).mockImplementation((key: string) => {
-      if (key === 'chatbot_backend') return 'windowai';
-      return 'default';
-    });
-
-    await askLLM('System', 'User', null);
-
-    expect(getWindowAiChatResponseStream).toHaveBeenCalled();
   });
 
   it('should use ollama backend when configured', async () => {

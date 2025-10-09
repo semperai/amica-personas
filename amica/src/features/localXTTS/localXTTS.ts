@@ -19,23 +19,25 @@ export async function localXTTSTTS(message:string){
   });
 
   try {
-    const res = await fetch(`${config("localXTTS_url")}`, {
+    const url = config("localXTTS_url");
+    console.log('[TTS] LocalXTTS request -', { url, messageLength: message.length });
+
+    const res = await fetch(url, {
       method: "POST",
       body: formData,
-      
     });
     if (!res.ok) {
-      console.error(res);
-      throw new Error("localXTTS TTS API Error");
+      console.error('[TTS] LocalXTTS error:', res.status, res.statusText);
+      throw new Error(`LocalXTTS TTS API Error (${res.status}: ${res.statusText})`);
     }
-    const data = await res.json(); 
+    const data = await res.json();
+    console.log('[TTS] LocalXTTS response -', { outputUrl: data.output_file_url });
 
     return {
-      debugmsg: console.log(data.output_file_url),
-      audio: data.output_file_url, 
+      audio: data.output_file_url,
     };
   } catch (e) {
-    console.error('ERROR', e);
+    console.error('[TTS] LocalXTTS error:', e);
     throw new Error("localXTTS TTS API Error");
   }
 }

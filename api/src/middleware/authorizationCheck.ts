@@ -284,7 +284,7 @@ const authorizationCheck = (spend: number) => {
       res.locals.accountInfo = info;
       res.header("X-Credits-Remaining", info.credits.toString());
       res.header("X-Plan", info.plan);
-      authMetrics.labels(info.plan).inc();
+      authMetrics.labels(info.plan, req.path).inc();
       next();
     });
 

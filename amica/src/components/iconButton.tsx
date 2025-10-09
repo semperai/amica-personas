@@ -1,4 +1,5 @@
 import { ButtonHTMLAttributes } from "react";
+
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   iconName: string;
   isProcessing: boolean;
@@ -19,8 +20,10 @@ export const IconButton = ({
       `}
     >
       {isProcessing ? (
+        // @ts-expect-error - Custom web component pixiv-icon
         <pixiv-icon name={"24/Dot"} scale="1"></pixiv-icon>
       ) : (
+        // @ts-expect-error - Custom web component pixiv-icon
         <pixiv-icon name={iconName} scale="1"></pixiv-icon>
       )}
       {label && <div className="mx-2 font-bold">{label}</div>}

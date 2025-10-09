@@ -15,7 +15,7 @@ export default defineConfig({
         '**/__tests__/**',
         'src/server.ts',
         'src/instrument.ts',
-        'vitest.config.ts',
+        'vitest.config.mts',
       ],
     },
   },

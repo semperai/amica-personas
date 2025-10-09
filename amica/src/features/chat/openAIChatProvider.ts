@@ -22,19 +22,52 @@ async function getResponseStream(
     "X-Title": "Amica",
   };
 
-  const res = await fetch(`${url}/v1/chat/completions`, {
-    headers: headers,
-    method: "POST",
-    body: JSON.stringify({
-      model,
-      messages,
-      stream: true,
-      max_tokens: 200,
-    }),
+  const requestUrl = `${url}/v1/chat/completions`;
+  const requestBody = {
+    model,
+    messages,
+    stream: true,
+    max_tokens: 200,
+  };
+
+  console.log('[OpenAI] Starting chat request', {
+    url: requestUrl,
+    model,
+    messageCount: messages.length,
+    apiKeyPrefix: apiKey.substring(0, 10) + '...',
   });
+
+  let res;
+  try {
+    res = await fetch(requestUrl, {
+      headers: headers,
+      method: "POST",
+      body: JSON.stringify(requestBody),
+    });
+    console.log('[OpenAI] Fetch completed', {
+      status: res.status,
+      statusText: res.statusText,
+      ok: res.ok,
+      headers: Object.fromEntries(res.headers.entries()),
+    });
+  } catch (error: any) {
+    console.error('[OpenAI] Fetch failed', {
+      url: requestUrl,
+      error: error.message,
+      errorType: error.name,
+      stack: error.stack,
+    });
+    throw new Error(`Network error connecting to ${url}: ${error.message}`);
+  }
 
   const reader = res.body?.getReader();
   if (res.status !== 200 || ! reader) {
+    console.error('[OpenAI] Invalid response', {
+      status: res.status,
+      statusText: res.statusText,
+      hasBody: !!res.body,
+    });
+
     if (res.status === 401) {
       throw new Error('Invalid OpenAI authentication');
     }
@@ -42,8 +75,10 @@ async function getResponseStream(
       throw new Error('Payment required');
     }
 
-    throw new Error(`OpenAI chat error (${res.status})`);
+    throw new Error(`OpenAI chat error (${res.status}): ${res.statusText}`);
   }
+
+  console.log('[OpenAI] Stream reader created successfully');
 
   const stream = new ReadableStream({
     async start(controller: ReadableStreamDefaultController) {

@@ -20,6 +20,21 @@ import { TransparencyOptimizer, checkAndOptimizeTransparency } from '@/utils/gra
 import { config } from "@/utils/config";
 
 /**
+ * Type for materials that support the update method (MToonMaterial, MToonNodeMaterial)
+ */
+type MaterialWithUpdate = THREE.Material & {
+  update?: (delta: number) => void;
+  isMToonMaterial?: boolean;
+};
+
+/**
+ * Type for the MToonNodeMaterial module (WebGPU-compatible MToon material)
+ */
+type MToonNodeMaterialModule = {
+  MToonNodeMaterial: any;
+};
+
+/**
  * 3Dキャラクターを管理するクラス
  */
 export class Model {
@@ -27,6 +42,7 @@ export class Model {
   public mixer?: THREE.AnimationMixer;
   public emoteController?: EmoteController;
   public proceduralAnimation?: ProceduralAnimation;
+  public mtoonMaterials: MaterialWithUpdate[] = [];
 
   private _lookAtTargetParent: THREE.Object3D;
   private _lipSync?: LipSync;
@@ -85,40 +101,43 @@ export class Model {
     const helperRoot = new THREE.Group();
     helperRoot.renderOrder = 10000;
 
-    // the type of material to use
-    // should usually be MToonMaterial
+    // Determine material type based on renderer and config
     let materialType: any;
-    switch (config("mtoon_material_type")) {
-      case "mtoon":
-        materialType = MToonMaterial;
-        break;
-      case "mtoon_node":
-        // @ts-ignore
-        const { MToonNodeMaterial } = await import("@pixiv/three-vrm/nodes");
-        materialType = MToonNodeMaterial;
-        break;
-      case "meshtoon":
-        materialType = THREE.MeshToonMaterial;
-        break;
-      case "basic":
-        materialType = THREE.MeshBasicMaterial;
-        break;
-      case "depth":
-        materialType = THREE.MeshDepthMaterial;
-        break;
-      case "normal":
-        materialType = THREE.MeshNormalMaterial;
-        break;
-      default:
-        console.error("mtoon_material_type not found");
-        break;
-    }
+    const useWebGPU = config("use_webgpu") === "true";
+    const configuredMaterialType = config("mtoon_material_type");
 
-    if (config("use_webgpu") === "true") {
-      // create a WebGPU compatible MToonMaterialLoaderPlugin
-      // @ts-ignore
-      // TODO currently MToonNodeMaterial is broken in amica
-      // materialType = MTonNodeMaterial;
+    // WebGPU requires MToonNodeMaterial for proper rendering
+    if (useWebGPU) {
+      console.log('[VRM] Using WebGPU renderer - loading MToonNodeMaterial');
+      const module = await import("@pixiv/three-vrm-materials-mtoon/nodes") as MToonNodeMaterialModule;
+      materialType = module.MToonNodeMaterial;
+    } else {
+      // WebGL renderer - use configured material type
+      switch (configuredMaterialType) {
+        case "mtoon":
+          materialType = MToonMaterial;
+          break;
+        case "mtoon_node":
+          console.warn('[VRM] mtoon_node requires WebGPU - falling back to MToonMaterial');
+          materialType = MToonMaterial;
+          break;
+        case "meshtoon":
+          materialType = THREE.MeshToonMaterial;
+          break;
+        case "basic":
+          materialType = THREE.MeshBasicMaterial;
+          break;
+        case "depth":
+          materialType = THREE.MeshDepthMaterial;
+          break;
+        case "normal":
+          materialType = THREE.MeshNormalMaterial;
+          break;
+        default:
+          console.error("[VRM] Unknown mtoon_material_type:", configuredMaterialType);
+          materialType = MToonMaterial;
+          break;
+      }
     }
 
     loader.register((parser) => {
@@ -172,8 +191,18 @@ export class Model {
           const vrm = (this.vrm = gltf.userData.vrm);
           vrm.scene.name = "VRMRoot";
 
+          // Optimize VRM model
           VRMUtils.removeUnnecessaryVertices(gltf.scene);
-          VRMUtils.removeUnnecessaryJoints(gltf.scene);
+
+          // Use combineSkeletons instead of deprecated removeUnnecessaryJoints
+          // combineSkeletons provides better performance improvement
+          try {
+            VRMUtils.combineSkeletons(gltf.scene);
+          } catch (e) {
+            console.warn('[VRM] Failed to combine skeletons:', e);
+            // Fallback to old method if combineSkeletons fails
+            VRMUtils.removeUnnecessaryJoints(gltf.scene);
+          }
 
           // await downscaleModelTextures(gltf, 128);
 
@@ -199,6 +228,14 @@ export class Model {
           });
 
           // this.setTransparency(0.5);
+
+          // Store MToon materials for WebGPU compatibility
+          // The plugin stores materials in gltf.userData.vrmMToonMaterials
+          const materials = gltf.userData.vrmMToonMaterials;
+          this.mtoonMaterials = Array.isArray(materials) ? materials : [];
+          if (this.mtoonMaterials.length > 0) {
+            console.log('[VRM] Stored', this.mtoonMaterials.length, 'MToon materials for updates');
+          }
 
           if (config("debug_gfx") === "true") {
             vrm.scene.add(helperRoot);
@@ -263,6 +300,8 @@ export class Model {
     if (this.vrm) {
       VRMUtils.deepDispose(this.vrm.scene);
       this.vrm = null;
+      // Clear material references to avoid updating disposed materials
+      this.mtoonMaterials = [];
     }
   }
 
@@ -431,6 +470,16 @@ export class Model {
     this.vrm?.update(delta);
     if (config("animation_procedural") === "true") {
       this.proceduralAnimation?.update(delta);
+    }
+
+    // Update MToon materials (required for WebGPU)
+    // MToonNodeMaterial requires manual updates for proper rendering
+    if (this.mtoonMaterials.length > 0) {
+      for (const material of this.mtoonMaterials) {
+        if (typeof material.update === "function") {
+          material.update(delta);
+        }
+      }
     }
   }
 }

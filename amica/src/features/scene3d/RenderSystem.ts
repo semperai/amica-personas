@@ -3,9 +3,17 @@ import { OrbitControls } from "three/addons/controls/OrbitControls";
 import { InteractiveGroup } from "three/addons/interactive/InteractiveGroup.js";
 import { config } from "@/utils/config";
 import { Model } from "./VrmCharacterModel";
+import type WebGPURenderer from "three/src/renderers/webgpu/WebGPURenderer.Nodes.js";
+
+/**
+ * Union type for WebGL and WebGPU renderers
+ * Both renderers extend from the common Renderer base class
+ * This allows the code to work with both renderer types while maintaining type safety
+ */
+export type WebRenderer = THREE.WebGLRenderer | WebGPURenderer;
 
 export class RenderSystem {
-  public renderer: THREE.WebGLRenderer;
+  public renderer: WebRenderer;
   public scene: THREE.Scene;
   public camera: THREE.PerspectiveCamera;
   public cameraControls: OrbitControls;
@@ -15,7 +23,7 @@ export class RenderSystem {
   private screenshotCallback: BlobCallback | undefined;
 
   private constructor(
-    renderer: THREE.WebGLRenderer,
+    renderer: WebRenderer,
     scene: THREE.Scene,
     camera: THREE.PerspectiveCamera,
     cameraControls: OrbitControls,
@@ -33,28 +41,51 @@ export class RenderSystem {
     const width = parentElement?.clientWidth || canvas.width;
     const height = parentElement?.clientHeight || canvas.height;
 
-    let WebRendererType = THREE.WebGLRenderer;
+    let renderer: WebRenderer;
+
     if (config("use_webgpu") === "true") {
-      // @ts-ignore
-      WebRendererType = (
-        await import("three/src/renderers/webgpu/WebGPURenderer.js")
-      ).default;
+      // Import from three/webgpu to match MToonNodeMaterial's imports
+      // This ensures we use the same Three.js instance
+      const { WebGPURenderer } = await import("three/webgpu");
+
+      renderer = new WebGPURenderer({
+        canvas: canvas,
+        alpha: true,
+        antialias: true,
+        powerPreference: "high-performance",
+      });
+
+      // WebGPU renderer requires async initialization
+      console.log('[Renderer] Initializing WebGPU renderer...');
+      try {
+        await renderer.init!();
+        console.log('[Renderer] WebGPU renderer initialized');
+      } catch (error) {
+        console.error('[Renderer] Failed to initialize WebGPU renderer:', error);
+        throw new Error('WebGPU initialization failed. Try disabling use_webgpu in config.');
+      }
+    } else {
+      renderer = new THREE.WebGLRenderer({
+        canvas: canvas,
+        alpha: true,
+        antialias: true,
+        powerPreference: "high-performance",
+      });
     }
 
-    const renderer = new WebRendererType({
-      canvas: canvas,
-      alpha: true,
-      antialias: true,
-      powerPreference: "high-performance",
-    }) as THREE.WebGLRenderer;
-
     renderer.setClearColor(0x000000, 0);
-    renderer.shadowMap.enabled = false;
+
+    // shadowMap is only available in WebGL renderer
+    if (renderer.shadowMap) {
+      renderer.shadowMap.enabled = false;
+    }
+
     renderer.setSize(width, height);
     renderer.setPixelRatio(window.devicePixelRatio);
 
     // XR features are only available in WebGL renderer
-    if (config("use_webgpu") !== "true") {
+    // WebGPU renderer has different XR API that doesn't support these methods
+    if (renderer.xr && typeof renderer.xr.setFramebufferScaleFactor === 'function') {
       renderer.xr.enabled = true;
       renderer.xr.setFramebufferScaleFactor(2.0);
       renderer.xr.setFoveation(0);
@@ -63,13 +94,29 @@ export class RenderSystem {
     // Create scene
     const scene = new THREE.Scene();
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
-    directionalLight.position.set(1.0, 1.0, 1.0).normalize();
-    directionalLight.castShadow = false;
-    scene.add(directionalLight);
+    // Setup lighting - WebGPU and WebGL use different light systems
+    if (config("use_webgpu") === "true") {
+      // WebGPU uses node-based lighting system
+      // Import lighting nodes from three/webgpu
+      // @ts-ignore
+      const { DirectionalLight, AmbientLight } = await import("three/webgpu");
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 2);
-    scene.add(ambientLight);
+      const directionalLight = new DirectionalLight(0xffffff, 1.2);
+      directionalLight.position.set(1.0, 1.0, 1.0).normalize();
+      scene.add(directionalLight);
+
+      const ambientLight = new AmbientLight(0xffffff, 2);
+      scene.add(ambientLight);
+    } else {
+      // WebGL uses standard Three.js lights
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+      directionalLight.position.set(1.0, 1.0, 1.0).normalize();
+      directionalLight.castShadow = false;
+      scene.add(directionalLight);
+
+      const ambientLight = new THREE.AmbientLight(0xffffff, 2);
+      scene.add(ambientLight);
+    }
 
     // Create camera
     const camera = new THREE.PerspectiveCamera(20.0, width / height, 0.1, 20.0);
@@ -88,7 +135,11 @@ export class RenderSystem {
     igroup.visible = false;
     scene.add(igroup);
 
-    igroup.listenToPointerEvents(renderer, camera);
+    // InteractiveGroup only works with WebGLRenderer
+    // TypeScript doesn't know renderer is WebGLRenderer at this point for WebGL mode
+    if (renderer instanceof THREE.WebGLRenderer) {
+      igroup.listenToPointerEvents(renderer, camera);
+    }
 
     return new RenderSystem(renderer, scene, camera, cameraControls, igroup);
   }

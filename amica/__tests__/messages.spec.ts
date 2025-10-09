@@ -1,4 +1,5 @@
-import { describe, expect, test, jest, beforeEach, afterEach } from "vitest";
+import { describe, expect, test, jest, beforeEach, afterEach, vi } from "vitest";
+import type { MockInstance } from "vitest";
 import { textsToScreenplay } from "../src/features/chat/messages";
 import type { Screenplay, EmotionType } from "../src/features/chat/messages";
 
@@ -6,7 +7,7 @@ describe("messages", () => {
   let consoleSpy: MockInstance<any>;
 
   beforeEach(() => {
-    consoleSpy = vi.spyOn(console, "log").mockImplementation();
+    consoleSpy = vi.spyOn(console, "debug").mockImplementation();
   });
 
   afterEach(() => {
@@ -261,7 +262,7 @@ describe("messages", () => {
       const texts = ["[happy] Hello"];
       textsToScreenplay(texts);
 
-      expect(consoleSpy).toHaveBeenCalledWith("Emotion detect :", "happy");
+      expect(consoleSpy).toHaveBeenCalledWith("[Chat] Emotion:", "happy");
     });
 
     test("should not log for unrecognized emotions", () => {

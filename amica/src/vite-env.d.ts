@@ -13,6 +13,20 @@ interface ImportMeta {
 declare global {
   interface Window {
     dataLayer: any[];
+    ethereum?: {
+      request: (args: { method: string; params?: any[] }) => Promise<any>;
+      on: (event: string, handler: (...args: any[]) => void) => void;
+      removeListener: (event: string, handler: (...args: any[]) => void) => void;
+    };
+  }
+}
+
+declare namespace JSX {
+  interface IntrinsicElements {
+    'pixiv-icon': {
+      name: string;
+      scale?: string;
+    };
   }
 }
 

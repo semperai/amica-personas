@@ -13,9 +13,19 @@ Sentry.init({
 
 // Load configuration before rendering the app
 loadConfig().then(() => {
+  // Remove the initial loading overlay
+  const initialLoading = document.getElementById('initial-loading');
+  if (initialLoading) {
+    initialLoading.remove();
+  }
+
+  // StrictMode disabled to prevent double initialization of physics/3D systems
+  // StrictMode causes components to mount twice in development, which breaks
+  // singleton systems like Rapier physics, WebGL contexts, and audio systems
+  // that don't support multiple instances. This is common practice for 3D/game apps.
+  // Trade-off: We lose StrictMode's benefits (detecting side effects, memory leaks)
+  // but gain stable initialization of WebGL/Physics/Audio resources.
   ReactDOM.createRoot(document.getElementById('root')!).render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
+    <App />
   );
 });

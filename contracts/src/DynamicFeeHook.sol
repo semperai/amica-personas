@@ -102,8 +102,14 @@ contract DynamicFeeHook is BaseHook, Ownable {
         SwapParams calldata,
         bytes calldata
     ) internal view override returns (bytes4, BeforeSwapDelta, uint24) {
-        uint24 dynamicFee =
-            feeReductionSystem.getFee(sender) | LPFeeLibrary.OVERRIDE_FEE_FLAG;
+        // Default fee if feeReductionSystem is not set (1%)
+        uint24 defaultFee = 10000;
+
+        uint24 dynamicFee = address(feeReductionSystem) == address(0)
+            ? defaultFee
+            : feeReductionSystem.getFee(sender);
+
+        dynamicFee = dynamicFee | LPFeeLibrary.OVERRIDE_FEE_FLAG;
 
         return (
             BaseHook.beforeSwap.selector,

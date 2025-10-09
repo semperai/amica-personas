@@ -33,12 +33,29 @@ export async function fetchWithRetry(
 
     console.log(`Request to ${url} took ${duration}ms (average: ${averageSpeed}ms)`);
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      // Try to get error details from response body
+      let errorDetails = "";
+      try {
+        const errorBody = await response.text();
+        errorDetails = errorBody ? `: ${errorBody}` : "";
+      } catch {
+        // Ignore errors reading response body
+      }
+
+      const error = new Error(`HTTP error! status: ${response.status}${errorDetails}`);
+      // Only retry on 5xx server errors, not 4xx client errors
+      if (response.status >= 500 && retries > 0) {
+        console.log(`Retrying ${url} attempts left: ${retries - 1} (server error ${response.status})`);
+        await new Promise((resolve) => setTimeout(resolve, env.RETRY_DELAY));
+        return fetchWithRetry(url, options, retries - 1);
+      }
+      throw error;
     }
     return response;
   } catch (error) {
-    if (retries > 0) {
-      console.log(`Retrying ${url} attempts left: ${retries - 1}`);
+    // Retry on network errors (not HTTP errors)
+    if (retries > 0 && error instanceof Error && !error.message.startsWith("HTTP error!")) {
+      console.log(`Retrying ${url} attempts left: ${retries - 1} (network error)`);
       await new Promise((resolve) => setTimeout(resolve, env.RETRY_DELAY));
       return fetchWithRetry(url, options, retries - 1);
     } else {

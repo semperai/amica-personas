@@ -34,6 +34,28 @@ const amicaBones: VRMHumanBoneName[] = [
   "rightHand",
 ];
 
+export interface RaycastHit {
+  point: THREE.Vector3;
+  distance: number;
+  object: THREE.Object3D;
+  face?: THREE.Face;
+  faceIndex?: number;
+  uv?: THREE.Vector2;
+  normal?: THREE.Vector3;
+  type: 'model' | 'room' | 'object';
+}
+
+export interface RaycastOptions {
+  maxDistance?: number;
+  layers?: THREE.Layers;
+  firstHitOnly?: boolean;
+}
+
+export interface RaySource {
+  origin: THREE.Vector3;
+  direction: THREE.Vector3;
+}
+
 export class RaycastSystem {
   private bvhWorker: WorkerBase;
   private modelBVHGenerator: StaticGeometryGenerator | null = null;
@@ -42,11 +64,18 @@ export class RaycastSystem {
   private roomBVHHelperGroup = new THREE.Group();
   private modelTargets: THREE.Mesh[] = [];
   private roomTargets: THREE.Mesh[] = [];
+  private customTargets: THREE.Object3D[] = [];
   private raycaster = new THREE.Raycaster();
   private raycasterTempM = new THREE.Matrix4();
+  private raycasterTempV2 = new THREE.Vector2();
+  private raycasterTempV3 = new THREE.Vector3();
   private intersectsModel: THREE.Intersection[] = [];
   private intersectsRoom: THREE.Intersection[] = [];
+  private intersectsCustom: THREE.Intersection[] = [];
   private mouse = new THREE.Vector2();
+  private enabled = true;
+  private mouseHandler?: (event: MouseEvent) => void;
+  private trackedCanvas?: HTMLCanvasElement;
 
   constructor(private scene: THREE.Scene) {
     this.bvhWorker = new GenerateMeshBVHWorker();
@@ -54,13 +83,59 @@ export class RaycastSystem {
     this.scene.add(this.roomBVHHelperGroup);
   }
 
-  public setupMouseTracking(canvas: HTMLCanvasElement) {
-    canvas.addEventListener("mousemove", (event) => {
-      this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-      this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-    });
+  /**
+   * Enable or disable the raycast system
+   */
+  public setEnabled(enabled: boolean) {
+    this.enabled = enabled;
   }
 
+  public isEnabled(): boolean {
+    return this.enabled;
+  }
+
+  /**
+   * Setup mouse tracking for raycasting
+   */
+  public setupMouseTracking(canvas: HTMLCanvasElement) {
+    // Remove previous handler if any
+    if (this.mouseHandler && this.trackedCanvas) {
+      this.trackedCanvas.removeEventListener("mousemove", this.mouseHandler);
+    }
+
+    const handler = (event: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      // Skip calculation if canvas has zero size to avoid division by zero
+      if (rect.width === 0 || rect.height === 0) return;
+
+      // Calculate mouse position relative to canvas, then convert to NDC (-1 to 1)
+      this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    };
+    canvas.addEventListener("mousemove", handler);
+
+    // Store references for cleanup
+    this.mouseHandler = handler;
+    this.trackedCanvas = canvas;
+  }
+
+  /**
+   * Get the current mouse position in normalized device coordinates
+   */
+  public getMousePosition(): THREE.Vector2 {
+    return this.mouse.clone();
+  }
+
+  /**
+   * Set mouse position manually (useful for testing)
+   */
+  public setMousePosition(x: number, y: number) {
+    this.mouse.set(x, y);
+  }
+
+  /**
+   * Setup BVH for model raycasting
+   */
   public async setupModelBVH(model: Model) {
     if (!model.vrm) return;
 
@@ -91,6 +166,9 @@ export class RaycastSystem {
     await this.regenerateBVHForModel();
   }
 
+  /**
+   * Regenerate BVH for model (call when model pose changes significantly)
+   */
   public async regenerateBVHForModel() {
     if (!this.modelMeshHelper || !this.modelBVHGenerator) return;
 
@@ -105,6 +183,9 @@ export class RaycastSystem {
     this.modelBVHHelper!.update();
   }
 
+  /**
+   * Setup BVH for room/environment raycasting
+   */
   public async setupRoomBVH(room: THREE.Group) {
     this.roomTargets = [];
 
@@ -126,43 +207,283 @@ export class RaycastSystem {
     }
   }
 
-  public cleanupModelBVH() {
-    if (this.modelMeshHelper) {
-      const geometry = this.modelMeshHelper.geometry;
-      geometry?.dispose();
-      for (const key in geometry?.attributes) {
-        geometry?.deleteAttribute(key);
-      }
-      this.scene.remove(this.modelMeshHelper);
-      if (this.modelBVHHelper) {
-        this.scene.remove(this.modelBVHHelper);
-      }
+  /**
+   * Add custom objects for raycasting
+   */
+  public addCustomTarget(object: THREE.Object3D) {
+    if (!object) {
+      console.warn('[RaycastSystem] addCustomTarget: object is null or undefined');
+      return;
     }
-    this.modelBVHGenerator = null;
-    this.modelMeshHelper = null;
-    this.modelBVHHelper = null;
-    this.modelTargets = [];
+    if (!this.customTargets.includes(object)) {
+      this.customTargets.push(object);
+    }
   }
 
-  public cleanupRoomBVH() {
-    for (const item of this.roomBVHHelperGroup.children) {
-      if (item instanceof MeshBVHHelper) {
-        try {
-          // @ts-ignore
-          const geometry = item.geometry;
-          geometry?.dispose();
-          for (const key in geometry?.attributes) {
-            geometry?.deleteAttribute(key);
-          }
-        } catch (e) {
-          console.error("error disposing room geometry", e);
-        }
-      }
+  /**
+   * Remove custom object from raycasting
+   */
+  public removeCustomTarget(object: THREE.Object3D) {
+    const index = this.customTargets.indexOf(object);
+    if (index > -1) {
+      this.customTargets.splice(index, 1);
     }
-    this.roomBVHHelperGroup.clear();
-    this.roomTargets = [];
   }
 
+  /**
+   * Clear all custom targets
+   */
+  public clearCustomTargets() {
+    this.customTargets = [];
+  }
+
+  /**
+   * Perform a raycast from camera through screen coordinates
+   */
+  public raycastFromCamera(
+    camera: THREE.Camera,
+    screenX: number = this.mouse.x,
+    screenY: number = this.mouse.y,
+    options: RaycastOptions = {}
+  ): RaycastHit | null {
+    if (!this.enabled) return null;
+
+    const prevFar = this.raycaster.far;
+    const prevFirstHitOnly = this.raycaster.firstHitOnly;
+    const prevLayersMask = this.raycaster.layers.mask;
+
+    this.applyRaycastOptions(options);
+    this.raycasterTempV2.set(screenX, screenY);
+    this.raycaster.setFromCamera(this.raycasterTempV2, camera);
+    try {
+      return this.performRaycast();
+    } finally {
+      this.raycaster.far = prevFar;
+      this.raycaster.firstHitOnly = prevFirstHitOnly;
+      this.raycaster.layers.mask = prevLayersMask;
+    }
+  }
+
+  /**
+   * Perform a raycast from a specific point in a direction
+   */
+  public raycastFromPoint(
+    origin: THREE.Vector3,
+    direction: THREE.Vector3,
+    options: RaycastOptions = {}
+  ): RaycastHit | null {
+    if (!this.enabled) return null;
+
+    const prevFar = this.raycaster.far;
+    const prevFirstHitOnly = this.raycaster.firstHitOnly;
+    const prevLayersMask = this.raycaster.layers.mask;
+
+    this.applyRaycastOptions(options);
+    this.raycaster.set(origin, direction.clone().normalize());
+    try {
+      return this.performRaycast();
+    } finally {
+      this.raycaster.far = prevFar;
+      this.raycaster.firstHitOnly = prevFirstHitOnly;
+      this.raycaster.layers.mask = prevLayersMask;
+    }
+  }
+
+  /**
+   * Perform a raycast from an object (using its world position and forward direction)
+   */
+  public raycastFromObject(
+    object: THREE.Object3D,
+    options: RaycastOptions = {}
+  ): RaycastHit | null {
+    if (!this.enabled) return null;
+
+    const prevFar = this.raycaster.far;
+    const prevFirstHitOnly = this.raycaster.firstHitOnly;
+    const prevLayersMask = this.raycaster.layers.mask;
+
+    const origin = new THREE.Vector3();
+    const direction = new THREE.Vector3();
+
+    origin.setFromMatrixPosition(object.matrixWorld);
+    this.raycasterTempM.identity().extractRotation(object.matrixWorld);
+    direction.set(0, 0, -1).applyMatrix4(this.raycasterTempM);
+
+    this.applyRaycastOptions(options);
+    this.raycaster.set(origin, direction.clone().normalize());
+    try {
+      return this.performRaycast();
+    } finally {
+      this.raycaster.far = prevFar;
+      this.raycaster.firstHitOnly = prevFirstHitOnly;
+      this.raycaster.layers.mask = prevLayersMask;
+    }
+  }
+
+  /**
+   * Get all intersections (not just the first one)
+   */
+  public raycastAll(
+    origin: THREE.Vector3,
+    direction: THREE.Vector3,
+    options: RaycastOptions = {}
+  ): RaycastHit[] {
+    if (!this.enabled) return [];
+
+    const prevFar = this.raycaster.far;
+    const prevFirstHitOnly = this.raycaster.firstHitOnly;
+    const prevLayersMask = this.raycaster.layers.mask;
+
+    this.applyRaycastOptions(options);
+    this.raycaster.firstHitOnly = false; // Enforce "all hits" mode after applying options
+    this.raycaster.set(origin, direction.clone().normalize());
+
+    try {
+      // Collect intersections by type
+      this.intersectsModel = [];
+      this.intersectsRoom = [];
+      this.intersectsCustom = [];
+
+      if (this.modelTargets.length > 0) {
+        this.intersectsModel = this.raycaster.intersectObjects(this.modelTargets, true);
+      }
+      if (this.roomTargets.length > 0) {
+        this.intersectsRoom = this.raycaster.intersectObjects(this.roomTargets, true);
+      }
+      if (this.customTargets.length > 0) {
+        this.intersectsCustom = this.raycaster.intersectObjects(this.customTargets, true);
+      }
+
+      const hits: RaycastHit[] = [];
+
+      for (const intersection of this.intersectsModel) {
+        hits.push(this.convertIntersectionToHit(intersection, 'model'));
+      }
+      for (const intersection of this.intersectsRoom) {
+        hits.push(this.convertIntersectionToHit(intersection, 'room'));
+      }
+      for (const intersection of this.intersectsCustom) {
+        hits.push(this.convertIntersectionToHit(intersection, 'object'));
+      }
+
+      return hits.sort((a, b) => a.distance - b.distance);
+    } finally {
+      this.raycaster.far = prevFar;
+      this.raycaster.firstHitOnly = prevFirstHitOnly;
+      this.raycaster.layers.mask = prevLayersMask;
+    }
+  }
+
+  /**
+   * Find the closest bone to a point (for VRM models)
+   */
+  public findClosestBone(
+    point: THREE.Vector3,
+    model: Model
+  ): { bone: THREE.Object3D; distance: number } | null {
+    if (!model?.vrm) return null;
+
+    let closestBone = null;
+    let minDist = Number.MAX_VALUE;
+
+    for (const boneName of amicaBones) {
+      const node = model.vrm.humanoid.getNormalizedBoneNode(boneName);
+      if (!node) continue;
+
+      const dist = point.distanceTo(node.getWorldPosition(this.raycasterTempV3));
+      if (dist < minDist) {
+        minDist = dist;
+        closestBone = node;
+      }
+    }
+
+    return closestBone ? { bone: closestBone, distance: minDist } : null;
+  }
+
+  private applyRaycastOptions(options: RaycastOptions) {
+    if (options.maxDistance !== undefined) {
+      this.raycaster.far = options.maxDistance;
+    }
+    if (options.layers !== undefined) {
+      this.raycaster.layers.mask = options.layers.mask;
+    }
+    if (options.firstHitOnly !== undefined) {
+      this.raycaster.firstHitOnly = options.firstHitOnly;
+    }
+  }
+
+  private performRaycast(): RaycastHit | null {
+    try {
+      this.intersectsModel = [];
+      this.intersectsRoom = [];
+      this.intersectsCustom = [];
+
+      if (this.modelTargets.length > 0) {
+        this.intersectsModel = this.raycaster.intersectObjects(
+          this.modelTargets,
+          true,
+        );
+      }
+      if (this.roomTargets.length > 0) {
+        this.intersectsRoom = this.raycaster.intersectObjects(
+          this.roomTargets,
+          true,
+        );
+      }
+      if (this.customTargets.length > 0) {
+        this.intersectsCustom = this.raycaster.intersectObjects(
+          this.customTargets,
+          true,
+        );
+      }
+
+      // Find the closest intersection
+      let closest: THREE.Intersection | null = null;
+      let closestType: 'model' | 'room' | 'object' = 'object';
+
+      if (this.intersectsModel.length > 0) {
+        closest = this.intersectsModel[0];
+        closestType = 'model';
+      }
+
+      if (this.intersectsRoom.length > 0 &&
+          (!closest || this.intersectsRoom[0].distance < closest.distance)) {
+        closest = this.intersectsRoom[0];
+        closestType = 'room';
+      }
+
+      if (this.intersectsCustom.length > 0 &&
+          (!closest || this.intersectsCustom[0].distance < closest.distance)) {
+        closest = this.intersectsCustom[0];
+        closestType = 'object';
+      }
+
+      return closest ? this.convertIntersectionToHit(closest, closestType) : null;
+    } catch (e) {
+      console.error("Raycast error:", e);
+      return null;
+    }
+  }
+
+  private convertIntersectionToHit(
+    intersection: THREE.Intersection,
+    type: 'model' | 'room' | 'object'
+  ): RaycastHit {
+    return {
+      point: intersection.point.clone(),
+      distance: intersection.distance,
+      object: intersection.object,
+      face: intersection.face ?? undefined,
+      faceIndex: intersection.faceIndex ?? undefined,
+      uv: intersection.uv?.clone(),
+      normal: intersection.normal?.clone(),
+      type,
+    };
+  }
+
+  /**
+   * Legacy method for XR system compatibility
+   */
   public updateRaycasts(
     camera: THREE.PerspectiveCamera,
     model: Model | undefined,
@@ -178,66 +499,21 @@ export class RaycastSystem {
     closestPart2: THREE.Object3D,
     onBallCreate?: (point: THREE.Vector3, itype: number) => void,
   ) {
+    if (!this.enabled) return;
+
     const checkIntersection = (closestPart: THREE.Object3D) => {
-      try {
-        if (this.modelTargets.length > 0) {
-          this.intersectsModel = this.raycaster.intersectObjects(
-            this.modelTargets,
-            true,
-          );
-        }
-        if (this.roomTargets.length > 0) {
-          this.intersectsRoom = this.raycaster.intersectObjects(
-            this.roomTargets,
-            true,
-          );
-        }
-      } catch (e) {
-        console.error("intersectObjects error", e);
-        return;
-      }
+      const hit = this.performRaycast();
 
-      const highlightClosestBone = (point: THREE.Vector3) => {
-        if (!model?.vrm) return;
-
-        let vec3 = new THREE.Vector3();
-        let closestBone = null;
-        let mindist = Number.MAX_VALUE;
-
-        for (const bone of amicaBones) {
-          const node = model.vrm.humanoid.getNormalizedBoneNode(bone);
-          if (!node) continue;
-
-          const dist = point.distanceTo(node.getWorldPosition(vec3));
-          if (dist < mindist) {
-            mindist = dist;
-            closestBone = node;
+      if (hit) {
+        if (hit.type === 'model' && model) {
+          const closestBone = this.findClosestBone(hit.point, model);
+          if (closestBone) {
+            closestPart.position.copy(closestBone.bone.getWorldPosition(new THREE.Vector3()));
+            closestPart.scale.setScalar(0.1);
           }
+        } else if (hit.type === 'room') {
+          onBallCreate?.(hit.point, 1);
         }
-
-        if (closestBone) {
-          closestPart.position.copy(closestBone.getWorldPosition(vec3));
-          closestPart.scale.setScalar(0.1);
-        }
-      };
-
-      const handleAmicaIntersection = (point: THREE.Vector3) => {
-        highlightClosestBone(point);
-      };
-
-      // check which object is closer
-      if (this.intersectsModel.length > 0 && this.intersectsRoom.length > 0) {
-        if (
-          this.intersectsModel[0].distance < this.intersectsRoom[0].distance
-        ) {
-          handleAmicaIntersection(this.intersectsModel[0].point);
-        } else {
-          onBallCreate?.(this.intersectsRoom[0].point, 1);
-        }
-      } else if (this.intersectsModel.length > 0) {
-        handleAmicaIntersection(this.intersectsModel[0].point);
-      } else if (this.intersectsRoom.length > 0) {
-        onBallCreate?.(this.intersectsRoom[0].point, 1);
       }
     };
 
@@ -281,7 +557,85 @@ export class RaycastSystem {
     }
   }
 
+  /**
+   * Cleanup model BVH
+   */
+  public cleanupModelBVH() {
+    if (this.modelMeshHelper) {
+      const geometry = this.modelMeshHelper.geometry;
+      (geometry as any)?.disposeBoundsTree?.();
+      geometry?.dispose();
+      this.scene.remove(this.modelMeshHelper);
+      if (this.modelBVHHelper) {
+        this.scene.remove(this.modelBVHHelper);
+      }
+    }
+    this.modelBVHGenerator = null;
+    this.modelMeshHelper = null;
+    this.modelBVHHelper = null;
+    this.modelTargets = [];
+  }
+
+  /**
+   * Cleanup room BVH
+   */
+  public cleanupRoomBVH() {
+    for (const item of this.roomBVHHelperGroup.children) {
+      if (item instanceof MeshBVHHelper) {
+        try {
+          const geometry = (item as any).geometry as THREE.BufferGeometry | undefined;
+          (geometry as any)?.disposeBoundsTree?.();
+          geometry?.dispose();
+        } catch (e) {
+          console.error("error disposing room geometry", e);
+        }
+      }
+    }
+    this.roomBVHHelperGroup.clear();
+    this.roomTargets = [];
+  }
+
+  /**
+   * Cleanup all resources
+   */
+  public dispose() {
+    this.cleanupModelBVH();
+    this.cleanupRoomBVH();
+    this.clearCustomTargets();
+
+    // Cleanup mouse event listener
+    if (this.mouseHandler && this.trackedCanvas) {
+      this.trackedCanvas.removeEventListener("mousemove", this.mouseHandler);
+      this.mouseHandler = undefined;
+      this.trackedCanvas = undefined;
+    }
+  }
+
+  /**
+   * Get room BVH helper group (for debugging)
+   */
   public getRoomBVHHelperGroup(): THREE.Group {
     return this.roomBVHHelperGroup;
+  }
+
+  /**
+   * Get current model targets
+   */
+  public getModelTargets(): THREE.Mesh[] {
+    return [...this.modelTargets];
+  }
+
+  /**
+   * Get current room targets
+   */
+  public getRoomTargets(): THREE.Mesh[] {
+    return [...this.roomTargets];
+  }
+
+  /**
+   * Get current custom targets
+   */
+  public getCustomTargets(): THREE.Object3D[] {
+    return [...this.customTargets];
   }
 }

@@ -18,6 +18,7 @@ import { Chat } from '@/features/chat/chat';
 import { SceneCoordinator } from "@/features/scene3d/SceneCoordinator";
 import { HookManager } from '@/features/hooks/hookManager';
 import { HookEvent } from '@/features/hooks/hookEvents';
+import * as THREE from 'three';
 
 export type JsonRpcHandler<M extends AmicaMethod> = (
   params: MethodParamsMap[M],
@@ -456,7 +457,10 @@ export class JsonRpcServer {
       });
 
       // Play audio directly (bypass TTS)
-      ctx.viewer.model.speak(audioBuffer, fullScreenplay as any);
+      const vrm = ctx.viewer.vrm?.getModel();
+      if (vrm?.speak) {
+        vrm.speak(audioBuffer, fullScreenplay as any);
+      }
 
       return {
         success: true,
@@ -523,8 +527,7 @@ export class JsonRpcServer {
       // Create a simple talk object and fetch audio
       const talk = {
         message: params.text,
-        style: params.style || 'talk',
-        emotion: params.emotion || 'neutral',
+        style: (params.style || 'talk') as any,
       };
       await ctx.chat.fetchAudio(talk);
       return {
@@ -767,11 +770,11 @@ export class JsonRpcServer {
 
     this.registerHandler('model.setPosition', async (params, ctx) => {
       const model = ctx.viewer.vrm?.getModel();
-      if (!model) {
+      if (!model?.vrm?.scene) {
         throw new Error('No model loaded');
       }
 
-      model.position.set(
+      model.vrm.scene.position.set(
         params.position.x,
         params.position.y,
         params.position.z
@@ -785,11 +788,11 @@ export class JsonRpcServer {
 
     this.registerHandler('model.setRotation', async (params, ctx) => {
       const model = ctx.viewer.vrm?.getModel();
-      if (!model) {
+      if (!model?.vrm?.scene) {
         throw new Error('No model loaded');
       }
 
-      model.rotation.set(
+      model.vrm.scene.rotation.set(
         params.rotation.x,
         params.rotation.y,
         params.rotation.z
@@ -803,11 +806,11 @@ export class JsonRpcServer {
 
     this.registerHandler('model.setScale', async (params, ctx) => {
       const model = ctx.viewer.vrm?.getModel();
-      if (!model) {
+      if (!model?.vrm?.scene) {
         throw new Error('No model loaded');
       }
 
-      model.scale.set(
+      model.vrm.scene.scale.set(
         params.scale.x,
         params.scale.y,
         params.scale.z
@@ -821,25 +824,25 @@ export class JsonRpcServer {
 
     this.registerHandler('model.getTransform', async (params, ctx) => {
       const model = ctx.viewer.vrm?.getModel();
-      if (!model) {
+      if (!model?.vrm?.scene) {
         throw new Error('No model loaded');
       }
 
       return {
         position: {
-          x: model.position.x,
-          y: model.position.y,
-          z: model.position.z,
+          x: model.vrm.scene.position.x,
+          y: model.vrm.scene.position.y,
+          z: model.vrm.scene.position.z,
         },
         rotation: {
-          x: model.rotation.x,
-          y: model.rotation.y,
-          z: model.rotation.z,
+          x: model.vrm.scene.rotation.x,
+          y: model.vrm.scene.rotation.y,
+          z: model.vrm.scene.rotation.z,
         },
         scale: {
-          x: model.scale.x,
-          y: model.scale.y,
-          z: model.scale.z,
+          x: model.vrm.scene.scale.x,
+          y: model.vrm.scene.scale.y,
+          z: model.vrm.scene.scale.z,
         },
       };
     });
@@ -857,12 +860,12 @@ export class JsonRpcServer {
       const rot = params.rotation || { x: 0, y: 0, z: 0 };
       const scale = params.scale || { x: 1, y: 1, z: 1 };
 
-      await ctx.viewer.environment.loadRoom(
-        params.roomUrl,
-        pos,
-        { x: rot.x, y: rot.y, z: rot.z } as any,
-        scale,
-        (progress) => {
+      await ctx.viewer.environment.loadRoom({
+        url: params.roomUrl,
+        position: new THREE.Vector3(pos.x, pos.y, pos.z),
+        rotation: new THREE.Euler(rot.x, rot.y, rot.z),
+        scale: new THREE.Vector3(scale.x, scale.y, scale.z),
+        onProgress: (progress) => {
           // Optionally send progress events
           if (params.onProgress && this.transport) {
             this.transport.broadcast({
@@ -872,7 +875,7 @@ export class JsonRpcServer {
             });
           }
         }
-      );
+      });
 
       const room = ctx.viewer.environment?.getRoom();
       return {
@@ -891,12 +894,12 @@ export class JsonRpcServer {
     });
 
     this.registerHandler('room.setPosition', async (params, ctx) => {
-      const room = ctx.viewer.environment?.getRoom();
-      if (!room) {
+      const roomObj = ctx.viewer.environment?.getRoom();
+      if (!roomObj?.room) {
         throw new Error('No room loaded');
       }
 
-      room.position.set(
+      roomObj.room.position.set(
         params.position.x,
         params.position.y,
         params.position.z
@@ -909,12 +912,12 @@ export class JsonRpcServer {
     });
 
     this.registerHandler('room.setRotation', async (params, ctx) => {
-      const room = ctx.viewer.environment?.getRoom();
-      if (!room) {
+      const roomObj = ctx.viewer.environment?.getRoom();
+      if (!roomObj?.room) {
         throw new Error('No room loaded');
       }
 
-      room.rotation.set(
+      roomObj.room.rotation.set(
         params.rotation.x,
         params.rotation.y,
         params.rotation.z
@@ -927,12 +930,12 @@ export class JsonRpcServer {
     });
 
     this.registerHandler('room.setScale', async (params, ctx) => {
-      const room = ctx.viewer.environment?.getRoom();
-      if (!room) {
+      const roomObj = ctx.viewer.environment?.getRoom();
+      if (!roomObj?.room) {
         throw new Error('No room loaded');
       }
 
-      room.scale.set(
+      roomObj.room.scale.set(
         params.scale.x,
         params.scale.y,
         params.scale.z
@@ -945,48 +948,45 @@ export class JsonRpcServer {
     });
 
     this.registerHandler('room.getTransform', async (params, ctx) => {
-      const room = ctx.viewer.environment?.getRoom();
-      if (!room) {
+      const roomObj = ctx.viewer.environment?.getRoom();
+      if (!roomObj?.room) {
         throw new Error('No room loaded');
       }
 
       return {
         position: {
-          x: room.position.x,
-          y: room.position.y,
-          z: room.position.z,
+          x: roomObj.room.position.x,
+          y: roomObj.room.position.y,
+          z: roomObj.room.position.z,
         },
         rotation: {
-          x: room.rotation.x,
-          y: room.rotation.y,
-          z: room.rotation.z,
+          x: roomObj.room.rotation.x,
+          y: roomObj.room.rotation.y,
+          z: roomObj.room.rotation.z,
         },
         scale: {
-          x: room.scale.x,
-          y: room.scale.y,
-          z: room.scale.z,
+          x: roomObj.room.scale.x,
+          y: roomObj.room.scale.y,
+          z: roomObj.room.scale.z,
         },
       };
     });
 
     this.registerHandler('room.loadSplat', async (params, ctx) => {
-      const room = ctx.viewer.environment?.getRoom();
       if (!ctx.viewer.environment?.loadSplat) {
         throw new Error('Viewer not initialized');
       }
 
-      const pos = params.position || { x: 0, y: 0, z: 0 };
-      const rot = params.rotation || { x: 0, y: 0, z: 0 };
-      const scale = params.scale || { x: 1, y: 1, z: 1 };
+      const pos = params.position || { x: 0, y: 4, z: 0 };
+      const rot = params.rotation || { x: 0, y: 0, z: Math.PI };
+      const scale = params.scale;
 
-      await ctx.viewer.environment.loadSplat(params.splatUrl);
-
-      // Apply transform if provided
-      if (room) {
-        room.position.set(pos.x, pos.y, pos.z);
-        room.rotation.set(rot.x, rot.y, rot.z);
-        room.scale.set(scale.x, scale.y, scale.z);
-      }
+      await ctx.viewer.environment.loadSplat({
+        url: params.splatUrl,
+        position: new THREE.Vector3(pos.x, pos.y, pos.z),
+        rotation: new THREE.Euler(rot.x, rot.y, rot.z),
+        scale: scale ? new THREE.Vector3(scale.x, scale.y, scale.z) : undefined,
+      });
 
       return {
         success: true,

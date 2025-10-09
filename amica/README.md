@@ -52,7 +52,6 @@ The various features of Amica mainly use and support the following technologies:
 - ChatBot
   - [Llama.cpp server](https://github.com/ggerganov/llama.cpp)
   - [ChatGPT API](https://platform.openai.com/docs/api-reference/chat) (compatible with projects such as [LM Studio](https://lmstudio.ai/))
-  - [Window.ai](https://windowai.io/)
   - [Ollama](https://ollama.ai)
   - [KoboldCpp](https://github.com/LostRuins/koboldcpp)
   - [Oobabooga](https://github.com/oobabooga/text-generation-webui/wiki)
@@ -115,6 +114,20 @@ npm run tauri dev
 ## 📖 Documentation
 
 View the [documentation](https://docs.heyamica.com) for more information on how to configure and use Amica.
+
+### 📸 Screenshot Tool
+
+Amica includes an automated screenshot tool for capturing clean images without UI elements. Perfect for sharing your character on websites!
+
+```bash
+# Basic screenshot
+npm run screenshot
+
+# Custom configuration
+npm run screenshot -- --vrm_url=/vrm/model.vrm --bg_color=#ffffff --output=custom.png
+```
+
+See [docs/SCREENSHOT.md](docs/SCREENSHOT.md) for complete usage instructions.
 
 ## 📜 History
 

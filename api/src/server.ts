@@ -379,6 +379,11 @@ app.post("/v1/chat/completions", [authorizationCheck(env.CREDITS_PER_CHAT)], asy
 
     try {
       for (const message of req.body.messages) {
+        // Skip messages with empty content
+        if (!message.content || typeof message.content !== "string" || message.content.trim() === "") {
+          logger.info("Skipping empty message", { role: message.role, requestId: req.id });
+          continue;
+        }
         messages.push({
           role: message.role,
           content: message.content,
@@ -389,6 +394,11 @@ app.post("/v1/chat/completions", [authorizationCheck(env.CREDITS_PER_CHAT)], asy
       return res.status(400).send("Bad Request");
     }
 
+    if (messages.length === 0) {
+      logError(new Error("No valid messages in request"), { context: "validate_messages", requestId: req.id });
+      return res.status(400).send("Bad Request: No valid messages");
+    }
+
     const body = {
       stream: true,
       model,
@@ -397,6 +407,13 @@ app.post("/v1/chat/completions", [authorizationCheck(env.CREDITS_PER_CHAT)], asy
     };
 
     try {
+      logger.info("Sending chat request", {
+        component: "server",
+        model,
+        messageCount: messages.length,
+        requestId: req.id,
+      });
+
       // Track credits usage
       creditsUsedCounter.inc({ tier, endpoint: "/v1/chat/completions", user_id: userId }, env.CREDITS_PER_CHAT);
 
@@ -472,13 +489,13 @@ app.post("/v1/chat/completions", [authorizationCheck(env.CREDITS_PER_CHAT)], asy
   }
 });
 
-const outOfCreditsAudios = [
-  Buffer.from(fs.readFileSync("./assets/outofcredits1.mp3")),
-  Buffer.from(fs.readFileSync("./assets/outofcredits2.mp3")),
-  Buffer.from(fs.readFileSync("./assets/outofcredits3.mp3")),
-  Buffer.from(fs.readFileSync("./assets/outofcredits4.mp3")),
-  Buffer.from(fs.readFileSync("./assets/outofcredits5.mp3")),
-];
+const outOfCreditsAudios: Buffer[] = [];
+for (let i = 1; i <= 5; i++) {
+  const path = `./assets/outofcredits${i}.mp3`;
+  if (fs.existsSync(path)) {
+    outOfCreditsAudios.push(Buffer.from(fs.readFileSync(path)));
+  }
+}
 
 app.post("/v1/audio/speech", [authorizationCheck(env.CREDITS_PER_TTS)], async (req: Request, res: Response) => {
   try {
@@ -490,8 +507,12 @@ app.post("/v1/audio/speech", [authorizationCheck(env.CREDITS_PER_TTS)], async (r
 
     if (accountInfo.credits < 0) {
       outOfCreditsCounter.inc({ tier, endpoint: "/v1/audio/speech" });
-      res.setHeader("Content-Type", "audio/mpeg");
-      res.send(outOfCreditsAudios[Math.floor(Math.random() * outOfCreditsAudios.length)]);
+      if (outOfCreditsAudios.length > 0) {
+        res.setHeader("Content-Type", "audio/mpeg");
+        res.send(outOfCreditsAudios[Math.floor(Math.random() * outOfCreditsAudios.length)]);
+      } else {
+        res.status(402).json({ error: "Out of credits" });
+      }
       return;
     }
 
@@ -523,11 +544,35 @@ app.post("/v1/audio/speech", [authorizationCheck(env.CREDITS_PER_TTS)], async (r
       signal: AbortSignal.timeout(env.TIMEOUT_FISH),
     });
 
-    const duration = (Date.now() - startTime) / 1000;
-    apiCallDuration.observe({ service: "fish", endpoint: "/v1/audio/speech", status: "success" }, duration);
-
+    // Set headers before streaming
     res.setHeader("Content-Type", "audio/mpeg");
-    res.send(Buffer.from(await response.arrayBuffer()));
+    if (response.headers.get("Content-Length")) {
+      res.setHeader("Content-Length", response.headers.get("Content-Length")!);
+    }
+
+    // Stream the response directly instead of buffering
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error("Response body is not readable");
+    }
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          break;
+        }
+        res.write(Buffer.from(value));
+      }
+      res.end();
+
+      const duration = (Date.now() - startTime) / 1000;
+      apiCallDuration.observe({ service: "fish", endpoint: "/v1/audio/speech", status: "success" }, duration);
+    } catch (error) {
+      apiCallErrors.inc({ service: "fish", endpoint: "/v1/audio/speech", error_type: (error as Error).name });
+      logError(error as Error, { context: "tts_streaming", requestId: req.id });
+      throw error;
+    }
   } catch {
     return res.status(500).json({ error: "Internal error" });
   }

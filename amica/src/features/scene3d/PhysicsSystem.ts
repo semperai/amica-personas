@@ -1,63 +1,99 @@
 import * as THREE from "three";
 import { VRM } from "@pixiv/three-vrm";
 
+type RapierModule = Awaited<typeof import("@dimforge/rapier3d-compat")>;
+
 export class PhysicsSystem {
-  private ammo: any;
-  private collisionConfiguration: any;
-  private dispatcher: any;
-  private broadphase: any;
-  private solver: any;
-  private physicsWorld: any;
-  private transformAux1: any;
-  private tempBtVec3_1: any;
+  private RAPIER?: RapierModule;
+  private world?: InstanceType<RapierModule['World']>;
+  private eventQueue?: InstanceType<RapierModule['EventQueue']>;
+  private bodiesToRemove: InstanceType<RapierModule['RigidBody']>[] = [];
 
   public isInitialized = false;
 
   public async initialize() {
-    // we have this weird construct because ammo is loaded globally
-    // and things get funny with hot reloading
-    if (typeof window.Ammo === "undefined") {
-      console.error("Ammo not found");
-      return false;
-    } else if (typeof window.Ammo === "function") {
-      this.ammo = await window.Ammo();
-    } else {
-      this.ammo = window.Ammo;
-    }
-
-    if (this.ammo) {
-      this.collisionConfiguration =
-        new this.ammo.btDefaultCollisionConfiguration();
-      this.dispatcher = new this.ammo.btCollisionDispatcher(
-        this.collisionConfiguration,
-      );
-      this.broadphase = new this.ammo.btDbvtBroadphase();
-      this.solver = new this.ammo.btSequentialImpulseConstraintSolver();
-      this.physicsWorld = new this.ammo.btDiscreteDynamicsWorld(
-        this.dispatcher,
-        this.broadphase,
-        this.solver,
-        this.collisionConfiguration,
-      );
-      this.physicsWorld.setGravity(new this.ammo.btVector3(0, -7.8, 0));
-      this.transformAux1 = new this.ammo.btTransform();
-      this.tempBtVec3_1 = new this.ammo.btVector3(0, 0, 0);
-
-      this.isInitialized = true;
+    // Prevent double initialization
+    if (this.isInitialized) {
+      console.warn("PhysicsSystem already initialized, skipping");
       return true;
     }
 
-    return false;
+    try {
+      // Initialize Rapier
+      const rapierModule = await import("@dimforge/rapier3d-compat");
+      this.RAPIER = rapierModule.default as RapierModule;
+
+      // Initialize WASM module (only call init() once globally)
+      if (typeof this.RAPIER.init === 'function') {
+        await this.RAPIER.init();
+      } else {
+        console.warn("Rapier already initialized globally");
+      }
+
+      // Create the physics world
+      const gravity = { x: 0.0, y: -7.8, z: 0.0 };
+      this.world = new this.RAPIER.World(gravity);
+
+      // Create event queue for collision detection
+      // In Rapier 0.14+, EventQueue constructor takes autodrainEnabled parameter
+      this.eventQueue = new this.RAPIER.EventQueue(true);
+
+      this.isInitialized = true;
+      console.log('[Physics] Rapier initialized');
+      return true;
+    } catch (error) {
+      console.error("Failed to initialize Rapier physics:", error);
+      return false;
+    }
   }
 
   public stepSimulation(delta: number) {
-    if (!this.isInitialized) return;
+    if (!this.isInitialized || !this.world) return;
+
+    // Clamp delta to a reasonable range to avoid:
+    // - Huge timesteps on lag spikes (max 1/15 = ~66ms for 15 FPS minimum)
+    // - Tiny timesteps that cause instability (min 1/240 = ~4ms for 240 FPS maximum)
+    const clampedDelta = Math.min(Math.max(delta, 1 / 240), 1 / 15);
+    this.world.timestep = clampedDelta;
 
     try {
-      this.physicsWorld.stepSimulation(delta, 10);
+      // Remove any bodies that were queued for deletion BEFORE stepping
+      this.processDeferredRemovals();
+
+      // Step the world with the event queue to enable collision events
+      if (this.eventQueue) {
+        this.world.step(this.eventQueue);
+      } else {
+        this.world.step();
+      }
     } catch (e) {
-      console.error("physics update error", e);
+      // Rapier errors often indicate memory corruption from improper body management
+      // Common causes: removing bodies during physics step, using freed bodies
+      if (e instanceof Error) {
+        if (e.message?.includes('recursive use')) {
+          console.error("physics update error: Detected recursive use of Rapier object. This usually means a rigid body was removed during the physics step. Bodies should only be removed between steps.", e);
+        } else if (e.message?.includes('memory access out of bounds')) {
+          console.error("physics update error: Memory access error in Rapier. A body or collider may have been used after being freed.", e);
+        } else {
+          console.error("physics update error", e);
+        }
+      } else {
+        console.error("physics update error", e);
+      }
     }
+  }
+
+  private processDeferredRemovals() {
+    if (!this.world || this.bodiesToRemove.length === 0) return;
+
+    for (const body of this.bodiesToRemove) {
+      try {
+        this.world.removeRigidBody(body);
+      } catch (e) {
+        console.warn("Failed to remove rigid body:", e);
+      }
+    }
+    this.bodiesToRemove = [];
   }
 
   public applyWind(vrm: VRM | undefined, dir: THREE.Vector3, strength: number) {
@@ -67,7 +103,122 @@ export class PhysicsSystem {
     });
   }
 
-  public getPhysicsWorld() {
-    return this.physicsWorld;
+  public getWorld() {
+    return this.world;
+  }
+
+  public getRAPIER() {
+    return this.RAPIER;
+  }
+
+  public getEventQueue() {
+    return this.eventQueue;
+  }
+
+  // Helper method to create a rigid body
+  public createRigidBody(
+    type: "dynamic" | "static" | "kinematic",
+    position: { x: number; y: number; z: number },
+    rotation?: { x: number; y: number; z: number; w: number }
+  ) {
+    if (!this.isInitialized || !this.world || !this.RAPIER) return null;
+
+    const rigidBodyDesc =
+      type === "dynamic"
+        ? this.RAPIER.RigidBodyDesc.dynamic()
+        : type === "kinematic"
+        ? this.RAPIER.RigidBodyDesc.kinematicPositionBased()
+        : this.RAPIER.RigidBodyDesc.fixed();
+
+    rigidBodyDesc.setTranslation(position.x, position.y, position.z);
+    if (rotation) {
+      rigidBodyDesc.setRotation(rotation);
+    }
+
+    return this.world.createRigidBody(rigidBodyDesc);
+  }
+
+  // Helper method to create a collider
+  public createCollider(
+    shape: InstanceType<RapierModule['ColliderDesc']>,
+    rigidBody: InstanceType<RapierModule['RigidBody']>
+  ) {
+    if (!this.isInitialized || !this.world) return null;
+
+    return this.world.createCollider(shape, rigidBody);
+  }
+
+  // Helper methods for common shapes
+  public createBox(
+    halfExtents: { x: number; y: number; z: number },
+    rigidBody: InstanceType<RapierModule['RigidBody']>
+  ) {
+    if (!this.RAPIER) return null;
+    const shape = this.RAPIER.ColliderDesc.cuboid(
+      halfExtents.x,
+      halfExtents.y,
+      halfExtents.z
+    );
+    return this.createCollider(shape, rigidBody);
+  }
+
+  public createSphere(radius: number, rigidBody: InstanceType<RapierModule['RigidBody']>) {
+    if (!this.RAPIER) return null;
+    const shape = this.RAPIER.ColliderDesc.ball(radius);
+    return this.createCollider(shape, rigidBody);
+  }
+
+  public createCylinder(
+    halfHeight: number,
+    radius: number,
+    rigidBody: InstanceType<RapierModule['RigidBody']>
+  ) {
+    if (!this.RAPIER) return null;
+    const shape = this.RAPIER.ColliderDesc.cylinder(halfHeight, radius);
+    return this.createCollider(shape, rigidBody);
+  }
+
+  // Helper to remove a rigid body (deferred until after physics step)
+  public removeRigidBody(rigidBody: InstanceType<RapierModule['RigidBody']> | null | undefined) {
+    if (!this.isInitialized || !this.world || !rigidBody) return;
+
+    // Guard against invalid objects - only accept actual RigidBody instances
+    if (this.RAPIER && !(rigidBody instanceof this.RAPIER.RigidBody)) {
+      console.warn('[Physics] Attempted to remove invalid rigid body (not a RigidBody instance)');
+      return;
+    }
+
+    // Queue for removal after the current physics step completes
+    // This prevents "recursive use" errors
+    this.bodiesToRemove.push(rigidBody);
+  }
+
+  public setGravity(x: number, y: number, z: number) {
+    if (!this.isInitialized || !this.world) return;
+    this.world.gravity = { x, y, z };
+  }
+
+  // Cleanup method to properly dispose of physics resources
+  public dispose() {
+    if (!this.isInitialized) return;
+
+    try {
+      // Free the world and all its resources
+      if (this.world) {
+        this.world.free();
+        this.world = undefined;
+      }
+
+      if (this.eventQueue) {
+        this.eventQueue.free();
+        this.eventQueue = undefined;
+      }
+
+      this.RAPIER = undefined;
+      this.isInitialized = false;
+      console.log('[Physics] Disposed');
+    } catch (error) {
+      console.error("Error disposing physics system:", error);
+    }
   }
 }

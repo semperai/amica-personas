@@ -415,9 +415,13 @@ describe('JsonRpcServer', () => {
     });
 
     it('should set model position', async () => {
-      // Mock a loaded model
+      // Mock a loaded model with vrm.scene structure
       const mockModel = {
-        position: { set: vi.fn(), x: 0, y: 0, z: 0 },
+        vrm: {
+          scene: {
+            position: { set: vi.fn(), x: 0, y: 0, z: 0 },
+          },
+        },
       } as any;
       mockSceneCoordinator.vrm!.getModel = vi.fn(() => mockModel);
 
@@ -434,8 +438,7 @@ describe('JsonRpcServer', () => {
 
       expect(response.result.success).toBe(true);
       expect(response.result.position).toEqual({ x: 1, y: 2, z: 3 });
-      const model = mockSceneCoordinator.vrm!.getModel();
-      expect(model!.position.set).toHaveBeenCalledWith(1, 2, 3);
+      expect(mockModel.vrm.scene.position.set).toHaveBeenCalledWith(1, 2, 3);
     });
 
     it('should reject model operations without model', async () => {
@@ -458,9 +461,13 @@ describe('JsonRpcServer', () => {
 
     it('should get model transform', async () => {
       const mockModel = {
-        position: { x: 1, y: 2, z: 3 },
-        rotation: { x: 0, y: 0, z: 0 },
-        scale: { x: 1, y: 1, z: 1 },
+        vrm: {
+          scene: {
+            position: { x: 1, y: 2, z: 3 },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+          },
+        },
       } as any;
       mockSceneCoordinator.vrm!.getModel = vi.fn(() => mockModel);
 
@@ -511,11 +518,13 @@ describe('JsonRpcServer', () => {
 
       expect(response.result.success).toBe(true);
       expect(mockSceneCoordinator.environment!.loadRoom).toHaveBeenCalledWith(
-        'https://example.com/room.glb',
-        { x: 0, y: 0, z: 0 },
-        { x: 0, y: 0, z: 0 },
-        { x: 1, y: 1, z: 1 },
-        expect.any(Function)
+        expect.objectContaining({
+          url: 'https://example.com/room.glb',
+          position: expect.anything(),
+          rotation: expect.anything(),
+          scale: expect.anything(),
+          onProgress: expect.any(Function)
+        })
       );
     });
 
@@ -534,9 +543,11 @@ describe('JsonRpcServer', () => {
 
     it('should set room transform', async () => {
       const mockRoom = {
-        position: { set: vi.fn(), x: 0, y: 0, z: 0 },
-        rotation: { set: vi.fn(), x: 0, y: 0, z: 0 },
-        scale: { set: vi.fn(), x: 1, y: 1, z: 1 },
+        room: {
+          position: { set: vi.fn(), x: 0, y: 0, z: 0 },
+          rotation: { set: vi.fn(), x: 0, y: 0, z: 0 },
+          scale: { set: vi.fn(), x: 1, y: 1, z: 1 },
+        },
       } as any;
       mockSceneCoordinator.environment!.getRoom = vi.fn(() => mockRoom);
 
@@ -550,7 +561,7 @@ describe('JsonRpcServer', () => {
       const response = await server.handleRequest(posRequest);
 
       expect(response.result.success).toBe(true);
-      expect(mockRoom.position.set).toHaveBeenCalledWith(5, 0, -3);
+      expect(mockRoom.room.position.set).toHaveBeenCalledWith(5, 0, -3);
     });
   });
 

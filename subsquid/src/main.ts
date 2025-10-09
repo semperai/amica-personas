@@ -2,6 +2,7 @@ import { TypeormDatabase } from '@subsquid/typeorm-store'
 import { processor, Context, Log, DEPLOYMENT } from './processor'
 import * as factoryAbi from './abi/PersonaTokenFactory'
 import * as amicaAbi from './abi/AmicaTokenMainnet'
+import * as feeReductionAbi from './abi/FeeReductionSystem'
 import {
   Persona,
   PersonaMetadata,
@@ -35,6 +36,7 @@ import { handleTransfer } from './handlers/transfers'
 import { handleTokensClaimed } from './handlers/withdrawals'
 import { handlePairingConfigUpdated } from './handlers/config'
 import { handleGraduated, handleTokensDistributed } from './handlers/graduation'
+import { handleSnapshotUpdated, handleSnapshotActivated, handleFeeReductionConfigUpdated } from './handlers/feeReduction'
 
 
 // Log startup information
@@ -61,6 +63,7 @@ processor.run(new TypeormDatabase({ supportHotBlocks: true }), async (ctx) => {
   let eventsProcessed = {
     personaFactory: 0,
     amicaToken: 0,
+    feeReduction: 0,
     errors: 0
   }
 
@@ -222,7 +225,34 @@ processor.run(new TypeormDatabase({ supportHotBlocks: true }), async (ctx) => {
               ctx.log.warn(`Unknown AmicaToken event topic: ${topic}`)
           }
         }
-        
+
+        // FeeReductionSystem events
+        else if (address === DEPLOYMENT.addresses.feeReductionSystem) {
+          eventsProcessed.feeReduction++
+          const topic = log.topics[0]
+          ctx.log.debug(`FeeReductionSystem event: ${topic} at block ${blockNumber}`)
+
+          switch (topic) {
+            case feeReductionAbi.events.SnapshotUpdated.topic:
+              ctx.log.info('Processing SnapshotUpdated event')
+              await handleSnapshotUpdated(ctx, log, timestamp)
+              break
+
+            case feeReductionAbi.events.SnapshotActivated.topic:
+              ctx.log.info('Processing SnapshotActivated event')
+              await handleSnapshotActivated(ctx, log, timestamp)
+              break
+
+            case feeReductionAbi.events.FeeReductionConfigUpdated.topic:
+              ctx.log.info('Processing FeeReductionConfigUpdated event')
+              await handleFeeReductionConfigUpdated(ctx, log, timestamp)
+              break
+
+            default:
+              ctx.log.warn(`Unknown FeeReductionSystem event topic: ${topic}`)
+          }
+        }
+
       } catch (error) {
         eventsProcessed.errors++
         ctx.log.error(`Error processing log at block ${block.header.height}: ${error}`)
@@ -241,6 +271,7 @@ processor.run(new TypeormDatabase({ supportHotBlocks: true }), async (ctx) => {
   ctx.log.info(`  - Total logs: ${totalLogsProcessed}`)
   ctx.log.info(`  - PersonaFactory events: ${eventsProcessed.personaFactory}`)
   ctx.log.info(`  - AmicaToken events: ${eventsProcessed.amicaToken}`)
+  ctx.log.info(`  - FeeReductionSystem events: ${eventsProcessed.feeReduction}`)
   ctx.log.info(`  - Errors: ${eventsProcessed.errors}`)
   
   // Update statistics

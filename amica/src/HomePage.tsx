@@ -12,6 +12,7 @@ import {
   CubeIcon,
   CubeTransparentIcon,
   LanguageIcon,
+  MicrophoneIcon,
   ShareIcon,
   SpeakerWaveIcon,
   SpeakerXMarkIcon,
@@ -23,6 +24,7 @@ import {
 import { IconBrain } from '@tabler/icons-react';
 
 import { MenuButton } from "@/components/menuButton";
+import { MicrophoneSettings } from "@/components/MicrophoneSettings";
 import { AssistantText } from "@/components/assistantText";
 import { Alert } from "@/components/alert";
 import { UserText } from "@/components/userText";
@@ -106,11 +108,88 @@ export default function Home() {
   const [webcamEnabled, setWebcamEnabled] = useState(false);
   const [showLanguageSelector, setShowLanguageSelector] = useState(false);
 
+  // Microphone settings
+  const [showMicSettings, setShowMicSettings] = useState(false);
+  const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('default');
+
+  // Initialize from localStorage if available, otherwise use config
+  const [autosendEnabled, setAutosendEnabled] = useState(() => {
+    try {
+      const stored = localStorage.getItem('amica_autosend_from_mic');
+      return stored !== null ? stored === 'true' : config('autosend_from_mic') === 'true';
+    } catch (err) {
+      console.warn('[Mic Settings] Failed to load autosend preference:', err);
+      return false;
+    }
+  });
+
+  const [micEnabled, setMicEnabled] = useState(() => {
+    try {
+      const stored = localStorage.getItem('amica_mic_enabled');
+      return stored !== null ? stored === 'true' : config('stt_backend') !== 'none';
+    } catch (err) {
+      console.warn('[Mic Settings] Failed to load mic preference:', err);
+      return false;
+    }
+  });
+
   const [isARSupported, setIsARSupported] = useState(false);
   const [isVRSupported, setIsVRSupported] = useState(false);
 
   const [isVRHeadset, setIsVRHeadset] = useState(false);
 
+  // Persist autosend preference to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('amica_autosend_from_mic', autosendEnabled.toString());
+    } catch (err) {
+      console.warn('[Mic Settings] Failed to save autosend preference:', err);
+    }
+  }, [autosendEnabled]);
+
+  // Persist mic enabled preference to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('amica_mic_enabled', micEnabled.toString());
+    } catch (err) {
+      console.warn('[Mic Settings] Failed to save mic preference:', err);
+    }
+  }, [micEnabled]);
+
+  // Load audio devices
+  useEffect(() => {
+    const loadAudioDevices = async () => {
+      // Guard: Check if navigator.mediaDevices is available
+      if (!navigator.mediaDevices?.enumerateDevices) {
+        console.warn('[Audio Devices] navigator.mediaDevices not available');
+        return;
+      }
+
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioInputs = devices.filter(device => device.kind === 'audioinput');
+        console.log('[Audio] Found', audioInputs.length, 'input devices');
+        setAudioDevices(audioInputs);
+      } catch (err) {
+        console.error('[Audio Devices] Failed to enumerate devices:', err);
+      }
+    };
+
+    loadAudioDevices();
+
+    // Guard: Only add event listener if navigator.mediaDevices is available
+    if (navigator.mediaDevices?.addEventListener) {
+      navigator.mediaDevices.addEventListener('devicechange', loadAudioDevices);
+    }
+
+    return () => {
+      // Guard: Only remove event listener if navigator.mediaDevices is available
+      if (navigator.mediaDevices?.removeEventListener) {
+        navigator.mediaDevices.removeEventListener('devicechange', loadAudioDevices);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (muted === null) {
@@ -128,11 +207,11 @@ export default function Home() {
       setIsVRHeadset(deviceInfo.isVRDevice);
 
       window.navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
-        console.log('ar supported', supported);
+        console.log('[XR] AR support:', supported);
         setIsARSupported(supported);
       });
       window.navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
-        console.log('vr supported', supported);
+        console.log('[XR] VR support:', supported);
         setIsVRSupported(supported);
       });
     }
@@ -160,7 +239,7 @@ export default function Home() {
   };
 
   const toggleXR = async (immersiveType: XRSessionMode) => {
-    console.log('Toggle XR', immersiveType);
+    console.log('[XR] Toggle', immersiveType);
 
     if (! window.navigator.xr) {
       console.error("WebXR not supported");
@@ -190,11 +269,12 @@ export default function Home() {
       domOverlay: { root: document.body },
     };
 
-    if (viewer.currentSession) {
-      viewer.onSessionEnded();
+    const currentSession = viewer.xr?.currentSession;
+    if (currentSession) {
+      viewer.endXRSession();
 
       try {
-        await viewer.currentSession.end();
+        await currentSession.end();
       } catch (err) {
         // some times session already ended not due to user interaction
         console.warn(err);
@@ -204,7 +284,7 @@ export default function Home() {
       if (window.navigator.xr.offerSession !== undefined) {
         // @ts-ignore
         const session = await navigator.xr?.offerSession(immersiveType, sessionInit);
-        viewer.onSessionStarted(session, immersiveType);
+        viewer.startXRSession(session, immersiveType);
       }
       return;
     }
@@ -213,14 +293,14 @@ export default function Home() {
     if (window.navigator.xr.offerSession !== undefined ) {
       // @ts-ignore
       const session = await navigator.xr?.offerSession(immersiveType, sessionInit);
-      viewer.onSessionStarted(session, immersiveType);
+      viewer.startXRSession(session, immersiveType);
       return;
     }
 
     try {
       const session = await window.navigator.xr.requestSession(immersiveType, sessionInit);
 
-      viewer.onSessionStarted(session, immersiveType);
+      viewer.startXRSession(session, immersiveType);
     } catch (err) {
       console.error(err);
     }
@@ -266,7 +346,12 @@ export default function Home() {
         <VrmViewer chatMode={showChatMode}/>
       </VrmStoreProvider>
 
-      <MessageInputContainer isChatProcessing={chatProcessing} />
+      <MessageInputContainer
+        isChatProcessing={chatProcessing}
+        audioDevices={audioDevices}
+        selectedDeviceId={selectedDeviceId}
+        micEnabled={micEnabled}
+      />
 
       {/* main menu */}
       <div className="absolute z-10 m-2">
@@ -287,6 +372,26 @@ export default function Home() {
                 label="mute"
               />
             )}
+
+            <div className="relative">
+              <MenuButton
+                large={isVRHeadset}
+                icon={MicrophoneIcon}
+                onClick={() => setShowMicSettings(!showMicSettings)}
+                label="microphone settings"
+              />
+              <MicrophoneSettings
+                audioDevices={audioDevices}
+                selectedDeviceId={selectedDeviceId}
+                onDeviceChange={setSelectedDeviceId}
+                autosendEnabled={autosendEnabled}
+                onAutosendToggle={() => setAutosendEnabled(!autosendEnabled)}
+                micEnabled={micEnabled}
+                onMicToggle={() => setMicEnabled(!micEnabled)}
+                isOpen={showMicSettings}
+                onClose={() => setShowMicSettings(false)}
+              />
+            </div>
 
             { webcamEnabled ? (
               <MenuButton

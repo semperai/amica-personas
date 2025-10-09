@@ -1,5 +1,107 @@
+import 'reflect-metadata';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { Context, Log } from '../processor';
+
+// Mock model classes before importing handlers
+vi.mock('../model', () => ({
+  Persona: vi.fn(),
+  AgentDeposit: vi.fn(),
+  AgentReward: vi.fn(),
+  Trade: vi.fn(),
+  Transfer: vi.fn(),
+  Withdrawal: vi.fn(),
+  Config: vi.fn(),
+  FeeReduction: vi.fn(),
+  FeeReductionUsage: vi.fn(),
+  LiquidityEvent: vi.fn(),
+  Metadata: vi.fn(),
+  DailyStats: vi.fn(),
+  GlobalStats: vi.fn(),
+}));
+
+// Mock ABIs to prevent import errors
+vi.mock('../abi/PersonaTokenFactory', () => ({
+  events: {
+    PersonaCreated: { decode: vi.fn(), topic: '0xpersonacreated' },
+    Transfer: { decode: vi.fn(), topic: '0xtransfer' },
+    TokensPurchased: { decode: vi.fn(), topic: '0xtokenspurchased' },
+    TokensSold: { decode: vi.fn(), topic: '0xtokenssold' },
+    MetadataUpdated: { decode: vi.fn(), topic: '0xmetadataupdated' },
+    V4PoolCreated: { decode: vi.fn(), topic: '0xv4poolcreated' },
+    FeesCollected: { decode: vi.fn(), topic: '0xfeescollected' },
+    Graduated: { decode: vi.fn(), topic: '0xgraduated' },
+    TokensClaimed: { decode: vi.fn(), topic: '0xtokensclaimed' },
+    TokensDistributed: { decode: vi.fn(), topic: '0xtokensdistributed' },
+    AgentTokenAssociated: { decode: vi.fn(), topic: '0xagenttokenassociated' },
+    AgentTokensDeposited: { decode: vi.fn(), topic: '0xagenttokensdeposited' },
+    AgentTokensWithdrawn: { decode: vi.fn(), topic: '0xagenttokenswithdrawn' },
+    AgentRewardsDistributed: { decode: vi.fn(), topic: '0xagentrewardsdistributed' },
+    PairingConfigUpdated: { decode: vi.fn(), topic: '0xpairingconfigupdated' },
+    FeeReductionApplied: { decode: vi.fn(), topic: '0xfeereductionapplied' },
+  },
+}));
+
+vi.mock('../abi/AmicaTokenMainnet', () => ({
+  events: {
+    Transfer: { decode: vi.fn(), topic: '0xtransfer' },
+    TokenClaimed: { decode: vi.fn(), topic: '0xtokenclaimed' },
+    TokenDeposited: { decode: vi.fn(), topic: '0xtokendeposited' },
+    TokenConfigured: { decode: vi.fn(), topic: '0xtokenconfigured' },
+    TokenWithdrawn: { decode: vi.fn(), topic: '0xtokenwithdrawn' },
+  },
+}));
+
+vi.mock('../abi/ConfigurationManager', () => ({
+  events: {
+    ConfigUpdated: { decode: vi.fn(), topic: '0xconfigupdated' },
+  },
+}));
+
+vi.mock('../abi/FeeReductionSystem', () => ({
+  events: {
+    SnapshotUpdated: { decode: vi.fn(), topic: '0xsnapshotupdated' },
+    SnapshotActivated: { decode: vi.fn(), topic: '0xsnapshotactivated' },
+    FeeReductionConfigUpdated: { decode: vi.fn(), topic: '0xfeereductionconfigupdated' },
+    FeeReductionRegistered: { decode: vi.fn(), topic: '0xfeereductionregistered' },
+    FeeReductionUsed: { decode: vi.fn(), topic: '0xfeereductionused' },
+    FeeReductionExpired: { decode: vi.fn(), topic: '0xfeereductionexpired' },
+    FeeReductionRevoked: { decode: vi.fn(), topic: '0xfeereductionrevoked' },
+  },
+}));
+
+vi.mock('../abi/PersonaToken', () => ({
+  events: {
+    Graduated: { decode: vi.fn(), topic: '0xgraduated' },
+    Transfer: { decode: vi.fn(), topic: '0xtransfer' },
+  },
+}));
+
+vi.mock('../abi/BondingCurve', () => ({
+  events: {
+    LiquidityAdded: { decode: vi.fn(), topic: '0xliquidityadded' },
+    LiquidityRemoved: { decode: vi.fn(), topic: '0xliquidityremoved' },
+  },
+}));
+
+vi.mock('../abi/MetadataRegistry', () => ({
+  events: {
+    MetadataSet: { decode: vi.fn(), topic: '0xmetadataset' },
+  },
+}));
+
+// Import handlers after mocking
+import * as agentHandlers from '../handlers/agent';
+import * as amicaTokenHandlers from '../handlers/amica-token';
+import * as configHandlers from '../handlers/config';
+import * as feeReductionHandlers from '../handlers/feeReduction';
+import * as graduationHandlers from '../handlers/graduation';
+import * as liquidityHandlers from '../handlers/liquidity';
+import * as metadataHandlers from '../handlers/metadata';
+import * as personaHandlers from '../handlers/persona';
+import * as statsHandlers from '../handlers/stats';
+import * as tradingHandlers from '../handlers/trading';
+import * as transfersHandlers from '../handlers/transfers';
+import * as withdrawalsHandlers from '../handlers/withdrawals';
 
 // These tests verify the handler function structure and basic logic
 // without requiring full module mocking
@@ -11,6 +113,8 @@ describe('Handler Function Structure', () => {
   const blockNumber = 12345n;
 
   beforeEach(() => {
+    vi.clearAllMocks();
+
     mockCtx = {
       store: {
         get: vi.fn(),
@@ -231,5 +335,116 @@ describe('Handler Function Structure', () => {
 
     expect(totalStaked).toBe(6000n);
     expect(pools.length).toBe(3);
+  });
+});
+
+describe('Agent Handlers', () => {
+  let mockCtx: Context;
+  let mockLog: Log;
+  const timestamp = new Date('2024-01-01T00:00:00Z');
+  const blockNumber = 12345n;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    mockCtx = {
+      store: {
+        get: vi.fn(),
+        save: vi.fn(),
+        insert: vi.fn(),
+      },
+      log: {
+        info: vi.fn(),
+        error: vi.fn(),
+      },
+    } as unknown as Context;
+
+    mockLog = {
+      transactionHash: '0xtxhash',
+      logIndex: 0,
+      address: '0xcontract',
+      data: '0xdata',
+      topics: [],
+      block: { height: Number(blockNumber) },
+    } as unknown as Log;
+  });
+
+  it('should call handleAgentTokenAssociated when persona not found', async () => {
+    const factoryAbi = await import('../abi/PersonaTokenFactory');
+    (factoryAbi.events.AgentTokenAssociated.decode as any).mockReturnValue({
+      tokenId: 1n,
+      agentToken: '0xagenttoken',
+    });
+
+    (mockCtx.store.get as any).mockResolvedValue(null);
+
+    await agentHandlers.handleAgentTokenAssociated(mockCtx, mockLog);
+
+    expect(mockCtx.log.error).toHaveBeenCalledWith('Persona not found: 1');
+    expect(mockCtx.store.save).not.toHaveBeenCalled();
+  });
+
+  it('should call handleAgentTokensDeposited', async () => {
+    const factoryAbi = await import('../abi/PersonaTokenFactory');
+    (factoryAbi.events.AgentTokensDeposited.decode as any).mockReturnValue({
+      tokenId: 1n,
+      depositor: '0xdepositor',
+      amount: 1000n,
+    });
+
+    (mockCtx.store.get as any).mockResolvedValue(null);
+
+    await agentHandlers.handleAgentTokensDeposited(mockCtx, mockLog, timestamp, blockNumber);
+
+    expect(mockCtx.log.error).toHaveBeenCalled();
+  });
+});
+
+describe('Config Handlers', () => {
+  let mockCtx: Context;
+  let mockLog: Log;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    mockCtx = {
+      store: {
+        get: vi.fn(),
+        save: vi.fn(),
+        insert: vi.fn(),
+      },
+      log: {
+        info: vi.fn(),
+      },
+    } as unknown as Context;
+
+    mockLog = {
+      transactionHash: '0xtxhash',
+      logIndex: 0,
+      address: '0xcontract',
+      data: '0xdata',
+      topics: [],
+      block: { height: 12345 },
+    } as unknown as Log;
+  });
+
+  it('should call handlePairingConfigUpdated', async () => {
+    const factoryAbi = await import('../abi/PersonaTokenFactory');
+    (factoryAbi.events.PairingConfigUpdated.decode as any).mockReturnValue({
+      token: '0xtoken',
+    });
+
+    (factoryAbi.Contract as any) = vi.fn().mockImplementation(() => ({
+      pairingConfigs: vi.fn().mockResolvedValue({
+        enabled: true,
+        mintCost: 1000n,
+        pricingMultiplier: 100n,
+      }),
+    }));
+
+    const timestamp = new Date('2024-01-01T00:00:00Z');
+    await configHandlers.handlePairingConfigUpdated(mockCtx, mockLog, timestamp);
+
+    expect(factoryAbi.events.PairingConfigUpdated.decode).toHaveBeenCalledWith(mockLog);
   });
 });

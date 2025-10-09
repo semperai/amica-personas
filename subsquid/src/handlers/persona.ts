@@ -2,7 +2,6 @@ import { Context, Log } from '../processor'
 import * as factoryAbi from '../abi/PersonaTokenFactory'
 import { Persona, PersonaMetadata } from '../model'
 import { DEPLOYMENT } from '../processor'
-import { Multicall } from '../abi/multicall'
 
 export async function handlePersonaCreated(
   ctx: Context,

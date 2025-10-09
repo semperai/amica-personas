@@ -15,7 +15,6 @@ import {
   getLlamaCppChatResponseStream,
   getLlavaCppChatResponse,
 } from "./llamaCppChat";
-import { getWindowAiChatResponseStream } from "./windowAiChat";
 import {
   getOllamaChatResponseStream,
   getOllamaVisionChatResponse,
@@ -91,10 +90,10 @@ export class Chat {
 
   // the message from the user that is currently being processed
   // it can be reset
-  public stream: ReadableStream<Uint8Array> | null;
-  public streams: ReadableStream<Uint8Array>[];
-  public reader: ReadableStreamDefaultReader<Uint8Array> | null;
-  public readers: ReadableStreamDefaultReader<Uint8Array>[];
+  public stream: ReadableStream<string> | null;
+  public streams: ReadableStream<string>[];
+  public reader: ReadableStreamDefaultReader<string> | null;
+  public readers: ReadableStreamDefaultReader<string>[];
 
   // process these immediately as they come in and add to audioToPlay
   public ttsJobs: Queue<TTSJob>;
@@ -221,7 +220,6 @@ export class Chat {
         }
 
         if (ttsJob.streamIdx !== this.currentStreamIdx) {
-          console.log("skipping tts for streamIdx");
           continue;
         }
 
@@ -244,7 +242,6 @@ export class Chat {
           break;
         }
         if (speak.streamIdx !== this.currentStreamIdx) {
-          console.log("skipping speak for streamIdx");
           continue;
         }
 
@@ -252,7 +249,7 @@ export class Chat {
           if ((window as any).chatvrm_latency_tracker.active) {
             const ms =
               +new Date() - (window as any).chatvrm_latency_tracker.start;
-            console.log("performance_latency", ms);
+            console.debug('[Performance] Total latency:', ms, 'ms');
             (window as any).chatvrm_latency_tracker.active = false;
           }
         }
@@ -260,8 +257,13 @@ export class Chat {
         this.bubbleMessage("assistant", speak.screenplay.text);
 
         if (speak.audioBuffer) {
+          const model = this.viewer?.vrm?.getModel();
           this.setChatSpeaking!(true);
-          await this.viewer!.model?.speak(speak.audioBuffer, speak.screenplay);
+          if (model?.speak) {
+            await model.speak(speak.audioBuffer, speak.screenplay);
+          } else {
+            console.warn('[Chat] VRM model not loaded - cannot speak');
+          }
           this.setChatSpeaking!(false);
           this.isAwake() ? this.updateAwake() : null;
         }
@@ -324,16 +326,16 @@ export class Chat {
     this.currentStreamIdx++;
     try {
       if (this.reader) {
-        console.debug("cancelling");
+        console.debug('[Chat] Cancelling stream');
         if (!this.reader?.closed) {
           await this.reader?.cancel();
         }
         // this.reader = null;
         // this.stream = null;
-        console.debug("finished cancelling");
+        console.debug('[Chat] Finished cancelling stream');
       }
     } catch (e: any) {
-      console.error(e.toString());
+      console.error('[Chat] Error during interruption:', e.toString());
     }
 
     // TODO if llm type is llama.cpp, we can send /stop message here
@@ -349,13 +351,13 @@ export class Chat {
     }
 
     console.time("performance_interrupting");
-    console.debug("interrupting...");
+    console.debug('[Chat] Interrupting current stream...');
     await this.interrupt();
     console.timeEnd("performance_interrupting");
     await wait(0);
-    console.debug("wait complete");
+    console.debug('[Chat] Interruption wait complete');
 
-    console.log("receiveMessageFromUser", message);
+    console.debug('[Chat] Received user message:', message.substring(0, 50));
 
     // Trigger before hook
     const beforeContext = await this.hookManager.trigger('before:user:message:receive', { message });
@@ -384,17 +386,25 @@ export class Chat {
 
   public async makeAndHandleStream(messages: Message[]) {
     try {
+      console.debug('[Chat] Creating chat response stream', {
+        backend: config("chatbot_backend"),
+        messageCount: messages.length,
+      });
       this.streams.push(await this.getChatResponseStream(messages));
     } catch (e: any) {
       const errMsg = e.toString();
-      console.error(errMsg);
+      console.error('[Chat] Failed to create chat response stream', {
+        backend: config("chatbot_backend"),
+        error: errMsg,
+        stack: e.stack,
+      });
       this.alert?.error("Failed to get chat response", errMsg);
       return errMsg;
     }
 
     if (this.streams[this.streams.length - 1] == null) {
       const errMsg = "Error: Null stream encountered.";
-      console.error(errMsg);
+      console.error('[Chat]', errMsg);
       this.alert?.error("Null stream encountered", errMsg);
       return errMsg;
     }
@@ -404,7 +414,7 @@ export class Chat {
 
   public async handleChatResponseStream() {
     if (this.streams.length === 0) {
-      console.log("no stream!");
+      console.warn('[Chat] No stream available');
       return;
     }
 
@@ -433,11 +443,9 @@ export class Chat {
     try {
       while (true) {
         if (this.currentStreamIdx !== streamIdx) {
-          console.log("wrong stream idx");
           break;
         }
         const { done, value } = await reader.read();
-        console.log("monkey", value);
         if (!firstTokenEncountered) {
           console.timeEnd("performance_time_to_first_token");
           firstTokenEncountered = true;
@@ -462,7 +470,7 @@ export class Chat {
           callback: (aiTalks: Screenplay[]): boolean => {
             // Generate & play audio for each sentence, display responses
             if (streamIdx !== this.currentStreamIdx) {
-              console.log("wrong stream idx");
+              console.log('[Chat] Wrong stream index - stopping processing');
               return true; // should break
             }
             this.ttsJobs.enqueue({
@@ -497,7 +505,7 @@ export class Chat {
     } catch (e: any) {
       const errMsg = e.toString();
       this.bubbleMessage!("assistant", errMsg);
-      console.error(errMsg);
+      console.error('[Chat] Stream processing error:', errMsg);
     } finally {
       if (!reader.closed) {
         reader.releaseLock();
@@ -572,7 +580,7 @@ export class Chat {
         }
       }
     } catch (e: any) {
-      console.error(e.toString());
+      console.error('[Chat] TTS generation error:', e.toString());
       this.alert?.error("Failed to get TTS response", e.toString());
     }
 
@@ -586,8 +594,13 @@ export class Chat {
   }
 
   public async getChatResponseStream(messages: Message[]) {
-    console.debug("getChatResponseStream", messages);
+    console.debug('[Chat] getChatResponseStream called with', messages.length, 'messages');
     const chatbotBackend = config("chatbot_backend");
+
+    console.debug('[Chat] Getting chat response stream', {
+      backend: chatbotBackend,
+      messageCount: messages.length,
+    });
 
     // Trigger before hook
     const beforeContext = await this.hookManager.trigger('before:llm:request', {
@@ -595,7 +608,15 @@ export class Chat {
       backend: chatbotBackend
     });
 
-    let stream: ReadableStream<Uint8Array>;
+    if (beforeContext.backend !== chatbotBackend) {
+      console.debug('[Chat] Backend changed by hook', {
+        original: chatbotBackend,
+        modified: beforeContext.backend,
+      });
+    }
+
+    let stream: ReadableStream<string>;
+    console.debug('[Chat] Routing to backend provider:', beforeContext.backend);
     switch (beforeContext.backend) {
       case "arbius_llm":
         stream = await getArbiusChatResponseStream(beforeContext.messages);
@@ -606,9 +627,6 @@ export class Chat {
       case "llamacpp":
         stream = await getLlamaCppChatResponseStream(beforeContext.messages);
         break;
-      case "windowai":
-        stream = await getWindowAiChatResponseStream(beforeContext.messages);
-        break;
       case "ollama":
         stream = await getOllamaChatResponseStream(beforeContext.messages);
         break;
@@ -616,8 +634,15 @@ export class Chat {
         stream = await getKoboldAiChatResponseStream(beforeContext.messages);
         break;
       default:
+        console.warn('[Chat] Unknown backend, using echo provider:', beforeContext.backend);
+        this.alert?.error(
+          'Unknown chatbot backend',
+          `Backend "${beforeContext.backend}" not recognized. Using echo provider as fallback.`
+        );
         stream = await getEchoChatResponseStream(beforeContext.messages);
     }
+
+    console.debug('[Chat] Stream created successfully');
 
     // Trigger after hook
     await this.hookManager.trigger('after:llm:request', {
@@ -684,7 +709,7 @@ export class Chat {
 
         res = await getOpenAiVisionChatResponse(messages);
       } else {
-        console.warn("vision_backend not supported", visionBackend);
+        console.warn('[Chat] Vision backend not supported:', visionBackend);
         return;
       }
 
@@ -703,7 +728,7 @@ export class Chat {
         },
       ]);
     } catch (e: any) {
-      console.error("getVisionResponse", e.toString());
+      console.error('[Chat] Vision response error:', e.toString());
       this.alert?.error("Failed to get vision response", e.toString());
     }
   }

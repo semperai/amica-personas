@@ -6,16 +6,6 @@ import { walletReducer, initialState } from '../reducers/walletReducer';
 import { WALLET_CONNECT, WALLET_DISCONNECT, WALLET_SWITCH_CHAIN, TRANSACTION_ADD, TRANSACTION_UPDATE } from '../reducers/walletActions';
 import { broadcastWalletState } from '../utils/broadcastChannel';
 
-declare global {
-  interface Window {
-    ethereum?: {
-      request: (args: { method: string; params?: any[] }) => Promise<any>;
-      on: (event: string, handler: (...args: any[]) => void) => void;
-      removeListener: (event: string, handler: (...args: any[]) => void) => void;
-    };
-  }
-}
-
 export const AAWalletContext = createContext<AAWalletContextValue>({
   isConnected: false,
   address: null,

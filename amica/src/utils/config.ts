@@ -1,14 +1,15 @@
 import { AmicaConfig } from '@/types/config';
+import { setLoadingStage } from '@/utils/fileLoadingProgress';
 
 const defaults = {
-  autosend_from_mic: 'true',
-  wake_word_enabled: 'false',
-  wake_word: 'Hello',
-  time_before_idle_sec: '20',
-  debug_gfx: 'false',
-  use_webgpu: 'false',
-  mtoon_debug_mode: 'none',
-  mtoon_material_type: 'mtoon',
+  autosend_from_mic: import.meta.env.VITE_AUTOSEND_FROM_MIC ?? 'true',
+  wake_word_enabled: import.meta.env.VITE_WAKE_WORD_ENABLED ?? 'false',
+  wake_word: import.meta.env.VITE_WAKE_WORD ?? 'Hello',
+  time_before_idle_sec: import.meta.env.VITE_TIME_BEFORE_IDLE_SEC ?? '20',
+  debug_gfx: import.meta.env.VITE_DEBUG_GFX ?? 'false',
+  use_webgpu: import.meta.env.VITE_USE_WEBGPU ?? 'false',
+  mtoon_debug_mode: import.meta.env.VITE_MTOON_DEBUG_MODE ?? 'none',
+  mtoon_material_type: import.meta.env.VITE_MTOON_MATERIAL_TYPE ?? 'mtoon',
   bg_color: import.meta.env.VITE_BG_COLOR ?? '#000000',
   bg_url: import.meta.env.VITE_BG_URL ?? '/bg/bg-room2.jpg',
   vrm_url: import.meta.env.VITE_VRM_HASH ?? '/vrm/AvatarSample_A.vrm',
@@ -93,6 +94,29 @@ let configLoaded = false;
 let configError: string | null = null;
 
 /**
+ * Parse URL parameters for config overrides
+ */
+function parseUrlConfigOverrides(): Record<string, string> {
+  const overrides: Record<string, string> = {};
+
+  if (typeof window === "undefined") {
+    return overrides;
+  }
+
+  const urlParams = new URLSearchParams(window.location.search);
+
+  // Check each URL parameter - if it matches a valid config key, use it as override
+  urlParams.forEach((value, key) => {
+    if (defaults.hasOwnProperty(key)) {
+      overrides[key] = value;
+      console.log(`[Config] URL override: ${key} = ${value}`);
+    }
+  });
+
+  return overrides;
+}
+
+/**
  * Load configuration from /config endpoint
  * Called once on app initialization
  */
@@ -100,6 +124,9 @@ export async function loadConfig(): Promise<void> {
   if (configLoaded) {
     return;
   }
+
+  // Start loading progress
+  setLoadingStage("Loading configuration...", 5);
 
   try {
     const response = await fetch('/config');
@@ -137,6 +164,10 @@ export async function loadConfig(): Promise<void> {
     console.warn('[Config] Error loading config:', error);
     configError = error instanceof Error ? error.message : 'Unknown error';
   }
+
+  // Apply URL parameter overrides (highest priority)
+  const urlOverrides = parseUrlConfigOverrides();
+  Object.assign(loadedConfig, urlOverrides);
 
   configLoaded = true;
 }
@@ -192,4 +223,27 @@ export function getConfigError(): string | null {
  */
 export function setConfig(key: string, value: string): void {
   loadedConfig[key] = value;
+}
+
+/**
+ * Reset config state to force reload on next access
+ * Used for HMR (Hot Module Replacement) when config file changes
+ */
+export function resetConfig(): void {
+  loadedConfig = {};
+  configLoaded = false;
+  configError = null;
+  console.log('[Config] Config state reset for reload');
+}
+
+// Listen for config file changes in development
+if (import.meta.hot) {
+  import.meta.hot.on('amica-config-changed', () => {
+    console.log('[Config] amica.toml changed, resetting config state');
+    resetConfig();
+    // Reload config immediately so it's fresh after page reload
+    loadConfig().catch(err => {
+      console.error('[Config] Failed to reload config:', err);
+    });
+  });
 }

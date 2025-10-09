@@ -27,14 +27,7 @@ export default defineConfig({
           src: 'node_modules/@xenova/transformers/dist/ort-wasm-simd.wasm',
           dest: 'assets',
         },
-        {
-          src: 'node_modules/@ricky0123/vad-web/dist/vad.worklet.bundle.min.js',
-          dest: 'assets',
-        },
-        {
-          src: 'node_modules/@ricky0123/vad-web/dist/*.onnx',
-          dest: 'assets',
-        },
+        // VAD worklet and models are now in public/ directory
         {
           src: 'node_modules/onnxruntime-web/dist/*.wasm',
           dest: 'assets',
@@ -50,6 +43,7 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+    dedupe: ['three'],
   },
   base: process.env.BASE_PATH || '/',
   define: {
@@ -73,6 +67,12 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
+    // Enable SharedArrayBuffer support for ONNX Runtime on all browsers including Brave
+    // Required for VAD (Voice Activity Detection) to work properly
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
   },
   optimizeDeps: {
     exclude: ['sharp', 'onnxruntime-node', 'onnxruntime-web'],

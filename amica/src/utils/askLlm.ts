@@ -4,7 +4,6 @@ import { Chat } from "@/features/chat/chat";
 import { getEchoChatResponseStream } from "@/features/chat/echoChat";
 import { getOpenAiChatResponseStream } from "@/features/chat/openAIChatProvider";
 import { getLlamaCppChatResponseStream } from "@/features/chat/llamaCppChat";
-import { getWindowAiChatResponseStream } from "@/features/chat/windowAiChat";
 import { getOllamaChatResponseStream } from "@/features/chat/ollamaChat";
 import { getKoboldAiChatResponseStream } from "@/features/chat/koboldAIChatProvider";
 
@@ -44,8 +43,6 @@ export async function askLLM(
         return getOpenAiChatResponseStream(messages);
       case "llamacpp":
         return getLlamaCppChatResponseStream(messages);
-      case "windowai":
-        return getWindowAiChatResponseStream(messages);
       case "ollama":
         return getOllamaChatResponseStream(messages);
       case "koboldai":

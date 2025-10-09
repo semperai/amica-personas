@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { InteractiveGroup } from "three/addons/interactive/InteractiveGroup.js";
 import { XRControllerModelFactory } from "./XRControllerModelFactory";
 import { config } from "@/utils/config";
+import type { WebRenderer } from "./RenderSystem";
 
 const joints: string[] = [
   "wrist",
@@ -34,7 +35,7 @@ const joints: string[] = [
 export class XRSystem {
   public currentSession: XRSession | null = null;
 
-  private renderer: THREE.WebGLRenderer;
+  private renderer: WebRenderer;
   private scene: THREE.Scene;
   private camera: THREE.PerspectiveCamera;
   private igroup: InteractiveGroup;
@@ -57,7 +58,7 @@ export class XRSystem {
   private handGroup = new THREE.Group();
 
   constructor(
-    renderer: THREE.WebGLRenderer,
+    renderer: WebRenderer,
     scene: THREE.Scene,
     camera: THREE.PerspectiveCamera,
     igroup: InteractiveGroup,
@@ -123,7 +124,7 @@ export class XRSystem {
         this.igroup.listenToXRControllerEvents(this.controller2);
       }
     } catch (e) {
-      console.log("No controller available", e);
+      console.debug('[XR] Controller not available:', e);
     }
   }
 
@@ -172,7 +173,7 @@ export class XRSystem {
       this.handGroup.visible = false;
       this.scene.add(this.handGroup);
     } catch (e) {
-      console.log("No hands available", e);
+      console.debug('[XR] Hand tracking not available:', e);
     }
   }
 
@@ -181,7 +182,7 @@ export class XRSystem {
     immersiveType: XRSessionMode,
     onSessionEnd: () => void,
   ) {
-    console.log("session", session);
+    console.log('[XR] Session started -', immersiveType);
 
     this.renderer.xr.setReferenceSpaceType("local");
     await this.renderer.xr.setSession(session);

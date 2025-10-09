@@ -10,20 +10,29 @@ export async function coquiLocal(
   }
 
   try {
-    const res = await fetch(`${config("coquiLocal_url")}/api/tts`, {
+    const url = `${config("coquiLocal_url")}/api/tts`;
+    console.log('[TTS] CoquiLocal request -', { url, voiceId, messageLength: message.length });
+
+    const res = await fetch(url, {
       method: 'POST',
       headers: {
         'text': message,
-        'speaker-id': config("coquiLocal_voiceid"),
+        'speaker-id': voiceId,
       }
     });
 
-    const data = await res.arrayBuffer()
+    if (!res.ok) {
+      console.error('[TTS] CoquiLocal error:', res.status, res.statusText);
+      throw new Error(`CoquiLocal API Error (${res.status})`);
+    }
+
+    const data = await res.arrayBuffer();
+    console.log('[TTS] CoquiLocal response -', { audioSize: data.byteLength });
+
     return { audio: data };
 
   } catch (error) {
-
-    console.error('Error in coquiLocal:', error);
+    console.error('[TTS] CoquiLocal error:', error);
     throw error;
   }
 }

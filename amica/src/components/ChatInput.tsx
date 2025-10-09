@@ -1,5 +1,5 @@
-import { useContext, useEffect, useRef, useState } from "react";
-import { useMicVAD } from "@ricky0123/vad-react"
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useMicVAD } from "@/hooks/useMicVAD"
 import { Mic, Pause, Send, Loader2 } from "lucide-react";
 import { useTranscriber } from "@/hooks/useTranscriber";
 import { cleanTranscript, cleanFromPunctuation, cleanFromWakeWord } from "@/utils/stringProcessing";
@@ -17,6 +17,9 @@ export default function MessageInput({
   setUserMessage,
   isChatProcessing,
   onChangeUserMessage,
+  audioDevices = [],
+  selectedDeviceId = 'default',
+  micEnabled = true,
 }: {
   userMessage: string;
   setUserMessage: (message: string) => void;
@@ -24,6 +27,9 @@ export default function MessageInput({
   onChangeUserMessage: (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => void;
+  audioDevices?: MediaDeviceInfo[];
+  selectedDeviceId?: string;
+  micEnabled?: boolean;
 }) {
   const transcriber = useTranscriber();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -32,16 +38,41 @@ export default function MessageInput({
   const { chat: bot } = useContext(ChatContext);
   const { alert } = useContext(AlertContext);
 
+  // Memoize getStream to prevent VAD from recreating on every render
+  const getStream = useMemo(() => {
+    return async () => {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          deviceId: selectedDeviceId !== 'default' ? { exact: selectedDeviceId } : undefined,
+          channelCount: 1,
+          echoCancellation: true,
+          autoGainControl: true,
+          noiseSuppression: true,
+        },
+      });
+      return stream;
+    };
+  }, [selectedDeviceId]);
+
   const vad = useMicVAD({
     startOnLoad: false,
-    onnxWASMBasePath: 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/',
-    baseAssetPath: 'https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.28/dist/',
+    model: 'v5' as const,
+    baseAssetPath: '/',
+    getStream,
+    onFrameProcessed: (probabilities) => {
+      // Removed excessive VAD logging - no per-frame logging
+    },
+    onVADMisfire: () => {
+      // Speech segment too short - no logging needed
+    },
     onSpeechStart: () => {
-      console.log('[VAD] Speech started');
       console.time('performance_speech');
     },
+    onSpeechRealStart: () => {
+      console.log('[VAD] Speech detected');
+    },
     onSpeechEnd: (audio: Float32Array) => {
-      console.log('[VAD] Speech ended, audio length:', audio.length);
+      console.log('[VAD] Speech ended -', (audio.length / 16000).toFixed(2), 'seconds');
       console.timeEnd('performance_speech');
       console.time('performance_transcribe');
       (window as any).chatvrm_latency_tracker = {
@@ -51,69 +82,62 @@ export default function MessageInput({
 
       try {
         const sttBackend = config("stt_backend");
-        console.log('[STT] Using backend:', sttBackend);
 
         switch (sttBackend) {
           case 'whisper_browser': {
-            console.log('[STT] Starting whisper_browser transcription');
             // since VAD sample rate is same as whisper we do nothing here
             // both are 16000
             const audioCtx = new AudioContext();
             const buffer = audioCtx.createBuffer(1, audio.length, 16000);
             buffer.copyToChannel(new Float32Array(audio), 0, 0);
             transcriber.start(buffer);
-            console.log('[STT] whisper_browser transcription started');
             break;
           }
           case 'whisper_openai': {
-            console.log('[STT] Starting whisper_openai transcription');
             const wav = new WaveFile();
             wav.fromScratch(1, 16000, '32f', audio);
             const file = new File([new Uint8Array(wav.toBuffer())], "input.wav", { type: "audio/wav" });
-            console.log('[STT] Created WAV file, size:', file.size);
 
             let prompt;
             // TODO load prompt if it exists
 
             (async () => {
               try {
-                console.log('[STT] Calling OpenAI Whisper API...');
+                console.log('[STT] OpenAI Whisper request -', { url: config("openai_whisper_url"), model: config("openai_whisper_model"), fileSize: file.size });
                 const transcript = await openaiWhisper(file, prompt);
-                console.log('[STT] OpenAI Whisper response:', transcript);
+                console.log('[STT] OpenAI Whisper response -', { text: transcript });
                 setWhisperOpenAIOutput(transcript);
               } catch (e: any) {
-                console.error('[STT] whisper_openai error', e);
+                console.error('[STT] OpenAI Whisper error:', e);
                 alert.error('whisper_openai error', e.toString());
               }
             })();
             break;
           }
           case 'whispercpp': {
-            console.log('[STT] Starting whispercpp transcription');
             const wav = new WaveFile();
             wav.fromScratch(1, 16000, '32f', audio);
             wav.toBitDepth('16');
             const file = new File([new Uint8Array(wav.toBuffer())], "input.wav", { type: "audio/wav" });
-            console.log('[STT] Created WAV file, size:', file.size);
 
             let prompt;
             // TODO load prompt if it exists
 
             (async () => {
               try {
-                console.log('[STT] Calling Whisper.cpp API...');
+                console.log('[STT] Whisper.cpp request -', { url: config("whispercpp_url"), fileSize: file.size });
                 const transcript = await whispercpp(file, prompt);
-                console.log('[STT] Whisper.cpp response:', transcript);
+                console.log('[STT] Whisper.cpp response -', { text: transcript });
                 setWhisperCppOutput(transcript);
               } catch (e: any) {
-                console.error('[STT] whispercpp error', e);
+                console.error('[STT] Whisper.cpp error:', e);
                 alert.error('whispercpp error', e.toString());
               }
             })();
             break;
           }
           default:
-            console.log('[STT] Unknown or no backend configured:', sttBackend);
+            console.warn('[STT] Unknown backend:', sttBackend);
         }
       } catch (e: any) {
         console.error('[STT] stt_backend error', e);
@@ -122,9 +146,35 @@ export default function MessageInput({
     },
   });
 
+  // Always print VAD status with setInterval for testing
+  const selectedDevice = audioDevices.find(d => d.deviceId === selectedDeviceId);
+
+  // Removed VAD status interval logging
+
   if (vad.errored) {
-    console.error('vad error', vad.errored);
+    console.error('[VAD] ERROR:', vad.errored);
   }
+
+  useEffect(() => {
+
+    // Check if we have an audio context and it's running
+    if (vad.listening) {
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+          console.log('[VAD] Microphone access granted');
+          console.log('[VAD] Audio tracks:', stream.getAudioTracks().map(t => ({
+            label: t.label,
+            enabled: t.enabled,
+            muted: t.muted,
+            readyState: t.readyState,
+          })));
+          // Don't stop the stream, VAD is using it
+        })
+        .catch(err => {
+          console.error('[VAD] Microphone access denied or failed:', err);
+        });
+    }
+  }, [vad.listening, vad.userSpeaking]);
 
   function handleTranscriptionResult(preprocessed: string) {
     console.log('[Transcription] Raw result:', preprocessed);
@@ -203,8 +253,18 @@ export default function MessageInput({
         <div className="bg-white/20 backdrop-blur-xl border border-white/10 rounded-lg shadow-lg p-2">
           <div className="flex items-center gap-2">
             <button
-              disabled={config('stt_backend') === 'none' || vad.loading || Boolean(vad.errored)}
-              onClick={vad.toggle}
+              disabled={!micEnabled || config('stt_backend') === 'none' || vad.loading || Boolean(vad.errored)}
+              onClick={() => {
+                console.log('[VAD] Microphone button clicked');
+                console.log('[VAD] Current state before toggle:', {
+                  listening: vad.listening,
+                  loading: vad.loading,
+                  errored: vad.errored,
+                  micEnabled,
+                  sttBackend: config('stt_backend'),
+                });
+                vad.toggle();
+              }}
               className="flex-shrink-0 p-2 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-slate-900"
             >
               {vad.userSpeaking ? (
