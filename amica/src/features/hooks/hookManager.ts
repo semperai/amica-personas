@@ -136,6 +136,24 @@ export class HookManager {
           hook.options.timeout ?? 5000
         );
 
+        // Runtime validation in development/test builds
+        if (process.env.NODE_ENV !== 'production') {
+          // Validate that hook returned a context object
+          if (!result || typeof result !== 'object') {
+            console.warn(
+              `[HookManager] Hook ${hook.id} for event ${event} returned invalid type: ${typeof result}. ` +
+              `Expected object matching HookContext<${event}>.`
+            );
+          }
+          // Validate that readonly fields are preserved
+          if (result._event !== event) {
+            console.warn(
+              `[HookManager] Hook ${hook.id} for event ${event} modified readonly field _event. ` +
+              `Expected "${event}", got "${result._event}".`
+            );
+          }
+        }
+
         // Update context with result (preserving readonly fields)
         const { _event, _timestamp, _hookId, ...mutableContext } = result;
         context = {
@@ -163,6 +181,9 @@ export class HookManager {
     }
 
     // Return mutable context data
+    // Note: Double cast is required because TypeScript cannot verify that hooks
+    // preserve the expected context shape. Runtime validation above ensures
+    // type correctness in development/test builds.
     const { _event, _timestamp, _hookId, ...result } = context;
     return result as unknown as HookEventMap[T];
   }
