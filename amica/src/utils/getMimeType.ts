@@ -17,12 +17,12 @@ export const mimeTypeCheck = () => {
     "video/webm",
   ];
   for (const mime of types) {
-      console.log(mime, MediaRecorder.isTypeSupported(mime));
+      console.log('[Media] MIME type support:', mime, MediaRecorder.isTypeSupported(mime));
   }
 }
 
 const getVideoMimeType = () => {
-  if (!MediaRecorder.isTypeSupported){
+  if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) {
     return "video/mp4";
   }
   if (MediaRecorder.isTypeSupported("video/webm")) {
@@ -31,12 +31,12 @@ const getVideoMimeType = () => {
   if (MediaRecorder.isTypeSupported("video/mp4")) {
     return "video/mp4";
   }
-  console.log("No supported video mime type found")
+  console.log("[Media] No supported video mime type found")
   return "";
 };
 
 const getAudioMimeType = () => {
-  if (!MediaRecorder.isTypeSupported){
+  if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) {
     return "audio/mp4";
   }
   if (MediaRecorder.isTypeSupported("audio/webm")) {
@@ -44,11 +44,11 @@ const getAudioMimeType = () => {
   }
   if (MediaRecorder.isTypeSupported("audio/mpeg")) {
     return "audio/mpeg";
-  }``
+  }
   if (MediaRecorder.isTypeSupported("audio/mp4")) {
     return "audio/mp4";
   }
-  console.log("No supported audio mime type found")
+  console.log("[Media] No supported audio mime type found")
   return "";
 }
 

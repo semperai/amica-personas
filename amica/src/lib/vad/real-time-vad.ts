@@ -486,9 +486,15 @@ export class AudioNodeVAD {
     validateAudioContextState(ctx)
 
     // Configure ONNX Runtime
-    ort.env.wasm.wasmPaths = fullOptions.onnxWASMBasePath
-    if (fullOptions.ortConfig !== undefined) {
-      fullOptions.ortConfig(ort)
+    try {
+      ort.env.wasm.wasmPaths = fullOptions.onnxWASMBasePath
+      if (fullOptions.ortConfig !== undefined) {
+        fullOptions.ortConfig(ort)
+      }
+    } catch (error) {
+      // Brave browser may throw errors during ONNX initialization
+      // but it often still works - log and continue
+      log.warn("ONNX configuration warning (may be safe to ignore):", error)
     }
 
     // Load model

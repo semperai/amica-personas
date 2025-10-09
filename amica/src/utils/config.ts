@@ -153,7 +153,7 @@ export async function loadConfig(): Promise<void> {
         loadedConfig.name = data.personaName;
       }
 
-      console.log('[Config] Loaded configuration from /config endpoint');
+      console.log('[Config] Loaded configuration from /config endpoint:', loadedConfig);
     } else if (response.status === 404) {
       console.log('[Config] No /config endpoint found, using defaults');
     } else {

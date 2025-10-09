@@ -1,5 +1,5 @@
 export function cleanTranscript(transcript: string) {
-  console.log('transcript', transcript);
+  console.log('[Transcription] Raw transcript:', transcript);
   let text = transcript.trim();
   text = text.replaceAll(/\[.+\]|{.+}|\(.+\)/gm, '');
   return text.trim();

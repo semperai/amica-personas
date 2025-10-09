@@ -2,6 +2,7 @@ import { Providers } from './providers';
 import Home from './HomePage';
 import { Navbar } from './components/Navbar';
 import { AAWalletProvider, init as initAAWallet } from './lib/arbius-wallet';
+import { MobileErrorOverlay } from './components/MobileErrorOverlay';
 import { useEffect } from 'react';
 
 // Initialize AA Wallet
@@ -33,14 +34,17 @@ function App() {
   }, []);
 
   return (
-    <Providers>
-      <AAWalletProvider>
-        <Navbar />
-        <div className="pt-14">
-          <Home />
-        </div>
-      </AAWalletProvider>
-    </Providers>
+    <>
+      <MobileErrorOverlay />
+      <Providers>
+        <AAWalletProvider>
+          <Navbar />
+          <div className="pt-14">
+            <Home />
+          </div>
+        </AAWalletProvider>
+      </Providers>
+    </>
   );
 }
 

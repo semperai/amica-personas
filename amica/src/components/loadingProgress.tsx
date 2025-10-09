@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type LoadingFile = {
   file: string;
@@ -78,6 +78,8 @@ export function LoadingProgress() {
   );
   const [stageCnt, setStageCnt] = useState(0);
   const [funnyMessage, setFunnyMessage] = useState("");
+  const [shouldShow, setShouldShow] = useState(false);
+  const hideTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     // Set initial funny message
@@ -107,8 +109,31 @@ export function LoadingProgress() {
         const stage = (window as any).chatvrm_loading_stage;
         const stageCntWindow = (window as any).chatvrm_loading_stage_cnt;
         if (stageCnt !== stageCntWindow) {
-          setLoadingStage(stage);
           setStageCnt(stageCntWindow);
+
+          if (stage === null) {
+            if (hideTimeoutRef.current !== null) {
+              clearTimeout(hideTimeoutRef.current);
+              hideTimeoutRef.current = null;
+            }
+
+            if (shouldShow) {
+              hideTimeoutRef.current = window.setTimeout(() => {
+                setShouldShow(false);
+                setLoadingStage(null);
+                hideTimeoutRef.current = null;
+              }, 200);
+            } else {
+              setLoadingStage(null);
+            }
+          } else {
+            if (hideTimeoutRef.current !== null) {
+              clearTimeout(hideTimeoutRef.current);
+              hideTimeoutRef.current = null;
+            }
+            setLoadingStage(stage);
+            setShouldShow(true);
+          }
         }
       }
     }, 100);
@@ -121,13 +146,17 @@ export function LoadingProgress() {
     return () => {
       clearInterval(interval);
       clearInterval(funnyInterval);
+      if (hideTimeoutRef.current !== null) {
+        clearTimeout(hideTimeoutRef.current);
+        hideTimeoutRef.current = null;
+      }
     };
-  }, [progressCnt, stageCnt]);
+  }, [progressCnt, stageCnt, shouldShow]);
 
   return (
     <>
       {/* Main loading bar overlay */}
-      {loadingStage && (
+      {(loadingStage || shouldShow) && loadingStage && (
         <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-white via-gray-50 to-gray-100 z-[9999] p-4" style={{ fontFamily: 'Fredoka, sans-serif' }}>
           <div className="w-full max-w-[600px] px-4 sm:px-8">
             {/* Stage text - larger on mobile */}

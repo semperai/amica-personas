@@ -37,7 +37,7 @@ export default function VrmDemo({
           }
         }))
         .then(() => {
-          console.log("vrm loaded");
+          console.log("[VRM] vrm loaded");
           setIsLoading(false);
           setLoadingError(false);
           onLoaded && onLoaded();
@@ -45,7 +45,7 @@ export default function VrmDemo({
         .then(() => {if (onScreenShot) return new Promise(resolve => setTimeout(resolve, 300));})
         .then(() => {if (onScreenShot) viewer.captureScreenshot(onScreenShot);})
         .catch((e) => {
-          console.error("vrm loading error", e);
+          console.error("[VRM] vrm loading error", e);
           setLoadingError(true);
           setIsLoading(false);
           onError && onError();

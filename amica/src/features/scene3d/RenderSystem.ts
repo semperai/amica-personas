@@ -19,6 +19,7 @@ export class RenderSystem {
   public cameraControls: OrbitControls;
   public igroup: InteractiveGroup;
 
+  private isMobile: boolean;
   private sendScreenshotToCallback: boolean = false;
   private screenshotCallback: BlobCallback | undefined;
 
@@ -28,18 +29,36 @@ export class RenderSystem {
     camera: THREE.PerspectiveCamera,
     cameraControls: OrbitControls,
     igroup: InteractiveGroup,
+    isMobile: boolean,
   ) {
     this.renderer = renderer;
     this.scene = scene;
     this.camera = camera;
     this.cameraControls = cameraControls;
     this.igroup = igroup;
+    this.isMobile = isMobile;
   }
 
   public static async create(canvas: HTMLCanvasElement): Promise<RenderSystem> {
     const parentElement = canvas.parentElement;
     const width = parentElement?.clientWidth || canvas.width;
     const height = parentElement?.clientHeight || canvas.height;
+
+    // Mobile-specific checks to prevent crashes
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    // Check WebGL support before attempting to create renderer
+    const testCanvas = document.createElement('canvas');
+    const gl = testCanvas.getContext('webgl2') || testCanvas.getContext('webgl');
+
+    if (!gl) {
+      throw new Error('WebGL is not supported on this device. Please try a different browser.');
+    }
+    testCanvas.remove();
+
+    console.log('[Renderer] WebGL supported. Creating renderer...');
+    console.log('[Renderer] Device:', isMobile ? 'Mobile' : 'Desktop');
+    console.log('[Renderer] User Agent:', navigator.userAgent);
 
     let renderer: WebRenderer;
 
@@ -65,12 +84,27 @@ export class RenderSystem {
         throw new Error('WebGPU initialization failed. Try disabling use_webgpu in config.');
       }
     } else {
-      renderer = new THREE.WebGLRenderer({
+      // Mobile-optimized settings
+      const rendererOptions: THREE.WebGLRendererParameters & {
+        failIfMajorPerformanceCaveat?: boolean;
+      } = {
         canvas: canvas,
         alpha: true,
-        antialias: true,
-        powerPreference: "high-performance",
-      });
+        antialias: !isMobile, // Disable antialias on mobile for better performance
+        powerPreference: isMobile ? "default" : "high-performance",
+        failIfMajorPerformanceCaveat: false, // Don't fail on low-end devices
+        preserveDrawingBuffer: false, // Better performance on mobile
+      };
+
+      console.log('[Renderer] Creating WebGL renderer with options:', rendererOptions);
+
+      try {
+        renderer = new THREE.WebGLRenderer(rendererOptions);
+        console.log('[Renderer] WebGL renderer created successfully');
+      } catch (error) {
+        console.error('[Renderer] Failed to create WebGL renderer:', error);
+        throw new Error(`Failed to create WebGL renderer: ${error}`);
+      }
     }
 
     renderer.setClearColor(0x000000, 0);
@@ -81,7 +115,14 @@ export class RenderSystem {
     }
 
     renderer.setSize(width, height);
-    renderer.setPixelRatio(window.devicePixelRatio);
+
+    // Limit pixel ratio on mobile to prevent performance issues
+    const pixelRatio = isMobile
+      ? Math.min(window.devicePixelRatio, 2)
+      : window.devicePixelRatio;
+
+    console.log('[Renderer] Setting pixel ratio:', pixelRatio);
+    renderer.setPixelRatio(pixelRatio);
 
     // XR features are only available in WebGL renderer
     // WebGPU renderer has different XR API that doesn't support these methods
@@ -141,7 +182,7 @@ export class RenderSystem {
       igroup.listenToPointerEvents(renderer, camera);
     }
 
-    return new RenderSystem(renderer, scene, camera, cameraControls, igroup);
+    return new RenderSystem(renderer, scene, camera, cameraControls, igroup, isMobile);
   }
 
   public setupResizeHandler() {
@@ -154,7 +195,10 @@ export class RenderSystem {
     const parentElement = this.renderer.domElement.parentElement;
     if (!parentElement) return;
 
-    this.renderer.setPixelRatio(window.devicePixelRatio);
+    const pixelRatio = this.isMobile
+      ? Math.min(window.devicePixelRatio, 2)
+      : window.devicePixelRatio;
+    this.renderer.setPixelRatio(pixelRatio);
     this.renderer.setSize(
       parentElement.clientWidth,
       parentElement.clientHeight,
@@ -169,7 +213,10 @@ export class RenderSystem {
     const parentElement = this.renderer.domElement.parentElement;
     if (!parentElement) return;
 
-    this.renderer.setPixelRatio(window.devicePixelRatio);
+    const pixelRatio = this.isMobile
+      ? Math.min(window.devicePixelRatio, 2)
+      : window.devicePixelRatio;
+    this.renderer.setPixelRatio(pixelRatio);
 
     let width = parentElement.clientWidth;
     let height = parentElement.clientHeight;

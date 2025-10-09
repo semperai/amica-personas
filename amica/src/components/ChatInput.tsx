@@ -155,6 +155,24 @@ export default function MessageInput({
     console.error('[VAD] ERROR:', vad.errored);
   }
 
+  // Debug: Log button disabled state
+  useEffect(() => {
+    try {
+      const sttBackend = config('stt_backend');
+      const isDisabled = !micEnabled || sttBackend === 'none' || vad.loading || Boolean(vad.errored);
+      console.log('[Mic Button] State:', {
+        disabled: isDisabled,
+        micEnabled,
+        sttBackend,
+        vadLoading: vad.loading,
+        vadErrored: vad.errored,
+        vadListening: vad.listening,
+      });
+    } catch (error) {
+      console.error('[Mic Button] Failed to log state:', error);
+    }
+  }, [micEnabled, vad.loading, vad.errored, vad.listening]);
+
   useEffect(() => {
 
     // Check if we have an audio context and it's running
@@ -247,13 +265,22 @@ export default function MessageInput({
     setUserMessage("");
   }
 
+  // Safe config access for button state
+  const sttBackend = (() => {
+    try {
+      return config('stt_backend');
+    } catch {
+      return 'none';
+    }
+  })();
+
   return (
     <div className="fixed bottom-2 z-20 w-full">
       <div className="mx-auto max-w-4xl p-2">
         <div className="bg-white/20 backdrop-blur-xl border border-white/10 rounded-lg shadow-lg p-2">
           <div className="flex items-center gap-2">
             <button
-              disabled={!micEnabled || config('stt_backend') === 'none' || vad.loading || Boolean(vad.errored)}
+              disabled={!micEnabled || sttBackend === 'none' || vad.loading || Boolean(vad.errored)}
               onClick={() => {
                 console.log('[VAD] Microphone button clicked');
                 console.log('[VAD] Current state before toggle:', {
@@ -261,13 +288,23 @@ export default function MessageInput({
                   loading: vad.loading,
                   errored: vad.errored,
                   micEnabled,
-                  sttBackend: config('stt_backend'),
+                  sttBackend,
                 });
                 vad.toggle();
               }}
               className="flex-shrink-0 p-2 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-slate-900"
+              title={
+                !micEnabled ? 'Microphone disabled in settings' :
+                sttBackend === 'none' ? 'No STT backend configured' :
+                vad.loading ? 'Loading voice detection model...' :
+                vad.errored ? `Error: ${vad.errored}` :
+                vad.listening ? 'Stop listening' :
+                'Start listening'
+              }
             >
-              {vad.userSpeaking ? (
+              {vad.loading ? (
+                <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+              ) : vad.userSpeaking ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
               ) : vad.listening ? (
                 <Pause className="h-5 w-5" />

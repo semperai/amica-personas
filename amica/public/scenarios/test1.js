@@ -4,14 +4,14 @@ class Scenario {
    * Version: 0.1
    */
   constructor(ctx) {
-    console.log('constructor', ctx);
+    console.log('[Scenario] constructor', ctx);
     this.$ = ctx.scope;
     this.THREE = ctx.THREE;
-    console.log('loading scenario');
+    console.log('[Scenario] loading scenario');
   }
 
   async setup() {
-    console.log('setup scenario');
+    console.log('[Scenario] setup scenario');
     const $ = this.$;
     const THREE = this.THREE;
 
