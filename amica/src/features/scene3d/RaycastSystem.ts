@@ -67,6 +67,8 @@ export class RaycastSystem {
   private customTargets: THREE.Object3D[] = [];
   private raycaster = new THREE.Raycaster();
   private raycasterTempM = new THREE.Matrix4();
+  private raycasterTempV2 = new THREE.Vector2();
+  private raycasterTempV3 = new THREE.Vector3();
   private intersectsModel: THREE.Intersection[] = [];
   private intersectsRoom: THREE.Intersection[] = [];
   private intersectsCustom: THREE.Intersection[] = [];
@@ -232,7 +234,8 @@ export class RaycastSystem {
     if (!this.enabled) return null;
 
     this.applyRaycastOptions(options);
-    this.raycaster.setFromCamera(new THREE.Vector2(screenX, screenY), camera);
+    this.raycasterTempV2.set(screenX, screenY);
+    this.raycaster.setFromCamera(this.raycasterTempV2, camera);
     return this.performRaycast();
   }
 
@@ -326,7 +329,6 @@ export class RaycastSystem {
   ): { bone: THREE.Object3D; distance: number } | null {
     if (!model?.vrm) return null;
 
-    let vec3 = new THREE.Vector3();
     let closestBone = null;
     let minDist = Number.MAX_VALUE;
 
@@ -334,7 +336,7 @@ export class RaycastSystem {
       const node = model.vrm.humanoid.getNormalizedBoneNode(boneName);
       if (!node) continue;
 
-      const dist = point.distanceTo(node.getWorldPosition(vec3));
+      const dist = point.distanceTo(node.getWorldPosition(this.raycasterTempV3));
       if (dist < minDist) {
         minDist = dist;
         closestBone = node;
@@ -407,22 +409,6 @@ export class RaycastSystem {
       console.error("Raycast error:", e);
       return null;
     }
-  }
-
-  private getAllIntersections(): THREE.Intersection[] {
-    const all: THREE.Intersection[] = [];
-
-    if (this.modelTargets.length > 0) {
-      all.push(...this.raycaster.intersectObjects(this.modelTargets, true));
-    }
-    if (this.roomTargets.length > 0) {
-      all.push(...this.raycaster.intersectObjects(this.roomTargets, true));
-    }
-    if (this.customTargets.length > 0) {
-      all.push(...this.raycaster.intersectObjects(this.customTargets, true));
-    }
-
-    return all;
   }
 
   private convertIntersectionToHit(
