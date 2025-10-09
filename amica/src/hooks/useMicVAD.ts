@@ -115,8 +115,9 @@ export function useMicVAD(options: Partial<ReactRealTimeVADOptions>) {
         };
 
         // Add timeout to detect if VAD initialization hangs (Brave browser issue)
+        let timeoutId: number | undefined;
         const timeout = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error('VAD initialization timeout - this may be a browser compatibility issue')), 15000);
+          timeoutId = window.setTimeout(() => reject(new Error('VAD initialization timeout - this may be a browser compatibility issue')), 15000);
         });
 
         try {
@@ -124,11 +125,46 @@ export function useMicVAD(options: Partial<ReactRealTimeVADOptions>) {
             MicVAD.new(vadOptions),
             timeout
           ]);
-        } catch (timeoutError) {
-          console.warn('[useMicVAD] Initialization timed out, retrying with legacy model...');
-          // Retry with legacy model if timeout occurs
-          vadOptions.model = 'legacy';
-          myvad = await MicVAD.new(vadOptions);
+          // Clear timeout if successful
+          if (timeoutId !== undefined) {
+            clearTimeout(timeoutId);
+          }
+        } catch (error) {
+          // Clear timeout on any error
+          if (timeoutId !== undefined) {
+            clearTimeout(timeoutId);
+          }
+
+          // Only retry with legacy model on timeout, not on other errors
+          if (error instanceof Error && error.message.includes('timeout')) {
+            console.warn('[useMicVAD] Initialization timed out, retrying with legacy model...');
+
+            // Retry with legacy model and timeout protection
+            const retryVadOptions: RealTimeVADOptions = { ...vadOptions, model: 'legacy' as const };
+            let retryTimeoutId: number | undefined;
+            const retryTimeout = new Promise<never>((_, reject) => {
+              retryTimeoutId = window.setTimeout(() => reject(new Error('VAD initialization timeout on retry with legacy model')), 15000);
+            });
+
+            try {
+              myvad = await Promise.race([
+                MicVAD.new(retryVadOptions),
+                retryTimeout
+              ]);
+              // Clear retry timeout if successful
+              if (retryTimeoutId !== undefined) {
+                clearTimeout(retryTimeoutId);
+              }
+            } catch (retryError) {
+              // Clear retry timeout on error
+              if (retryTimeoutId !== undefined) {
+                clearTimeout(retryTimeoutId);
+              }
+              throw retryError; // Let outer catch handle it
+            }
+          } else {
+            throw error; // Re-throw non-timeout errors
+          }
         }
 
         if (canceled) {
