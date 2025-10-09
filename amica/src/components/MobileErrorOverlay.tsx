@@ -76,6 +76,24 @@ export function MobileErrorOverlay() {
   const [expandedErrors, setExpandedErrors] = useState<Set<number>>(new Set());
 
   useEffect(() => {
+    // Configurable error filter patterns
+    // Critical errors that should be displayed to users
+    const CRITICAL_ERROR_PATTERNS = [
+      '[ScenarioLoader]',
+      '[VrmViewer]',
+      '[VRM]',
+      'Loading',
+      'ERROR',
+    ];
+
+    // Non-critical errors to exclude (will be filtered out)
+    const EXCLUDED_ERROR_PATTERNS = [
+      '[VAD]',
+      '[useMicVAD]',
+      'ModelLoadError',
+      'silero_vad',
+    ];
+
     // Intercept console.error to capture important error logs
     const originalConsoleError = console.error;
     console.error = (...args: any[]) => {
@@ -93,17 +111,18 @@ export function MobileErrorOverlay() {
         }
       }).join(' ');
 
-      // Only show critical errors from our code (ScenarioLoader, VrmViewer, etc.)
-      // DO NOT show VAD errors as they are non-critical (mic features will just be disabled)
-      if ((message.includes('[ScenarioLoader]') ||
-           message.includes('[VrmViewer]') ||
-           message.includes('[VRM]') ||
-           (message.includes('Loading') && !message.includes('[VAD]')) ||
-           message.includes('ERROR')) &&
-          !message.includes('[VAD]') &&
-          !message.includes('[useMicVAD]') &&
-          !message.includes('ModelLoadError') &&
-          !message.includes('silero_vad')) {
+      // Check if message matches any critical pattern
+      const hasCriticalPattern = CRITICAL_ERROR_PATTERNS.some(pattern =>
+        message.includes(pattern)
+      );
+
+      // Check if message matches any excluded pattern
+      const hasExcludedPattern = EXCLUDED_ERROR_PATTERNS.some(pattern =>
+        message.includes(pattern)
+      );
+
+      // Only show critical errors that are not in the exclusion list
+      if (hasCriticalPattern && !hasExcludedPattern) {
         const errorInfo: ErrorInfo = {
           type: 'console',
           level: 'error',
