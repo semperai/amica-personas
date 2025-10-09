@@ -111,7 +111,8 @@ export function MobileErrorOverlay() {
           timestamp: Date.now(),
           userAgent: navigator.userAgent,
         };
-        console.log('[Mobile Error Overlay] Captured console error:', errorInfo);
+        // Debug: uncomment to verify error capture (avoiding console.log in interceptor)
+        // originalConsoleError('[Mobile Error Overlay] Captured:', errorInfo);
         setErrors(prev => {
           const updated = [...prev, errorInfo];
           return updated.length > MAX_ERRORS ? updated.slice(-MAX_ERRORS) : updated;
@@ -122,7 +123,7 @@ export function MobileErrorOverlay() {
 
     // Capture unhandled errors
     const handleError = (event: ErrorEvent) => {
-      console.error('[Mobile Error Overlay] Caught error:', event);
+      originalConsoleError('[Mobile Error Overlay] Caught error:', event);
 
       // Better error message extraction
       let message = 'Unknown error';
@@ -151,7 +152,7 @@ export function MobileErrorOverlay() {
         timestamp: Date.now(),
         userAgent: navigator.userAgent,
       };
-      console.error('[Mobile Error Overlay] Error details:', errorInfo);
+      originalConsoleError('[Mobile Error Overlay] Error details:', errorInfo);
       setErrors(prev => {
         const updated = [...prev, errorInfo];
         // Keep only the most recent MAX_ERRORS errors to prevent memory issues
@@ -162,7 +163,7 @@ export function MobileErrorOverlay() {
 
     // Capture unhandled promise rejections
     const handleRejection = (event: PromiseRejectionEvent) => {
-      console.error('[Mobile Error Overlay] Caught rejection:', event);
+      originalConsoleError('[Mobile Error Overlay] Caught rejection:', event);
       const reason = event.reason;
       const errorInfo: ErrorInfo = {
         type: 'rejection',
@@ -171,7 +172,7 @@ export function MobileErrorOverlay() {
         timestamp: Date.now(),
         userAgent: navigator.userAgent,
       };
-      console.error('[Mobile Error Overlay] Rejection details:', errorInfo);
+      originalConsoleError('[Mobile Error Overlay] Rejection details:', errorInfo);
       setErrors(prev => {
         const updated = [...prev, errorInfo];
         // Keep only the most recent MAX_ERRORS errors to prevent memory issues
