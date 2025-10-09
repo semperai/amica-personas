@@ -1,9 +1,65 @@
 import { useEffect, useState } from 'react';
 
 interface ErrorInfo {
+  type: 'error' | 'rejection';
   message: string;
   stack?: string;
+  filename?: string;
+  lineno?: number;
+  colno?: number;
   timestamp: number;
+  userAgent: string;
+}
+
+interface StackFrame {
+  functionName: string;
+  fileName: string;
+  lineNumber: string;
+  columnNumber: string;
+}
+
+/**
+ * Parse stack trace into structured format
+ */
+function parseStackTrace(stack?: string): StackFrame[] {
+  if (!stack) return [];
+
+  const frames: StackFrame[] = [];
+  const lines = stack.split('\n');
+
+  for (const line of lines) {
+    // Match various stack trace formats
+    // Chrome: "at functionName (file:line:col)"
+    // Firefox: "functionName@file:line:col"
+    const chromeMatch = line.match(/at\s+(.+?)\s+\((.+?):(\d+):(\d+)\)/);
+    const firefoxMatch = line.match(/(.+?)@(.+?):(\d+):(\d+)/);
+    const simpleMatch = line.match(/at\s+(.+?):(\d+):(\d+)/);
+
+    if (chromeMatch) {
+      frames.push({
+        functionName: chromeMatch[1],
+        fileName: chromeMatch[2],
+        lineNumber: chromeMatch[3],
+        columnNumber: chromeMatch[4],
+      });
+    } else if (firefoxMatch) {
+      frames.push({
+        functionName: firefoxMatch[1],
+        fileName: firefoxMatch[2],
+        lineNumber: firefoxMatch[3],
+        columnNumber: firefoxMatch[4],
+      });
+    } else if (simpleMatch) {
+      frames.push({
+        functionName: '(anonymous)',
+        fileName: simpleMatch[1],
+        lineNumber: simpleMatch[2],
+        columnNumber: simpleMatch[3],
+      });
+    }
+  }
+
+  return frames;
 }
 
 /**
@@ -13,27 +69,40 @@ interface ErrorInfo {
 export function MobileErrorOverlay() {
   const [errors, setErrors] = useState<ErrorInfo[]>([]);
   const [isVisible, setIsVisible] = useState(false);
+  const [expandedErrors, setExpandedErrors] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     // Capture unhandled errors
     const handleError = (event: ErrorEvent) => {
-      console.error('[Mobile Error Overlay] Caught error:', event.error);
-      setErrors(prev => [...prev, {
+      console.error('[Mobile Error Overlay] Caught error:', event);
+      const errorInfo: ErrorInfo = {
+        type: 'error',
         message: event.message || String(event.error),
-        stack: event.error?.stack,
+        stack: event.error?.stack || new Error().stack,
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
         timestamp: Date.now(),
-      }]);
+        userAgent: navigator.userAgent,
+      };
+      console.error('[Mobile Error Overlay] Error details:', errorInfo);
+      setErrors(prev => [...prev, errorInfo]);
       setIsVisible(true);
     };
 
     // Capture unhandled promise rejections
     const handleRejection = (event: PromiseRejectionEvent) => {
-      console.error('[Mobile Error Overlay] Caught rejection:', event.reason);
-      setErrors(prev => [...prev, {
-        message: String(event.reason),
-        stack: event.reason?.stack,
+      console.error('[Mobile Error Overlay] Caught rejection:', event);
+      const reason = event.reason;
+      const errorInfo: ErrorInfo = {
+        type: 'rejection',
+        message: reason?.message || String(reason),
+        stack: reason?.stack || new Error().stack,
         timestamp: Date.now(),
-      }]);
+        userAgent: navigator.userAgent,
+      };
+      console.error('[Mobile Error Overlay] Rejection details:', errorInfo);
+      setErrors(prev => [...prev, errorInfo]);
       setIsVisible(true);
     };
 
@@ -45,6 +114,18 @@ export function MobileErrorOverlay() {
       window.removeEventListener('unhandledrejection', handleRejection);
     };
   }, []);
+
+  const toggleExpanded = (index: number) => {
+    setExpandedErrors(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  };
 
   if (!isVisible || errors.length === 0) {
     return null;
@@ -58,99 +139,260 @@ export function MobileErrorOverlay() {
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: '#1a1a1a',
-        color: '#fff',
+        backgroundColor: '#0d1117',
+        color: '#c9d1d9',
         zIndex: 999999,
         overflow: 'auto',
-        padding: '20px',
-        fontFamily: 'monospace',
-        fontSize: '12px',
+        padding: '16px',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif',
+        fontSize: '14px',
       }}
     >
-      <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ margin: 0, fontSize: '18px', color: '#ff4444' }}>
-          ⚠️ Application Error ({errors.length})
+      {/* Header */}
+      <div style={{
+        marginBottom: '20px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '10px',
+      }}>
+        <h1 style={{
+          margin: 0,
+          fontSize: '20px',
+          color: '#f85149',
+          fontWeight: '600',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}>
+          <span style={{ fontSize: '24px' }}>⚠️</span>
+          Application Error ({errors.length})
         </h1>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => {
+              const errorText = errors.map((e, i) =>
+                `Error #${i + 1} (${e.type})\n` +
+                `Message: ${e.message}\n` +
+                `File: ${e.filename || 'unknown'}:${e.lineno || '?'}:${e.colno || '?'}\n` +
+                `Stack:\n${e.stack}\n\n`
+              ).join('\n---\n\n');
+              navigator.clipboard?.writeText(errorText);
+            }}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#238636',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '14px',
+              cursor: 'pointer',
+              fontWeight: '500',
+            }}
+          >
+            📋 Copy
+          </button>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#1f6feb',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '14px',
+              cursor: 'pointer',
+              fontWeight: '500',
+            }}
+          >
+            🔄 Reload
+          </button>
+        </div>
+      </div>
+
+      {/* Device Info */}
+      <div style={{
+        marginBottom: '20px',
+        padding: '12px',
+        backgroundColor: '#161b22',
+        border: '1px solid #30363d',
+        borderRadius: '6px',
+      }}>
+        <div style={{ fontWeight: '600', marginBottom: '8px', color: '#58a6ff' }}>📱 Device Info</div>
+        <div style={{ fontSize: '12px', fontFamily: 'monospace', color: '#8b949e' }}>
+          <div>Screen: {window.screen.width}x{window.screen.height}</div>
+          <div>Viewport: {window.innerWidth}x{window.innerHeight}</div>
+          <div>Pixel Ratio: {window.devicePixelRatio}</div>
+          <div style={{ wordBreak: 'break-all' }}>UA: {navigator.userAgent}</div>
+        </div>
+      </div>
+
+      {/* Errors */}
+      {errors.map((error, index) => {
+        const stackFrames = parseStackTrace(error.stack);
+        const isExpanded = expandedErrors.has(index);
+
+        return (
+          <div
+            key={index}
+            style={{
+              marginBottom: '16px',
+              backgroundColor: '#161b22',
+              border: '1px solid #f85149',
+              borderRadius: '6px',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Error Header */}
+            <div
+              onClick={() => toggleExpanded(index)}
+              style={{
+                padding: '12px',
+                backgroundColor: '#21262d',
+                cursor: 'pointer',
+                userSelect: 'none',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+              }}
+            >
+              <div style={{ flex: 1 }}>
+                <div style={{ color: '#f85149', fontWeight: '600', marginBottom: '4px' }}>
+                  {error.type === 'error' ? '❌ Error' : '⚡ Promise Rejection'} #{index + 1}
+                </div>
+                <div style={{ fontSize: '12px', color: '#8b949e' }}>
+                  {new Date(error.timestamp).toLocaleString()}
+                </div>
+              </div>
+              <div style={{ fontSize: '18px', color: '#8b949e' }}>
+                {isExpanded ? '▼' : '▶'}
+              </div>
+            </div>
+
+            {/* Error Body */}
+            {isExpanded && (
+              <div style={{ padding: '12px' }}>
+                {/* Message */}
+                <div style={{ marginBottom: '12px' }}>
+                  <div style={{ fontWeight: '600', marginBottom: '4px', color: '#58a6ff' }}>
+                    💬 Message
+                  </div>
+                  <div style={{
+                    padding: '8px',
+                    backgroundColor: '#0d1117',
+                    borderRadius: '4px',
+                    fontSize: '13px',
+                    wordBreak: 'break-word',
+                    color: '#ff7b72',
+                    fontFamily: 'monospace',
+                  }}>
+                    {error.message}
+                  </div>
+                </div>
+
+                {/* Location */}
+                {(error.filename || error.lineno) && (
+                  <div style={{ marginBottom: '12px' }}>
+                    <div style={{ fontWeight: '600', marginBottom: '4px', color: '#58a6ff' }}>
+                      📍 Location
+                    </div>
+                    <div style={{
+                      padding: '8px',
+                      backgroundColor: '#0d1117',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontFamily: 'monospace',
+                      color: '#ffa657',
+                    }}>
+                      {error.filename}:{error.lineno}:{error.colno}
+                    </div>
+                  </div>
+                )}
+
+                {/* Stack Frames */}
+                {stackFrames.length > 0 && (
+                  <div style={{ marginBottom: '12px' }}>
+                    <div style={{ fontWeight: '600', marginBottom: '4px', color: '#58a6ff' }}>
+                      📚 Stack Trace ({stackFrames.length} frames)
+                    </div>
+                    <div style={{
+                      backgroundColor: '#0d1117',
+                      borderRadius: '4px',
+                      overflow: 'hidden',
+                    }}>
+                      {stackFrames.map((frame, frameIndex) => (
+                        <div
+                          key={frameIndex}
+                          style={{
+                            padding: '8px',
+                            borderBottom: frameIndex < stackFrames.length - 1 ? '1px solid #21262d' : 'none',
+                            fontSize: '11px',
+                            fontFamily: 'monospace',
+                          }}
+                        >
+                          <div style={{ color: '#79c0ff', marginBottom: '2px' }}>
+                            {frame.functionName}
+                          </div>
+                          <div style={{ color: '#8b949e' }}>
+                            {frame.fileName}:{frame.lineNumber}:{frame.columnNumber}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Raw Stack (fallback) */}
+                {error.stack && stackFrames.length === 0 && (
+                  <div>
+                    <div style={{ fontWeight: '600', marginBottom: '4px', color: '#58a6ff' }}>
+                      📋 Raw Stack Trace
+                    </div>
+                    <pre style={{
+                      margin: 0,
+                      padding: '8px',
+                      backgroundColor: '#0d1117',
+                      borderRadius: '4px',
+                      overflow: 'auto',
+                      fontSize: '10px',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      fontFamily: 'monospace',
+                      color: '#8b949e',
+                      maxHeight: '300px',
+                    }}>
+                      {error.stack}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {/* Footer */}
+      <div style={{ marginTop: '20px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
         <button
-          onClick={() => window.location.reload()}
+          onClick={() => {
+            setErrors([]);
+            setIsVisible(false);
+          }}
           style={{
-            padding: '10px 20px',
-            backgroundColor: '#4CAF50',
-            color: 'white',
-            border: 'none',
-            borderRadius: '5px',
+            padding: '8px 16px',
+            backgroundColor: '#21262d',
+            color: '#c9d1d9',
+            border: '1px solid #30363d',
+            borderRadius: '6px',
             fontSize: '14px',
             cursor: 'pointer',
+            fontWeight: '500',
           }}
         >
-          Reload Page
+          ✖️ Dismiss
         </button>
       </div>
-
-      <div style={{ marginBottom: '20px', padding: '10px', backgroundColor: '#333', borderRadius: '5px' }}>
-        <strong>Device Info:</strong>
-        <div>User Agent: {navigator.userAgent}</div>
-        <div>Screen: {window.screen.width}x{window.screen.height}</div>
-        <div>Viewport: {window.innerWidth}x{window.innerHeight}</div>
-      </div>
-
-      {errors.map((error, index) => (
-        <div
-          key={index}
-          style={{
-            marginBottom: '15px',
-            padding: '15px',
-            backgroundColor: '#2a2a2a',
-            borderLeft: '4px solid #ff4444',
-            borderRadius: '5px',
-          }}
-        >
-          <div style={{ marginBottom: '10px', color: '#ff6b6b', fontWeight: 'bold' }}>
-            Error #{index + 1} at {new Date(error.timestamp).toLocaleTimeString()}
-          </div>
-          <div style={{ marginBottom: '10px', wordBreak: 'break-word' }}>
-            <strong>Message:</strong> {error.message}
-          </div>
-          {error.stack && (
-            <details style={{ marginTop: '10px' }}>
-              <summary style={{ cursor: 'pointer', color: '#4dabf7' }}>
-                Stack Trace
-              </summary>
-              <pre style={{
-                marginTop: '10px',
-                padding: '10px',
-                backgroundColor: '#1a1a1a',
-                borderRadius: '3px',
-                overflow: 'auto',
-                fontSize: '10px',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-              }}>
-                {error.stack}
-              </pre>
-            </details>
-          )}
-        </div>
-      ))}
-
-      <button
-        onClick={() => {
-          setErrors([]);
-          setIsVisible(false);
-        }}
-        style={{
-          padding: '10px 20px',
-          backgroundColor: '#666',
-          color: 'white',
-          border: 'none',
-          borderRadius: '5px',
-          fontSize: '14px',
-          cursor: 'pointer',
-          marginTop: '20px',
-        }}
-      >
-        Dismiss Errors
-      </button>
     </div>
   );
 }

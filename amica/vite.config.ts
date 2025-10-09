@@ -25,29 +25,22 @@ export default defineConfig({
     htmlCacheBuster(),
     viteStaticCopy({
       targets: [
-        {
-          src: 'node_modules/@xenova/transformers/dist/ort-wasm-simd-threaded.wasm',
-          dest: 'assets',
-        },
-        {
-          src: 'node_modules/@xenova/transformers/dist/ort-wasm-threaded.wasm',
-          dest: 'assets',
-        },
-        {
-          src: 'node_modules/@xenova/transformers/dist/ort-wasm.wasm',
-          dest: 'assets',
-        },
-        {
-          src: 'node_modules/@xenova/transformers/dist/ort-wasm-simd.wasm',
-          dest: 'assets',
-        },
-        // VAD worklet and models are now in public/ directory
+        // ONNX Runtime WASM files (used by both VAD and Transformers)
         {
           src: 'node_modules/onnxruntime-web/dist/*.wasm',
           dest: 'assets',
         },
         {
           src: 'node_modules/onnxruntime-web/dist/*.mjs',
+          dest: 'assets',
+        },
+        // Hugging Face Transformers WASM files (newer JSEP version)
+        {
+          src: 'node_modules/@huggingface/transformers/dist/*.wasm',
+          dest: 'assets',
+        },
+        {
+          src: 'node_modules/@huggingface/transformers/dist/*.mjs',
           dest: 'assets',
         },
       ],
