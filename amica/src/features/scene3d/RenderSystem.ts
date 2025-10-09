@@ -3,9 +3,17 @@ import { OrbitControls } from "three/addons/controls/OrbitControls";
 import { InteractiveGroup } from "three/addons/interactive/InteractiveGroup.js";
 import { config } from "@/utils/config";
 import { Model } from "./VrmCharacterModel";
+import type WebGPURenderer from "three/src/renderers/webgpu/WebGPURenderer.Nodes.js";
+
+/**
+ * Union type for WebGL and WebGPU renderers
+ * Both renderers extend from the common Renderer base class
+ * This allows the code to work with both renderer types while maintaining type safety
+ */
+export type WebRenderer = THREE.WebGLRenderer | WebGPURenderer;
 
 export class RenderSystem {
-  public renderer: THREE.WebGLRenderer;
+  public renderer: WebRenderer;
   public scene: THREE.Scene;
   public camera: THREE.PerspectiveCamera;
   public cameraControls: OrbitControls;
@@ -15,7 +23,7 @@ export class RenderSystem {
   private screenshotCallback: BlobCallback | undefined;
 
   private constructor(
-    renderer: THREE.WebGLRenderer,
+    renderer: WebRenderer,
     scene: THREE.Scene,
     camera: THREE.PerspectiveCamera,
     cameraControls: OrbitControls,
@@ -33,27 +41,31 @@ export class RenderSystem {
     const width = parentElement?.clientWidth || canvas.width;
     const height = parentElement?.clientHeight || canvas.height;
 
-    let WebRendererType: typeof THREE.WebGLRenderer = THREE.WebGLRenderer;
+    let renderer: WebRenderer;
+
     if (config("use_webgpu") === "true") {
       // Import from three/webgpu to match MToonNodeMaterial's imports
       // This ensures we use the same Three.js instance
-      // @ts-ignore
       const { WebGPURenderer } = await import("three/webgpu");
-      WebRendererType = WebGPURenderer as any;
-    }
 
-    const renderer = new WebRendererType({
-      canvas: canvas,
-      alpha: true,
-      antialias: true,
-      powerPreference: "high-performance",
-    }) as THREE.WebGLRenderer;
+      renderer = new WebGPURenderer({
+        canvas: canvas,
+        alpha: true,
+        antialias: true,
+        powerPreference: "high-performance",
+      });
 
-    // WebGPU renderer requires async initialization
-    if (config("use_webgpu") === "true") {
+      // WebGPU renderer requires async initialization
       console.log('[Renderer] Initializing WebGPU renderer...');
-      await (renderer as any).init();
+      await renderer.init!();
       console.log('[Renderer] WebGPU renderer initialized');
+    } else {
+      renderer = new THREE.WebGLRenderer({
+        canvas: canvas,
+        alpha: true,
+        antialias: true,
+        powerPreference: "high-performance",
+      });
     }
 
     renderer.setClearColor(0x000000, 0);
@@ -118,7 +130,11 @@ export class RenderSystem {
     igroup.visible = false;
     scene.add(igroup);
 
-    igroup.listenToPointerEvents(renderer, camera);
+    // InteractiveGroup only works with WebGLRenderer
+    // TypeScript doesn't know renderer is WebGLRenderer at this point for WebGL mode
+    if (renderer instanceof THREE.WebGLRenderer) {
+      igroup.listenToPointerEvents(renderer, camera);
+    }
 
     return new RenderSystem(renderer, scene, camera, cameraControls, igroup);
   }

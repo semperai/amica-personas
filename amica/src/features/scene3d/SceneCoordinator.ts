@@ -225,7 +225,7 @@ export class SceneCoordinator {
     return this.render?.camera;
   }
 
-  public get renderer(): THREE.WebGLRenderer | undefined {
+  public get renderer(): import("./RenderSystem").WebRenderer | undefined {
     return this.render?.renderer;
   }
 

@@ -295,7 +295,7 @@ export class EnvironmentManager {
   /**
    * Update splat rendering (call in animation loop)
    */
-  public updateSplat(renderer: THREE.WebGLRenderer | undefined, camera: THREE.PerspectiveCamera | undefined): void {
+  public updateSplat(renderer: import("./RenderSystem").WebRenderer | undefined, camera: THREE.PerspectiveCamera | undefined): void {
     this.room?.splat?.update(renderer, camera);
     this.room?.splat?.render();
   }

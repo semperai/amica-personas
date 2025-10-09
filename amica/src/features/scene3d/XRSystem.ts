@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { InteractiveGroup } from "three/addons/interactive/InteractiveGroup.js";
 import { XRControllerModelFactory } from "./XRControllerModelFactory";
 import { config } from "@/utils/config";
+import type { WebRenderer } from "./RenderSystem";
 
 const joints: string[] = [
   "wrist",
@@ -34,7 +35,7 @@ const joints: string[] = [
 export class XRSystem {
   public currentSession: XRSession | null = null;
 
-  private renderer: THREE.WebGLRenderer;
+  private renderer: WebRenderer;
   private scene: THREE.Scene;
   private camera: THREE.PerspectiveCamera;
   private igroup: InteractiveGroup;
@@ -57,7 +58,7 @@ export class XRSystem {
   private handGroup = new THREE.Group();
 
   constructor(
-    renderer: THREE.WebGLRenderer,
+    renderer: WebRenderer,
     scene: THREE.Scene,
     camera: THREE.PerspectiveCamera,
     igroup: InteractiveGroup,
