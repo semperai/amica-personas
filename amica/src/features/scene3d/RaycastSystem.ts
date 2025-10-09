@@ -237,10 +237,20 @@ export class RaycastSystem {
   ): RaycastHit | null {
     if (!this.enabled) return null;
 
+    const prevFar = this.raycaster.far;
+    const prevFirstHitOnly = this.raycaster.firstHitOnly;
+    const prevLayersMask = this.raycaster.layers.mask;
+
     this.applyRaycastOptions(options);
     this.raycasterTempV2.set(screenX, screenY);
     this.raycaster.setFromCamera(this.raycasterTempV2, camera);
-    return this.performRaycast();
+    try {
+      return this.performRaycast();
+    } finally {
+      this.raycaster.far = prevFar;
+      this.raycaster.firstHitOnly = prevFirstHitOnly;
+      this.raycaster.layers.mask = prevLayersMask;
+    }
   }
 
   /**
@@ -253,9 +263,19 @@ export class RaycastSystem {
   ): RaycastHit | null {
     if (!this.enabled) return null;
 
+    const prevFar = this.raycaster.far;
+    const prevFirstHitOnly = this.raycaster.firstHitOnly;
+    const prevLayersMask = this.raycaster.layers.mask;
+
     this.applyRaycastOptions(options);
     this.raycaster.set(origin, direction.clone().normalize());
-    return this.performRaycast();
+    try {
+      return this.performRaycast();
+    } finally {
+      this.raycaster.far = prevFar;
+      this.raycaster.firstHitOnly = prevFirstHitOnly;
+      this.raycaster.layers.mask = prevLayersMask;
+    }
   }
 
   /**
@@ -267,6 +287,10 @@ export class RaycastSystem {
   ): RaycastHit | null {
     if (!this.enabled) return null;
 
+    const prevFar = this.raycaster.far;
+    const prevFirstHitOnly = this.raycaster.firstHitOnly;
+    const prevLayersMask = this.raycaster.layers.mask;
+
     const origin = new THREE.Vector3();
     const direction = new THREE.Vector3();
 
@@ -274,7 +298,15 @@ export class RaycastSystem {
     this.raycasterTempM.identity().extractRotation(object.matrixWorld);
     direction.set(0, 0, -1).applyMatrix4(this.raycasterTempM);
 
-    return this.raycastFromPoint(origin, direction, options);
+    this.applyRaycastOptions(options);
+    this.raycaster.set(origin, direction.clone().normalize());
+    try {
+      return this.performRaycast();
+    } finally {
+      this.raycaster.far = prevFar;
+      this.raycaster.firstHitOnly = prevFirstHitOnly;
+      this.raycaster.layers.mask = prevLayersMask;
+    }
   }
 
   /**
@@ -287,41 +319,48 @@ export class RaycastSystem {
   ): RaycastHit[] {
     if (!this.enabled) return [];
 
-    const previousFirstHitOnly = this.raycaster.firstHitOnly;
-    this.raycaster.firstHitOnly = false;
+    const prevFar = this.raycaster.far;
+    const prevFirstHitOnly = this.raycaster.firstHitOnly;
+    const prevLayersMask = this.raycaster.layers.mask;
 
+    this.raycaster.firstHitOnly = false;
     this.applyRaycastOptions(options);
     this.raycaster.set(origin, direction.clone().normalize());
 
-    // Collect intersections by type
-    this.intersectsModel = [];
-    this.intersectsRoom = [];
-    this.intersectsCustom = [];
+    try {
+      // Collect intersections by type
+      this.intersectsModel = [];
+      this.intersectsRoom = [];
+      this.intersectsCustom = [];
 
-    if (this.modelTargets.length > 0) {
-      this.intersectsModel = this.raycaster.intersectObjects(this.modelTargets, true);
-    }
-    if (this.roomTargets.length > 0) {
-      this.intersectsRoom = this.raycaster.intersectObjects(this.roomTargets, true);
-    }
-    if (this.customTargets.length > 0) {
-      this.intersectsCustom = this.raycaster.intersectObjects(this.customTargets, true);
-    }
+      if (this.modelTargets.length > 0) {
+        this.intersectsModel = this.raycaster.intersectObjects(this.modelTargets, true);
+      }
+      if (this.roomTargets.length > 0) {
+        this.intersectsRoom = this.raycaster.intersectObjects(this.roomTargets, true);
+      }
+      if (this.customTargets.length > 0) {
+        this.intersectsCustom = this.raycaster.intersectObjects(this.customTargets, true);
+      }
 
-    const hits: RaycastHit[] = [];
+      const hits: RaycastHit[] = [];
 
-    for (const intersection of this.intersectsModel) {
-      hits.push(this.convertIntersectionToHit(intersection, 'model'));
-    }
-    for (const intersection of this.intersectsRoom) {
-      hits.push(this.convertIntersectionToHit(intersection, 'room'));
-    }
-    for (const intersection of this.intersectsCustom) {
-      hits.push(this.convertIntersectionToHit(intersection, 'object'));
-    }
+      for (const intersection of this.intersectsModel) {
+        hits.push(this.convertIntersectionToHit(intersection, 'model'));
+      }
+      for (const intersection of this.intersectsRoom) {
+        hits.push(this.convertIntersectionToHit(intersection, 'room'));
+      }
+      for (const intersection of this.intersectsCustom) {
+        hits.push(this.convertIntersectionToHit(intersection, 'object'));
+      }
 
-    this.raycaster.firstHitOnly = previousFirstHitOnly;
-    return hits.sort((a, b) => a.distance - b.distance);
+      return hits.sort((a, b) => a.distance - b.distance);
+    } finally {
+      this.raycaster.far = prevFar;
+      this.raycaster.firstHitOnly = prevFirstHitOnly;
+      this.raycaster.layers.mask = prevLayersMask;
+    }
   }
 
   /**
@@ -355,7 +394,7 @@ export class RaycastSystem {
       this.raycaster.far = options.maxDistance;
     }
     if (options.layers !== undefined) {
-      this.raycaster.layers = options.layers;
+      this.raycaster.layers.mask = options.layers.mask;
     }
     if (options.firstHitOnly !== undefined) {
       this.raycaster.firstHitOnly = options.firstHitOnly;
