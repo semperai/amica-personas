@@ -217,8 +217,9 @@ export class Model {
 
           // Store MToon materials for WebGPU compatibility
           // The plugin stores materials in gltf.userData.vrmMToonMaterials
-          if (gltf.userData.vrmMToonMaterials) {
-            this.mtoonMaterials = gltf.userData.vrmMToonMaterials;
+          const materials = gltf.userData.vrmMToonMaterials;
+          this.mtoonMaterials = Array.isArray(materials) ? materials : [];
+          if (this.mtoonMaterials.length > 0) {
             console.log('[VRM] Stored', this.mtoonMaterials.length, 'MToon materials for updates');
           }
 
@@ -285,6 +286,8 @@ export class Model {
     if (this.vrm) {
       VRMUtils.deepDispose(this.vrm.scene);
       this.vrm = null;
+      // Clear material references to avoid updating disposed materials
+      this.mtoonMaterials = [];
     }
   }
 
