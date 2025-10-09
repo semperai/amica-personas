@@ -15,7 +15,6 @@ import {
   getLlamaCppChatResponseStream,
   getLlavaCppChatResponse,
 } from "./llamaCppChat";
-import { getWindowAiChatResponseStream } from "./windowAiChat";
 import {
   getOllamaChatResponseStream,
   getOllamaVisionChatResponse,
@@ -627,9 +626,6 @@ export class Chat {
         break;
       case "llamacpp":
         stream = await getLlamaCppChatResponseStream(beforeContext.messages);
-        break;
-      case "windowai":
-        stream = await getWindowAiChatResponseStream(beforeContext.messages);
         break;
       case "ollama":
         stream = await getOllamaChatResponseStream(beforeContext.messages);
