@@ -6,7 +6,35 @@ export class GenerateMeshBVHWorker extends WorkerBase {
 
 	constructor() {
 
-		const worker = new Worker( new URL( './generateMeshBVH.worker.js', import.meta.url ), { type: 'module' } );
+		// BVH worker for raycasting optimization
+		// Note: This worker is optional - if it fails to load, raycasting will still work
+		// but without BVH acceleration (slower but functional)
+		let worker;
+		try {
+			// Try loading from import.meta.url first (works in both dev and prod with Vite)
+			worker = new Worker( new URL( '/generateMeshBVH.worker.js', import.meta.url ) );
+		} catch (error) {
+			console.warn('Failed to create BVH worker with import.meta.url, trying direct path:', error);
+			try {
+				// Fallback to direct path (for production builds)
+				worker = new Worker( '/generateMeshBVH.worker.js' );
+			} catch (fallbackError) {
+				console.error('Failed to create BVH worker entirely:', fallbackError);
+				// Create a worker that immediately signals BVH is unavailable
+				// This prevents promises from hanging and provides clear error messages
+				const blob = new Blob([`
+					self.onmessage = (e) => {
+						self.postMessage({
+							error: 'BVH worker unavailable - raycasting will work but without acceleration'
+						});
+					}
+				`], { type: 'application/javascript' });
+				const blobUrl = URL.createObjectURL(blob);
+				worker = new Worker(blobUrl);
+				// Clean up the blob URL after worker creation to prevent memory leak
+				URL.revokeObjectURL(blobUrl);
+			}
+		}
 		super( worker );
 		this.name = 'GenerateMeshBVHWorker';
 

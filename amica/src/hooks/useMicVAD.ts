@@ -181,6 +181,8 @@ export function useMicVAD(options: Partial<ReactRealTimeVADOptions>) {
           setListening(true);
         }
       } catch (e) {
+        console.warn('[useMicVAD] VAD initialization failed - microphone features will be disabled');
+        console.warn('[useMicVAD] This is non-critical and will not affect the main application');
         console.error('[useMicVAD] Setup error:', e);
         setLoading(false);
         if (e instanceof Error) {

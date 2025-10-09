@@ -1,12 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 
+/**
+ * Represents a file being loaded with its download progress.
+ */
 type LoadingFile = {
+  /** The name/path of the file being loaded */
   file: string;
+  /** The loading progress as a percentage (0-100) */
   progress: number;
 }
 
+/**
+ * Represents a loading stage with its description and progress.
+ */
 type LoadingStage = {
+  /** The description of the current loading stage */
   stage: string;
+  /** The overall loading progress as a percentage (0-100) */
   progress: number;
 }
 
@@ -59,6 +69,29 @@ const DEBUG_FROZEN_STAGE: LoadingStage = {
 // Progress bar gradient - cyan to blue
 const PROGRESS_BAR_GRADIENT = "from-cyan-400 via-blue-500 to-blue-600";
 
+/**
+ * LoadingProgress Component
+ *
+ * A full-screen loading overlay that displays the current loading stage with a
+ * beautiful animated progress bar. Monitors the global window loading state and
+ * shows/hides the overlay accordingly.
+ *
+ * Features:
+ * - Animated gradient progress bar with shimmer effect
+ * - Rotating funny loading messages
+ * - Smooth transitions when showing/hiding
+ * - Responsive design (mobile-friendly)
+ * - Debug mode for design work (DEBUG_FREEZE_LOADING)
+ *
+ * The component monitors two global state objects on the window:
+ * - `window.chatvrm_loading_stage`: Current loading stage and progress
+ * - `window.chatvrm_loading_progress`: Individual file loading details
+ *
+ * When `chatvrm_loading_stage` becomes null, the overlay hides after a 200ms delay
+ * to ensure smooth transitions.
+ *
+ * @returns A React component that renders the loading overlay
+ */
 export function LoadingProgress() {
   if (typeof window !== "undefined") {
     if(! (window as any).chatvrm_loading_progress) {
@@ -109,24 +142,31 @@ export function LoadingProgress() {
         const stage = (window as any).chatvrm_loading_stage;
         const stageCntWindow = (window as any).chatvrm_loading_stage_cnt;
         if (stageCnt !== stageCntWindow) {
+          console.debug('[LoadingProgress] Stage change detected', { stage, stageCnt: stageCntWindow, shouldShow });
           setStageCnt(stageCntWindow);
 
           if (stage === null) {
-            if (hideTimeoutRef.current !== null) {
-              clearTimeout(hideTimeoutRef.current);
-              hideTimeoutRef.current = null;
-            }
-
-            if (shouldShow) {
-              hideTimeoutRef.current = window.setTimeout(() => {
-                setShouldShow(false);
+            console.debug('[LoadingProgress] Stage is null, hideTimeoutRef.current:', hideTimeoutRef.current);
+            // Only schedule hide if not already hiding
+            if (hideTimeoutRef.current === null) {
+              if (shouldShow) {
+                console.debug('[LoadingProgress] Scheduling hide with 200ms delay');
+                hideTimeoutRef.current = window.setTimeout(() => {
+                  console.debug('[LoadingProgress] Hiding overlay after delay');
+                  setShouldShow(false);
+                  setLoadingStage(null);
+                  hideTimeoutRef.current = null;
+                }, 200);
+                console.debug('[LoadingProgress] Hide timeout scheduled, ref:', hideTimeoutRef.current);
+              } else {
+                console.debug('[LoadingProgress] Hiding overlay immediately (shouldShow is false)');
                 setLoadingStage(null);
-                hideTimeoutRef.current = null;
-              }, 200);
+              }
             } else {
-              setLoadingStage(null);
+              console.debug('[LoadingProgress] Hide already scheduled, ignoring duplicate');
             }
           } else {
+            console.debug('[LoadingProgress] Showing stage:', stage);
             if (hideTimeoutRef.current !== null) {
               clearTimeout(hideTimeoutRef.current);
               hideTimeoutRef.current = null;
@@ -151,7 +191,7 @@ export function LoadingProgress() {
         hideTimeoutRef.current = null;
       }
     };
-  }, [progressCnt, stageCnt, shouldShow]);
+  }, []);
 
   return (
     <>

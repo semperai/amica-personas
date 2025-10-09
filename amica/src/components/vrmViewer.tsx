@@ -8,12 +8,34 @@ import { ChatContext } from "@/features/chat/chatContext";
 import { globalHookManager } from "@/features/hooks";
 import clsx from "clsx";
 
+/**
+ * VrmViewer Component
+ *
+ * The main 3D viewer component that renders VRM models on a canvas using Three.js.
+ * Handles loading, displaying, and interacting with VRM avatars.
+ *
+ * Features:
+ * - Renders VRM models in a 3D scene
+ * - Supports drag-and-drop VRM file loading
+ * - Monitors loading state via the global loading stage system
+ * - Responsive canvas resizing based on chat mode
+ * - Error handling for loading failures
+ * - Fallback timeout if loading system doesn't activate
+ *
+ * The component coordinates with the LoadingProgress component by monitoring
+ * `window.chatvrm_loading_stage` to determine when to show/hide the canvas.
+ *
+ * @param props - Component props
+ * @param props.chatMode - Whether the viewer is in chat mode (affects positioning)
+ * @returns A React component that renders the 3D VRM viewer
+ */
 export default function VrmViewer({ chatMode }: { chatMode: boolean }) {
   const { chat: bot } = useContext(ChatContext);
   const { viewer } = useContext(ViewerContext);
   const { getCurrentVrm, vrmList, vrmListAddFile, isLoadingVrmList } =
     useVrmStoreContext();
   const [loadingError, setLoadingError] = useState(false);
+  const [loadingErrorDetails, setLoadingErrorDetails] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const isVrmLocal = "local" == config("vrm_save_type");
 
@@ -35,6 +57,7 @@ export default function VrmViewer({ chatMode }: { chatMode: boolean }) {
     }
 
     let observedActiveStage = false;
+    let hasLoadingStageSystem = false;
 
     const interval = window.setInterval(() => {
       const loadingStage = (window as any).chatvrm_loading_stage ?? null;
@@ -42,6 +65,7 @@ export default function VrmViewer({ chatMode }: { chatMode: boolean }) {
       if (loadingStage !== null) {
         // Loading is active
         observedActiveStage = true;
+        hasLoadingStageSystem = true;
         setIsLoading(true);
       } else if (observedActiveStage) {
         // Loading completed (was active, now null)
@@ -49,31 +73,55 @@ export default function VrmViewer({ chatMode }: { chatMode: boolean }) {
       }
     }, 100);
 
-    return () => window.clearInterval(interval);
+    // Fallback: if loading stage system never activates, hide loading after 5 seconds
+    const fallbackTimeout = window.setTimeout(() => {
+      if (!hasLoadingStageSystem) {
+        console.warn('[VrmViewer] Loading stage system not detected, using fallback');
+        setIsLoading(false);
+      }
+    }, 5000);
+
+    return () => {
+      window.clearInterval(interval);
+      window.clearTimeout(fallbackTimeout);
+    };
   }, []);
 
   const canvasRef = useCallback(
     (canvas: HTMLCanvasElement) => {
       if (canvas && (!isVrmLocal || !isLoadingVrmList)) {
-        new Promise(async (resolve, reject) => {
-          await viewer.setup(canvas);
-
+        (async () => {
           try {
+            console.log('[VrmViewer] Setting up viewer...');
+            await viewer.setup(canvas);
+
+            console.log('[VrmViewer] Loading scenario from:', config('scenario_url'));
             await viewer.scenario.loadScenario(config('scenario_url'), viewer, globalHookManager);
-            resolve(true);
+            return true;
           } catch (e) {
-            reject(e);
+            console.error('[VrmViewer] Setup or scenario loading failed:', e);
+            throw e;
           }
-        })
+        })()
           .then((loaded) => {
             if (loaded) {
-              console.log("[VRM] vrm loaded");
+              console.log("[VRM] vrm loaded successfully");
               setLoadingError(false);
               setIsLoading(false);
             }
           })
           .catch((e) => {
-            console.error("[VRM] vrm loading error", e);
+            console.error("[VRM] vrm loading error:", e);
+            console.error("[VRM] error details:", {
+              message: e?.message,
+              stack: e?.stack,
+              type: typeof e,
+              stringified: String(e),
+            });
+
+            // Capture error details for display
+            const errorMessage = e?.message || String(e) || "Unknown error";
+            setLoadingErrorDetails(errorMessage);
             setLoadingError(true);
             setIsLoading(false);
           });
@@ -130,10 +178,25 @@ export default function VrmViewer({ chatMode }: { chatMode: boolean }) {
       {loadingError && (
         <div
           className={
-            "absolute left-0 top-0 flex h-full w-full items-center justify-center bg-black bg-opacity-50"
+            "absolute left-0 top-0 flex h-full w-full items-center justify-center bg-black bg-opacity-90 p-4"
           }>
-          <div className={"text-2xl text-white"}>
-            Error loading VRM model...
+          <div className="max-w-2xl text-center">
+            <div className="text-3xl text-red-500 mb-4">⚠️ Loading Error</div>
+            <div className="text-xl text-white mb-4">
+              Failed to load the application
+            </div>
+            <div className="text-sm text-gray-300 mb-6 font-mono bg-black bg-opacity-50 p-4 rounded break-words">
+              {loadingErrorDetails}
+            </div>
+            <div className="text-sm text-gray-400 mb-4">
+              Try refreshing the page. If the problem persists, check the browser console for more details.
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition"
+            >
+              🔄 Reload Page
+            </button>
           </div>
         </div>
       )}

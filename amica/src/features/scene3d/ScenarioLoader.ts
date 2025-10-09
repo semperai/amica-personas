@@ -12,26 +12,54 @@ export class ScenarioLoader {
 
     this.scenarioLoading = true;
 
-    setLoadingStage("Initializing scene...", 15);
-    const res = await fetch(url);
-    const classCode = await res.text();
+    try {
+      console.log('[ScenarioLoader] Starting scenario load from:', url);
+      setLoadingStage("Initializing scene...", 15);
 
-    const ClassDefinition = new Function(`return ${classCode}`)();
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`Failed to fetch scenario: ${res.status} ${res.statusText}`);
+      }
 
-    this.scenario = new ClassDefinition({
-      scope,
-      THREE,
-      hookManager,
-      config,
-    });
+      const classCode = await res.text();
+      console.log('[ScenarioLoader] Scenario code fetched, length:', classCode.length);
 
-    setLoadingStage("Setting up scenario...", 35);
-    await this.scenario.setup();
-    this.scenarioLoading = false;
+      console.log('[ScenarioLoader] Creating scenario class...');
+      const ClassDefinition = new Function(`return ${classCode}`)();
 
-    // Notify that scenario setup is complete
-    if (this.onScenarioSetupComplete) {
-      this.onScenarioSetupComplete();
+      console.log('[ScenarioLoader] Instantiating scenario...');
+      this.scenario = new ClassDefinition({
+        scope,
+        THREE,
+        hookManager,
+        config,
+      });
+
+      setLoadingStage("Setting up scenario...", 35);
+      console.log('[ScenarioLoader] Running scenario setup...');
+      await this.scenario.setup();
+
+      console.log('[ScenarioLoader] Scenario setup complete');
+      this.scenarioLoading = false;
+
+      // Notify that scenario setup is complete
+      if (this.onScenarioSetupComplete) {
+        console.log('[ScenarioLoader] Notifying scenario setup complete');
+        this.onScenarioSetupComplete();
+      }
+
+      console.log('[ScenarioLoader] Completing loading...');
+      completeLoading();
+    } catch (error) {
+      console.error('[ScenarioLoader] ERROR during scenario load:', error);
+      console.error('[ScenarioLoader] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      this.scenarioLoading = false;
+
+      // Complete loading even on error to show the error properly
+      completeLoading();
+
+      // Re-throw to propagate to caller
+      throw error;
     }
   }
 

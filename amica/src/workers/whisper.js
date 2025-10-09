@@ -4,6 +4,10 @@ import { pipeline, env } from "@huggingface/transformers";
 // Disable local models
 env.allowLocalModels = false;
 
+// Configure WASM paths for mobile Chrome compatibility
+// WASM files are copied to /assets/ by Vite build process
+env.backends.onnx.wasm.wasmPaths = '/assets/';
+
 // Define model factories
 // Ensures only one model is created of each type
 class PipelineFactory {
