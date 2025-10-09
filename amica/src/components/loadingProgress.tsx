@@ -109,25 +109,29 @@ export function LoadingProgress() {
         const stage = (window as any).chatvrm_loading_stage;
         const stageCntWindow = (window as any).chatvrm_loading_stage_cnt;
         if (stageCnt !== stageCntWindow) {
-          setLoadingStage(stage);
           setStageCnt(stageCntWindow);
 
-          // When loading completes, add delay before hiding
-          if (stage === null && shouldShow) {
-            // Clear any existing timeout
-            if (hideTimeoutRef.current !== null) {
-              clearTimeout(hideTimeoutRef.current);
-            }
-            hideTimeoutRef.current = window.setTimeout(() => {
-              setShouldShow(false);
-              hideTimeoutRef.current = null;
-            }, 200);
-          } else if (stage !== null) {
-            // Clear any pending hide timeout when a new stage starts
+          if (stage === null) {
             if (hideTimeoutRef.current !== null) {
               clearTimeout(hideTimeoutRef.current);
               hideTimeoutRef.current = null;
             }
+
+            if (shouldShow) {
+              hideTimeoutRef.current = window.setTimeout(() => {
+                setShouldShow(false);
+                setLoadingStage(null);
+                hideTimeoutRef.current = null;
+              }, 200);
+            } else {
+              setLoadingStage(null);
+            }
+          } else {
+            if (hideTimeoutRef.current !== null) {
+              clearTimeout(hideTimeoutRef.current);
+              hideTimeoutRef.current = null;
+            }
+            setLoadingStage(stage);
             setShouldShow(true);
           }
         }
