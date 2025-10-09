@@ -26,6 +26,7 @@ describe('ScenarioLoader', () => {
         })`;
 
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
         text: () => Promise.resolve(mockScenarioCode),
       } as Response);
 
@@ -45,6 +46,7 @@ describe('ScenarioLoader', () => {
         })`;
 
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
         text: () => Promise.resolve(mockScenarioCode),
       } as Response);
 
@@ -73,6 +75,7 @@ describe('ScenarioLoader', () => {
         })`;
 
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
         text: () => Promise.resolve(mockScenarioCode),
       } as Response);
 
@@ -98,6 +101,7 @@ describe('ScenarioLoader', () => {
         })`;
 
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
         text: () => Promise.resolve(mockScenarioCode),
       } as Response);
 
@@ -120,6 +124,7 @@ describe('ScenarioLoader', () => {
         })`;
 
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
         text: () => Promise.resolve(mockScenarioCode),
       } as Response);
 
