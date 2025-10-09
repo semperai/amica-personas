@@ -221,7 +221,7 @@ export class XRControllerModelFactory {
       const xrInputSource: XRInputSource = event.data;
       if (xrInputSource.targetRayMode !== 'tracked-pointer' || !xrInputSource.gamepad || xrInputSource.hand) return;
 
-      fetchProfile(xrInputSource, this.path, DEFAULT_PROFILE).then(({ profile, assetPath }: any) => {
+      fetchProfile(xrInputSource, this.path, DEFAULT_PROFILE as any).then(({ profile, assetPath }: any) => {
         controllerModel.motionController = new MotionController(
           xrInputSource,
           profile,

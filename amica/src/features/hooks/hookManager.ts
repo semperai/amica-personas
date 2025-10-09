@@ -13,7 +13,7 @@ interface RegisteredHook<T extends HookEvent = HookEvent> {
 }
 
 export class HookManager {
-  private hooks: Map<HookEvent, RegisteredHook[]> = new Map();
+  private hooks: Map<HookEvent, RegisteredHook<any>[]> = new Map();
   private metrics: Map<string, HookMetrics> = new Map();
   private enabled: boolean = true;
   private hookIdCounter: number = 0;
@@ -48,8 +48,7 @@ export class HookManager {
     }
 
     const hooks = this.hooks.get(event)!;
-    // @ts-expect-error - Complex generic type conversion that's safe at runtime
-    hooks.push(hook as RegisteredHook);
+    hooks.push(hook);
 
     // Sort by priority (lower numbers first)
     hooks.sort((a, b) => (a.options.priority ?? 100) - (b.options.priority ?? 100));
@@ -132,7 +131,6 @@ export class HookManager {
 
         // Execute hook with timeout
         const result = await this.executeWithTimeout(
-          // @ts-expect-error - Complex generic type conversion that's safe at runtime
           hook.callback as HookCallback<T>,
           context,
           hook.options.timeout ?? 5000
@@ -166,8 +164,7 @@ export class HookManager {
 
     // Return mutable context data
     const { _event, _timestamp, _hookId, ...result } = context;
-    // @ts-expect-error - Complex generic type conversion that's safe at runtime
-    return result as HookEventMap[T];
+    return result as unknown as HookEventMap[T];
   }
 
   /**
@@ -221,7 +218,7 @@ export class HookManager {
   /**
    * Get all registered hooks
    */
-  public getHooks(event?: HookEvent): RegisteredHook[] {
+  public getHooks(event?: HookEvent): RegisteredHook<any>[] {
     if (event) {
       return this.hooks.get(event) || [];
     }
