@@ -7,7 +7,7 @@ import {
 } from "three-mesh-bvh";
 
 import { config } from "@/utils/config";
-import { RenderSystem } from "./RenderSystem";
+import { RenderSystem, WebRenderer } from "./RenderSystem";
 import { XRSystem } from "./XRSystem";
 import { PhysicsSystem } from "./PhysicsSystem";
 import { RaycastSystem } from "./RaycastSystem";
@@ -16,6 +16,7 @@ import { EnvironmentManager } from "./EnvironmentManager";
 import { ParticleManager, ParticleOptions, ParticleEffectType } from "./ParticleManager";
 import { DebugSystem } from "./DebugSystem";
 import { ScenarioLoader } from "./ScenarioLoader";
+import type { Chat } from "@/features/chat/chat";
 
 // Add the extension functions
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
@@ -38,7 +39,7 @@ THREE.BatchedMesh.prototype.disposeBoundsTree = disposeBoundsTree;
  */
 export class SceneCoordinator {
   public isReady: boolean = false;
-  public chat?: any;
+  public chat?: Chat;
 
   // Public systems - access directly for fine-grained control
   public render?: RenderSystem;
@@ -225,7 +226,7 @@ export class SceneCoordinator {
     return this.render?.camera;
   }
 
-  public get renderer(): import("./RenderSystem").WebRenderer | undefined {
+  public get renderer(): WebRenderer | undefined {
     return this.render?.renderer;
   }
 
@@ -252,11 +253,7 @@ export class SceneCoordinator {
       console.warn('Cannot play animation: invalid animation clip');
       return;
     }
-    if (typeof model.loadAnimation === 'function') {
-      model.loadAnimation(animationClip);
-    } else {
-      console.warn('Cannot play animation: model does not support loadAnimation');
-    }
+    model.loadAnimation(animationClip);
   }
 
   // Emotion/Expression control
@@ -302,15 +299,11 @@ export class SceneCoordinator {
 
   // Chat/Bot interaction
   public sendMessage(message: string) {
-    if (this.chat) {
-      if (typeof this.chat.handleUserMessage === 'function') {
-        this.chat.handleUserMessage(message);
-      } else {
-        console.warn('Cannot send message: chat.handleUserMessage is not available');
-      }
-    } else {
+    if (!this.chat) {
       console.warn('Cannot send message: chat not initialized');
+      return;
     }
+    this.chat.receiveMessageFromUser(message);
   }
 
   // Splat loading
