@@ -289,7 +289,8 @@ describe('Dynamic Lighting Scenario', () => {
         let angleDiff = angles[i] - angles[i - 1];
         if (angleDiff < 0) angleDiff += Math.PI * 2;
 
-        expect(angleDiff).toBeCloseTo(expectedSpacing, 0);
+        // Tighter precision (1 decimal = ~±0.05 radians or ±2.9°) to better validate spacing
+        expect(angleDiff).toBeCloseTo(expectedSpacing, 1);
       }
     });
   });
