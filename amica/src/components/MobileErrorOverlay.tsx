@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
 
+// Maximum number of errors to store to prevent memory issues
+const MAX_ERRORS = 50;
+
 interface ErrorInfo {
   type: 'error' | 'rejection';
   message: string;
@@ -104,7 +107,11 @@ export function MobileErrorOverlay() {
         userAgent: navigator.userAgent,
       };
       console.error('[Mobile Error Overlay] Error details:', errorInfo);
-      setErrors(prev => [...prev, errorInfo]);
+      setErrors(prev => {
+        const updated = [...prev, errorInfo];
+        // Keep only the most recent MAX_ERRORS errors to prevent memory issues
+        return updated.length > MAX_ERRORS ? updated.slice(-MAX_ERRORS) : updated;
+      });
       setIsVisible(true);
     };
 
@@ -120,7 +127,11 @@ export function MobileErrorOverlay() {
         userAgent: navigator.userAgent,
       };
       console.error('[Mobile Error Overlay] Rejection details:', errorInfo);
-      setErrors(prev => [...prev, errorInfo]);
+      setErrors(prev => {
+        const updated = [...prev, errorInfo];
+        // Keep only the most recent MAX_ERRORS errors to prevent memory issues
+        return updated.length > MAX_ERRORS ? updated.slice(-MAX_ERRORS) : updated;
+      });
       setIsVisible(true);
     };
 
