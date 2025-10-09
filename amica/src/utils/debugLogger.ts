@@ -101,9 +101,25 @@ function initDebugLogger(): void {
 
   // Global error handler
   window.addEventListener('error', (event: ErrorEvent) => {
-    const message = event.error?.message ?? event.message ?? 'Unknown error';
-    const stack = event.error?.stack ?? '';
-    console.error(`Error occurred: ${message}${stack ? ' ' + stack : ''}`);
+    // Better handling of error objects
+    let message = 'Unknown error';
+    let stack = '';
+
+    if (event.error) {
+      // Standard Error object
+      message = event.error.message || String(event.error);
+      stack = event.error.stack || '';
+    } else if (event.message) {
+      // Plain message
+      message = event.message;
+    }
+
+    // Add source location info if available
+    if (event.filename) {
+      message += ` (at ${event.filename}:${event.lineno}:${event.colno})`;
+    }
+
+    console.error(`[Error Handler] ${message}${stack ? '\n' + stack : ''}`);
     return false;
   });
 

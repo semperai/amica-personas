@@ -75,10 +75,28 @@ export function MobileErrorOverlay() {
     // Capture unhandled errors
     const handleError = (event: ErrorEvent) => {
       console.error('[Mobile Error Overlay] Caught error:', event);
+
+      // Better error message extraction
+      let message = 'Unknown error';
+      let stack = '';
+
+      if (event.error) {
+        // Standard Error object
+        message = event.error.message || String(event.error);
+        stack = event.error.stack || '';
+      } else if (event.message) {
+        // Plain message - check if it's the generic "Uncaught [object Event]"
+        message = event.message;
+        if (message.includes('[object Event]') || message.includes('[object Object]')) {
+          // Try to extract more info from the event
+          message = `Worker error at ${event.filename || 'unknown'}`;
+        }
+      }
+
       const errorInfo: ErrorInfo = {
         type: 'error',
-        message: event.message || String(event.error),
-        stack: event.error?.stack || new Error().stack,
+        message,
+        stack: stack || new Error().stack,
         filename: event.filename,
         lineno: event.lineno,
         colno: event.colno,
