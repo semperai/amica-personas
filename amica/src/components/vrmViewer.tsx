@@ -30,17 +30,26 @@ export default function VrmViewer({ chatMode }: { chatMode: boolean }) {
 
   // Monitor loading completion
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (typeof window !== "undefined") {
-        const loadingStage = (window as any).chatvrm_loading_stage;
-        if (loadingStage === null) {
-          setIsLoading(false);
-          clearInterval(interval);
-        }
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    let observedActiveStage = false;
+
+    const interval = window.setInterval(() => {
+      const loadingStage = (window as any).chatvrm_loading_stage ?? null;
+
+      if (loadingStage !== null) {
+        // Loading is active
+        observedActiveStage = true;
+        setIsLoading(true);
+      } else if (observedActiveStage) {
+        // Loading completed (was active, now null)
+        setIsLoading(false);
       }
     }, 100);
 
-    return () => clearInterval(interval);
+    return () => window.clearInterval(interval);
   }, []);
 
   const canvasRef = useCallback(
