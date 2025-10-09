@@ -112,13 +112,32 @@ export default function Home() {
   const [showMicSettings, setShowMicSettings] = useState(false);
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('default');
-  const [autosendEnabled, setAutosendEnabled] = useState(config('autosend_from_mic') === 'true');
-  const [micEnabled, setMicEnabled] = useState(config('stt_backend') !== 'none');
+
+  // Initialize from localStorage if available, otherwise use config
+  const [autosendEnabled, setAutosendEnabled] = useState(() => {
+    const stored = localStorage.getItem('amica_autosend_from_mic');
+    return stored !== null ? stored === 'true' : config('autosend_from_mic') === 'true';
+  });
+
+  const [micEnabled, setMicEnabled] = useState(() => {
+    const stored = localStorage.getItem('amica_mic_enabled');
+    return stored !== null ? stored === 'true' : config('stt_backend') !== 'none';
+  });
 
   const [isARSupported, setIsARSupported] = useState(false);
   const [isVRSupported, setIsVRSupported] = useState(false);
 
   const [isVRHeadset, setIsVRHeadset] = useState(false);
+
+  // Persist autosend preference to localStorage
+  useEffect(() => {
+    localStorage.setItem('amica_autosend_from_mic', autosendEnabled.toString());
+  }, [autosendEnabled]);
+
+  // Persist mic enabled preference to localStorage
+  useEffect(() => {
+    localStorage.setItem('amica_mic_enabled', micEnabled.toString());
+  }, [micEnabled]);
 
   // Load audio devices
   useEffect(() => {
