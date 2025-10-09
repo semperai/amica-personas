@@ -35,6 +35,7 @@ export default function VrmViewer({ chatMode }: { chatMode: boolean }) {
   const { getCurrentVrm, vrmList, vrmListAddFile, isLoadingVrmList } =
     useVrmStoreContext();
   const [loadingError, setLoadingError] = useState(false);
+  const [loadingErrorDetails, setLoadingErrorDetails] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const isVrmLocal = "local" == config("vrm_save_type");
 
@@ -90,24 +91,39 @@ export default function VrmViewer({ chatMode }: { chatMode: boolean }) {
     (canvas: HTMLCanvasElement) => {
       if (canvas && (!isVrmLocal || !isLoadingVrmList)) {
         new Promise(async (resolve, reject) => {
-          await viewer.setup(canvas);
-
           try {
+            console.log('[VrmViewer] Setting up viewer...');
+            await viewer.setup(canvas);
+
+            console.log('[VrmViewer] Loading scenario from:', config('scenario_url'));
             await viewer.scenario.loadScenario(config('scenario_url'), viewer, globalHookManager);
             resolve(true);
           } catch (e) {
+            console.error('[VrmViewer] Setup or scenario loading failed:', e);
             reject(e);
           }
         })
           .then((loaded) => {
             if (loaded) {
-              console.log("[VRM] vrm loaded");
+              console.log("[VRM] vrm loaded successfully");
               setLoadingError(false);
+              setIsLoading(false);
             }
           })
           .catch((e) => {
-            console.error("[VRM] vrm loading error", e);
+            console.error("[VRM] vrm loading error:", e);
+            console.error("[VRM] error details:", {
+              message: e?.message,
+              stack: e?.stack,
+              type: typeof e,
+              stringified: String(e),
+            });
+
+            // Capture error details for display
+            const errorMessage = e?.message || String(e) || "Unknown error";
+            setLoadingErrorDetails(errorMessage);
             setLoadingError(true);
+            setIsLoading(false);
           });
 
         // Replace VRM with Drag and Drop
@@ -162,10 +178,25 @@ export default function VrmViewer({ chatMode }: { chatMode: boolean }) {
       {loadingError && (
         <div
           className={
-            "absolute left-0 top-0 flex h-full w-full items-center justify-center bg-black bg-opacity-50"
+            "absolute left-0 top-0 flex h-full w-full items-center justify-center bg-black bg-opacity-90 p-4"
           }>
-          <div className={"text-2xl text-white"}>
-            Error loading VRM model...
+          <div className="max-w-2xl text-center">
+            <div className="text-3xl text-red-500 mb-4">⚠️ Loading Error</div>
+            <div className="text-xl text-white mb-4">
+              Failed to load the application
+            </div>
+            <div className="text-sm text-gray-300 mb-6 font-mono bg-black bg-opacity-50 p-4 rounded break-words">
+              {loadingErrorDetails}
+            </div>
+            <div className="text-sm text-gray-400 mb-4">
+              Try refreshing the page. If the problem persists, check the browser console for more details.
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition"
+            >
+              🔄 Reload Page
+            </button>
           </div>
         </div>
       )}

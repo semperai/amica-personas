@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 const MAX_ERRORS = 50;
 
 interface ErrorInfo {
-  type: 'error' | 'rejection';
+  type: 'error' | 'rejection' | 'console';
   message: string;
   stack?: string;
   filename?: string;
@@ -12,6 +12,7 @@ interface ErrorInfo {
   colno?: number;
   timestamp: number;
   userAgent: string;
+  level?: string;
 }
 
 interface StackFrame {
@@ -75,6 +76,45 @@ export function MobileErrorOverlay() {
   const [expandedErrors, setExpandedErrors] = useState<Set<number>>(new Set());
 
   useEffect(() => {
+    // Intercept console.error to capture important error logs
+    const originalConsoleError = console.error;
+    console.error = (...args: any[]) => {
+      // Call original console.error
+      originalConsoleError.apply(console, args);
+
+      // Capture for display
+      const message = args.map(arg => {
+        if (typeof arg === 'string') return arg;
+        if (arg instanceof Error) return arg.message;
+        try {
+          return JSON.stringify(arg, null, 2);
+        } catch {
+          return String(arg);
+        }
+      }).join(' ');
+
+      // Only show errors from our code (ScenarioLoader, VrmViewer, etc.)
+      if (message.includes('[ScenarioLoader]') ||
+          message.includes('[VrmViewer]') ||
+          message.includes('[VRM]') ||
+          message.includes('Loading') ||
+          message.includes('ERROR')) {
+        const errorInfo: ErrorInfo = {
+          type: 'console',
+          level: 'error',
+          message,
+          timestamp: Date.now(),
+          userAgent: navigator.userAgent,
+        };
+        console.log('[Mobile Error Overlay] Captured console error:', errorInfo);
+        setErrors(prev => {
+          const updated = [...prev, errorInfo];
+          return updated.length > MAX_ERRORS ? updated.slice(-MAX_ERRORS) : updated;
+        });
+        setIsVisible(true);
+      }
+    };
+
     // Capture unhandled errors
     const handleError = (event: ErrorEvent) => {
       console.error('[Mobile Error Overlay] Caught error:', event);
@@ -141,6 +181,7 @@ export function MobileErrorOverlay() {
     return () => {
       window.removeEventListener('error', handleError);
       window.removeEventListener('unhandledrejection', handleRejection);
+      console.error = originalConsoleError;
     };
   }, []);
 
@@ -299,7 +340,7 @@ export function MobileErrorOverlay() {
             >
               <div style={{ flex: 1 }}>
                 <div style={{ color: '#f85149', fontWeight: '600', marginBottom: '4px' }}>
-                  {error.type === 'error' ? '❌ Error' : '⚡ Promise Rejection'} #{index + 1}
+                  {error.type === 'error' ? '❌ Error' : error.type === 'rejection' ? '⚡ Promise Rejection' : '📋 Console Error'} #{index + 1}
                 </div>
                 <div style={{ fontSize: '12px', color: '#8b949e' }}>
                   {new Date(error.timestamp).toLocaleString()}
