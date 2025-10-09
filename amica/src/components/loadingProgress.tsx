@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type LoadingFile = {
   file: string;
@@ -79,6 +79,7 @@ export function LoadingProgress() {
   const [stageCnt, setStageCnt] = useState(0);
   const [funnyMessage, setFunnyMessage] = useState("");
   const [shouldShow, setShouldShow] = useState(false);
+  const hideTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     // Set initial funny message
@@ -113,10 +114,20 @@ export function LoadingProgress() {
 
           // When loading completes, add delay before hiding
           if (stage === null && shouldShow) {
-            setTimeout(() => {
+            // Clear any existing timeout
+            if (hideTimeoutRef.current !== null) {
+              clearTimeout(hideTimeoutRef.current);
+            }
+            hideTimeoutRef.current = window.setTimeout(() => {
               setShouldShow(false);
+              hideTimeoutRef.current = null;
             }, 200);
           } else if (stage !== null) {
+            // Clear any pending hide timeout when a new stage starts
+            if (hideTimeoutRef.current !== null) {
+              clearTimeout(hideTimeoutRef.current);
+              hideTimeoutRef.current = null;
+            }
             setShouldShow(true);
           }
         }
@@ -131,6 +142,10 @@ export function LoadingProgress() {
     return () => {
       clearInterval(interval);
       clearInterval(funnyInterval);
+      if (hideTimeoutRef.current !== null) {
+        clearTimeout(hideTimeoutRef.current);
+        hideTimeoutRef.current = null;
+      }
     };
   }, [progressCnt, stageCnt, shouldShow]);
 
