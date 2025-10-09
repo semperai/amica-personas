@@ -1,11 +1,6 @@
 import { Message } from "./messages";
 import { config } from "@/utils/config";
-
-interface Output {
-  message?: {
-    content: string;
-  };
-}
+import type { Output } from "window.ai";
 
 export async function getWindowAiChatResponseStream(messages: Message[]) {
   const stream = new ReadableStream({
