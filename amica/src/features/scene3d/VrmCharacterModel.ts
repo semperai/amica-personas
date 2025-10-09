@@ -28,6 +28,13 @@ type MaterialWithUpdate = THREE.Material & {
 };
 
 /**
+ * Type for the MToonNodeMaterial module (WebGPU-compatible MToon material)
+ */
+type MToonNodeMaterialModule = {
+  MToonNodeMaterial: any;
+};
+
+/**
  * 3Dキャラクターを管理するクラス
  */
 export class Model {
@@ -102,9 +109,8 @@ export class Model {
     // WebGPU requires MToonNodeMaterial for proper rendering
     if (useWebGPU) {
       console.log('[VRM] Using WebGPU renderer - loading MToonNodeMaterial');
-      // @ts-ignore
-      const { MToonNodeMaterial } = await import("@pixiv/three-vrm-materials-mtoon/nodes");
-      materialType = MToonNodeMaterial;
+      const module = await import("@pixiv/three-vrm-materials-mtoon/nodes") as MToonNodeMaterialModule;
+      materialType = module.MToonNodeMaterial;
     } else {
       // WebGL renderer - use configured material type
       switch (configuredMaterialType) {
