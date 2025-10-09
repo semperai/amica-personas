@@ -49,8 +49,9 @@ export class SileroV5 {
     this._state = out["stateN"]
 
     // @ts-ignore
-    const [isSpeech] = out["output"]?.data
-    const notSpeech = 1 - isSpeech
+    const data = out["output"]?.data;
+    const isSpeech = typeof data === 'number' ? data : (Array.isArray(data) ? Number(data[0]) : 0);
+    const notSpeech = 1 - isSpeech;
     return { notSpeech, isSpeech }
   }
 }

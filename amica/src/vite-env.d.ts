@@ -10,9 +10,38 @@ interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
+declare module 'window.ai' {
+  export interface Output {
+    message?: {
+      content: string;
+    };
+  }
+  export {};
+}
+
 declare global {
   interface Window {
     dataLayer: any[];
+    ai?: {
+      generateText(
+        options: any,
+        config: any
+      ): Promise<any[]>;
+    };
+    ethereum?: {
+      request: (args: { method: string; params?: any[] }) => Promise<any>;
+      on: (event: string, handler: (...args: any[]) => void) => void;
+      removeListener: (event: string, handler: (...args: any[]) => void) => void;
+    };
+  }
+}
+
+declare namespace JSX {
+  interface IntrinsicElements {
+    'pixiv-icon': {
+      name: string;
+      scale?: string;
+    };
   }
 }
 

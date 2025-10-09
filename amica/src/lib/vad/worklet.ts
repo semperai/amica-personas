@@ -1,6 +1,23 @@
 // VAD AudioWorklet Processor
 // Based on @ricky0123/vad-web but fixed to ensure process() is called
 
+// AudioWorklet global types
+declare const sampleRate: number;
+
+declare class AudioWorkletProcessor {
+  readonly port: MessagePort;
+  process(
+    inputs: Float32Array[][],
+    outputs: Float32Array[][],
+    parameters: Record<string, Float32Array>
+  ): boolean;
+}
+
+declare function registerProcessor(
+  name: string,
+  processorCtor: new (options: AudioWorkletNodeOptions) => AudioWorkletProcessor
+): void;
+
 const LOG_PREFIX = "[VAD Worklet]";
 const log = {
   debug: (...args: unknown[]) => console.debug(LOG_PREFIX, ...args),
@@ -111,7 +128,7 @@ class VadWorkletProcessor extends AudioWorkletProcessor {
 
     log.debug("Worklet constructor called with options:", this.options);
 
-    this.port.onmessage = (ev) => {
+    this.port.onmessage = (ev: MessageEvent) => {
       if (ev.data.message === Message.SpeechStop) {
         log.debug("Received SpeechStop message");
         this._stopProcessing = true;

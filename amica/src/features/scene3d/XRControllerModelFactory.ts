@@ -6,8 +6,7 @@ import {
   Texture,
 } from 'three';
 
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader";
-import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader';
+import { GLTFLoader, GLTF } from "three/addons/loaders/GLTFLoader";
 
 import {
   Constants as MotionControllerConstants,
@@ -222,7 +221,7 @@ export class XRControllerModelFactory {
       const xrInputSource: XRInputSource = event.data;
       if (xrInputSource.targetRayMode !== 'tracked-pointer' || !xrInputSource.gamepad || xrInputSource.hand) return;
 
-      fetchProfile(xrInputSource, this.path, DEFAULT_PROFILE).then(({ profile, assetPath }: any) => {
+      fetchProfile(xrInputSource, this.path, DEFAULT_PROFILE as any).then(({ profile, assetPath }: any) => {
         controllerModel.motionController = new MotionController(
           xrInputSource,
           profile,
@@ -233,7 +232,7 @@ export class XRControllerModelFactory {
         if (cachedAsset) {
           scene = cachedAsset.scene.clone();
           addAssetSceneToControllerModel(controllerModel, scene);
-          if (this.onLoad) this.onLoad(scene);
+          if (this.onLoad && scene) this.onLoad(scene);
         } else {
           if (!this.gltfLoader) {
             throw new Error('GLTFLoader not set.');
@@ -245,7 +244,7 @@ export class XRControllerModelFactory {
             scene = asset.scene.clone();
             addAssetSceneToControllerModel(controllerModel, scene);
 
-            if (this.onLoad) this.onLoad(scene);
+            if (this.onLoad && scene) this.onLoad(scene);
           },
           undefined,
           () => {

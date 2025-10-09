@@ -15,6 +15,7 @@ interface LogEntry {
 interface WindowWithErrorHandler extends Window {
   error_handler_installed?: boolean;
   error_handler_logs?: LogEntry[];
+  console: Console;
 }
 
 declare const window: WindowWithErrorHandler;
@@ -96,7 +97,7 @@ function initDebugLogger(): void {
   };
 
   // Replace console with proxy
-  window.console = new Proxy({}, consoleHandler) as Console;
+  window.console = new Proxy({}, consoleHandler) as unknown as Console;
 
   // Global error handler
   window.addEventListener('error', (event: ErrorEvent) => {

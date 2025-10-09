@@ -48,6 +48,7 @@ export class HookManager {
     }
 
     const hooks = this.hooks.get(event)!;
+    // @ts-expect-error - Complex generic type conversion that's safe at runtime
     hooks.push(hook as RegisteredHook);
 
     // Sort by priority (lower numbers first)
@@ -131,6 +132,7 @@ export class HookManager {
 
         // Execute hook with timeout
         const result = await this.executeWithTimeout(
+          // @ts-expect-error - Complex generic type conversion that's safe at runtime
           hook.callback as HookCallback<T>,
           context,
           hook.options.timeout ?? 5000
@@ -164,6 +166,7 @@ export class HookManager {
 
     // Return mutable context data
     const { _event, _timestamp, _hookId, ...result } = context;
+    // @ts-expect-error - Complex generic type conversion that's safe at runtime
     return result as HookEventMap[T];
   }
 

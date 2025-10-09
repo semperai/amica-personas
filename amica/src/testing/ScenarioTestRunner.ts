@@ -340,7 +340,7 @@ export class ScenarioTestRunner {
    * Get all lights in scene
    */
   getLights(): THREE.Light[] {
-    return this.getSceneObjects(THREE.Light);
+    return this.getSceneObjects(THREE.Light as any);
   }
 
   /**
@@ -526,6 +526,9 @@ export const ScenarioTestUtils = {
    */
   createMinimalScenario(): any {
     return class MinimalScenario {
+      $: any;
+      THREE: any;
+
       constructor(ctx: any) {
         this.$ = ctx.scope;
         this.THREE = ctx.THREE;

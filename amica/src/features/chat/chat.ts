@@ -91,10 +91,10 @@ export class Chat {
 
   // the message from the user that is currently being processed
   // it can be reset
-  public stream: ReadableStream<Uint8Array> | null;
-  public streams: ReadableStream<Uint8Array>[];
-  public reader: ReadableStreamDefaultReader<Uint8Array> | null;
-  public readers: ReadableStreamDefaultReader<Uint8Array>[];
+  public stream: ReadableStream<string> | null;
+  public streams: ReadableStream<string>[];
+  public reader: ReadableStreamDefaultReader<string> | null;
+  public readers: ReadableStreamDefaultReader<string>[];
 
   // process these immediately as they come in and add to audioToPlay
   public ttsJobs: Queue<TTSJob>;
@@ -616,7 +616,7 @@ export class Chat {
       });
     }
 
-    let stream: ReadableStream<Uint8Array>;
+    let stream: ReadableStream<string>;
     console.debug('[Chat] Routing to backend provider:', beforeContext.backend);
     switch (beforeContext.backend) {
       case "arbius_llm":

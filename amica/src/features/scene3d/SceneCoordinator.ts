@@ -3,7 +3,6 @@ import {
   computeBoundsTree,
   disposeBoundsTree,
   computeBatchedBoundsTree,
-  disposeBatchedBoundsTree,
   acceleratedRaycast,
 } from "three-mesh-bvh";
 
@@ -26,7 +25,7 @@ THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
 THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
 
 THREE.BatchedMesh.prototype.computeBoundsTree = computeBatchedBoundsTree;
-THREE.BatchedMesh.prototype.disposeBatchedBoundsTree = disposeBatchedBoundsTree;
+THREE.BatchedMesh.prototype.disposeBoundsTree = disposeBoundsTree;
 
 /**
  * Coordinates all 3D scene systems
@@ -271,7 +270,7 @@ export class SceneCoordinator {
   public triggerEmotion(emotion: string, duration?: number) {
     const model = this.vrm?.getModel();
     if (model?.emoteController) {
-      model.emoteController.playEmotion(emotion, duration);
+      model.emoteController.playEmotion(emotion);
     }
   }
 

@@ -1,13 +1,17 @@
 import { Message } from "./messages";
-import { Output } from "window.ai";
 import { config } from "@/utils/config";
 
+interface Output {
+  message?: {
+    content: string;
+  };
+}
 
 export async function getWindowAiChatResponseStream(messages: Message[]) {
   const stream = new ReadableStream({
     async start(controller: ReadableStreamDefaultController) {
       try {
-        const [response]: Output[] = await window.ai.generateText({
+        const [response]: Output[] = await window.ai!.generateText({
           messages,
         }, {
           maxTokens: 400,

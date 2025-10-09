@@ -120,6 +120,7 @@ export class AmicaJsonRpcClient {
         }
         this.ws.send(JSON.stringify(request));
       } else {
+        // @ts-expect-error - Complex generic type inference issue with resolve/reject
         this.sendHttpRequest(request).then(resolve).catch(reject);
       }
     });

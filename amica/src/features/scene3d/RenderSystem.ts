@@ -33,13 +33,13 @@ export class RenderSystem {
     const width = parentElement?.clientWidth || canvas.width;
     const height = parentElement?.clientHeight || canvas.height;
 
-    let WebRendererType = THREE.WebGLRenderer;
+    let WebRendererType: typeof THREE.WebGLRenderer = THREE.WebGLRenderer;
     if (config("use_webgpu") === "true") {
       // Import from three/webgpu to match MToonNodeMaterial's imports
       // This ensures we use the same Three.js instance
       // @ts-ignore
       const { WebGPURenderer } = await import("three/webgpu");
-      WebRendererType = WebGPURenderer;
+      WebRendererType = WebGPURenderer as any;
     }
 
     const renderer = new WebRendererType({
