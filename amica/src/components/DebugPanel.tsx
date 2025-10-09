@@ -206,14 +206,59 @@ export function DebugPane({ onClickClose }: {
                 // Prepare log message string (lightweight)
                 let logMessage = '';
                 try {
-                  logMessage = [...log.arguments].map((v: any) =>
-                    typeof v === 'object' ? '[Object]' : String(v)
-                  ).join(" ");
+                  // Check different possible argument structures
+                  let args: any[] = [];
+
+                  if (log.args) {
+                    if (Array.isArray(log.args)) {
+                      args = log.args;
+                    } else if (typeof log.args === 'object') {
+                      // Try to convert array-like objects
+                      try {
+                        args = Array.from(log.args);
+                      } catch {
+                        // If that fails, try Object.values
+                        args = Object.values(log.args);
+                      }
+                    }
+                  }
+
+                  // Fallback: check if message or msg property exists
+                  if (args.length === 0) {
+                    if (log.message) {
+                      args = [log.message];
+                    } else if (log.msg) {
+                      args = [log.msg];
+                    }
+                  }
+
+                  logMessage = args.map((v: any) => {
+                    if (v === null) return 'null';
+                    if (v === undefined) return 'undefined';
+                    if (typeof v === 'object') {
+                      try {
+                        // Try to show object in a readable way
+                        if (v.constructor && v.constructor.name !== 'Object') {
+                          return `[${v.constructor.name}]`;
+                        }
+                        return safeStringify(v);
+                      } catch {
+                        return '[Object]';
+                      }
+                    }
+                    return String(v);
+                  }).join(" ");
+
                   if (logMessage.length > 500) {
                     logMessage = logMessage.substring(0, 500) + '...';
                   }
+
+                  // If still empty, show a placeholder
+                  if (!logMessage) {
+                    logMessage = '(empty log)';
+                  }
                 } catch (e) {
-                  logMessage = '[Error rendering log]';
+                  logMessage = `[Error: ${e instanceof Error ? e.message : 'Unknown error'}]`;
                 }
 
                 return (

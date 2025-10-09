@@ -78,6 +78,7 @@ export function LoadingProgress() {
   );
   const [stageCnt, setStageCnt] = useState(0);
   const [funnyMessage, setFunnyMessage] = useState("");
+  const [shouldShow, setShouldShow] = useState(false);
 
   useEffect(() => {
     // Set initial funny message
@@ -109,6 +110,15 @@ export function LoadingProgress() {
         if (stageCnt !== stageCntWindow) {
           setLoadingStage(stage);
           setStageCnt(stageCntWindow);
+
+          // When loading completes, add delay before hiding
+          if (stage === null && shouldShow) {
+            setTimeout(() => {
+              setShouldShow(false);
+            }, 200);
+          } else if (stage !== null) {
+            setShouldShow(true);
+          }
         }
       }
     }, 100);
@@ -122,12 +132,12 @@ export function LoadingProgress() {
       clearInterval(interval);
       clearInterval(funnyInterval);
     };
-  }, [progressCnt, stageCnt]);
+  }, [progressCnt, stageCnt, shouldShow]);
 
   return (
     <>
       {/* Main loading bar overlay */}
-      {loadingStage && (
+      {(loadingStage || shouldShow) && loadingStage && (
         <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-white via-gray-50 to-gray-100 z-[9999] p-4" style={{ fontFamily: 'Fredoka, sans-serif' }}>
           <div className="w-full max-w-[600px] px-4 sm:px-8">
             {/* Stage text - larger on mobile */}

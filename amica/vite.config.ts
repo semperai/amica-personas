@@ -1,14 +1,28 @@
-import { defineConfig } from 'vite';
+import { defineConfig, Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 import { configServerPlugin } from './vite-plugins/config-server';
+
+// Generate build ID once at config time
+const BUILD_ID = Date.now().toString();
+
+// Plugin to inject build ID into HTML
+function htmlCacheBuster(): Plugin {
+  return {
+    name: 'html-cache-buster',
+    transformIndexHtml(html) {
+      return html.replace(/%VITE_CONFIG_BUILD_ID%/g, BUILD_ID);
+    },
+  };
+}
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react(),
     configServerPlugin(),
+    htmlCacheBuster(),
     viteStaticCopy({
       targets: [
         {
@@ -47,7 +61,7 @@ export default defineConfig({
   },
   base: process.env.BASE_PATH || '/',
   define: {
-    'import.meta.env.VITE_CONFIG_BUILD_ID': JSON.stringify(Date.now().toString()),
+    'import.meta.env.VITE_CONFIG_BUILD_ID': JSON.stringify(BUILD_ID),
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
   },
   build: {

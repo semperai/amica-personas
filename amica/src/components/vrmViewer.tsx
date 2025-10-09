@@ -13,9 +13,8 @@ export default function VrmViewer({ chatMode }: { chatMode: boolean }) {
   const { viewer } = useContext(ViewerContext);
   const { getCurrentVrm, vrmList, vrmListAddFile, isLoadingVrmList } =
     useVrmStoreContext();
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadingProgress, setLoadingProgress] = useState("");
   const [loadingError, setLoadingError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const isVrmLocal = "local" == config("vrm_save_type");
 
   useEffect(() => {
@@ -28,6 +27,21 @@ export default function VrmViewer({ chatMode }: { chatMode: boolean }) {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, [chatMode, viewer]);
+
+  // Monitor loading completion
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (typeof window !== "undefined") {
+        const loadingStage = (window as any).chatvrm_loading_stage;
+        if (loadingStage === null) {
+          setIsLoading(false);
+          clearInterval(interval);
+        }
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const canvasRef = useCallback(
     (canvas: HTMLCanvasElement) => {
@@ -46,13 +60,11 @@ export default function VrmViewer({ chatMode }: { chatMode: boolean }) {
             if (loaded) {
               console.log("vrm loaded");
               setLoadingError(false);
-              setIsLoading(false);
             }
           })
           .catch((e) => {
             console.error("vrm loading error", e);
             setLoadingError(true);
-            setIsLoading(false);
           });
 
         // Replace VRM with Drag and Drop
@@ -96,15 +108,14 @@ export default function VrmViewer({ chatMode }: { chatMode: boolean }) {
         "z-0 fixed left-0 top-0 h-full w-full",
         chatMode ? "left-[65%] top-[50%]" : "left-0 top-0",
       )}>
-      <canvas ref={canvasRef} className={"h-full w-full"}></canvas>
-      {isLoading && (
-        <div
-          className={
-            "absolute left-0 top-0 flex h-full w-full items-center justify-center bg-black bg-opacity-50"
-          }>
-          <div className={"text-2xl text-white"}>{loadingProgress}</div>
-        </div>
-      )}
+      <canvas
+        ref={canvasRef}
+        className={clsx(
+          "h-full w-full",
+          isLoading && "opacity-0"
+        )}
+      ></canvas>
+      {/* Loading is handled by LoadingProgress component - no overlay needed here */}
       {loadingError && (
         <div
           className={
