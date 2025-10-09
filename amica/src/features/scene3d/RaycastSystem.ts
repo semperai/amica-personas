@@ -200,6 +200,10 @@ export class RaycastSystem {
    * Add custom objects for raycasting
    */
   public addCustomTarget(object: THREE.Object3D) {
+    if (!object) {
+      console.warn('[RaycastSystem] addCustomTarget: object is null or undefined');
+      return;
+    }
     if (!this.customTargets.includes(object)) {
       this.customTargets.push(object);
     }
