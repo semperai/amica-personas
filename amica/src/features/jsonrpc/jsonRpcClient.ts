@@ -104,7 +104,7 @@ export class AmicaJsonRpcClient {
       id,
     };
 
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       const timeoutMs = timeout || this.defaultTimeout;
       const timeoutHandle = setTimeout(() => {
         this.pending.delete(id);
@@ -120,8 +120,12 @@ export class AmicaJsonRpcClient {
         }
         this.ws.send(JSON.stringify(request));
       } else {
-        // @ts-expect-error - Complex generic type inference issue with resolve/reject
-        this.sendHttpRequest(request).then(resolve).catch(reject);
+        try {
+          const result = await this.sendHttpRequest<M>(request);
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
       }
     });
   }
