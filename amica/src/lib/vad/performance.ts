@@ -84,6 +84,12 @@ export class VADPerformanceTracker {
   recordFrameProcessing(durationMs: number): void {
     if (!this.enabled) return
 
+    // Validate input
+    if (!Number.isFinite(durationMs) || durationMs < 0) {
+      log.warn(`Invalid frame processing duration: ${durationMs}ms`)
+      return
+    }
+
     this.metrics.framesProcessed++
     this.frameProcessingTimes.push(durationMs)
 
@@ -112,6 +118,12 @@ export class VADPerformanceTracker {
   recordModelInference(durationMs: number): void {
     if (!this.enabled) return
 
+    // Validate input
+    if (!Number.isFinite(durationMs) || durationMs < 0) {
+      log.warn(`Invalid model inference duration: ${durationMs}ms`)
+      return
+    }
+
     this.modelInferenceTimes.push(durationMs)
 
     // Keep only recent samples
@@ -130,6 +142,12 @@ export class VADPerformanceTracker {
   recordModelLoad(durationMs: number): void {
     if (!this.enabled) return
 
+    // Validate input
+    if (!Number.isFinite(durationMs) || durationMs < 0) {
+      log.warn(`Invalid model load duration: ${durationMs}ms`)
+      return
+    }
+
     this.metrics.modelLoadTime = durationMs
     log.info(`Model loaded in ${durationMs.toFixed(2)}ms`)
   }
@@ -140,6 +158,12 @@ export class VADPerformanceTracker {
   recordWorkletLoad(durationMs: number): void {
     if (!this.enabled) return
 
+    // Validate input
+    if (!Number.isFinite(durationMs) || durationMs < 0) {
+      log.warn(`Invalid worklet load duration: ${durationMs}ms`)
+      return
+    }
+
     this.metrics.workletLoadTime = durationMs
     log.info(`Worklet loaded in ${durationMs.toFixed(2)}ms`)
   }
@@ -149,6 +173,12 @@ export class VADPerformanceTracker {
    */
   recordInitialization(durationMs: number): void {
     if (!this.enabled) return
+
+    // Validate input
+    if (!Number.isFinite(durationMs) || durationMs < 0) {
+      log.warn(`Invalid initialization duration: ${durationMs}ms`)
+      return
+    }
 
     this.metrics.initializationTime = durationMs
     log.info(`VAD initialized in ${durationMs.toFixed(2)}ms`)
