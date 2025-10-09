@@ -3,3 +3,5 @@ sw.js.map
 workbox-*
 generateMeshBVH.worker.js
 generateMeshBVH.worker.js.map
+vad.worklet.js
+vad.worklet.js.map
