@@ -74,6 +74,8 @@ export class RaycastSystem {
   private intersectsCustom: THREE.Intersection[] = [];
   private mouse = new THREE.Vector2();
   private enabled = true;
+  private mouseHandler?: (event: MouseEvent) => void;
+  private trackedCanvas?: HTMLCanvasElement;
 
   constructor(private scene: THREE.Scene) {
     this.bvhWorker = new GenerateMeshBVHWorker();
@@ -96,6 +98,11 @@ export class RaycastSystem {
    * Setup mouse tracking for raycasting
    */
   public setupMouseTracking(canvas: HTMLCanvasElement) {
+    // Remove previous handler if any
+    if (this.mouseHandler && this.trackedCanvas) {
+      this.trackedCanvas.removeEventListener("mousemove", this.mouseHandler);
+    }
+
     const handler = (event: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
       // Skip calculation if canvas has zero size to avoid division by zero
@@ -106,6 +113,10 @@ export class RaycastSystem {
       this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
     };
     canvas.addEventListener("mousemove", handler);
+
+    // Store references for cleanup
+    this.mouseHandler = handler;
+    this.trackedCanvas = canvas;
   }
 
   /**
@@ -323,8 +334,8 @@ export class RaycastSystem {
     const prevFirstHitOnly = this.raycaster.firstHitOnly;
     const prevLayersMask = this.raycaster.layers.mask;
 
-    this.raycaster.firstHitOnly = false;
     this.applyRaycastOptions(options);
+    this.raycaster.firstHitOnly = false; // Enforce "all hits" mode after applying options
     this.raycaster.set(origin, direction.clone().normalize());
 
     try {
@@ -591,6 +602,13 @@ export class RaycastSystem {
     this.cleanupModelBVH();
     this.cleanupRoomBVH();
     this.clearCustomTargets();
+
+    // Cleanup mouse event listener
+    if (this.mouseHandler && this.trackedCanvas) {
+      this.trackedCanvas.removeEventListener("mousemove", this.mouseHandler);
+      this.mouseHandler = undefined;
+      this.trackedCanvas = undefined;
+    }
   }
 
   /**

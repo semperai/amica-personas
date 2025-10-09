@@ -320,6 +320,25 @@ describe('RaycastSystem', () => {
         expect(hit.type).toBe('object');
       });
     });
+
+    it('should enforce firstHitOnly = false even when options override it', () => {
+      const cube1 = createMesh(0, 0, 0);
+      const cube2 = createMesh(0, 0, 2);
+
+      raycastSystem.addCustomTarget(cube1);
+      raycastSystem.addCustomTarget(cube2);
+
+      // Try to pass firstHitOnly: true in options
+      // raycastAll should still return all hits
+      const hits = raycastSystem.raycastAll(
+        new THREE.Vector3(0, 0, 5),
+        new THREE.Vector3(0, 0, -1),
+        { firstHitOnly: true } // This should be overridden by raycastAll
+      );
+
+      // Should still get all hits, not just the first one
+      expect(hits.length).toBeGreaterThanOrEqual(2);
+    });
   });
 
   describe('raycast options', () => {
@@ -430,6 +449,45 @@ describe('RaycastSystem', () => {
     it('should cleanup room BVH', () => {
       raycastSystem.cleanupRoomBVH();
       expect(raycastSystem.getRoomTargets()).toHaveLength(0);
+    });
+
+    it('should cleanup mouse event listener on dispose', () => {
+      // Create a mock canvas
+      const canvas = document.createElement('canvas');
+      const addEventListenerSpy = vi.spyOn(canvas, 'addEventListener');
+      const removeEventListenerSpy = vi.spyOn(canvas, 'removeEventListener');
+
+      // Setup mouse tracking
+      raycastSystem.setupMouseTracking(canvas);
+      expect(addEventListenerSpy).toHaveBeenCalledWith('mousemove', expect.any(Function));
+
+      // Dispose should remove the listener
+      raycastSystem.dispose();
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('mousemove', expect.any(Function));
+    });
+
+    it('should remove old listener when setupMouseTracking called multiple times', () => {
+      const canvas1 = document.createElement('canvas');
+      const canvas2 = document.createElement('canvas');
+
+      const removeEventListenerSpy1 = vi.spyOn(canvas1, 'removeEventListener');
+      const addEventListenerSpy2 = vi.spyOn(canvas2, 'addEventListener');
+
+      // Setup mouse tracking on first canvas
+      raycastSystem.setupMouseTracking(canvas1);
+
+      // Setup on second canvas should remove listener from first
+      raycastSystem.setupMouseTracking(canvas2);
+
+      expect(removeEventListenerSpy1).toHaveBeenCalledWith('mousemove', expect.any(Function));
+      expect(addEventListenerSpy2).toHaveBeenCalledWith('mousemove', expect.any(Function));
+    });
+
+    it('should handle dispose without setupMouseTracking', () => {
+      // Should not throw even if setupMouseTracking was never called
+      expect(() => {
+        raycastSystem.dispose();
+      }).not.toThrow();
     });
   });
 
