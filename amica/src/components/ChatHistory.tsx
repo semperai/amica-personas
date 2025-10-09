@@ -62,7 +62,7 @@ export const ChatLog = ({
             console.error("[Chat History] Please attach the correct file format.");
           }
         } catch (e: any) {
-          console.error("[Chat History] Error loading file:", e.toString());
+          console.error("[Chat History] Error loading file:", e);
         }
       };
 
