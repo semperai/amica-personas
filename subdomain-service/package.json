@@ -13,7 +13,7 @@
     "test:coverage": "mkdir -p test-results && vitest run --coverage --reporter=default --reporter=junit --outputFile=test-results/junit.xml"
   },
   "dependencies": {
-    "@sentry/node": "^10.17.0",
+    "@sentry/node": "^10.19.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
