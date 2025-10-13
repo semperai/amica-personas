@@ -45,7 +45,7 @@
     "@testing-library/react": "^16.1.0",
     "autoprefixer": "^10.4.21",
     "clsx": "^2.1.1",
-    "dexie": "^4.2.0",
+    "dexie": "^4.2.1",
     "file-saver": "^2.0.5",
     "lil-gui": "^0.20.0",
     "lucide-react": "^0.544.0",
