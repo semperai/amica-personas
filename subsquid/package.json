@@ -39,7 +39,7 @@
   "devDependencies": {
     "@subsquid/evm-typegen": "^4.4.0",
     "@subsquid/typeorm-codegen": "^2.0.2",
-    "@types/node": "^24.7.0",
+    "@types/node": "^24.7.2",
     "@types/pg": "^8.15.5",
     "@vitest/coverage-v8": "^3.2.4",
     "ts-node": "^10.9.2",
