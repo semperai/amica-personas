@@ -112,7 +112,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload Slither Report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: slither-report
