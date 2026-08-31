@@ -229,3 +229,6 @@ MIT License - see [LICENSE](LICENSE) for details
 ---
 
 *Built with ❤️ by the [Arbius](https://arbius.ai/) team*
+
+
+<!-- Security scan triggered at 2026-08-31 16:48:35 -->
