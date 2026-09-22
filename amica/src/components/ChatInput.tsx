@@ -58,6 +58,7 @@ export default function MessageInput({
     startOnLoad: false,
     model: 'v5' as const,
     baseAssetPath: '/',
+    onnxWASMBasePath: '/assets/',
     getStream,
     onFrameProcessed: (probabilities) => {
       // Removed excessive VAD logging - no per-frame logging

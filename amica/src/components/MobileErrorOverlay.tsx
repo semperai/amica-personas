@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 const MAX_ERRORS = 50;
 
 interface ErrorInfo {
-  type: 'error' | 'rejection';
+  type: 'error' | 'rejection' | 'console';
   message: string;
   stack?: string;
   filename?: string;
@@ -12,6 +12,7 @@ interface ErrorInfo {
   colno?: number;
   timestamp: number;
   userAgent: string;
+  level?: string;
 }
 
 interface StackFrame {
@@ -75,9 +76,73 @@ export function MobileErrorOverlay() {
   const [expandedErrors, setExpandedErrors] = useState<Set<number>>(new Set());
 
   useEffect(() => {
+    // Configurable error filter patterns
+    // Critical errors that should be displayed to users
+    const CRITICAL_ERROR_PATTERNS = [
+      '[ScenarioLoader]',
+      '[VrmViewer]',
+      '[VRM]',
+      'Loading',
+      'ERROR',
+    ];
+
+    // Non-critical errors to exclude (will be filtered out)
+    const EXCLUDED_ERROR_PATTERNS = [
+      '[VAD]',
+      '[useMicVAD]',
+      'ModelLoadError',
+      'silero_vad',
+    ];
+
+    // Intercept console.error to capture important error logs
+    const originalConsoleError = console.error;
+    console.error = (...args: any[]) => {
+      // Call original console.error
+      originalConsoleError.apply(console, args);
+
+      // Capture for display
+      const message = args.map(arg => {
+        if (typeof arg === 'string') return arg;
+        if (arg instanceof Error) return arg.message;
+        try {
+          return JSON.stringify(arg, null, 2);
+        } catch {
+          return String(arg);
+        }
+      }).join(' ');
+
+      // Check if message matches any critical pattern
+      const hasCriticalPattern = CRITICAL_ERROR_PATTERNS.some(pattern =>
+        message.includes(pattern)
+      );
+
+      // Check if message matches any excluded pattern
+      const hasExcludedPattern = EXCLUDED_ERROR_PATTERNS.some(pattern =>
+        message.includes(pattern)
+      );
+
+      // Only show critical errors that are not in the exclusion list
+      if (hasCriticalPattern && !hasExcludedPattern) {
+        const errorInfo: ErrorInfo = {
+          type: 'console',
+          level: 'error',
+          message,
+          timestamp: Date.now(),
+          userAgent: navigator.userAgent,
+        };
+        // Debug: uncomment to verify error capture (avoiding console.log in interceptor)
+        // originalConsoleError('[Mobile Error Overlay] Captured:', errorInfo);
+        setErrors(prev => {
+          const updated = [...prev, errorInfo];
+          return updated.length > MAX_ERRORS ? updated.slice(-MAX_ERRORS) : updated;
+        });
+        setIsVisible(true);
+      }
+    };
+
     // Capture unhandled errors
     const handleError = (event: ErrorEvent) => {
-      console.error('[Mobile Error Overlay] Caught error:', event);
+      originalConsoleError('[Mobile Error Overlay] Caught error:', event);
 
       // Better error message extraction
       let message = 'Unknown error';
@@ -106,7 +171,7 @@ export function MobileErrorOverlay() {
         timestamp: Date.now(),
         userAgent: navigator.userAgent,
       };
-      console.error('[Mobile Error Overlay] Error details:', errorInfo);
+      originalConsoleError('[Mobile Error Overlay] Error details:', errorInfo);
       setErrors(prev => {
         const updated = [...prev, errorInfo];
         // Keep only the most recent MAX_ERRORS errors to prevent memory issues
@@ -117,7 +182,7 @@ export function MobileErrorOverlay() {
 
     // Capture unhandled promise rejections
     const handleRejection = (event: PromiseRejectionEvent) => {
-      console.error('[Mobile Error Overlay] Caught rejection:', event);
+      originalConsoleError('[Mobile Error Overlay] Caught rejection:', event);
       const reason = event.reason;
       const errorInfo: ErrorInfo = {
         type: 'rejection',
@@ -126,7 +191,7 @@ export function MobileErrorOverlay() {
         timestamp: Date.now(),
         userAgent: navigator.userAgent,
       };
-      console.error('[Mobile Error Overlay] Rejection details:', errorInfo);
+      originalConsoleError('[Mobile Error Overlay] Rejection details:', errorInfo);
       setErrors(prev => {
         const updated = [...prev, errorInfo];
         // Keep only the most recent MAX_ERRORS errors to prevent memory issues
@@ -141,6 +206,7 @@ export function MobileErrorOverlay() {
     return () => {
       window.removeEventListener('error', handleError);
       window.removeEventListener('unhandledrejection', handleRejection);
+      console.error = originalConsoleError;
     };
   }, []);
 
@@ -299,7 +365,7 @@ export function MobileErrorOverlay() {
             >
               <div style={{ flex: 1 }}>
                 <div style={{ color: '#f85149', fontWeight: '600', marginBottom: '4px' }}>
-                  {error.type === 'error' ? '❌ Error' : '⚡ Promise Rejection'} #{index + 1}
+                  {error.type === 'error' ? '❌ Error' : error.type === 'rejection' ? '⚡ Promise Rejection' : '📋 Console Error'} #{index + 1}
                 </div>
                 <div style={{ fontSize: '12px', color: '#8b949e' }}>
                   {new Date(error.timestamp).toLocaleString()}

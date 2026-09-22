@@ -7,6 +7,15 @@ export class WorkerBase {
 		this.worker = worker;
 		this.worker.onerror = e => {
 
+			console.error( `${ this.name }: Worker error event:`, e );
+			console.error( `${ this.name }: Error details:`, {
+				message: e.message,
+				filename: e.filename,
+				lineno: e.lineno,
+				colno: e.colno,
+				error: e.error
+			});
+
 			if ( e.message ) {
 
 				throw new Error( `${ this.name }: Could not create Web Worker with error "${ e.message }"` );
